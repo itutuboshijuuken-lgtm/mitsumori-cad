@@ -1674,11 +1674,9 @@ $("plan").addEventListener("pointermove", e => {
   if (!touches.has(e.pointerId)) return;
   touches.set(e.pointerId, [e.clientX, e.clientY]);
   if (pinch && touches.size >= 2){
-    const [a, b] = [...touches.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
-    const r = $("plan").getBoundingClientRect();
-    PV.z = Math.max(1, Math.min(8, pinch.z * d / pinch.d));
-    const k = (PV.W / PV.z) / r.width;
-    PV.cx = pinch.c[0] - (m[0] - pinch.m[0]) * k; PV.cy = pinch.c[1] - (m[1] - pinch.m[1]) * k; applyPV();
+    const [a, b] = [...touches.values()], d = Math.max(12, Math.hypot(a[0] - b[0], a[1] - b[1])), m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    PV.z = Math.max(1, Math.min(8, pinch.z * d / pinch.d)); applyPV();
+    if (pinch.a && PV.cx != null){ const nw = planPt({ clientX: m[0], clientY: m[1] }); PV.cx += pinch.a[0] - nw[0]; PV.cy += pinch.a[1] - nw[1]; applyPV(); }
     e.stopImmediatePropagation(); return;
   }
   if (dragging && touches.size === 1){
@@ -2423,10 +2421,10 @@ function pushUndo(){ undoStack.push(undoSnap()); redoStack.length = 0; if (undoS
 let sel = null, selStep = 10;
 function drawToolsUI(){
   drawNotchRow();
-  $("partCh").innerHTML = [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>` + `<button class="p${window.__partDraw ? " armBlink" : ""}" id="pdBtn" type="button" aria-pressed="${!!window.__partDraw}">👆指で描く</button>`;
+  $("partCh").innerHTML = `<button class="p${window.__partDraw ? " armBlink" : ""}" id="pdBtn" type="button" aria-pressed="${!!window.__partDraw}">👆指で描く</button>` + [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>`;
   $("partCh").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => { if (b.dataset.pl === "waist"){ fxStartPlace("waist"); return; } if (b.dataset.pl === "tare") openPad({title: "垂れ壁の長さ", value: "", done: v => { if (v) addStdTare(v); }}); else if (b.dataset.pl === "pad") openPad({title: "間仕切りの長さ", value: "", done: v => { if (v) addStdPart(v); }}); else addStdPart(+b.dataset.pl); });
-  $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"], ["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
-  $("toolCh").classList.toggle("winmode", toolOpen === "win");
+  $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
+  $("toolCh").classList.toggle("winmode", toolOpen === "win" || toolOpen === "gen");
   $("toolCh2").innerHTML = `<button type="button" data-tk="wc">便器</button><button type="button" data-tk="bath">浴槽</button><button type="button" data-tk="tearai">手洗い</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="acout">エアコン</button><button type="button" data-tk="kitchen">キッチン</button><button type="button" data-tk="senmen">洗面台</button><button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button>`;
   $("toolCh2").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => addTenken(b.dataset.tk));
   $("toolCh3").innerHTML = Object.keys(LTN).map(k => `<button type="button" data-lt="${k}" aria-pressed="${ltTool === k}">${LTN[k]}</button>`).join("") + (ltTool && window.__ltAct && window.__ltAct.k === ltTool ? `<button type="button" data-ltact="1" class="armBlink" style="grid-column:1/-1;background:#FFF8DC;border:2px solid #FFC400;font-size:13px;line-height:1.3">いま：${LTA[window.__ltAct.act]}<br><small>（変える）</small></button>` : "");
@@ -3218,23 +3216,52 @@ let nt = null;
 let toolOpen = null;
 // 1行のタブ：押すと下に開く（もう一度押すと仕舞う）。「囲む」は押すとすぐ囲むモード
 function drawToolTabs(){
-  const el = $("toolTabs"); if (!el) return;
-  const tabs = [["part", "間仕切", toolOpen === "part"], ["door", "建具", toolOpen === "door"], ["win", "窓・玄関", toolOpen === "win"], ["etc", "その他", toolOpen === "etc"], ["light", "照明" + (ltTool ? "·" + LTN[ltTool] : ""), toolOpen === "light" || !!ltTool]];
-  el.innerHTML = tabs.map(([k, n, on]) => `<button type="button" data-tt="${k}" aria-pressed="${on}">${n}</button>`).join("");
-  el.querySelectorAll("[data-tt]").forEach(b => b.onclick = () => {
-    const k = b.dataset.tt;
-    if (k === "encl"){
-      if (enclMode){ enclOff(); return; }
-      enclMode = true; encl = {r: null}; tatMode = false; eraMode = false; ltTool = null; sel = null; enclNew = S.mode === "zo"; toolOpen = null;
-      document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
-      drawToolsUI(); drawPlan(); return;
-    }
-    if (k === "light" && ltTool){ ltTool = null; toast("照明をやめました"); drawToolsUI(); drawPlan(); return; }
-    if (enclMode) enclReset();
-    toolOpen = toolOpen === k ? null : k;
-    drawToolsUI(); drawPlan();
+  /* CAD-136: 入口は「壁を描く」「選んで置く」の2つをここで描き、「床の仕様」は
+     床モジュールが #floorBtn を #toolTabs へ足す (合計3つが常時表示)。
+     選んで置く の中身は下段 #grpSub (建具／窓／玄関／設備・その他／照明)。
+     状態は window.grp136 (null/"wall"/"put") と window.putLeaf136 に持ち、
+     毎回 toolOpen から整合させる (他のモジュールが toolOpen を変えても追従)。 */
+  if (window.grp136 === undefined){ window.grp136 = null; window.putLeaf136 = "door"; }
+  var LEAVES136 = ["door", "win", "gen", "etc", "light"];
+  if (window.__floorTab) window.grp136 = null;
+  else if (toolOpen === "part") window.grp136 = "wall";
+  else if (LEAVES136.indexOf(toolOpen) >= 0){ window.grp136 = "put"; window.putLeaf136 = toolOpen; }
+  else if (toolOpen === null && window.grp136 === "wall") window.grp136 = null;
+  const tabs = $("toolTabs");
+  tabs.innerHTML = "";
+  [["part", "壁を描く"], ["put", "選んで置く"]].forEach(([k, n]) => {
+    const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
+    const on = k === "part" ? toolOpen === "part" : window.grp136 === "put";
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.onclick = () => {
+      if (enclMode) enclReset();
+      if (k === "part"){ toolOpen = toolOpen === "part" ? null : "part"; }
+      else if (window.grp136 === "put"){ window.grp136 = null; toolOpen = null; }
+      else { window.grp136 = "put"; toolOpen = window.putLeaf136 || "door"; }
+      drawToolsUI(); drawPlan();
+    };
+    tabs.appendChild(b);
   });
-  $("partCh").hidden = toolOpen !== "part"; $("toolCh").hidden = toolOpen !== "door" && toolOpen !== "win"; $("toolCh2").hidden = toolOpen !== "etc"; $("toolCh3").hidden = toolOpen !== "light";
+  let sub = $("grpSub");
+  if (!sub){ sub = document.createElement("div"); sub.id = "grpSub"; sub.className = "mrow"; tabs.insertAdjacentElement("afterend", sub); }
+  if (window.grp136 === "put"){
+    sub.hidden = false;
+    sub.innerHTML = "";
+    [["door", "建具"], ["win", "窓"], ["gen", "玄関"], ["etc", "設備・その他"], ["light", "照明" + (ltTool ? "·" + LTN[ltTool] : "")]].forEach(([k, n]) => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
+      b.setAttribute("aria-pressed", (k === "light" ? toolOpen === "light" || !!ltTool : toolOpen === k) ? "true" : "false");
+      b.onclick = () => {
+        if (k === "light" && ltTool){ ltTool = null; toast("照明をやめました"); drawToolsUI(); drawPlan(); return; }
+        if (enclMode) enclReset();
+        window.putLeaf136 = k; toolOpen = toolOpen === k ? null : k; drawToolsUI(); drawPlan();
+      };
+      sub.appendChild(b);
+    });
+  } else sub.hidden = true;
+  $("partCh").hidden = toolOpen !== "part";
+  $("toolCh").hidden = !(toolOpen === "door" || toolOpen === "win" || toolOpen === "gen");
+  $("toolCh2").hidden = toolOpen !== "etc";
+  $("toolCh3").hidden = toolOpen !== "light";
   drawEnclBar();
 }
 function drawNotchRow(){ drawToolTabs(); }
@@ -7886,7 +7913,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     if (window.__put && (toolOpen !== window.__put.g || ltTool || enclMode)) clearPut();
     origUI.apply(this, arguments);
     try {
-      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : "door") : grp; if (window.__put && window.__put.label === lbl && window.__put.g === gg){ window.__putOff(); return; } sel = null; window.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${window.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
+      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (window.__put && window.__put.label === lbl && window.__put.g === gg){ window.__putOff(); return; } sel = null; window.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${window.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
@@ -9617,6 +9644,7 @@ function sujiWall(){
     try {
       if (prevOpen !== undefined && toolOpen !== prevOpen && !window.__put && !ltTool && !enclMode){
         if (toolOpen === "win"){ window.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK")}; toast("腰窓：置く所をタップ（続けて置けます）"); _ui.apply(this, arguments); }
+        else if (toolOpen === "gen"){ window.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS")}; toast("玄関シングル：置く所をタップ（続けて置けます）"); _ui.apply(this, arguments); }
         else if (toolOpen === "door"){ window.__put = {g: "door", label: "ドア", fn: () => addStdOpening("door")}; toast("ドア：置く所をタップ（続けて置けます）"); _ui.apply(this, arguments); }
       }
       prevOpen = toolOpen;
@@ -10115,7 +10143,8 @@ function sujiWall(){
     }
     if (toolOpen === "part") return "間仕切り：長さのボタンを押すと、その長さで入ります。図をタップすると、壁から壁まで入ります。";
     if (toolOpen === "door") return "建具：付けたい物を選んで、置きたい壁をタップ。選んだ物は、続けて置けます。";
-    if (toolOpen === "win") return "窓・玄関：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。続けて置けます。";
+    if (toolOpen === "win") return "窓：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。続けて置けます。";
+    if (toolOpen === "gen") return "玄関：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。続けて置けます。";
     if (toolOpen === "etc") return "その他：置きたい物を選んで、置く所をタップ。便器は、置くと自動でトイレになります。";
     if (toolOpen === "light") return "照明：種類を選んで、置く所をタップ。新設か、今ある物を使うかを聞かれます。";
     return "上のボタンで、付けたい物を選びます。置いた物を直す時は、図の上の物をタップしてください。";
@@ -12972,6 +13001,67 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }, {passive: false});
   window.__gest130 = true;
   window.__gest131 = true;
+})();
+</script>
+
+<script>
+/* ================= CAD-136：入口3つの見た目＋ピンチ初期化 =================
+   入口の組み替え本体は base の drawToolTabs 置換 (edit 1) と drawToolsUI の
+   外科的編集 (edit 2〜7)。ここは (a) #toolTabs を3列にする等の見た目、
+   (b) 間取り図の2本指ピンチの初期化だけを行う。
+   ピンチ: #planWrap のキャプチャで2本目の指を検出し、base の pinch 変数を
+   初期化する。実際のズーム計算は base の pointermove ピンチ分岐 (edit 8 で
+   アンカー方式に修正) が PV に乗せて行う。ピンチ開始時に進行中のドラッグ
+   (間仕切り・開口の移動) は取り消し、終了直後のクリックは moved で飲み込む
+   (base のクリックガードが弾く)。1本指の操作には一切触れない。 */
+(function(){
+  "use strict";
+  if (window.grp136 === undefined){ window.grp136 = null; window.putLeaf136 = "door"; }
+  var st = document.createElement("style");
+  st.textContent = "#stM #toolTabs{grid-template-columns:1fr 1fr 1fr}"
+    + "#grpSub{order:0}"
+    + "#grpSub button{font-size:14px;min-height:36px}"
+    + "#grpSub button[aria-pressed=\"true\"]{background:var(--ai);color:#fff;border-color:var(--ai)}"
+    + "body.ezEasy #grpSub [data-tt=\"light\"]{display:none!important}"
+    + "body.nbtutRun.ezEasy #grpSub [data-tt=\"light\"]{display:block!important}";
+  document.head.appendChild(st);
+
+  var wrap = document.getElementById("planWrap"), svg = document.getElementById("plan");
+  if (!wrap || !svg) return;
+  var pts = new Map(), pinching = false;
+  wrap.addEventListener("pointerdown", function(e){
+    if (!window.__pageM || e.pointerType !== "touch") return;
+    if (!svg.contains(e.target)) return;
+    pts.set(e.pointerId, [e.clientX, e.clientY]);
+    if (pts.size !== 2 || pinching) return;
+    pinching = true;
+    try {
+      if (PV.cx == null){ var vc = mViewCenterSvg(); PV.cx = vc[0]; PV.cy = vc[1]; }
+      var a = [...pts.values()];
+      var m = [(a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2];
+      var d0 = Math.max(12, Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]));
+      pinch = { z: PV.z, d: d0, c: [PV.cx, PV.cy], m: m, a: planPt({ clientX: m[0], clientY: m[1] }) };
+    } catch(err){}
+    try {
+      if (dragging){
+        clearTimeout(dragging.timer);
+        if (!dragging.moved) undoStack.pop();
+        else { Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig))); drawPlan(); }
+        dragging = null;
+        wrap.classList.remove("dragArmed");
+      }
+    } catch(err){}
+    tapCancel = true; moved = true;
+  }, true);
+  wrap.addEventListener("pointermove", function(e){ if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]); }, true);
+  function endP(e){
+    if (!pts.delete(e.pointerId)) return;
+    if (pinching && pts.size < 2){ pinching = false; moved = true; tapCancel = true; }
+    if (!pts.size) pinching = false;
+  }
+  wrap.addEventListener("pointerup", endP, true);
+  wrap.addEventListener("pointercancel", endP, true);
+  window.addEventListener("pointerup", function(e){ if (pts.delete(e.pointerId) && !pts.size) pinching = false; }, true);
 })();
 </script>
 </body>
