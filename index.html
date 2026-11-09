@@ -1663,7 +1663,7 @@ window.__cands = cands;
     sel = {t: pk.t, i}; pushUndo();
     const obj = isP ? S.parts2D[i] : pk.t === "k" ? S.tenken[i] : S.sashes[i];
     dragging = {isP, kind: pk.t, obj, start: [e.clientX, e.clientY], orig: JSON.parse(JSON.stringify(obj)), moved: false, cands, wasSel: !!keep, armed: false, cancel: false};
-    { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); }
+    { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel && !dg.isP){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); }
     try { $("plan").setPointerCapture(e.pointerId); } catch(er){}
     drawSelBar(); e.stopImmediatePropagation(); return;
   }
@@ -1690,7 +1690,7 @@ $("plan").addEventListener("pointermove", e => {
         if (!dragging) return; dragging.raf = 0;
         Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig)));
         const r5 = v => Math.round(v / 5) * 5;
-        if (dragging.kind === "k") moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); else if (dragging.isP) movePart(dragging.obj, r5(dragging.dx), r5(dragging.dy)); else moveOpening(dragging.obj, dragging.dx, dragging.dy);
+        if (dragging.kind === "k") moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); else if (dragging.isP){ /* CAD-137: 間仕切りのドラッグ移動は廃止 (位置直しはコントローラーだけ) */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
         drawPlan();
       });
     }
@@ -3149,7 +3149,7 @@ function padStdBuild(cfg){
 const PLAN_FONT_K = 0.6;
 function tidyPlanLabels(){
   const svg = $("plan"); if (!svg || !svg.getScreenCTM) return;
-  const root = svg.getScreenCTM(); if (!root) return;
+  const root = svg.getScreenCTM(); if (!root || !(Math.abs(root.a) > 1e-9) || !(Math.abs(root.d) > 1e-9)) return;  /* CAD-137: 変換が縮退 (レイアウト未確定) の時はラベルを動かさない */
   const texts = [...svg.querySelectorAll("text")].filter(t => !t.closest("#planInk") && !t.closest("[data-sno]"));
   texts.forEach(t => {
     const cs = getComputedStyle(t), fs = parseFloat(cs.fontSize);
@@ -13062,6 +13062,34 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   wrap.addEventListener("pointerup", endP, true);
   wrap.addEventListener("pointercancel", endP, true);
   window.addEventListener("pointerup", function(e){ if (pts.delete(e.pointerId) && !pts.size) pinching = false; }, true);
+})();
+</script>
+
+<script>
+/* ================= CAD-137：開いた直後の表示ずれ対策（確認描画） =================
+   drawPlan は slotM の実寸や画面変換など、その瞬間のレイアウトを測って描く。
+   プロジェクトを開いた直後やステップを切り替えた直後は、レイアウトがまだ
+   確定しきっておらず、実機では最初の1枚だけ位置・大きさがずれて描かれ、
+   触るかリサイズが来るまで直らない事があった。そこで go() のたび（および
+   起動直後）に、レイアウト確定後（2フレーム後）にもう1回だけ drawPlan を
+   引き直し、最初に描かれた形と確定後の形を一致させる。図形・計算・保存
+   データは一切変えない（同じ内容の描き直し）。 */
+(function(){
+  "use strict";
+  var pend137 = false;
+  window.__planConfirm137 = function(){
+    if (pend137) return; pend137 = true;
+    var n = 0;
+    var tick137 = function(){
+      n++;
+      if (n < 2){ requestAnimationFrame(tick137); return; }
+      pend137 = false;
+      try { if ((step === 2 || step === "M") && typeof S !== "undefined" && S && S.edges) drawPlan(); } catch(e){}
+    };
+    requestAnimationFrame(tick137);
+  };
+  try { var g137 = go; go = function(){ var r = g137.apply(this, arguments); try { window.__planConfirm137(); } catch(e){} return r; }; } catch(e){}
+  window.__planConfirm137();
 })();
 </script>
 </body>
