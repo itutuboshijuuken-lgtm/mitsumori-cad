@@ -208,6 +208,7 @@ body.tatmode #slotM .card{box-shadow:inset 0 0 0 3px #7E8752}
 body.eramode #slotM .card,body.eramode #slotM svg{touch-action:none!important}
 body.eramode #slotM .card{box-shadow:inset 0 0 0 3px #C62828}
 body.enclmode #slotM .card,body.enclmode #slotM svg{touch-action:none!important}
+body.partdraw #slotM svg{touch-action:none!important}
 body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #enclBar{touch-action:manipulation;background:#fff;border:2px solid #2563B0;border-radius:12px;padding:4px;box-sizing:border-box}
 #enclBar .ecd small{white-space:nowrap;overflow:hidden}
@@ -2066,7 +2067,7 @@ function drawSelBarK(bar){
   $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; window.__put = null; window.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbDel").onclick = () => { pushUndo(); S.tenken.splice(sel.i, 1); sel = null; save(); drawPlan(); };
-  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
+  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
   if (o.k === "dansa"){
     // 間仕切りと同じ操作：長さ・壁まで・90°
     const asQ = () => o.dir === "v" ? {x1: o.x, x2: o.x, y1: o.y - o.w / 2, y2: o.y + o.w / 2} : {x1: o.x - o.w / 2, x2: o.x + o.w / 2, y1: o.y, y2: o.y};
@@ -2418,7 +2419,7 @@ function pushUndo(){ undoStack.push(undoSnap()); redoStack.length = 0; if (undoS
 let sel = null, selStep = 10;
 function drawToolsUI(){
   drawNotchRow();
-  $("partCh").innerHTML = [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>`;
+  $("partCh").innerHTML = [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>` + `<button class="p${window.__partDraw ? " armBlink" : ""}" id="pdBtn" type="button" aria-pressed="${!!window.__partDraw}">指で描く</button>`;
   $("partCh").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => { if (b.dataset.pl === "waist"){ fxStartPlace("waist"); return; } if (b.dataset.pl === "tare") openPad({title: "垂れ壁の長さ", value: "", done: v => { if (v) addStdTare(v); }}); else if (b.dataset.pl === "pad") openPad({title: "間仕切りの長さ", value: "", done: v => { if (v) addStdPart(v); }}); else addStdPart(+b.dataset.pl); });
   $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"], ["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
   $("toolCh").classList.toggle("winmode", toolOpen === "win");
@@ -3471,7 +3472,7 @@ function drawSelBar0(){
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; window.__put = null; window.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
 if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText += ";text-decoration:underline dotted;cursor:pointer"; tt.onclick = () => changeSheet(sel.i); } }
-  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 455 : 5; drawSelBar(); };
+  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; drawSelBar(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number);
     if (isP) movePart(q, ...alignStopP(q, ax * selStep, ay * selStep));
     else { const seg = hostSeg(sa.host); const L = seg ? Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1 : 1; const u = seg ? [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L] : [1, 0];
@@ -6695,7 +6696,7 @@ function drawFxBar(){
   if ($("fxNb")) $("fxNb").onclick = () => pickOne("ニッチの下面の仕上げ", [["cross", "クロス巻き"], ["waku", "窓枠"]], v => { pushUndo(); f.nb = v; save(); redraw(); toast(`ニッチの下面：${v === "waku" ? "窓枠" : "クロス巻き"}`); });
   $("fxUndo").onclick = () => $("undoBtn").click();
   $("fxDel").onclick = () => { pushUndo(); S.fx.splice(sel.i, 1); sel = null; save(); drawRoom(); };
-  $("fxStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 455 : 5; redraw(); };
+  $("fxStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; redraw(); };
   $("fxZ").onclick = () => openPad({title: isUnder ? `${FK[f.k][0]}の位置（下端）` : "高さ（床から）", unit: "mm", value: f.z, done: v => { if (v){ pushUndo(); f.z = v; fxClamp(f); save(); redraw(); } }});
   if ($("fxLen")) $("fxLen").onclick = () => { const pres = isUnder ? FKPRE[f.k].w : [600, 900, 1200, 1820, 2730]; openPad({title: isUnder ? "下地の幅" : `${FK[f.k][0]} の長さ`, unit: "mm", value: f.len, extra: pres.map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); f.len = v; fxClamp(f); save(); redraw(); }})), done: v => { if (v){ pushUndo(); f.len = Math.max(100, v); fxClamp(f); save(); redraw(); } }}); };
   if ($("fxHgt")) $("fxHgt").onclick = () => openPad({title: `${FK[f.k][0]}の高さ`, unit: "mm", value: f.hgt, extra: FKPRE[f.k].h.map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); f.hgt = v; fxClamp(f); save(); redraw(); }})), done: v => { if (v){ pushUndo(); f.hgt = Math.max(100, v); fxClamp(f); save(); redraw(); } }});
@@ -8335,7 +8336,7 @@ function drawSelBarL(bar){
   $("sbOk").onclick = () => { sel = null; window.__put = null; window.__sashAct = null; window.__ltAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbDel").onclick = () => { pushUndo(); S.lights.splice(sel.i, 1); sel = null; save(); drawPlan(); };
-  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
+  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
   $("sbLS").onclick = () => { pushUndo(); const A = ["new", "remove", "swap"]; l.act = A[(A.indexOf(l.act || "new") + 1) % 3]; save(); bar.dataset.k = ""; drawPlan(); };
   $("sbLK").onclick = () => { pushUndo(); l.k = l.k === "down" ? "ceil" : "down"; save(); bar.dataset.k = ""; drawPlan(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); l.x += ax * selStep; l.y += ay * selStep; save(); drawPlan(); };
@@ -8645,7 +8646,7 @@ function drawSelBarC(bar, o){
   $("sbOk").onclick = () => { sel = null; window.__put = null; window.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbDel").onclick = () => { pushUndo(); S.tenken.splice(sel.i, 1); sel = null; save(); drawPlan(); };
-  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
+  $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
   $("sbCS").onclick = () => ctSheet(sel.i);
   $("sbCK").onclick = () => { pushUndo(); o.dir = ({n: "e", e: "s", s: "w", w: "n"})[o.dir] || "n"; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
   if ($("sbCV")) $("sbCV").onclick = () => { pushUndo(); o.e = o.e === 0 ? 1 : 0; save(); bar.dataset.k = ""; drawPlan(); };
@@ -11973,6 +11974,166 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       else work("nuri", `袖壁${i + 1} 外壁 塗り壁`, aF, "㎡", spec);
     });
   };
+})();
+</script>
+
+<script>
+/* ================= CAD-127：間仕切りを指で描く ================= */
+(function(){
+  "use strict";
+  window.__partDraw = false;
+  var pdInk = null;
+
+  function pdOff(silent){
+    if (!window.__partDraw) return;
+    window.__partDraw = false;
+    document.body.classList.remove("partdraw");
+    var b = document.getElementById("pdBtn");
+    if (b){ b.classList.remove("armBlink"); b.setAttribute("aria-pressed", "false"); }
+    if (!silent) { try { drawToolsUI(); } catch(e){} }
+  }
+  window.__partDrawOff = pdOff;
+
+  function pdOn(){
+    if (window.__delMode && window.__delSet) window.__delSet(false);
+    if (typeof enclMode !== "undefined" && enclMode){ try { enclOff(); } catch(e){} }
+    try { ltTool = null; } catch(e){}
+    try { tool = null; } catch(e){}
+    window.__partDraw = true;
+    document.body.classList.add("partdraw");
+    try { drawToolsUI(); } catch(e){}
+    toast("指で線を描くと、間仕切りが入ります（もう一度押すとやめます）");
+  }
+
+  document.addEventListener("click", function(e){
+    var t = e.target && e.target.closest ? e.target.closest("#pdBtn") : null;
+    if (t){ if (window.__partDraw) pdOff(); else pdOn(); return; }
+    if (e.target && e.target.closest && e.target.closest("#nazoruBtn,#delToolBtn")) pdOff(true);
+    var tt = e.target && e.target.closest ? e.target.closest("#toolTabs [data-tt]") : null;
+    if (tt && tt.dataset.tt !== "part") pdOff(true);
+  }, false);
+
+  function pdSplit(q){
+    var horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
+    if (!horiz && !vert) return [q];
+    var cuts = [];
+    var test = function(x1, y1, x2, y2){
+      if (horiz){ if (Math.abs(x1 - x2) >= 1) return; var x = x1; if (x <= Math.min(q.x1, q.x2) + 1 || x >= Math.max(q.x1, q.x2) - 1) return; if (q.y1 >= Math.min(y1, y2) - 1 && q.y1 <= Math.max(y1, y2) + 1) cuts.push(x); }
+      else { if (Math.abs(y1 - y2) >= 1) return; var y = y1; if (y <= Math.min(q.y1, q.y2) + 1 || y >= Math.max(q.y1, q.y2) - 1) return; if (q.x1 >= Math.min(x1, x2) - 1 && q.x1 <= Math.max(x1, x2) + 1) cuts.push(y); }
+    };
+    var P = pts();
+    P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; test(a[0], a[1], c[0], c[1]); });
+    (S.parts2D || []).forEach(function(z){ if (pState(z) === "remove") return; test(z.x1, z.y1, z.x2, z.y2); });
+    if (!cuts.length) return [q];
+    cuts = cuts.filter(function(v, i){ return cuts.indexOf(v) === i; }).sort(function(a, b){ return a - b; });
+    var lo = horiz ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), hi = horiz ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2);
+    var B = [lo].concat(cuts, [hi]), out = [];
+    for (var k = 0; k < B.length - 1; k++){
+      if (B[k + 1] - B[k] < 100) continue;
+      out.push(horiz ? {x1: B[k], y1: q.y1, x2: B[k + 1], y2: q.y1} : {x1: q.x1, y1: B[k], x2: q.x1, y2: B[k + 1]});
+    }
+    return out.length ? out : [q];
+  }
+
+  // snapPart の作法を引き継ぐ専用の直線化：位置はモジュール吸着、端は近くの壁・間仕切りへ
+  // 450mm 以内で吸着（snapPart と同じ）。ただし両端が同じ壁に吸着して長さが消える時は、
+  // 遠い方の端をモジュール位置に戻す（壁際の短い線が潰れるのを防ぐ）。
+  function pdSegment(mm){
+    var b = bbox(), xs = mm.map(function(p){ return p[0]; }), ys = mm.map(function(p){ return p[1]; });
+    var dx = Math.max.apply(null, xs) - Math.min.apply(null, xs), dy = Math.max.apply(null, ys) - Math.min.apply(null, ys);
+    var horiz = dx >= dy;
+    var lines = [];
+    var P = pts();
+    P.forEach(function(a, i){ lines.push([a, P[(i + 1) % P.length]]); });
+    (S.parts2D || []).forEach(function(z){ if (pState(z) !== "remove") lines.push([[z.x1, z.y1], [z.x2, z.y2]]); });
+    var snapEnd = function(v, fixed){
+      var best = null;
+      lines.forEach(function(L){
+        var a = L[0], c = L[1], vert = Math.abs(a[0] - c[0]) < 1, hor = Math.abs(a[1] - c[1]) < 1;
+        if (horiz && vert && fixed >= Math.min(a[1], c[1]) - 1 && fixed <= Math.max(a[1], c[1]) + 1){ var d = Math.abs(v - a[0]); if (d < 450 && (!best || d < best.d)) best = {d: d, val: a[0]}; }
+        if (!horiz && hor && fixed >= Math.min(a[0], c[0]) - 1 && fixed <= Math.max(a[0], c[0]) + 1){ var d2 = Math.abs(v - a[1]); if (d2 < 450 && (!best || d2 < best.d)) best = {d: d2, val: a[1]}; }
+      });
+      return best;
+    };
+    if (horiz){
+      var y = gSnap(ys.reduce(function(s2, v){ return s2 + v; }, 0) / ys.length, b.y0);
+      var r1 = Math.min.apply(null, xs), r2 = Math.max.apply(null, xs);
+      var s1 = snapEnd(r1, y), s2b = snapEnd(r2, y);
+      var x1 = s1 ? s1.val : gSnap(r1, b.x0), x2 = s2b ? s2b.val : gSnap(r2, b.x0);
+      if (x2 - x1 < 100){ if (s1 && s2b && s1.val === s2b.val){ if (s1.d <= s2b.d) x2 = gSnap(r2, b.x0); else x1 = gSnap(r1, b.x0); } }
+      if (x2 - x1 < 100) return null;
+      return {x1: x1, y1: y, x2: x2, y2: y};
+    }
+    var x = gSnap(xs.reduce(function(s2, v){ return s2 + v; }, 0) / xs.length, b.x0);
+    var t1 = Math.min.apply(null, ys), t2 = Math.max.apply(null, ys);
+    var u1 = snapEnd(t1, x), u2 = snapEnd(t2, x);
+    var y1 = u1 ? u1.val : gSnap(t1, b.y0), y2 = u2 ? u2.val : gSnap(t2, b.y0);
+    if (y2 - y1 < 100){ if (u1 && u2 && u1.val === u2.val){ if (u1.d <= u2.d) y2 = gSnap(t2, b.y0); else y1 = gSnap(t1, b.y0); } }
+    if (y2 - y1 < 100) return null;
+    return {x1: x, y1: y1, x2: x, y2: y2};
+  }
+
+  function pdFinish(mm){
+    if (!mm || mm.length < 4) return;
+    var travel = 0;
+    for (var i = 1; i < mm.length; i++) travel += Math.hypot(mm[i][0] - mm[i - 1][0], mm[i][1] - mm[i - 1][1]);
+    if (travel < 150) return;
+    var q = pdSegment(mm);
+    if (!q){ toast("うまく読み取れませんでした。まっすぐ長く描いてください"); return; }
+    var b = bbox(), horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
+    var L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
+    if ((!horiz && !vert) || L < 100 || (horiz && (q.y1 < b.y0 - 1 || q.y1 > b.y1 + 1)) || (vert && (q.x1 < b.x0 - 1 || q.x1 > b.x1 + 1))){
+      toast("うまく読み取れませんでした。まっすぐ長く描いてください"); return;
+    }
+    var segs = pdSplit(q);
+    pushUndo();
+    S.parts2D = S.parts2D || [];
+    segs.forEach(function(s){ s.isNew = S.mode === "zo"; S.parts2D.push(s); });
+    sel = {t: "p", i: S.parts2D.length - 1};
+    try { flashAt = Date.now(); } catch(e){}
+    save(); drawPlan();
+    try { drawSelBar(); } catch(e){}
+    toast("間仕切り " + fmt(Math.round(L)) + "mm を入れました");
+  }
+
+  var slot = document.getElementById("slotM");
+  if (!slot) return;
+  slot.addEventListener("pointerdown", function(e){
+    if (!window.__partDraw || !window.__pageM || !S.edges) return;
+    if (e.target.closest && e.target.closest("button")) return;
+    if (typeof enclMode !== "undefined" && enclMode) return;
+    if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
+    if (window.__delMode) return;
+    if (e.isPrimary === false) return;
+    e.preventDefault(); e.stopPropagation();
+    try { slot.setPointerCapture(e.pointerId); } catch(er){}
+    var p = planPt(e);
+    pdInk = {id: e.pointerId, sv: [p], mm: [toMM(p)]};
+    var pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    pl.id = "pdInk";
+    pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "#E8742C"); pl.setAttribute("stroke-width", "3");
+    pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round"); pl.setAttribute("stroke-dasharray", "8 5");
+    document.getElementById("plan").appendChild(pl);
+    pdInk.el = pl;
+  }, true);
+  slot.addEventListener("pointermove", function(e){
+    if (!pdInk || e.pointerId !== pdInk.id) return;
+    e.preventDefault(); e.stopPropagation();
+    var p = planPt(e), l = pdInk.sv[pdInk.sv.length - 1];
+    if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
+    pdInk.sv.push(p); pdInk.mm.push(toMM(p));
+    pdInk.el.setAttribute("points", pdInk.sv.map(function(q){ return q.join(","); }).join(" "));
+  }, true);
+  var end = function(e){
+    if (!pdInk || e.pointerId !== pdInk.id) return;
+    e.stopPropagation();
+    var mm = pdInk.mm;
+    if (pdInk.el) pdInk.el.remove();
+    pdInk = null;
+    pdFinish(mm);
+  };
+  slot.addEventListener("pointerup", end, true);
+  slot.addEventListener("pointercancel", end, true);
 })();
 </script>
 </body>
