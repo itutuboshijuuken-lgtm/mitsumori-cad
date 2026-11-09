@@ -12393,5 +12393,347 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   syncFloats();
 })();
 </script>
+
+<style>
+#st6.bfOn #pvStruct{display:none!important}
+</style>
+<script>
+/* CAD-129: 既存図（工事前）— 仕様の記録から工事前の平面図を自動で作る（項目52）
+   完成図(⑥)の「立体・室内図／平面図」切り替えに「既存図」を足す（内装リフォームの時だけ）。
+   平面図モードと同じ白黒スタイル。見るだけで、プロジェクトのデータ・見積・保存は一切変えない。 */
+(function(){
+  "use strict";
+  var bfOn = false;
+  var CUR = {wood: "フローリング", tatami: "畳", cf: "CF・タイル", dobuki: "土間"};
+  var CCN = {board: "ボード・クロス", lami: "ラミテン"};
+  var ZK = {hall: "廊下", stair: "階段室", ub: "浴室", toilet: "トイレ"};
+  var r2 = function(v){ return Math.round(v * 100) / 100; };
+  var escS = function(s){ return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); };
+
+  /* 工事前の記録が1つでもあるか（状態を付けた間仕切り・剥がし・部屋ごとの仕様・全体の「今の床/天井」など） */
+  function hasRecords(){
+    try {
+      if ((S.parts2D || []).some(function(q){ return q.state || q.hg; })) return true;
+      if ((S.edges || []).some(function(e){ return e.hg; })) return true;
+      if ((S.roomFin || []).length) return true;
+      if ((S.fx || []).some(function(f){ return f.k === "demo"; })) return true;
+      if ((S.sashes || []).some(function(sa){ return !!sa.st; })) return true;
+      if (S.rfCur && S.rfCur !== "wood") return true;
+      if (S.rfCeilCur && S.rfCeilCur !== "board") return true;
+    } catch(e){}
+    return false;
+  }
+
+  /* 工事前の壁で部屋を切り直す（roomsCalc と同じ 50mm ます＋flood fill。新設の壁を除き、撤去の壁を含める） */
+  function bfRooms(){
+    var p = pts(), b = bbox(), st = 50;
+    try { if (typeof RM_STEP === "number" && RM_STEP > 0) st = RM_STEP; } catch(e){}
+    var segs = (S.parts2D || []).filter(function(q){ return pState(q) !== "new" && Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100; })
+      .concat(zoneWallSegs().filter(function(q){ return Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100; }));
+    var NX = Math.max(1, Math.ceil((b.x1 - b.x0) / st)), NY = Math.max(1, Math.ceil((b.y1 - b.y0) / st));
+    var cx = function(i){ return b.x0 + (i + 0.5) * st; }, cy = function(j){ return b.y0 + (j + 0.5) * st; };
+    var ins = new Uint8Array(NX * NY), blk = new Uint8Array(NX * NY);
+    for (var j = 0; j < NY; j++) for (var i = 0; i < NX; i++) if (inside([cx(i), cy(j)], p)) ins[j * NX + i] = 1;
+    segs.forEach(function(q){
+      var gx0 = Math.min(q.x1, q.x2) - 60, gx1 = Math.max(q.x1, q.x2) + 60, gy0 = Math.min(q.y1, q.y2) - 60, gy1 = Math.max(q.y1, q.y2) + 60;
+      var vx = q.x2 - q.x1, vy = q.y2 - q.y1, L2 = vx * vx + vy * vy || 1;
+      for (var j2 = 0; j2 < NY; j2++) for (var i2 = 0; i2 < NX; i2++){
+        var X = cx(i2), Y = cy(j2); if (X < gx0 || X > gx1 || Y < gy0 || Y > gy1) continue;
+        var t = ((X - q.x1) * vx + (Y - q.y1) * vy) / L2; t = Math.max(0, Math.min(1, t));
+        if (Math.hypot(X - q.x1 - t * vx, Y - q.y1 - t * vy) < 60) blk[j2 * NX + i2] = 1;
+      }
+    });
+    var comp = new Int32Array(NX * NY).fill(-1), rooms = [];
+    for (var k = 0; k < NX * NY; k++){
+      if (!ins[k] || blk[k] || comp[k] >= 0) continue;
+      var cells = [], stack = [k]; comp[k] = rooms.length;
+      while (stack.length){
+        var c = stack.pop(); cells.push(c);
+        var ci = c % NX, cj = (c - ci) / NX;
+        [[ci + 1, cj], [ci - 1, cj], [ci, cj + 1], [ci, cj - 1]].forEach(function(nb){
+          var a = nb[0], bb = nb[1]; if (a < 0 || bb < 0 || a >= NX || bb >= NY) return;
+          var n2 = bb * NX + a;
+          if (ins[n2] && !blk[n2] && comp[n2] < 0){ comp[n2] = rooms.length; stack.push(n2); }
+        });
+      }
+      rooms.push({cid: rooms.length, cells: cells});
+    }
+    rooms.forEach(function(r){
+      var sx = 0, sy = 0;
+      r.cells.forEach(function(c){ sx += cx(c % NX); sy += cy((c - c % NX) / NX); });
+      var mx = sx / r.cells.length, my = sy / r.cells.length;
+      r.cxm = mx; r.cym = my;
+      var dist = new Map(), qq = [];
+      r.cells.forEach(function(c){
+        var ci = c % NX, cj = (c - ci) / NX;
+        var edge = [[ci + 1, cj], [ci - 1, cj], [ci, cj + 1], [ci, cj - 1]].some(function(nb){
+          var a = nb[0], bb = nb[1];
+          return a < 0 || bb < 0 || a >= NX || bb >= NY || comp[bb * NX + a] !== r.cid;
+        });
+        if (edge){ dist.set(c, 0); qq.push(c); }
+      });
+      for (var h = 0; h < qq.length; h++){
+        var c2 = qq[h], ci2 = c2 % NX, cj2 = (c2 - ci2) / NX, d0 = dist.get(c2);
+        [[ci2 + 1, cj2], [ci2 - 1, cj2], [ci2, cj2 + 1], [ci2, cj2 - 1]].forEach(function(nb){
+          var a = nb[0], bb = nb[1]; if (a < 0 || bb < 0 || a >= NX || bb >= NY) return;
+          var n2 = bb * NX + a;
+          if (comp[n2] === r.cid && !dist.has(n2)){ dist.set(n2, d0 + 1); qq.push(n2); }
+        });
+      }
+      var best = r.cells[0], bd = -Infinity;
+      r.cells.forEach(function(c){
+        var sc = Math.min(dist.get(c) || 0, 12) * st - 0.3 * Math.hypot(cx(c % NX) - mx, cy((c - c % NX) / NX) - my);
+        if (sc > bd){ bd = sc; best = c; }
+      });
+      r.p = [cx(best % NX), cy((best - best % NX) / NX)];
+      r.area = r.cells.length * st * st / 1e6;
+    });
+    rooms.sort(function(a, c){ return Math.floor(a.cym / 1500) - Math.floor(c.cym / 1500) || a.cxm - c.cxm; });
+    return {rooms: rooms, comp: comp, NX: NX, NY: NY, b: b, st: st};
+  }
+
+  function bfName(br, idx){
+    var zs = (S.zones || []).filter(function(z){ return ZK[z.k]; });
+    for (var i = 0; i < zs.length; i++){
+      var z = zs[i];
+      if (br.p[0] >= Math.min(z.x0, z.x1) && br.p[0] <= Math.max(z.x0, z.x1) && br.p[1] >= Math.min(z.y0, z.y1) && br.p[1] <= Math.max(z.y0, z.y1)) return ZK[z.k];
+    }
+    try { var cr = roomAt(br.p[0], br.p[1]); if (cr) return roomLbl(cr); } catch(e){}
+    var LET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    return idx < 26 ? LET[idx] : LET[Math.floor(idx / 26) - 1] + LET[idx % 26];
+  }
+
+  /* 部屋の「元」を引く：部屋ごとの記録（roomFin の点が工事前の部屋に入るもの）→ 今の部屋の記録 → 全体の記録 */
+  function bfFin(br, B){
+    var e = null;
+    (S.roomFin || []).forEach(function(en){
+      if (!en.p) return;
+      var i = Math.floor((en.p[0] - B.b.x0) / B.st), j = Math.floor((en.p[1] - B.b.y0) / B.st);
+      if (i < 0 || j < 0 || i >= B.NX || j >= B.NY) return;
+      if (B.comp[j * B.NX + i] === br.cid) e = en;
+    });
+    var ce = null;
+    try { var cr = roomAt(br.p[0], br.p[1]); if (cr){ var o = roomFinOf(cr); if (o && !o.auto) ce = o; } } catch(err){}
+    return {
+      cur: (e && e.cur) || (ce && ce.cur) || S.rfCur || "wood",
+      cc: (e && e.cc) || (ce && ce.cc) || S.rfCeilCur || "board",
+      perCc: !!((e && e.cc) || (ce && ce.cc))
+    };
+  }
+
+  function bandPts(P, a, c, half){
+    var A = P(a), C = P(c), dx = C[0] - A[0], dy = C[1] - A[1], L = Math.hypot(dx, dy) || 1, nx = -dy / L * half, ny = dx / L * half;
+    return r2(A[0] + nx) + "," + r2(A[1] + ny) + " " + r2(C[0] + nx) + "," + r2(C[1] + ny) + " " + r2(C[0] - nx) + "," + r2(C[1] - ny) + " " + r2(A[0] - nx) + "," + r2(A[1] - ny);
+  }
+
+  /* 壁（二重線）：平面図モードと同じ。違うのは間仕切りの出し方（撤去を含め、新設を除く）だけ */
+  function bfWalls(P, bandO, bandP){
+    var p = pts(), lwO = 1.7, lwP = 1.3, black = "", white = "", partSegs = [];
+    (S.parts2D || []).forEach(function(q){
+      if (pState(q) === "new") return;
+      var Lh = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (Lh < 30) return;
+      var ux = (q.x2 - q.x1) / Lh, uy = (q.y2 - q.y1) / Lh, ext = 40;
+      partSegs.push([[q.x1 - ux * ext, q.y1 - uy * ext], [q.x2 + ux * ext, q.y2 + uy * ext]]);
+    });
+    (S.wallLines || []).forEach(function(w){ if (Math.hypot(w.x2 - w.x1, w.y2 - w.y1) >= 30) partSegs.push([[w.x1, w.y1], [w.x2, w.y2]]); });
+    partSegs.forEach(function(sc){ black += "<polygon class=\"bfPart\" points=\"" + bandPts(P, sc[0], sc[1], bandP / 2) + "\" fill=\"#111\"/>"; });
+    for (var i = 0; i < p.length; i++){ if (i === S.noWall) continue; black += "<polygon class=\"bfWall\" points=\"" + bandPts(P, p[i], p[(i + 1) % p.length], bandO / 2) + "\" fill=\"#111\"/>"; }
+    partSegs.forEach(function(sc){ white += "<polygon points=\"" + bandPts(P, sc[0], sc[1], Math.max(0.6, bandP / 2 - lwP)) + "\" fill=\"#fff\"/>"; });
+    for (var i2 = 0; i2 < p.length; i2++){ if (i2 === S.noWall) continue; white += "<polygon points=\"" + bandPts(P, p[i2], p[(i2 + 1) % p.length], Math.max(0.6, bandO / 2 - lwO)) + "\" fill=\"#fff\"/>"; }
+    if (S.noWall >= 0 && p[S.noWall]){
+      var a = P(p[S.noWall]), c = P(p[(S.noWall + 1) % p.length]);
+      white += "<line x1=\"" + r2(a[0]) + "\" y1=\"" + r2(a[1]) + "\" x2=\"" + r2(c[0]) + "\" y2=\"" + r2(c[1]) + "\" stroke=\"#111\" stroke-width=\"1.1\" stroke-dasharray=\"5 4\"/>";
+    }
+    return black + white;
+  }
+
+  /* 建具・窓の記号：平面図モード（pvSashes）と同じ描き方。新設の物と、新設の壁に付く物は描かない */
+  function bfSashes(P, s, bandO, bandP){
+    var g = "";
+    var p = pts();
+    (S.sashes || []).forEach(function(sa){
+      if (!sa.drawn || !sa.host) return;
+      if (sState(sa) === "new") return;
+      if (sa.host.t === "p"){ var hq = (S.parts2D || [])[sa.host.i]; if (hq && pState(hq) === "new") return; }
+      var seg = hostSeg(sa.host); if (!seg) return;
+      var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+      var u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L];
+      var n = [-u[1], u[0]];
+      var mid = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+      if (sa.host.t === "e" && !inside([mid[0] + n[0] * 50, mid[1] + n[1] * 50], p)) n = [-n[0], -n[1]];
+      if (sa.flip & 1) n = [-n[0], -n[1]];
+      var p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L);
+      var A = [a[0] + u[0] * p0, a[1] + u[1] * p0], B = [A[0] + u[0] * w, A[1] + u[1] * w];
+      var band = sa.host.t === "e" ? bandO : bandP;
+      var PA = P(A), PB = P(B), np = [n[0], n[1]];
+      var off = function(Pt, px){ return [Pt[0] + np[0] * px, Pt[1] + np[1] * px]; };
+      var half = band / 2 + 1.5;
+      g += "<polygon points=\"" + off(PA, half).join(",") + " " + off(PB, half).join(",") + " " + off(PB, -half).join(",") + " " + off(PA, -half).join(",") + "\" fill=\"#fff\"/>";
+      var jamb = function(Pt){ return "<line x1=\"" + (Pt[0] - np[0] * band / 2) + "\" y1=\"" + (Pt[1] - np[1] * band / 2) + "\" x2=\"" + (Pt[0] + np[0] * band / 2) + "\" y2=\"" + (Pt[1] + np[1] * band / 2) + "\" stroke=\"#111\" stroke-width=\"1.3\"/>"; };
+      var kind = kindOf(sa), ty = typeOf(sa);
+      if (kind === "open"){ g += jamb(PA) + jamb(PB); return; }
+      if (kind === "shut"){
+        var o1 = off(PA, -band / 2), o2 = off(PB, -band / 2), o3 = off(PB, -band / 2 - 5), o4 = off(PA, -band / 2 - 5);
+        g += "<polygon points=\"" + o1.join(",") + " " + o2.join(",") + " " + o3.join(",") + " " + o4.join(",") + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.3\"/>";
+        g += "<line x1=\"" + off(PA, -band * 0.2)[0] + "\" y1=\"" + off(PA, -band * 0.2)[1] + "\" x2=\"" + off(PB, -band * 0.2)[0] + "\" y2=\"" + off(PB, -band * 0.2)[1] + "\" stroke=\"#111\" stroke-width=\"1.1\"/>";
+        g += jamb(PA) + jamb(PB); return;
+      }
+      if (ty === "door"){
+        var leaf = function(hinge, other, len){
+          var tip = [hinge[0] + n[0] * len, hinge[1] + n[1] * len];
+          var PT = P(tip), PO = P(other), PH = P(hinge), r = len * s;
+          var sweep = (n[0] * (other[1] - hinge[1]) - n[1] * (other[0] - hinge[0])) > 0 ? 1 : 0;
+          return "<line x1=\"" + PH[0] + "\" y1=\"" + PH[1] + "\" x2=\"" + PT[0] + "\" y2=\"" + PT[1] + "\" stroke=\"#111\" stroke-width=\"1.6\"/><path d=\"M" + PT[0] + " " + PT[1] + " A" + r + " " + r + " 0 0 " + sweep + " " + PO[0] + " " + PO[1] + "\" fill=\"none\" stroke=\"#111\" stroke-width=\"1\"/>";
+        };
+        if (/親子/.test(sa.name || "")){
+          var fl = !!(sa.flip & 2), wp = Math.round(w * 0.7 / 5) * 5, HP = fl ? B : A, HC = fl ? A : B, sg = fl ? -1 : 1;
+          var M = [HP[0] + sg * u[0] * wp, HP[1] + sg * u[1] * wp];
+          g += leaf(HP, M, wp) + leaf(HC, M, w - wp);
+        } else {
+          var hinge = sa.flip & 2 ? B : A, other = sa.flip & 2 ? A : B;
+          g += leaf(hinge, other, w);
+        }
+        return;
+      }
+      if (ty === "hiki" || ty === "chigai"){
+        var ln = function(from, o, len, back){
+          var q1 = [from[0] + n[0] * o, from[1] + n[1] * o], q2 = [q1[0] + u[0] * len * (back ? -1 : 1), q1[1] + u[1] * len * (back ? -1 : 1)];
+          var Q1 = P(q1), Q2 = P(q2);
+          return "<line x1=\"" + Q1[0] + "\" y1=\"" + Q1[1] + "\" x2=\"" + Q2[0] + "\" y2=\"" + Q2[1] + "\" stroke=\"#111\" stroke-width=\"1.8\"/>";
+        };
+        if (ty === "hiki") g += ln(A, 35, w, false);
+        else g += ln(A, 35, w / 2 + 20, false) + ln(B, -35, w / 2 + 20, true);
+        g += jamb(PA) + jamb(PB); return;
+      }
+      if (ty === "closet"){
+        var kk = sa.w > 1200 ? 4 : 2, d = w / kk;
+        var path = "M" + P(A).join(" ");
+        for (var j = 1; j <= kk; j++){
+          var base = [A[0] + u[0] * d * j, A[1] + u[1] * d * j];
+          var peak = [A[0] + u[0] * d * (j - 0.5) + n[0] * d * 0.5, A[1] + u[1] * d * (j - 0.5) + n[1] * d * 0.5];
+          path += " L" + P(peak).join(" ") + " L" + P(base).join(" ");
+        }
+        g += "<path d=\"" + path + "\" fill=\"none\" stroke=\"#111\" stroke-width=\"1.4\"/>";
+        g += jamb(PA) + jamb(PB); return;
+      }
+      [-0.26, 0, 0.26].forEach(function(f){
+        var o = band * f;
+        g += "<line x1=\"" + (PA[0] + np[0] * o) + "\" y1=\"" + (PA[1] + np[1] * o) + "\" x2=\"" + (PB[0] + np[0] * o) + "\" y2=\"" + (PB[1] + np[1] * o) + "\" stroke=\"#111\" stroke-width=\"1.1\"/>";
+      });
+      g += jamb(PA) + jamb(PB);
+    });
+    return g;
+  }
+
+  function bfNorth(W){
+    var cx = W - 24, cy = 32, d = northDeg();
+    return "<g transform=\"rotate(" + d + " " + cx + " " + cy + ")\"><circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"13\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.2\"/><polygon points=\"" + cx + "," + (cy - 8) + " " + (cx - 4.5) + "," + (cy + 6) + " " + cx + "," + (cy + 2.5) + " " + (cx + 4.5) + "," + (cy + 6) + "\" fill=\"#111\"/><text x=\"" + cx + "\" y=\"" + (cy - 18) + "\" text-anchor=\"middle\" style=\"font-size:11px;font-weight:700;fill:#111\">N</text></g>";
+  }
+
+  function bfRender(){
+    var svg = document.getElementById("pvSvg"); if (!svg) return;
+    var lg = document.getElementById("pvLegend");
+    if (!S.edges || !S.edges.length){ svg.innerHTML = ""; if (lg) lg.textContent = "既存図：まだ図面がありません。"; return; }
+    var b = bbox(), W = 360, mL = 68, mT = 68, mR = 42, mB = 38;
+    var s = Math.min((W - mL - mR) / b.w, (470 - mT - mB) / b.h);
+    var H = Math.round(mT + b.h * s + mB);
+    var P = function(q){ return [mL + (q[0] - b.x0) * s, mT + (q[1] - b.y0) * s]; };
+    var bandO = Math.max(8, 165 * s), bandP = Math.max(6.5, 120 * s);
+    var rec = hasRecords();
+    var g = "";
+    g += "<text x=\"" + mL + "\" y=\"30\" style=\"font-size:16px;font-weight:900;fill:#111\">既存図（工事前）</text>";
+    /* 全体の寸法（上＝幅、左＝高さ） */
+    var xa = P([b.x0, b.y0])[0], xb = P([b.x1, b.y0])[0], ya = P([b.x0, b.y0])[1], yb = P([b.x0, b.y1])[1], yT = mT - 14, xL = mL - 14;
+    g += "<line x1=\"" + xa + "\" y1=\"" + yT + "\" x2=\"" + xb + "\" y2=\"" + yT + "\" stroke=\"#111\" stroke-width=\"1\"/>";
+    g += "<line x1=\"" + (xa - 3) + "\" y1=\"" + (yT + 3) + "\" x2=\"" + (xa + 3) + "\" y2=\"" + (yT - 3) + "\" stroke=\"#111\" stroke-width=\"1\"/><line x1=\"" + (xb - 3) + "\" y1=\"" + (yT + 3) + "\" x2=\"" + (xb + 3) + "\" y2=\"" + (yT - 3) + "\" stroke=\"#111\" stroke-width=\"1\"/>";
+    g += "<text x=\"" + ((xa + xb) / 2) + "\" y=\"" + (yT - 5) + "\" text-anchor=\"middle\" style=\"font-size:10.5px;fill:#111\">" + fmt(b.w) + "</text>";
+    g += "<line x1=\"" + xL + "\" y1=\"" + ya + "\" x2=\"" + xL + "\" y2=\"" + yb + "\" stroke=\"#111\" stroke-width=\"1\"/>";
+    g += "<line x1=\"" + (xL - 3) + "\" y1=\"" + (ya + 3) + "\" x2=\"" + (xL + 3) + "\" y2=\"" + (ya - 3) + "\" stroke=\"#111\" stroke-width=\"1\"/><line x1=\"" + (xL - 3) + "\" y1=\"" + (yb + 3) + "\" x2=\"" + (xL + 3) + "\" y2=\"" + (yb - 3) + "\" stroke=\"#111\" stroke-width=\"1\"/>";
+    g += "<text transform=\"rotate(-90 " + (xL - 5) + " " + ((ya + yb) / 2) + ")\" x=\"" + (xL - 5) + "\" y=\"" + ((ya + yb) / 2) + "\" text-anchor=\"middle\" style=\"font-size:10.5px;fill:#111\">" + fmt(b.h) + "</text>";
+    g += bfWalls(P, bandO, bandP);
+    g += bfSashes(P, s, bandO, bandP);
+    var B = bfRooms();
+    B.rooms.forEach(function(r, idx){
+      var c = P(r.p);
+      g += "<text class=\"bfRoomName\" x=\"" + c[0] + "\" y=\"" + c[1] + "\" text-anchor=\"middle\" style=\"font-size:14px;font-weight:700;fill:#111\">" + escS(bfName(r, idx)) + "</text>";
+      g += "<text x=\"" + c[0] + "\" y=\"" + (c[1] + 15) + "\" text-anchor=\"middle\" style=\"font-size:10px;fill:#111\">" + fmt(r.area / 1.62, 1) + "帖</text>";
+      if (rec){
+        var f = bfFin(r, B);
+        g += "<text class=\"bfFloor\" x=\"" + c[0] + "\" y=\"" + (c[1] + 30) + "\" text-anchor=\"middle\" style=\"font-size:10.5px;fill:#111\">床：" + (CUR[f.cur] || "") + "</text>";
+        if (f.perCc || f.cc === "lami") g += "<text class=\"bfCeil\" x=\"" + c[0] + "\" y=\"" + (c[1] + 45) + "\" text-anchor=\"middle\" style=\"font-size:10.5px;fill:#111\">天井：" + (CCN[f.cc] || "") + "</text>";
+      }
+    });
+    g += bfNorth(W);
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = g;
+    if (lg) lg.textContent = rec
+      ? "既存図（工事前）：仕様に記録した「元は何だったか」から作っています。撤去する壁は工事前にあったものとして描き、新しく作る壁は描いていません。記録のない所は、今の状態で描いています。"
+      : "既存図（工事前）：工事前の記録がまだありません。今の図面を表示しています。仕様で「既存の床」などを決めると、工事前の図面がここに出ます。";
+  }
+
+  function segBtns(){
+    var seg = document.getElementById("pvSeg");
+    return seg ? Array.prototype.slice.call(seg.querySelectorAll("[data-pv]")) : [];
+  }
+  function bfSet(on){
+    var st = document.getElementById("st6"); if (!st) return;
+    bfOn = !!on;
+    st.classList.toggle("bfOn", bfOn);
+    if (bfOn){
+      st.classList.add("pvOn");
+      segBtns().forEach(function(btn){ btn.setAttribute("aria-pressed", String(btn.dataset.pv === "before")); });
+      bfRender();
+    }
+  }
+  function bfOff(full){
+    bfOn = false;
+    var st = document.getElementById("st6"); if (!st) return;
+    st.classList.remove("bfOn");
+    if (full){
+      st.classList.remove("pvOn");
+      segBtns().forEach(function(btn){ btn.setAttribute("aria-pressed", String(btn.dataset.pv === "iso")); });
+    }
+  }
+  function bfInit(){
+    var seg = document.getElementById("pvSeg");
+    if (!seg || document.getElementById("bfBtn")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "bfBtn"; b.dataset.pv = "before"; b.textContent = "既存図";
+    b.setAttribute("aria-pressed", "false"); b.style.display = "none";
+    seg.appendChild(b);
+    b.addEventListener("click", function(){
+      if (bfOn) bfOff(true);
+      else { if (S.mode !== "rf") return; bfSet(true); }
+    });
+    seg.addEventListener("click", function(e){
+      var t = e.target && e.target.closest ? e.target.closest("[data-pv]") : null;
+      if (t && t.dataset.pv !== "before" && bfOn) bfOff(false);
+    }, true);
+  }
+  bfInit();
+  /* 完成図が描き直されるたび、既存図モードなら既存図も今のデータで描き直す（平面図モードの包み方の後ろに重ねる） */
+  if (typeof drawIso === "function" && !drawIso.__bf129){
+    var oIso = drawIso;
+    var wIso = function(){ var r = oIso.apply(this, arguments); try { if (bfOn) bfRender(); } catch(e){} return r; };
+    wIso.__bf129 = true;
+    drawIso = wIso;
+  }
+  setInterval(function(){
+    try {
+      bfInit();
+      var b = document.getElementById("bfBtn");
+      if (b){
+        var rf = S.mode === "rf";
+        b.style.display = rf ? "" : "none";
+        if (!rf && bfOn) bfOff(true);
+        if (b.getAttribute("aria-pressed") !== String(bfOn)) b.setAttribute("aria-pressed", String(bfOn));
+      }
+      var st = document.getElementById("st6");
+      if (bfOn && st && !st.classList.contains("pvOn")) bfOff(false);
+    } catch(e){}
+  }, 600);
+  window.__bf129 = { on: function(){ return bfOn; }, render: bfRender, set: bfSet };
+})();
+</script>
 </body>
 </html>
