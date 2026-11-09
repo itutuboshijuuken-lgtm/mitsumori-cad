@@ -489,7 +489,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">＋ 描き足す</button><button class="btn sub" id="zKagen" onclick="openKakigen()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">－ 描き減らす</button><button class="btn sub" id="zHen" onclick="toggleHenDel120()" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">辺を消す</button><button class="btn sub" id="zSen" onclick="openSode()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">＋ 線だけ増やす</button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
       <button id="zOut" type="button" style="width:48px;height:42px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:900;color:var(--ai)">−</button>
       <button id="zIn" type="button" style="width:48px;height:42px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:900;color:var(--ai)">＋</button>
-      <button id="zAll" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全体</button></div>
+      <button id="zAll" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全体</button><button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
     <p class="hint" id="dimHint"></p>
@@ -510,7 +510,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="zIn2" type="button">＋</button><button id="zOut2" type="button">−</button><button id="zAll2" type="button" style="font-size:11px">全体</button><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="zIn2" type="button">＋</button><button id="zOut2" type="button">−</button><button id="zAll2" type="button" style="font-size:11px">全体</button><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：間仕切りの線をなぞると、その部分が消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -3787,8 +3787,8 @@ function houseSide(){
 function drawPlan(){
   drawPlanCompass();
   let Ht = 0;
-  if (window.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (window.__pinH || 0)) window.__pinH = r.height; Ht = 360 * (window.__pinH || r.height) / r.width; } }
-  const p = pts(), b = bbox(), pad = window.__pageM ? 36 : 66, W = 360, maxH = Ht || (window.__pageM ? 470 : 340);
+  if (window.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ const asp128 = r.width > r.height; if (window.__aspM !== undefined && window.__aspM !== asp128) window.__pinH = 0; window.__aspM = asp128; window.__landM128 = asp128; if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (window.__pinH || 0)) window.__pinH = r.height; Ht = 360 * (window.__pinH || r.height) / r.width; if (asp128){ try{ const bb128 = bbox(); const sW128 = (360 - 32) / Math.max(1, bb128.w); const Hf128 = bb128.h * sW128 + 32; if (isFinite(Hf128) && Ht < Hf128) Ht = Hf128; }catch(e128){} } } }
+  const p = pts(), b = bbox(), pad = window.__pageM ? (window.__landM128 ? 16 : 36) : 66, W = 360, maxH = Ht || (window.__pageM ? 470 : 340);
   const s = Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
   const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? (Ht - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
@@ -12134,6 +12134,263 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   };
   slot.addEventListener("pointerup", end, true);
   slot.addEventListener("pointercancel", end, true);
+})();
+</script>
+
+<script>
+/* CAD-128: 消しゴム(49) / 全部閉じる(50) / 全画面・図面だけ表示(51) / 横向き補助(48) */
+(function(){
+  "use strict";
+  var css = [
+    /* item 48: compact chrome in landscape so the canvas gets the height */
+    "@media (orientation: landscape) and (max-height: 600px){",
+    " .top .bar{padding:3px 12px 2px}",
+    " .top .bar button{min-height:30px}",
+    " .top h1{font-size:14px}",
+    " .steps{padding:2px 6px 3px}",
+    " .steps button{min-height:26px!important;font-size:11px;padding:3px 2px}",
+    " .steps button b{display:inline;font-size:10px;margin:0 2px 0 0}",
+    " #tradeRow{padding:0 12px 2px}",
+    " #tradeRow button{min-height:22px;font-size:12px}",
+    " #stM{padding:3px 4px calc(3px + env(safe-area-inset-bottom,0px));gap:3px}",
+    " #stM .mtools{gap:3px}",
+    " #stM .modeSeg button{min-height:26px;height:26px;font-size:12px}",
+    " .mrow button{min-height:27px;font-size:12px}",
+    " #planBar{min-height:30px}",
+    " #planBar button{width:32px;height:32px;font-size:15px}",
+    " #planBar #delToolBtn,#planBar #nazoruBtn,#planBar #eraToolBtn,#planBar #fsBtn{width:auto;height:32px}",
+    "}",
+    /* planBar new buttons */
+    "#planBar{gap:4px}",
+    "#planBar #eraToolBtn,#planBar #fsBtn{width:auto;padding:0 7px;font-size:12.5px}",
+    "#planBar #eraToolBtn[aria-pressed=\"true\"]{background:var(--ai);color:#fff;border-color:var(--ai)}",
+    /* item 51: drawing-only / full-screen */
+    "body.fsDraw{--hdrH:0px}",
+    "body.fsDraw header.top{display:none!important}",
+    "body.fsDraw #stM .mtools,body.fsDraw #planBar{display:none!important}",
+    "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext{display:none!important}",
+    "#fsRestoreBtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:9000;min-height:40px;padding:0 16px;border-radius:20px;border:2px solid var(--ai);background:#fff;color:var(--ai);font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
+    /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
+    "#closeAllFloat{position:fixed;right:10px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:#fff;color:#37474F;font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
+    /* item 49: eraser armed -> plan svg takes the drag */
+    "body.eratool #slotM svg{touch-action:none!important}"
+  ].join("\n");
+  var sty = document.createElement("style"); sty.id = "cad128Sty"; sty.textContent = css;
+  document.head.appendChild(sty);
+
+  /* ---------------- item 49: eraser ---------------- */
+  window.__eraTool = false;
+  var ERA_R = 180;               /* brush radius, mm */
+  var eraInk = null;             /* active rub stroke */
+  function eraBtn(){ return document.getElementById("eraToolBtn"); }
+  function eraPaint(){
+    var b = eraBtn(); if (!b) return;
+    if (window.__eraTool){ b.classList.add("armBlink"); b.setAttribute("aria-pressed", "true"); }
+    else { b.classList.remove("armBlink"); b.setAttribute("aria-pressed", "false"); }
+  }
+  function eraOff(silent){
+    if (eraInk){ try{ eraInk.el.remove(); }catch(e){} eraInk = null; }
+    if (!window.__eraTool) return;
+    window.__eraTool = false;
+    document.body.classList.remove("eratool");
+    eraPaint();
+    if (!silent){ try{ drawToolsUI(); }catch(e){} }
+  }
+  window.__eraOff = eraOff;
+  function eraOn(){
+    try{ if (window.__delMode && window.__delSet) window.__delSet(false); }catch(e){}
+    try{ if (window.__partDrawOff) window.__partDrawOff(true); }catch(e){}
+    try{ if (typeof enclMode !== "undefined" && enclMode) enclOff(); }catch(e){}
+    try{ ltTool = null; }catch(e){}
+    try{ tool = null; }catch(e){}
+    try{ sel = null; }catch(e){}
+    window.__eraTool = true;
+    document.body.classList.add("eratool");
+    eraPaint();
+    try{ drawToolsUI(); }catch(e){}
+    toast("消しゴム：間仕切りの線をなぞると、その部分が消えます");
+  }
+  var eb0 = eraBtn();
+  if (eb0) eb0.onclick = function(){ if (window.__eraTool) eraOff(false); else eraOn(); };
+
+  function applyErase(mmPts){
+    var parts = S.parts2D || [];
+    if (!parts.length || !mmPts.length) return;
+    var out = [], pieceMap = {}, changed = false;
+    parts.forEach(function(q, idx){
+      var a = [q.x1, q.y1], c = [q.x2, q.y2];
+      var L = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (L < 1){ out.push(q); pieceMap[idx] = [{ ni: out.length - 1, s: 0, e: L }]; return; }
+      var iv = [];
+      mmPts.forEach(function(p){
+        var r = segDist(p, a, c);
+        if (r.d < ERA_R){ var half = Math.sqrt(ERA_R * ERA_R - r.d * r.d); iv.push([Math.max(0, r.t * L - half), Math.min(L, r.t * L + half)]); }
+      });
+      if (!iv.length){ out.push(q); pieceMap[idx] = [{ ni: out.length - 1, s: 0, e: L }]; return; }
+      changed = true;
+      iv.sort(function(x, y){ return x[0] - y[0]; });
+      var merged = [iv[0].slice()];
+      for (var k = 1; k < iv.length; k++){ var last = merged[merged.length - 1]; if (iv[k][0] <= last[1]) last[1] = Math.max(last[1], iv[k][1]); else merged.push(iv[k].slice()); }
+      var pieces = [], cur = 0;
+      merged.forEach(function(m){ if (m[0] - cur >= 100) pieces.push([cur, m[0]]); cur = Math.max(cur, m[1]); });
+      if (L - cur >= 100) pieces.push([cur, L]);
+      var ux = (c[0] - a[0]) / L, uy = (c[1] - a[1]) / L, recs = [];
+      pieces.forEach(function(pc){
+        var nq = Object.assign({}, q);
+        nq.x1 = Math.round((a[0] + ux * pc[0]) * 2) / 2; nq.y1 = Math.round((a[1] + uy * pc[0]) * 2) / 2;
+        nq.x2 = Math.round((a[0] + ux * pc[1]) * 2) / 2; nq.y2 = Math.round((a[1] + uy * pc[1]) * 2) / 2;
+        out.push(nq); recs.push({ ni: out.length - 1, s: pc[0], e: pc[1] });
+      });
+      pieceMap[idx] = recs;
+    });
+    if (!changed) return;
+    pushUndo();
+    /* remap sashes hosted on partitions (delPart pattern, extended for splits) */
+    (S.sashes || []).forEach(function(sa){
+      if (!sa.host || sa.host.t !== "p") return;
+      var recs = pieceMap[sa.host.i];
+      if (!recs){ sa.__drop128 = true; return; }
+      if (recs.length === 1 && recs[0].s === 0){ sa.host.i = recs[0].ni; return; } /* untouched or pure shift */
+      var s0 = sa.pos || 0, s1 = s0 + (sa.w || 0), best = null, bestOv = 0;
+      recs.forEach(function(rc){ var ov = Math.min(s1, rc.e) - Math.max(s0, rc.s); if (ov > bestOv){ bestOv = ov; best = rc; } });
+      if (!best){ sa.__drop128 = true; return; }
+      sa.host.i = best.ni; sa.pos = Math.max(0, s0 - best.s);
+    });
+    S.sashes = (S.sashes || []).filter(function(sa){ return !sa.__drop128; });
+    S.parts2D = out;
+    try{ sel = null; }catch(e){}
+    save(); drawPlan();
+  }
+  var slot = document.getElementById("slotM");
+  if (slot){
+    slot.addEventListener("pointerdown", function(e){
+      if (!window.__eraTool || !window.__pageM || !S.edges) return;
+      if (e.target.closest && e.target.closest("button")) return;
+      if (typeof enclMode !== "undefined" && enclMode) return;
+      if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
+      if (window.__delMode || window.__partDraw) return;
+      if (e.isPrimary === false) return;
+      e.preventDefault(); e.stopPropagation();
+      try{ slot.setPointerCapture(e.pointerId); }catch(er){}
+      var p = planPt(e);
+      eraInk = { id: e.pointerId, sv: [p], mm: [toMM(p)] };
+      var pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      pl.id = "eraInk"; pl.setAttribute("fill", "none"); pl.setAttribute("stroke", "#C62828");
+      pl.setAttribute("stroke-width", "12"); pl.setAttribute("stroke-linecap", "round");
+      pl.setAttribute("stroke-linejoin", "round"); pl.setAttribute("stroke-opacity", ".35");
+      pl.setAttribute("points", p[0] + "," + p[1]);
+      document.getElementById("plan").appendChild(pl); eraInk.el = pl;
+    }, true);
+    slot.addEventListener("pointermove", function(e){
+      if (!eraInk || e.pointerId !== eraInk.id) return;
+      e.preventDefault();
+      var p = planPt(e), last = eraInk.sv[eraInk.sv.length - 1];
+      if (Math.hypot(p[0] - last[0], p[1] - last[1]) < 1.5) return;
+      eraInk.sv.push(p); eraInk.mm.push(toMM(p));
+      eraInk.el.setAttribute("points", eraInk.sv.map(function(q){ return q[0] + "," + q[1]; }).join(" "));
+    }, true);
+    function eraEnd(e){
+      if (!eraInk || e.pointerId !== eraInk.id) return;
+      var mm = eraInk.mm.slice();
+      try{ eraInk.el.remove(); }catch(er){}
+      eraInk = null;
+      applyErase(mm);
+    }
+    slot.addEventListener("pointerup", eraEnd, true);
+    slot.addEventListener("pointercancel", eraEnd, true);
+  }
+
+  /* ---------------- item 51: full-screen / drawing-only ---------------- */
+  var fsState = "off"; /* off | auto | manual */
+  window.__fsState = function(){ return fsState; };
+  function afterFs(){
+    window.__pinH = 0;
+    try{ var hd = document.querySelector("header.top"); document.documentElement.style.setProperty("--hdrH", (document.body.classList.contains("fsDraw") ? 0 : (hd ? hd.offsetHeight : 100)) + "px"); }catch(e){}
+    try{ drawPlan(); }catch(e){}
+    syncFloats();
+  }
+  function fsEnter(kind){
+    if (fsState !== "off"){ if (kind === "manual") fsState = "manual"; syncFloats(); return; }
+    fsState = kind;
+    document.body.classList.add("fsDraw");
+    afterFs();
+  }
+  function fsExit(){
+    if (fsState === "off") return;
+    fsState = "off";
+    document.body.classList.remove("fsDraw");
+    afterFs();
+  }
+  window.__fsExit = fsExit;
+  function disarmCovered(){
+    try{ if (window.__partDrawOff) window.__partDrawOff(true); }catch(e){}
+    eraOff(true);
+    try{ if (window.__delMode && window.__delSet) window.__delSet(false); }catch(e){}
+    try{ if (typeof enclMode !== "undefined" && enclMode) enclOff(); }catch(e){}
+  }
+  var fsB = document.getElementById("fsBtn");
+  if (fsB) fsB.onclick = function(){ if (fsState === "off") fsEnter("manual"); else fsExit(); };
+  var zFsB = document.getElementById("zFs");
+  if (zFsB) zFsB.onclick = function(){ if (fsState === "off") fsEnter("manual"); else fsExit(); };
+
+  var rb = document.createElement("button");
+  rb.id = "fsRestoreBtn"; rb.type = "button"; rb.textContent = "戻す"; rb.style.display = "none";
+  rb.onclick = function(){ disarmCovered(); fsExit(); };
+  document.body.appendChild(rb);
+
+  /* ---------------- item 50: close all ---------------- */
+  window.__closeAll = function(){
+    fsExit();
+    disarmCovered();
+    try{ closePad(); }catch(e){}
+    try{ var m = document.getElementById("modal"); if (m) m.hidden = true; }catch(e){}
+    try{ var ps = document.getElementById("proSheet"); if (ps) ps.style.display = "none"; }catch(e){}
+    try{ var ao = document.getElementById("askOv"); if (ao){ ao.style.display = "none"; ao.hidden = true; } }catch(e){}
+    try{ var dl = document.getElementById("drawnList"), sm = document.getElementById("stM"); if (dl){ dl.hidden = true; if (sm && dl.parentNode !== sm) sm.appendChild(dl); } }catch(e){}
+    try{ document.querySelectorAll("details.mo[open]").forEach(function(d){ d.removeAttribute("open"); }); }catch(e){}
+    try{ sel = null; }catch(e){}
+    try{ drawPlan(); }catch(e){}
+    syncFloats();
+  };
+  var cab = document.createElement("button");
+  cab.id = "closeAllFloat"; cab.type = "button"; cab.textContent = "全部閉じる ✕"; cab.style.display = "none";
+  cab.onclick = function(){ window.__closeAll(); };
+  document.body.appendChild(cab);
+
+  function syncFloats(){
+    var tut = document.body.classList.contains("nbtutRun");
+    var showCab = false, base = 24;
+    try{
+      var m = document.getElementById("modal"), pd2 = document.getElementById("pad"),
+          ps = document.getElementById("proSheet"), ao = document.getElementById("askOv"),
+          sb = document.getElementById("selBar"), eb = document.getElementById("enclBar");
+      if ((m && !m.hidden) || (pd2 && !pd2.hidden) || (ps && ps.style.display && ps.style.display !== "none") ||
+          (ao && ao.style.display === "flex") || fsState !== "off") showCab = true;
+      if (sb && !sb.hidden){ showCab = true; base = Math.max(base, sb.offsetHeight + 30); }
+      if (eb && !eb.hidden){ showCab = true; base = Math.max(base, eb.offsetHeight + 30); }
+    }catch(e){}
+    cab.style.display = (showCab && !tut) ? "" : "none";
+    cab.style.bottom = "calc(" + base + "px + env(safe-area-inset-bottom,0px))";
+    rb.style.display = fsState !== "off" ? "" : "none";
+  }
+
+  /* ---------------- shared sync: eraser auto-off + FS auto + floats ---------------- */
+  function sync128(){
+    try{
+      if (window.__eraTool && (window.__put || (typeof ltTool !== "undefined" && ltTool) || (typeof enclMode !== "undefined" && enclMode) || window.__partDraw || window.__delMode || !window.__pageM)) eraOff(true);
+    }catch(e){}
+    try{
+      var covered = !!(window.__partDraw || window.__eraTool || window.__delMode || (typeof enclMode !== "undefined" && enclMode));
+      if (covered && fsState === "off" && window.__pageM && !document.body.classList.contains("nbtutRun")) fsEnter("auto");
+      else if (!covered && fsState === "auto") fsExit();
+      if (fsState !== "off"){ var sm2 = document.getElementById("stM"), s2 = document.getElementById("st2"); if (sm2 && s2 && sm2.hidden && s2.hidden) fsExit(); }
+    }catch(e){}
+    syncFloats();
+  }
+  var ui0 = drawToolsUI;
+  drawToolsUI = function(){ var r = ui0.apply(this, arguments); try{ eraPaint(); }catch(e){} try{ sync128(); }catch(e){} return r; };
+  setInterval(function(){ try{ sync128(); }catch(e){} }, 700);
+  syncFloats();
 })();
 </script>
 </body>
