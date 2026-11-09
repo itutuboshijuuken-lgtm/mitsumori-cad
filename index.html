@@ -13,8 +13,8 @@
   box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 *,*::before,*::after{box-sizing:inherit}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+html{scroll-padding-top:env(safe-area-inset-top,0px);overscroll-behavior:none}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%;overscroll-behavior:none}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--ai)}
 button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation}
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:6;background:var(--ai);color:#fff}
@@ -35,6 +35,7 @@ main{max-width:560px;margin:0 auto;padding:12px 12px 120px}
 .btn.sub{border-color:var(--line);color:var(--sub)}
 .btn:disabled{opacity:.4}
 #draw{width:100%;display:block;touch-action:none;background:#fff;border-radius:8px}
+#draw *{touch-action:none}
 .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
 .chips button{min-height:40px;min-width:52px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:#fff;font-weight:700;font-size:15px}
 .chips button[aria-pressed="true"]{background:var(--ai);color:#fff;border-color:var(--ai)}
@@ -128,8 +129,9 @@ body.mfull main{padding:0}
 #slotM{flex:1;min-height:0;position:relative}
 #slotM #planWrap,#slotM .card{height:100%}
 #slotM #zRow{display:none!important}
-#slotM .card{padding:0!important;overflow:scroll!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior:contain;position:absolute!important;inset:0}
-#slotM svg{width:100%;height:100%;display:block;touch-action:pan-x pan-y}
+#slotM .card{padding:0!important;overflow:scroll!important;-webkit-overflow-scrolling:touch;touch-action:none;overscroll-behavior:contain;position:absolute!important;inset:0}
+#slotM svg{width:100%;height:100%;display:block;touch-action:none}
+#slotM svg *{touch-action:none}
 .mfloat{position:absolute;top:6px;z-index:2;display:flex;flex-direction:column;gap:4px}
 .mfloat button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.95);font-size:18px;font-weight:900;color:var(--ai)}
 #selBar{touch-action:manipulation;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px}
@@ -208,7 +210,7 @@ body.tatmode #slotM .card{box-shadow:inset 0 0 0 3px #7E8752}
 body.eramode #slotM .card,body.eramode #slotM svg{touch-action:none!important}
 body.eramode #slotM .card{box-shadow:inset 0 0 0 3px #C62828}
 body.enclmode #slotM .card,body.enclmode #slotM svg{touch-action:none!important}
-body.partdraw #slotM svg{touch-action:none!important}
+body.partdraw #slotM .card,body.partdraw #slotM svg{touch-action:none!important}
 body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #enclBar{touch-action:manipulation;background:#fff;border:2px solid #2563B0;border-radius:12px;padding:4px;box-sizing:border-box}
 #enclBar .ecd small{white-space:nowrap;overflow:hidden}
@@ -1616,7 +1618,7 @@ function applyPV(){
   PV.z = Math.max(1, Math.min(8, PV.z));
   if (window.__pageM){
     const c = mCard(), sv = $("plan"), fx = PV.cx / PV.W, fy = PV.cy / PV.H;
-    c.style.height = ""; c.style.overflow = ""; c.style.touchAction = "";
+    c.style.height = ""; c.style.overflow = ""; c.style.touchAction = ""; sv.style.touchAction = "";
     sv.setAttribute("viewBox", `0 0 ${PV.W} ${PV.H}`);
     sv.style.width = (PV.z * 100) + "%"; sv.style.height = window.__pinH ? (window.__pinH * PV.z) + "px" : (PV.z * 100) + "%";
     c.scrollLeft = fx * sv.clientWidth - c.clientWidth / 2; c.scrollTop = fy * sv.clientHeight - c.clientHeight / 2;
@@ -12173,7 +12175,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
     "#closeAllFloat{position:fixed;right:10px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:#fff;color:#37474F;font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
     /* item 49: eraser armed -> plan svg takes the drag */
-    "body.eratool #slotM svg{touch-action:none!important}"
+    "body.eratool #slotM .card,body.eratool #slotM svg{touch-action:none!important}"
   ].join("\n");
   var sty = document.createElement("style"); sty.id = "cad128Sty"; sty.textContent = css;
   document.head.appendChild(sty);
@@ -12733,6 +12735,26 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     } catch(e){}
   }, 600);
   window.__bf129 = { on: function(){ return bfOn; }, render: bfRender, set: bfSet };
+})();
+</script>
+<script>
+/* CAD-130: 描く面が指の動きをブラウザに奪われないための保険（touchmove の preventDefault）。
+   本命は CSS の touch-action:none と overscroll-behavior:none。
+   iOS Safari 等で子要素ヒット時にスクロールへ化ける取りこぼしを、ストローク中だけ止める。
+   タップ・ボタン・入力・シート内のスクロールには触らない。 */
+(function(){
+  "use strict";
+  var draw = document.getElementById("draw");
+  if (draw) draw.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive: false});
+  var slot = document.getElementById("slotM");
+  if (slot) slot.addEventListener("touchmove", function(e){
+    var b = document.body.classList;
+    if (b.contains("partdraw") || b.contains("eratool") || b.contains("enclmode") ||
+        b.contains("eramode") || b.contains("tatmode") || window.__partDraw || window.__eraTool){
+      e.preventDefault();
+    }
+  }, {passive: false});
+  window.__gest130 = true;
 })();
 </script>
 </body>
