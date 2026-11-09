@@ -12268,7 +12268,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext{display:none!important}",
     "#fsRestoreBtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:9000;min-height:40px;padding:0 16px;border-radius:20px;border:2px solid var(--ai);background:#fff;color:var(--ai);font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
     /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
-    "#closeAllFloat{position:fixed;right:10px;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:#fff;color:#37474F;font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
+    "#closeAllFloat{position:fixed;right:10px;top:calc(var(--hdrH,100px) + 6px);z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:#fff;color:#37474F;font-size:14px;font-weight:900;box-shadow:0 3px 12px rgba(0,0,0,.28)}",
+    /* CAD-133: 全画面中はヘッダーが消えて右上に「戻す」が出るので、その下へ逃がす */
+    "body.fsDraw #closeAllFloat{top:calc(env(safe-area-inset-top,0px) + 58px)}",
     /* item 49: eraser armed -> plan svg takes the drag */
     "body.eratool #slotM .card,body.eratool #slotM svg{touch-action:none!important}"
   ].join("\n");
@@ -12467,7 +12469,38 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       if (eb && !eb.hidden){ showCab = true; base = Math.max(base, eb.offsetHeight + 30); }
     }catch(e){}
     cab.style.display = (showCab && !tut) ? "" : "none";
-    cab.style.bottom = "calc(" + base + "px + env(safe-area-inset-bottom,0px))";
+    /* CAD-133: 位置は原則 CSS の top (ステップ帯のすぐ下・右端) が決める。
+       間取り (mfull) では道具帯 (#planBar) の下端が状態で上下するため、その下へ逃がす。
+       仕様・見積などの先頭にはモード切替の帯があり、右端のボタンが候補位置に来るため、
+       最後に「中心が自分の矩形に入る表示中ボタン」の下へ最大3回逃がす (実測ドッジ)。
+       全画面中と、覆いのあるシート (モーダル/確認ダイアログ) 表示中は CSS 側に任せる。 */
+    var highSheet = (m && !m.hidden) || (ao && ao.style.display === "flex");
+    if (fsState !== "off" || highSheet) cab.style.top = "";
+    else {
+      if (document.body.classList.contains("mfull")){
+        var pbr = null;
+        try{ var pbEl = document.getElementById("planBar"); if (pbEl) pbr = pbEl.getBoundingClientRect(); }catch(e){}
+        cab.style.top = (pbr && pbr.height > 0) ? (pbr.bottom + 6) + "px" : "";
+      } else cab.style.top = "";
+      if (showCab && !tut){
+        try{
+          for (var pass = 0; pass < 3; pass++){
+            var cr0 = cab.getBoundingClientRect(), nx = 0;
+            document.querySelectorAll("button, input, select, textarea").forEach(function(el){
+              if (el === cab) return;
+              if (el.checkVisibility && !el.checkVisibility()) return;
+              var r = el.getBoundingClientRect();
+              if (r.width < 2 || r.height < 2) return;
+              var cx = r.x + r.width / 2, cy = r.y + r.height / 2;
+              if (cx >= cr0.left && cx <= cr0.right && cy >= cr0.top && cy <= cr0.bottom) nx = Math.max(nx, r.bottom + 6);
+            });
+            if (!nx) break;
+            cab.style.top = nx + "px";
+          }
+        }catch(e){}
+      }
+    }
+    cab.style.bottom = "auto";
     rb.style.display = fsState !== "off" ? "" : "none";
   }
 
