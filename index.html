@@ -1343,6 +1343,7 @@ window.__sy = window.__sy || {}; if (step !== n) window.__sy[step] = window.scro
   document.querySelectorAll("details.rfAdv").forEach(d => { if (!RF()) d.open = true; });
   window.__pageM = n === "M";
   document.body.classList.toggle("mfull", n === "M");
+  document.body.classList.toggle("dlock", n === "M");
   document.documentElement.style.setProperty("--hdrH", document.querySelector("header.top").offsetHeight + "px");
   if (n === "M"){ try { fixAssign(); syncZoneExtras(); } catch(er){} }
   if (n !== "M"){ eraOff(); enclReset(); tatMode = false; document.body.classList.remove("tatmode"); sel = null; if ($("selBar")){ $("selBar").hidden = true; document.body.classList.remove("selon"); } }
@@ -12738,23 +12739,44 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 <script>
-/* CAD-130: 描く面が指の動きをブラウザに奪われないための保険（touchmove の preventDefault）。
-   本命は CSS の touch-action:none と overscroll-behavior:none。
-   iOS Safari 等で子要素ヒット時にスクロールへ化ける取りこぼしを、ストローク中だけ止める。
-   タップ・ボタン・入力・シート内のスクロールには触らない。 */
+/* CAD-131: 間取り画面で、道具なしのストロークや図面に重なる要素から始まるストロークも
+   ブラウザに奪われないための保険。CAD-130 のモジュールを置き換える。
+   (1) 間取り表示中は文書スクロールをロック (body.dlock は go() が付け外し。
+       html には overflow を付けない: 付けるとヘッダーのメニューと図面の重なりで
+       ヒットテストが反転し、メニューのボタンが押せなくなるため)。
+   (2) 間取り表示中 (__pageM) は、#stM 内と浮動要素 (#closeAllFloat / #fsRestoreBtn / .toast)
+       から始まる touch の touchmove を、道具の有無を問わず preventDefault する。
+       #drawnList と #modal の中は、シート側のスクロールに任せて除外する。
+   (3) 重なる要素にも touch-action:none を付ける。
+   ①描く画面は内容が画面より縦に長いので文書ロックはせず、#draw の常時ネット (CAD-130) のまま。
+   タップ・ボタン・入力には触らない (touchmove のみを止める)。 */
 (function(){
   "use strict";
+  var st = document.createElement("style");
+  st.id = "cad131Sty";
+  st.textContent = [
+    "body.dlock{overflow:hidden!important}",
+    "#slotM{touch-action:none}",
+    "#stM .mtools{touch-action:none}",
+    "#planBar{touch-action:none}",
+    "#stM #selBar{touch-action:none!important}",
+    "#stM #enclBar{touch-action:none!important}",
+    "#closeAllFloat{touch-action:none!important}",
+    "#fsRestoreBtn{touch-action:none!important}",
+    ".toast{touch-action:none!important}"
+  ].join("\n");
+  document.head.appendChild(st);
   var draw = document.getElementById("draw");
   if (draw) draw.addEventListener("touchmove", function(e){ e.preventDefault(); }, {passive: false});
-  var slot = document.getElementById("slotM");
-  if (slot) slot.addEventListener("touchmove", function(e){
-    var b = document.body.classList;
-    if (b.contains("partdraw") || b.contains("eratool") || b.contains("enclmode") ||
-        b.contains("eramode") || b.contains("tatmode") || window.__partDraw || window.__eraTool){
-      e.preventDefault();
-    }
+  document.addEventListener("touchmove", function(e){
+    if (!window.__pageM) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest("#drawnList") || t.closest("#modal")) return;
+    if (t.closest("#stM") || t.closest("#closeAllFloat") || t.closest("#fsRestoreBtn") || t.closest(".toast")) e.preventDefault();
   }, {passive: false});
   window.__gest130 = true;
+  window.__gest131 = true;
 })();
 </script>
 </body>
