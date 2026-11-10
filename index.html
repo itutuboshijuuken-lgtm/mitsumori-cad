@@ -2021,20 +2021,21 @@ function tatSvg(r, P){
   h += (Math.abs(b[0] - a[0]) >= 34 && Math.abs(b[1] - a[1]) >= 22 ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" class="halo" style="font-size:16px;font-weight:900;fill:#5A6230">${fmt(tatCount(r), 1)}帖</text><text x="${cx}" y="${cy + 22}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:${TST[st][1]}">${TST[st][0]}</text>` : "") + "</g>";
   return h;
 }
-// 囲んだ線 → 近くの壁・間仕切りに合わせた四角
-function tatFromStroke(pm){
+// CAD-158: 囲んだ形そのままの四角。壁・間仕切り・部屋には広げない。
+// 227.5 のグリッドにだけそろえ、家の輪郭の中に収める（床の囲みの共通形）。
+function floorRectFromStroke(pm){
   const xs = pm.map(q => q[0]), ys = pm.map(q => q[1]);
   let x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
   if (x1 - x0 < 400 || y1 - y0 < 400) return null;
-  const pol = pts(), b = bbox(), vx = [], hy = [];
-  pol.forEach((a, i) => { const c = pol[(i + 1) % pol.length]; if (Math.abs(a[0] - c[0]) < 1) vx.push(a[0]); else hy.push(a[1]); });
-  (S.parts2D || []).forEach(q => { if (pState(q) === "remove") return; if (q.x1 === q.x2) vx.push(q.x1); else hy.push(q.y1); });
-  const tol = Math.max(350, Math.min(x1 - x0, y1 - y0) * 0.25);
-  const snap = (v, list, o) => { let best = null; list.forEach(l => { if (Math.abs(l - v) < tol && (best == null || Math.abs(l - v) < Math.abs(best - v))) best = l; }); return best == null ? gSnap(v, o) : best; };
-  x0 = Math.max(b.x0, snap(x0, vx, b.x0)); x1 = Math.min(b.x1, snap(x1, vx, b.x0)); y0 = Math.max(b.y0, snap(y0, hy, b.y0)); y1 = Math.min(b.y1, snap(y1, hy, b.y0));
+  const b = bbox();
+  const cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  x0 = cl(gSnap(x0, b.x0), b.x0, b.x1); x1 = cl(gSnap(x1, b.x0), b.x0, b.x1);
+  y0 = cl(gSnap(y0, b.y0), b.y0, b.y1); y1 = cl(gSnap(y1, b.y0), b.y0, b.y1);
   if (x1 - x0 < 400 || y1 - y0 < 400) return null;
   return {x0, y0, x1, y1};
 }
+// 囲んだ線 → 囲んだ形そのままの四角（CAD-158: 壁への吸着はやめた）
+function tatFromStroke(pm){ return floorRectFromStroke(pm); }
 (() => {
   const slot = $("slotM"); if (!slot) return;
   const svgPt = e => planPt(e);
@@ -3010,6 +3011,7 @@ function enclShrinks(dir){ const s = enclStop(dir); return !!s && ((encl.shr && 
 const enclExLabel = dir => enclShrinks(dir) ? "縮める " + ENC_STEP + "mm" : "壁まで伸ばす";
 function enclExtend(dir){
   const r = encl && encl.r; if (!r) return;
+  encl.raw = null; // CAD-158: 手で直したら、なぞった形ではなく今の四角を使う
   if (enclShrinks(dir)){
     const v = ENC_STEP, bad = ((dir === "l" || dir === "r") ? r.x1 - r.x0 : r.y1 - r.y0) - v < 50;
     if (bad){ toast("これ以上小さくできません"); return; }
@@ -3025,7 +3027,7 @@ function enclExtend(dir){
   drawEnclBar(); drawPlan();
 }
 // 囲んだ範囲を直す（幅・奥行・左から・上から）
-function enclEdit(k, v){ if (encl) encl.shr = {};
+function enclEdit(k, v){ if (encl){ encl.shr = {}; encl.raw = null; }
   const r = encl.r, b = bbox(), w = r.x1 - r.x0, h = r.y1 - r.y0;
   if (k === "w"){ if (r.ax1 && !r.ax0) r.x0 = r.x1 - v; else r.x1 = r.x0 + v; }
   else if (k === "h"){ if (r.ay1 && !r.ay0) r.y0 = r.y1 - v; else r.y1 = r.y0 + v; }
@@ -3234,7 +3236,7 @@ if (rr0){ if (rr0.bad){ toast("この部屋は、まわりと壁でつながっ�
       if (!(typeof encl !== "undefined" && encl && encl.r)) toast("範囲を指でなぞってください"); return; /* CAD-84: 範囲が決まっている時は言わない */
     }
     const r = eraFromStroke(mm); if (!r){ toast("もう少し大きくなぞってください"); return; }
-    encl = {r, pick: "room"}; drawEnclBar(); drawPlan();
+    encl = {r, pick: "room", raw: floorRectFromStroke(mm)}; drawEnclBar(); drawPlan();
   };
   slot.addEventListener("pointerup", end, true); slot.addEventListener("pointercancel", end, true);
 })();
@@ -10859,16 +10861,54 @@ document.addEventListener("click", function(e){
     return _lpc.apply(this, arguments);
   };
 
-  // 実タップでも確実に効くよう、床の指定は pointerdown で受ける（他の配置と同じ経路）。
-  // click は、押した瞬間の再描画で要素が消えるとブラウザに取り消されるため、当てにしない。
+  // CAD-158: 床の指定は「タップ＝部屋全体」「なぞる＝囲んだ形そのまま」の2通りで受ける。
+  // 旧作りは pointerdown の瞬間に部屋タップとして置いていたため、なぞっても部屋全体
+  // （間仕切りが無い所では家全体）になってしまった（本人の実機動画 2026-11-10）。
+  // 確定は pointerup で行う。click は、押した瞬間の再描画で要素が消えるとブラウザに
+  // 取り消されるため、当てにしない（従来と同じ理由）。
+  let flInk158 = null;
+  function flInkClear158(){ if (flInk158){ if (flInk158.el) try { flInk158.el.remove(); } catch(er){} flInk158 = null; } }
   document.addEventListener("pointerdown", e => {
+    if (flInk158 && e.pointerId !== flInk158.id) flInkClear158();
     if (!window.__floorArm || sel || (typeof enclMode !== "undefined" && enclMode) || (typeof ltTool !== "undefined" && ltTool) || window.__put) return;
     if (!window.__pageM) return;
     const t = e.target;
     if (!t || !t.closest || !t.closest("#plan") || t.closest("button")) return;
-    try { ltPlanClick(toMM(planPt(e))); } catch(er){}
     e.preventDefault(); e.stopPropagation();
+    const p = planPt(e);
+    flInk158 = {id: e.pointerId, sv: [p], mm: [toMM(p)]};
+    const pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    pl.setAttribute("fill", "rgba(37,99,176,.10)"); pl.setAttribute("stroke", "#2563B0"); pl.setAttribute("stroke-width", "8"); pl.setAttribute("stroke-opacity", ".45"); pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round");
+    const svg = document.getElementById("plan"); if (svg) svg.appendChild(pl);
+    flInk158.el = pl;
   }, true);
+  document.addEventListener("pointermove", e => {
+    if (!flInk158 || e.pointerId !== flInk158.id) return;
+    e.preventDefault(); e.stopPropagation();
+    const p = planPt(e), l = flInk158.sv[flInk158.sv.length - 1];
+    if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
+    flInk158.sv.push(p); flInk158.mm.push(toMM(p));
+    if (flInk158.el) flInk158.el.setAttribute("points", flInk158.sv.map(q => q.join(",")).join(" "));
+  }, true);
+  const flInkEnd158 = e => {
+    if (!flInk158 || e.pointerId !== flInk158.id) return;
+    e.stopPropagation();
+    const mm = flInk158.mm, fk = window.__floorArm;
+    flInkClear158();
+    if (!fk) return;
+    const xs = mm.map(q => q[0]), ys = mm.map(q => q[1]);
+    const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+    if (w < 150 && h < 150){ // タップ：従来通り、その部屋全体をその床にする
+      try { ltPlanClick(mm[0]); } catch(er){}
+      return;
+    }
+    const rect = floorRectFromStroke(mm);
+    if (!rect){ toast("もう少し大きくなぞってください"); return; }
+    pushUndo(); pushFloor(rect, fk); fixAssign(); save(); drawPlan();
+    toast(`床を${FLN[fk] || fk}にしました（囲んだ範囲） ${fmt((rect.x1 - rect.x0) * (rect.y1 - rect.y0) / 1e6, 1)}㎡`);
+  };
+  document.addEventListener("pointerup", flInkEnd158, true);
+  document.addEventListener("pointercancel", e => { if (flInk158 && e.pointerId === flInk158.id) flInkClear158(); }, true);
 
   // ツールタブに「床」タブ＋仕上げチップのパネルを足す
   window.__floorTab = false;
@@ -10888,14 +10928,14 @@ document.addEventListener("click", function(e){
       panel.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0";
       panel.innerHTML = FLKS.map(fk => `<button type="button" data-flk="${fk}" style="flex:1 1 30%;min-height:44px">${FLN[fk]}</button>`).join("")
         + `<button type="button" data-flk="" style="flex:1 1 30%;min-height:44px">やめる</button>`
-        + `<div style="flex:1 1 100%;font-size:12px;color:#555">部屋をタップすると、その部屋全部がその床になります。一部だけの時は「👆なぞる」で囲んで、床の種類を選んでください。</div>`;
+        + `<div style="flex:1 1 100%;font-size:12px;color:#555">部屋をタップすると、その部屋全部がその床になります。一部だけの時は、決めた後に、そのまま指でぐるっと囲んでください（囲んだ形がそのまま範囲になります）。</div>`;
       const anchor = document.getElementById("toolCh3") || tabs;
       anchor.insertAdjacentElement("afterend", panel);
       panel.querySelectorAll("[data-flk]").forEach(b => b.onclick = () => {
         panel.querySelectorAll("[data-flk]").forEach(x => x.classList.remove("armBlink"));
         if (!b.dataset.flk){ window.__floorArm = null; toast("床の指定をやめました"); return; }
         window.__floorArm = b.dataset.flk; b.classList.add("armBlink");
-        toast(FLN[b.dataset.flk] + "：部屋をタップ（続けて指定できます）");
+        toast(FLN[b.dataset.flk] + "：部屋をタップ／一部は指で囲む（続けて指定できます）");
         window.__floorTab = false; try { floorPanelSync(); } catch(e){}
       });
     }
@@ -10916,7 +10956,8 @@ document.addEventListener("click", function(e){
   // 囲んだ範囲のバーにも、床の種類を足す
   function applyFloorEncl(fk){
     if (typeof encl === "undefined" || !encl || !encl.r) return;
-    const r = encl.r, rect = {x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1};
+    // CAD-158: 床は、壁に吸着させた四角ではなく「なぞった形」を使う（手直し後は今の四角）
+    const r = (!encl.edit && encl.raw) ? encl.raw : encl.r, rect = {x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1};
     pushUndo();
     if (encl.edit){ const arr = encl.edit.kind === "t" ? S.tatami : S.zones; if (arr) arr.splice(encl.edit.i, 1); }
     pushFloor(rect, fk);
@@ -13870,7 +13911,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (br138.mode === "encl"){
       if (typeof encl === "undefined" || !encl || !encl.r){ toast("先に範囲を囲んでください"); return; }
       var fk = armFk138(kind, det);
-      var r0 = encl.r, rect = {x0: r0.x0, y0: r0.y0, x1: r0.x1, y1: r0.y1};
+      var r0 = (!encl.edit && encl.raw) ? encl.raw : encl.r, rect = {x0: r0.x0, y0: r0.y0, x1: r0.x1, y1: r0.y1};
       pushUndo();
       if (encl.edit){ var arr = encl.edit.kind === "t" ? S.tatami : S.zones; if (arr) arr.splice(encl.edit.i, 1); }
       window.__pushFloor(rect, fk);
@@ -13886,7 +13927,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     window.__flBlinkChip140 = kind === "za" ? "za" : (kind === "flMuku" && det.t === 30) ? "flMuku30" : kind;
     window.__zaActive138 = kind === "za";
     closeBar138();
-    toast("この内容で置きます：部屋をタップ（続けて指定できます）");
+    toast("この内容で置きます：部屋をタップ／一部は指で囲む（続けて指定できます）");
   }
 
   /* チップのタップでバーを開く（元の arm はそのまま効かせる。座上げだけ元の arm を止める） */
