@@ -374,8 +374,8 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 .armBlink{animation:armBlink .8s ease-in-out infinite}
 @keyframes armBlink{0%,100%{background:#FFF8DC;box-shadow:0 0 0 0 rgba(255,140,0,0)}50%{background:#FFC400;box-shadow:0 0 0 4px rgba(255,140,0,.5)}}
 /* CAD-81 本番ルール：案内の点滅はチュートリアル（body.nbtutRun）だけ、本番は静かに示す。CAD-93：「選んだ物」の点滅（.selBlink／#FF00C8）は状態表示なので本番に復活（当該3ルールを削除）。道具・案内の点滅は従来通り本番では静止 */
-body:not(.nbtutRun) #toolCh3 .armBlink,body:not(.nbtutRun) #floorPanel .armBlink{animation:none!important;background:#2563B0!important;color:#fff!important;border-color:#2563B0!important;box-shadow:none!important}
-/* CAD-95：道具ボタン（#toolCh/#toolCh2）のarmBlinkは「今置いている道具」の表示として、本番でも黄色点滅させる（翔伍の決定。CAD-81の凍結は道具ボタンだけ解除し、凍結は #toolCh3・#floorPanel と #edgeList（次ルール）の案内系に限定） */
+body:not(.nbtutRun) #toolCh3 .armBlink{animation:none!important;background:#2563B0!important;color:#fff!important;border-color:#2563B0!important;box-shadow:none!important}
+/* CAD-95：道具ボタン（#toolCh/#toolCh2）のarmBlinkは「今置いている道具」の表示として、本番でも黄色点滅させる（翔伍の決定。CAD-81の凍結は道具ボタンだけ解除し、凍結は #toolCh3 と #edgeList（次ルール）の案内系に限定。#floorPanel は CAD-140 で解除し、床仕様で選んでいるチップも本番で点滅させる（本人の指摘 2026-11-10） */
 body:not(.nbtutRun) #edgeList .armBlink{animation:none!important;background:#FFF3C4!important;color:inherit!important;border-color:transparent!important;box-shadow:inset 0 0 0 2px #FFB300!important}
 body:not(.nbtutRun) .padGlowBtn{animation:none!important;background:#FFC400!important;box-shadow:0 0 0 2px #FF6A00!important;border-color:#FF6A00!important;color:#111!important}
 body:not(.nbtutRun) .g26glow{animation:none!important;background:#FFF3C4!important;border-color:#FF6A00!important}
@@ -3506,10 +3506,10 @@ function drawSelBar0(){
   // 左：あまり使わない操作　真ん中：十字キー（真ん中で回転）　右：戻す・消す
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${isP ? "" : " o"}">${isP
-      ? `<button id="sbStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button><button id="sbLen" type="button">長さ</button><button id="sbFit" type="button">壁まで</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button>` : `<button id="sbTop" type="button">${q.top ? "パーティション " + fmt(q.top) : "高さ：天井まで"} ▸</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
+      ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button>` : `<button id="sbTop" type="button">高さ寸法</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
       : `<button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbSt" type="button" style="color:${SST[sState(sa)][1]}">${SST[sState(sa)][0]} ▸</button><button id="sbSize" type="button">大きさ・種類</button>`}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${isP ? `<button id="sbRot" class="rot" type="button">⟳<small>90°</small></button>` : `<button id="sbFlip" class="rot" type="button">⟳<small>向き</small></button>`}</div>
-    <div class="sbR"><span></span><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
+    <div class="sbR">${isP ? `<button id="sbStep" class="stp" type="button">${selStep}mm</button>` : "<span></span>"}<button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; window.__put = null; window.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
 if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText += ";text-decoration:underline dotted;cursor:pointer"; tt.onclick = () => changeSheet(sel.i); } }
@@ -10472,14 +10472,26 @@ document.addEventListener("click", function(e){
     const sn = (v, arr) => { let best = v, bd = 250; arr.forEach(a => { const d = Math.abs(a - v); if (d < bd){ bd = d; best = a; } }); return best; };
     return {x0: sn(rc.x0, xs), y0: sn(rc.y0, ys), x1: sn(rc.x1, xs), y1: sn(rc.y1, ys)};
   }
+  function subFloor140(a, r){
+    const ix0 = Math.max(a.x0, r.x0), ix1 = Math.min(a.x1, r.x1), iy0 = Math.max(a.y0, r.y0), iy1 = Math.min(a.y1, r.y1);
+    if (ix0 >= ix1 || iy0 >= iy1) return [a];
+    const out = [];
+    if (iy0 > a.y0) out.push(Object.assign({}, a, {y1: iy0}));
+    if (iy1 < a.y1) out.push(Object.assign({}, a, {y0: iy1}));
+    if (ix0 > a.x0) out.push(Object.assign({}, a, {x1: ix0, y0: iy0, y1: iy1}));
+    if (ix1 < a.x1) out.push(Object.assign({}, a, {x0: ix1, y0: iy0, y1: iy1}));
+    return out.filter(q => q.x1 > q.x0 && q.y1 > q.y0);
+  }
   function pushFloor(rect, fk){
     S.tatami = S.tatami || [];
-    S.tatami = S.tatami.filter(o => !(o.x0 < rect.x1 && rect.x0 < o.x1 && o.y0 < rect.y1 && rect.y0 < o.y1));
+    // CAD-140: 部分的に重なる既存の仕上げは、重なり分だけ引く。従来は「少しでも
+    // 重なれば記録ごと削除」で、重なっていない残りが標準仕上げに化けた。
+    S.tatami = S.tatami.flatMap(o => subFloor140(o, rect));
     if (fk === "tatami") S.tatami.push({x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, st: "new"});
     else { const rec = {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, fk: fk, st: "fl:" + fk};
       if (fk === "flAge"){ rec.h = 300; rec.fin = "tatami"; }
       S.tatami.push(rec);
-      if (fk === "flAge"){ const ix = S.tatami.length - 1; setTimeout(() => { try { tatSheet(ix); } catch(e){} }, 60); } }
+      if (fk === "flAge"){ const recObj = S.tatami[S.tatami.length - 1]; setTimeout(() => { const ix = S.tatami.indexOf(recObj); if (ix >= 0) try { tatSheet(ix); } catch(e){} }, 60); } }
   }
   window.__pushFloor = pushFloor;
 
@@ -10490,10 +10502,29 @@ document.addEventListener("click", function(e){
       const r = roomAt(mm[0], mm[1]);
       if (r){
         const R = roomsCalc();
-        let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1;
-        r.cells.forEach(k => { const a = k % R.NX, b = (k - a) / R.NX; i0 = Math.min(i0, a); i1 = Math.max(i1, a); j0 = Math.min(j0, b); j1 = Math.max(j1, b); });
-        const rect = floorSnap({x0: R.b.x0 + i0 * R.st, y0: R.b.y0 + j0 * R.st, x1: R.b.x0 + (i1 + 1) * R.st, y1: R.b.y0 + (j1 + 1) * R.st});
-        pushUndo(); pushFloor(rect, window.__floorArm); fixAssign(); save(); drawPlan();
+        // CAD-140: 部屋のセルを四角に分けて置く（横の連続ラン＋同じ横幅の行は縦に
+        // つなぐ）。従来はセルの外接四角（bbox）で置いたため、L字型の部屋では
+        // bbox に入る別の部屋（間仕切りで区切られた部屋）まで一緒に変わって
+        // しまった（本人の動画 2026-11-10）。
+        const rowMap = {};
+        r.cells.forEach(k => { const a = k % R.NX, b = (k - a) / R.NX; (rowMap[b] = rowMap[b] || []).push(a); });
+        const cellRects = [], openR = {};
+        Object.keys(rowMap).sort((x, y) => x - y).forEach(bj => {
+          const j = +bj, arr = rowMap[bj].sort((x, y) => x - y);
+          const runs = []; let s = arr[0], p = arr[0];
+          for (let ii = 1; ii < arr.length; ii++){ if (arr[ii] === p + 1) p = arr[ii]; else { runs.push([s, p]); s = arr[ii]; p = arr[ii]; } }
+          runs.push([s, p]);
+          const seenK = {};
+          runs.forEach(([a, b2]) => {
+            const key = a + "|" + b2; seenK[key] = 1;
+            if (openR[key] && openR[key].j1 === j - 1) openR[key].j1 = j;
+            else { if (openR[key]) cellRects.push(openR[key]); openR[key] = {i0: a, i1: b2, j0: j, j1: j}; }
+          });
+          Object.keys(openR).forEach(key => { if (!seenK[key]){ cellRects.push(openR[key]); delete openR[key]; } });
+        });
+        Object.keys(openR).forEach(key => cellRects.push(openR[key]));
+        const rects = cellRects.map(c => floorSnap({x0: R.b.x0 + c.i0 * R.st, y0: R.b.y0 + c.j0 * R.st, x1: R.b.x0 + (c.i1 + 1) * R.st, y1: R.b.y0 + (c.j1 + 1) * R.st}));
+        pushUndo(); rects.forEach(rc => pushFloor(rc, window.__floorArm)); fixAssign(); save(); drawPlan();
         toast("床を" + FLN[window.__floorArm] + "にしました（部屋全体）");
       } else toast("部屋の上をタップしてください");
       return true;
@@ -13387,7 +13418,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     pend138 = null;
     var k = kind, presetT = null;
     if (kind === "flMuku30"){ k = "flMuku"; presetT = 30; }
-    br138 = {mode: mode, kind: k, det: stdDet138(k), stage: 0, hint: !hintSeen138()};
+    br138 = {mode: mode, kind: k, det: stdDet138(k), stage: -1, hint: !hintSeen138()};
     if (presetT) br138.det.t = presetT;
     renderBar138();
   }
@@ -13411,7 +13442,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var h = "<div style='font-weight:700;font-size:14px'>" + kindName138(br138.kind, br138.det)
       + " <small style='font-weight:400;color:#555'>" + detSummary138(br138.kind, br138.det) + "</small></div>";
     if (br138.hint) h += "<p class='hint' style='color:#B26A00;margin:4px 0'>「✓ 決定」を押すと、この内容で置けます。内容は、あとから「仕様」の画面で決め直せます。</p>";
-    if (br138.stage < qs.length){
+    if (br138.stage < 0){
+      h += "<p class='hint' style='margin:6px 0 4px'>標準の内容でよければ「✓ 決定」。細かく選びたい時は「さらにこだわる」。</p>"
+        + "<div style='display:flex;gap:6px;margin-top:8px'>"
+        + "<button type='button' data-bdec='1' class='btn pri" + (br138.hint ? " armBlink" : "") + "' style='flex:1'>✓ 決定（標準で置く）</button>"
+        + "<button type='button' data-bmore='1' class='btn' style='flex:1'>さらにこだわる</button>"
+        + "<button type='button' data-bcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
+    } else if (br138.stage < qs.length){
       var q = qs[br138.stage];
       h += "<p class='hint' style='margin:6px 0 4px'>" + (br138.stage + 1) + ". " + q.t + "</p>"
         + "<div style='display:flex;flex-wrap:wrap;gap:6px'>"
@@ -13421,8 +13458,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     } else {
       h += "<p class='hint' style='margin:6px 0 4px'>この内容で置きます。</p>";
     }
-    h += "<div style='display:flex;gap:6px;margin-top:8px'>"
-      + (br138.stage > 0 ? "<button type='button' data-bback='1' class='btn sub' style='flex:0 0 auto'>← もどる</button>" : "")
+    if (br138.stage >= 0) h += "<div style='display:flex;gap:6px;margin-top:8px'>"
+      + "<button type='button' data-bback='1' class='btn sub' style='flex:0 0 auto'>← もどる</button>"
       + "<button type='button' data-bdec='1' class='btn pri" + (br138.hint ? " armBlink" : "") + "' style='flex:1'>✓ 決定（この内容で置く）</button>"
       + "<button type='button' data-bcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
     host.innerHTML = h;
@@ -13445,11 +13482,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }});
     };
     var bb = host.querySelector("[data-bback]");
-    if (bb) bb.onclick = function(){ br138.stage = Math.max(0, br138.stage - 1); renderBar138(); };
+    if (bb) bb.onclick = function(){ br138.stage = br138.stage - 1; renderBar138(); };
     var bc = host.querySelector("[data-bcan]");
     if (bc) bc.onclick = function(){ closeBar138(); };
     var bd = host.querySelector("[data-bdec]");
     if (bd) bd.onclick = function(){ decide138(); };
+    var bm = host.querySelector("[data-bmore]");
+    if (bm) bm.onclick = function(){ br138.stage = 0; renderBar138(); };
   }
   function decide138(){
     if (!br138) return;
@@ -13470,6 +13509,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     }
     pend138 = {kind: kind, det: JSON.parse(JSON.stringify(det))};
     window.__floorArm = armFk138(kind, det);
+    window.__flBlinkChip140 = kind === "za" ? "za" : (kind === "flMuku" && det.t === 30) ? "flMuku30" : kind;
     window.__zaActive138 = kind === "za";
     closeBar138();
     toast("この内容で置きます：部屋をタップ（続けて指定できます）");
@@ -13479,12 +13519,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   document.addEventListener("click", function(e){
     var t = e.target;
     if (!t || !t.closest) return;
+    if (document.body && document.body.classList && document.body.classList.contains("nbtutRun")) return;
     var b1 = t.closest("#floorPanel [data-flk]");
     if (b1){
       var fk = b1.dataset.flk;
-      if (fk === "za"){ e.preventDefault(); e.stopImmediatePropagation(); openBar138("panel", "za"); return; }
-      if (fk) openBar138("panel", fk);
-      else { pend138 = null; window.__zaActive138 = false; closeBar138(); }
+      /* CAD-140: arm は「決定」を押した後にだけ起きる。チップのタップでは元の arm を
+         止めて枝分かれバーだけを開く（本人の設計：押す→決定／さらにこだわる→
+         決めてから置く）。「やめる」（fk 空）は従来通り元の解除に流す。 */
+      if (fk){ e.preventDefault(); e.stopImmediatePropagation(); openBar138("panel", fk); return; }
+      pend138 = null; window.__zaActive138 = false; closeBar138();
       return;
     }
     var b2 = t.closest("#enclBar [data-eflk]");
@@ -13803,6 +13846,54 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     } catch(e){}
     return r;
   };
+})();
+</script>
+
+<script>
+/* ================= CAD-140：床チップの点滅＋間仕切りバーの行数調整 =================
+   ・A4: 床仕様で選んでいる（arm中の）チップだけを点滅させる。本体側の凍結CSSは
+     build140.py で #floorPanel を対象から外し、点滅させるチップは CAD-138 の
+     decide138 が window.__flBlinkChip140 に記録する（座上げ→"za"、無垢30mm→"flMuku30" 等）。
+     ここではそのチップへ armBlink を付け続け、arm が解けたら全部消す。
+     チュートリアル実行中（body.nbtutRun）は触らない（従来の見え方を維持）。
+   ・B: 間仕切りコントローラーの左ボタン群（.sbL）は1列に広げ、ボタン数に合わせて
+     行数を詰める（「壁まで伸ばす」等の名前が切れないように。10mm は右列へ移動済み）。 */
+(function(){
+  "use strict";
+
+  function syncBlink140(){
+    try {
+      if (document.body && document.body.classList.contains("nbtutRun")) return;
+      var panel = document.getElementById("floorPanel"); if (!panel) return;
+      var want = window.__floorArm ? (window.__flBlinkChip140 || window.__floorArm) : null;
+      panel.querySelectorAll("[data-flk]").forEach(function(b){
+        var on = !!want && b.dataset.flk === want;
+        if (b.classList.contains("armBlink") !== on) b.classList.toggle("armBlink", on);
+      });
+    } catch(e){}
+  }
+  setInterval(syncBlink140, 200);
+
+  try {
+    var _dsb140 = drawSelBar;
+    drawSelBar = function(){
+      var r = _dsb140.apply(this, arguments);
+      try {
+        if (typeof sel !== "undefined" && sel && sel.t === "p"){
+          var bar = document.getElementById("selBar");
+          var sbL = bar ? bar.querySelector(".sbL") : null;
+          var sbw = bar ? bar.querySelector(".sbw") : null;
+          if (sbL){
+            var n = sbL.querySelectorAll("button").length;
+            sbL.style.gridTemplateColumns = "1fr";
+            sbL.style.gridTemplateRows = "repeat(" + Math.max(1, n) + ", 40px)";
+            if (sbw) sbw.style.gridTemplateColumns = "132px 1fr 76px";
+          }
+        }
+      } catch(e){}
+      return r;
+    };
+  } catch(e){}
 })();
 </script>
 </body>
