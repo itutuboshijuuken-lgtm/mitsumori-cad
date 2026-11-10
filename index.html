@@ -13417,8 +13417,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "#slotM{touch-action:none}",
     "#stM .mtools{touch-action:none}",
     "#planBar{touch-action:none}",
-    "#stM #selBar{touch-action:none!important}",
-    "#stM #enclBar{touch-action:none!important}",
+    "#stM #selBar{touch-action:manipulation!important}",
+    "#stM #enclBar{touch-action:manipulation!important}",
     "#closeAllFloat{touch-action:none!important}",
     ".toast{touch-action:none!important}"
   ].join("\n");
@@ -13430,6 +13430,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var t = e.target;
     if (!t || !t.closest) return;
     if (t.closest("#drawnList") || t.closest("#modal")) return;
+    if (t.closest("#selBar") || t.closest("#enclBar")) return;
     if (t.closest("#stM") || t.closest("#closeAllFloat") || t.closest(".toast")) e.preventDefault();
   }, {passive: false});
   window.__gest130 = true;
@@ -14742,5 +14743,58 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 }
 </style>
 
+
+<script>
+/* ================= CAD-157：コントローラーのボタンを pointerup でも効かせる =================
+   実機（iPhone）で「向き」を押しても便器が回らなかった不具合への対策。
+   コントローラーのボタンは click だけに頼っていたため、タップの途中で
+   click が取り消される環境（指のブレ＋アプリ側の touchmove preventDefault
+   など）では、小さいボタンほど発火しなくなる。矢印は pointerdown 駆動
+   なので無事だった。そこで、描画のたびに各バーのボタンへ「pointerup で
+   同じ処理を走らせる」結線を足し、click が届く時は二重に走らない様に
+   700ms のガードを付ける。マウス操作は従来通り click のみ。
+   対象: #selBar（間取りの選択バー）/ #enclBar（範囲バー）/ #fxBar（室内図バー）。
+   矢印ボタン（data-ar）は元々 pointerdown 駆動なので対象外。 */
+(function(){
+  "use strict";
+  function bindBar157(bar){
+    if (!bar) return;
+    var btns = bar.querySelectorAll("button");
+    for (var i = 0; i < btns.length; i++){
+      (function(b){
+        if (b.dataset.ar || b.dataset.b157) return;
+        var oc = b.onclick;
+        if (!oc) return;
+        b.dataset.b157 = "1";
+        var key = "b157" + (b.id || "");
+        b.addEventListener("pointerup", function(e){
+          if (!e || e.pointerType === "mouse") return;
+          bar.dataset[key] = String(Date.now());
+          try { oc.call(b, e); } catch(err){}
+        });
+        b.onclick = function(e){
+          if (Date.now() - (+(bar.dataset[key] || 0)) < 700) return;
+          return oc.call(b, e);
+        };
+      })(btns[i]);
+    }
+  }
+  function wrap157(fnName, barId){
+    var orig = window[fnName];
+    if (typeof orig !== "function" || orig.__b157) return;
+    var w = function(){
+      var r = orig.apply(this, arguments);
+      try { bindBar157(document.getElementById(barId)); } catch(e){}
+      return r;
+    };
+    w.__b157 = true;
+    window[fnName] = w;
+  }
+  wrap157("drawSelBar", "selBar");
+  wrap157("drawEnclBar", "enclBar");
+  wrap157("drawFxBar", "fxBar");
+  window.__bindBar157 = bindBar157;
+})();
+</script>
 </body>
 </html>
