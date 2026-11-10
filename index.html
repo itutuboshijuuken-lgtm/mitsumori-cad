@@ -2060,7 +2060,9 @@ function tatFromStroke(pm){
 const TKN = {floor: "床下点検口", ceil: "天井点検口", dansa: "段差解消・敷居撤去", pillar: "独立柱", acout: "エアコン用コンセント（天井付け）", kitchen: "キッチン", senmen: "洗面化粧台", makura: "枕棚", chudan: "中段棚", wc: "便器", bath: "浴槽", tearai: "手洗い"};
 const tkExt = o => o.k === "dansa" ? (o.dir === "v" ? [60, o.w / 2] : [o.w / 2, 60]) : (o.k === "kitchen" || o.k === "senmen" || o.k === "counter" || o.k === "makura" || o.k === "chudan" || o.k === "wc" || o.k === "bath" || o.k === "tearai") ? ((o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2]) : [o.w / 2, o.w / 2];
 const isShelf = o => o.k === "makura" || o.k === "chudan", isKS = o => o.k === "kitchen" || o.k === "senmen" || isShelf(o) || o.k === "wc" || o.k === "bath" || o.k === "tearai";
-function moveTenken(o, dx, dy){ const b = bbox(), [hx, hy] = tkExt(o), sn = (v, h) => Math.round((v - h) / 2.5) * 2.5 + h; o.x = Math.max(b.x0 + hx, Math.min(b.x1 - hx, sn(o.x + dx, hx))); o.y = Math.max(b.y0 + hy, Math.min(b.y1 - hy, sn(o.y + dy, hy))); }
+function moveTenken(o, dx, dy){ const b = bbox(), [hx, hy] = tkExt(o), sn = (v, h) => Math.round((v - h) / 2.5) * 2.5 + h; const ox = o.x, oy = o.y; o.x = Math.max(b.x0 + hx, Math.min(b.x1 - hx, sn(o.x + dx, hx))); o.y = Math.max(b.y0 + hy, Math.min(b.y1 - hy, sn(o.y + dy, hy)));
+  // CAD-148: 外形ポリゴンの外（L字の凹みを含む）へは動かさない
+  try { if (window.__g148 && !window.__g148.rect(o)){ o.x = ox; o.y = oy; } } catch(e){} }
 // キッチン・洗面化粧台：いちばん近い壁にくっつけて置く（壁側が背中）。幅は選ぶ
 function addEquip(k){
   const c = window.__putAt || viewCenterMM(), pol = pts(), w = k === "kitchen" ? 2550 : k === "counter" ? ctDef().w : (k === "makura" || k === "chudan") ? 1820 : k === "tearai" ? 450 : 750, d = k === "tearai" ? 320 : k === "kitchen" ? 650 : k === "counter" ? ctDef().d : k === "makura" ? 450 : k === "chudan" ? 800 : 560, tw = 60;
@@ -3522,7 +3524,13 @@ function sashAskState(i){
   $("mbox").querySelectorAll("[data-sa]").forEach(b => b.onclick = () => { s.st = b.dataset.sa; $("modal").hidden = true; save(); drawPlan(); try { drawSash(); } catch(e){} toast(`${i + 1}番：${SST[s.st][0]}`); });
   $("saLater").onclick = () => { $("modal").hidden = true; };
 }
-function movePart(q, dx, dy){ const b = bbox(); const w = q.x2 - q.x1, h = q.y2 - q.y1; let nx = Math.max(b.x0, Math.min(b.x1 - w, q.x1 + dx)), ny = Math.max(b.y0, Math.min(b.y1 - h, q.y1 + dy)); q.x1 = nx; q.x2 = nx + w; q.y1 = ny; q.y2 = ny + h; }
+function movePart(q, dx, dy){ const b = bbox(); const w = q.x2 - q.x1, h = q.y2 - q.y1; let nx = Math.max(b.x0, Math.min(b.x1 - w, q.x1 + dx)), ny = Math.max(b.y0, Math.min(b.y1 - h, q.y1 + dy));
+  // CAD-148: 外形ポリゴンの外（L字の凹みを含む）へは動かさない。軸ごとにずらせば入る時は滑らせる
+  try { if (window.__g148 && !window.__g148.seg({x1: nx, y1: ny, x2: nx + w, y2: ny + h})){
+    if (window.__g148.seg({x1: nx, y1: q.y1, x2: nx + w, y2: q.y1 + h})) ny = q.y1;
+    else if (window.__g148.seg({x1: q.x1, y1: ny, x2: q.x1 + w, y2: ny + h})) nx = q.x1;
+    else { nx = q.x1; ny = q.y1; } } } catch(e){}
+  q.x1 = nx; q.x2 = nx + w; q.y1 = ny; q.y2 = ny + h; }
 function moveOpening(sa, dx, dy){
   const seg = hostSeg(sa.host); if (!seg) return;
   const L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
@@ -3620,11 +3628,11 @@ if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText
   });
   $("sbDel").onclick = () => { pushUndo(); if (isP) delPart(sel.i); else { S.sashes.splice(sel.i, 1); save(); } sel = null; drawPlan(); };
   if (isP){
-    $("sbRot").onclick = () => { pushUndo(); const cx = (q.x1 + q.x2) / 2, cy = (q.y1 + q.y2) / 2, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), r5 = v => Math.round(v / 5) * 5;
+    $("sbRot").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; const cx = (q.x1 + q.x2) / 2, cy = (q.y1 + q.y2) / 2, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), r5 = v => Math.round(v / 5) * 5;
       if (q.y1 === q.y2){ q.x1 = q.x2 = r5(cx); q.y1 = r5(cy - L / 2); q.y2 = q.y1 + L; } else { q.y1 = q.y2 = r5(cy); q.x1 = r5(cx - L / 2); q.x2 = q.x1 + L; }
-      movePart(q, 0, 0); save(); drawPlan(); };
+      movePart(q, 0, 0); try { if (window.__g148 && !window.__g148.seg(q) && window.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
     $("sbLen").onclick = () => openPad({title: "間仕切りの長さ", value: Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), extra: [455, 910, 1820, 2730, 3640].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); setLen(q, v); save(); drawPlan(); }})), done: v => { if (v){ pushUndo(); setLen(q, v); save(); drawPlan(); } }});
-    $("sbFit").onclick = () => { pushUndo(); if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } save(); drawPlan(); };
+    $("sbFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (window.__g148 && !window.__g148.seg(q) && window.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
     if ($("sbTop")) $("sbTop").onclick = () => openPad({title: "間仕切りの高さ", sub: "数字は床からの高さ。垂れ壁は天井から下がります", unit: "mm", std: false, value: q.top || "", extra: [{label: "天井まで", fn: () => { closePad(); pushUndo(); delete q.top; save(); drawPlan(); }}, {label: "垂れ壁（天井から）", fn: () => { closePad(); pushUndo(); const ix = S.parts2D.indexOf(q); if (ix >= 0) S.parts2D.splice(ix, 1); sel = null; S.tare = S.tare || []; const tt = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(tt); save(); drawPlan(); tareAsk(tt); }}].concat([1800, 2000, 2100].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); q.top = v; save(); drawPlan(); }}))), done: v => { if (v){ pushUndo(); q.top = Math.min(v, S.ch); save(); drawPlan(); } }});
     $("sbNew").onclick = () => { pushUndo(); setPState(q, (S.mode === "zo" ? {keep: "new", new: "keep", remove: "keep"} : {keep: "new", new: "remove", remove: "keep"})[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
     if ($("sbBeam")) $("sbBeam").onclick = () => beamAsk(q);
@@ -3727,6 +3735,7 @@ function placePart(pt){
   let q = vert ? {x1: r5(pt[0]), y1: b.y0, x2: r5(pt[0]), y2: b.y1} : {x1: b.x0, y1: r5(pt[1]), x2: b.x1, y2: r5(pt[1])};
   q = snapPart(vert ? [[q.x1, pt[1] - 10], [q.x1, pt[1] + 10]] : [[pt[0] - 10, q.y1], [pt[0] + 10, q.y1]]);
   if (vert){ q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } else { q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); }
+  const fq148 = clipSeg148(q); if (!fq148) return; q.x1 = fq148.x1; q.y1 = fq148.y1; q.x2 = fq148.x2; q.y2 = fq148.y2;
   q.isNew = false; S.parts2D = S.parts2D || []; S.parts2D.push(q); sel = {t: "p", i: S.parts2D.length - 1}; flashAt = Date.now(); save(); drawPlan();
 }
 // 間仕切りを、ぶつかる壁・間仕切りまで伸ばす
@@ -3837,7 +3846,7 @@ function drawSheet(c){
     $("modal").hidden = false;
     $("dsNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-nw]").forEach(b => b.onclick = () => { nw = b.dataset.nw === "1"; tare = b.dataset.nw === "2"; render(); });
-    if ($("dsOk")) $("dsOk").onclick = () => { pushUndo(); const q = snapPart(c.mm); if (tare){ (S.tare = S.tare || []).push({x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}); save(); $("modal").hidden = true; drawPlan(); toast(`垂れ壁 ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}mm を入れました`); return; } q.isNew = nw; S.parts2D = S.parts2D || []; S.parts2D.push(q); save(); $("modal").hidden = true; drawPlan(); toast(`間仕切り ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}mm を入れました`); };
+    if ($("dsOk")) $("dsOk").onclick = () => { pushUndo(); const q = clipSeg148(snapPart(c.mm)); if (!q){ $("modal").hidden = true; return; } if (tare){ (S.tare = S.tare || []).push({x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}); save(); $("modal").hidden = true; drawPlan(); toast(`垂れ壁 ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}mm を入れました`); return; } q.isNew = nw; S.parts2D = S.parts2D || []; S.parts2D.push(q); save(); $("modal").hidden = true; drawPlan(); toast(`間仕切り ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}mm を入れました`); };
     pickerBind(p, render, x => {
       const nh = nearestHost(c.c0);
       if (!nh){ toast("壁の近くに描いてください"); return; }
@@ -3893,12 +3902,12 @@ function partSheet(i){
     <div class="row"><button class="btn sub" id="psFit" type="button">壁から壁まで伸ばす</button></div>
     <div class="row"><button class="btn sub" id="psDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="psOk" type="button">決定</button></div>`;
   $("modal").hidden = false;
-  const apply = (o, s0, len) => { len = Math.max(100, len); if (horiz){ q.y1 = q.y2 = b.y0 + o; q.x1 = b.x0 + s0; q.x2 = q.x1 + len; } else { q.x1 = q.x2 = b.x0 + o; q.y1 = b.y0 + s0; q.y2 = q.y1 + len; } save(); drawPlan(); partSheet(i); };
+  const apply = (o, s0, len) => { len = Math.max(100, len); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (horiz){ q.y1 = q.y2 = b.y0 + o; q.x1 = b.x0 + s0; q.x2 = q.x1 + len; } else { q.x1 = q.x2 = b.x0 + o; q.y1 = b.y0 + s0; q.y2 = q.y1 + len; } try { if (window.__g148 && !window.__g148.seg(q) && window.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); };
   const bind = (id, fn, title, cur) => $("mbox").querySelectorAll(`[data-${id}]`).forEach(x => x.onclick = () => { pushUndo(); const v = x.dataset[id]; if (v === "pad"){ $("modal").hidden = true; openPad({title, value: cur, done: nv => { if (nv != null) fn(nv); else partSheet(i); }}); } else fn(cur + +v); });
   bind("po", v => apply(v, st, L), "位置", off); bind("ps", v => apply(off, v, L), "始まり", st); bind("pl", v => apply(off, st, v), "長さ", L);
   $("mbox").querySelectorAll("[data-nw]").forEach(x => x.onclick = () => { setPState(q, x.dataset.nw); save(); drawPlan(); partSheet(i); });
-  $("mbox").querySelectorAll("[data-or]").forEach(x => x.onclick = () => { if ((x.dataset.or === "h") === horiz) return; pushUndo(); const cx = (q.x1 + q.x2) / 2, cy = (q.y1 + q.y2) / 2; if (horiz){ q.x1 = q.x2 = Math.round(cx); q.y1 = cy - 10; q.y2 = cy + 10; q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } else { q.y1 = q.y2 = Math.round(cy); q.x1 = cx - 10; q.x2 = cx + 10; q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } save(); drawPlan(); partSheet(i); });
-  $("psFit").onclick = () => { pushUndo(); if (horiz){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } save(); drawPlan(); partSheet(i); };
+  $("mbox").querySelectorAll("[data-or]").forEach(x => x.onclick = () => { if ((x.dataset.or === "h") === horiz) return; pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; const cx = (q.x1 + q.x2) / 2, cy = (q.y1 + q.y2) / 2; if (horiz){ q.x1 = q.x2 = Math.round(cx); q.y1 = cy - 10; q.y2 = cy + 10; q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } else { q.y1 = q.y2 = Math.round(cy); q.x1 = cx - 10; q.x2 = cx + 10; q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } try { if (window.__g148 && !window.__g148.seg(q) && window.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); });
+  $("psFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (horiz){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (window.__g148 && !window.__g148.seg(q) && window.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); };
   $("psOk").onclick = () => { $("modal").hidden = true; drawPlan(); };
   $("psDel").onclick = () => { pushUndo(); delPart(i); $("modal").hidden = true; drawPlan(); };
 }
@@ -8596,7 +8605,7 @@ function drawSelBarL(bar){
   $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
   $("sbLS").onclick = () => { pushUndo(); const A = S.mode === "zo" ? ["new"] : ["new", "remove", "swap"]; l.act = A[(A.indexOf(l.act || "new") + 1) % A.length]; save(); bar.dataset.k = ""; drawPlan(); };
   $("sbLK").onclick = () => { pushUndo(); l.k = l.k === "down" ? "ceil" : "down"; save(); bar.dataset.k = ""; drawPlan(); };
-  const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); l.x += ax * selStep; l.y += ay * selStep; save(); drawPlan(); };
+  const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); const nx = l.x + ax * selStep, ny = l.y + ay * selStep; if (!window.__g148 || window.__g148.in(nx, ny)){ l.x = nx; l.y = ny; } save(); drawPlan(); };
   bar.querySelectorAll("[data-ar]").forEach(b => {
     if (b.dataset.ar === HOLD.dir) b.classList.add("on");
     b.addEventListener("pointerdown", e => { e.preventDefault(); holdStop(); HOLD.dir = b.dataset.ar; const k = sel.t + sel.i; nudge(HOLD.dir, true);
@@ -12523,8 +12532,20 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }
       return c;
     };
-    var keep = segs.filter(function(q){ return inPoly((q.x1 + q.x2) / 2, (q.y1 + q.y2) / 2); });
-    return keep.length ? keep : segs;
+    // CAD-148: 全部が外の時も元の断片を残さない（凹みに間仕切りが残る元の作りを直す）。
+    // 中点が境界の線の上（2mm以内）にある断片は「外ではない」として残す。
+    var keep = segs.filter(function(q){
+      var mx = (q.x1 + q.x2) / 2, my = (q.y1 + q.y2) / 2;
+      if (inPoly(mx, my)) return true;
+      for (var i2 = 0; i2 < P.length; i2++){
+        var a2 = P[i2], c2 = P[(i2 + 1) % P.length], dx2 = c2[0] - a2[0], dy2 = c2[1] - a2[1], L22 = dx2 * dx2 + dy2 * dy2;
+        var t2 = L22 ? ((mx - a2[0]) * dx2 + (my - a2[1]) * dy2) / L22 : 0;
+        t2 = Math.max(0, Math.min(1, t2));
+        if (Math.hypot(mx - (a2[0] + dx2 * t2), my - (a2[1] + dy2 * t2)) <= 2) return true;
+      }
+      return false;
+    });
+    return keep;
   }
 
   function pdFinish(mm){
@@ -12555,6 +12576,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var segs = [];
     qs.forEach(function(s){ pdSplit(s).forEach(function(p){ segs.push(p); }); });
     segs = pdTrimSegs(segs);
+    if (!segs.length) return;
     var L = 0;
     segs.forEach(function(s){ L += Math.hypot(s.x2 - s.x1, s.y2 - s.y1); });
     pushUndo();
@@ -14026,6 +14048,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }
     });
     target = Math.max(lo, Math.min(hi, target));
+    // CAD-148: 外形ポリゴンもバリアにする（L字の凹みの外へ線を押し出さない）
+    try {
+      const P148 = pts(), spA = Math.min(s0, ...onLine.map(q => spanOf(q)[0])), spB = Math.max(s1, ...onLine.map(q => spanOf(q)[1]));
+      const okT148 = tp => { for (let i2 = 0; i2 <= 16; i2++){ const t2 = spA + (spB - spA) * i2 / 16, px = vert ? tp : t2, py = vert ? t2 : tp; if (inside([px, py], P148)) continue; let onB = false; for (let e2 = 0; e2 < P148.length; e2++){ const A2 = P148[e2], C2 = P148[(e2 + 1) % P148.length], dx2 = C2[0] - A2[0], dy2 = C2[1] - A2[1], L22 = dx2 * dx2 + dy2 * dy2; let tt = L22 ? ((px - A2[0]) * dx2 + (py - A2[1]) * dy2) / L22 : 0; tt = Math.max(0, Math.min(1, tt)); if (Math.hypot(px - (A2[0] + dx2 * tt), py - (A2[1] + dy2 * tt)) <= 2){ onB = true; break; } } if (!onB) return false; } return true; };
+      if (!okT148(target)){ const ds148 = Math.sign(target - linePos) || 1; let tp148 = target; while (Math.abs(tp148 - linePos) > 1 && !okT148(tp148)) tp148 -= ds148 * 5; target = tp148; }
+    } catch(e){}
     if (Math.abs(target - linePos) < 1 || !onLine.length) return linePos;
     let u0 = s0, u1 = s1;
     onLine.forEach(q => { const zs = spanOf(q); u0 = Math.min(u0, zs[0]); u1 = Math.max(u1, zs[1]); });
@@ -14137,6 +14165,124 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       return r;
     };
   } catch(e){}
+})();
+</script>
+
+<script>
+/* ================= CAD-148：家の外側に描けない =================
+   本人の指示（2026-11-10）：間取りの操作では、家の輪郭の外に間仕切りを
+   描けたり物を置けたりしない。外構は将来の別機能で、それまで外側は全面禁止。
+   方針：外でタップ／描いても何も起きない（警告は出さない）。
+   内外判定は外形ポリゴン（pts()）で行い、境界の線の上（2mm以内）は
+   「上にある＝外ではない」とする（壁の上に乗る窓・建具と同じ扱い）。
+   ここでは共通ヘルパー __g148 と、関数を包む形で止められる入口
+   （照明の配置／点検口・設備の配置／長さチップの間仕切り・垂れ壁）を担当する。
+   閉じた関数の中の入口（指描きの確定、コントローラー、編集シート、
+   dsOk、placePart、部屋寸法）は build148.py が各所に同じ判定を差し込んである。
+   既に外へはみ出して保存された記録は消さない（読み込み・表示・見積は
+   今まで通り）。編集で内側の位置を指定すれば直して戻せる。 */
+(function(){
+  "use strict";
+  function poly(){ try { return (typeof pts === "function" && typeof S !== "undefined" && S.edges) ? pts() : []; } catch(e){ return []; } }
+  function inPt(x, y){
+    var P = poly(); if (P.length < 3) return true;
+    if (inside([x, y], P)) return true;
+    for (var i = 0; i < P.length; i++){
+      var a = P[i], c = P[(i + 1) % P.length];
+      var dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy;
+      var t = L2 ? ((x - a[0]) * dx + (y - a[1]) * dy) / L2 : 0;
+      t = Math.max(0, Math.min(1, t));
+      if (Math.hypot(x - (a[0] + dx * t), y - (a[1] + dy * t)) <= 2) return true;
+    }
+    return false;
+  }
+  function segIn(q){
+    if (!q) return false;
+    var L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
+    if (L < 1) return inPt(q.x1, q.y1);
+    var n = Math.max(1, Math.ceil(L / 90));
+    for (var i = 0; i <= n; i++){ var t = i / n; if (!inPt(q.x1 + (q.x2 - q.x1) * t, q.y1 + (q.y2 - q.y1) * t)) return false; }
+    return true;
+  }
+  function rectIn(o){
+    var e; try { e = tkExt(o); } catch(err){ return inPt(o.x, o.y); }
+    var hx = e[0], hy = e[1];
+    return inPt(o.x, o.y) && inPt(o.x - hx, o.y - hy) && inPt(o.x + hx, o.y - hy) && inPt(o.x - hx, o.y + hy) && inPt(o.x + hx, o.y + hy);
+  }
+  window.__g148 = { in: inPt, seg: segIn, rect: rectIn };
+  /* 軸平行な線分を外形ポリゴンで切り、内側の断片のうち最長の物を返す。
+     全部が外なら null（呼び出し側は何も置かずに終わる）。 */
+  window.clipSeg148 = function(q){
+    if (!q) return null;
+    var P = poly(); if (P.length < 3) return q;
+    var horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
+    if (!horiz && !vert) return segIn(q) ? q : null;
+    var lo = horiz ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), hi = horiz ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2), fixed = horiz ? q.y1 : q.x1;
+    var cuts = {}; cuts[lo] = 1; cuts[hi] = 1;
+    P.forEach(function(a, i){
+      var c = P[(i + 1) % P.length];
+      if (horiz){ if (Math.abs(a[0] - c[0]) < 1){ var x = a[0]; if (x > lo + 1 && x < hi - 1 && fixed >= Math.min(a[1], c[1]) - 1 && fixed <= Math.max(a[1], c[1]) + 1) cuts[x] = 1; } }
+      else { if (Math.abs(a[1] - c[1]) < 1){ var y = a[1]; if (y > lo + 1 && y < hi - 1 && fixed >= Math.min(a[0], c[0]) - 1 && fixed <= Math.max(a[0], c[0]) + 1) cuts[y] = 1; } }
+    });
+    var B = Object.keys(cuts).map(Number).sort(function(a, b){ return a - b; }), frags = [];
+    for (var k = 0; k < B.length - 1; k++){
+      if (B[k + 1] - B[k] < 1) continue;
+      var m = (B[k] + B[k + 1]) / 2;
+      if (inPt(horiz ? m : fixed, horiz ? fixed : m)) frags.push(horiz ? {x1: B[k], y1: fixed, x2: B[k + 1], y2: fixed} : {x1: fixed, y1: B[k], x2: fixed, y2: B[k + 1]});
+    }
+    if (!frags.length) return null;
+    frags.sort(function(a, b){ return Math.hypot(b.x2 - b.x1, b.y2 - b.y1) - Math.hypot(a.x2 - a.x1, a.y2 - a.y1); });
+    return frags[0];
+  };
+  /* 照明の配置：外のタップでは置かない（選ぶシートも開かない）。
+     置いてある物のタップ（選び直し）は従来通り通す。 */
+  if (typeof ltPlanClick === "function"){
+    var lp0 = ltPlanClick;
+    ltPlanClick = function(mm){
+      try { if (typeof ltTool !== "undefined" && ltTool && ltNear(mm) < 0 && !inPt(mm[0], mm[1])) return true; } catch(e){}
+      return lp0(mm);
+    };
+  }
+  /* 点検口・設備（その他）の配置：外のタップでは置かない。
+     置けた物でも、四隅が外に出る物は取り除く（ずらし配置の暴走対策）。 */
+  if (typeof addTenken === "function"){
+    var at0 = addTenken;
+    addTenken = function(k){
+      try { if (window.__putAt && !inPt(window.__putAt[0], window.__putAt[1])) return; } catch(e){}
+      var n0 = (typeof S !== "undefined" && S.tenken) ? S.tenken.length : 0;
+      var r = at0(k);
+      try {
+        var T = S.tenken || [];
+        if (T.length > n0 && !rectIn(T[T.length - 1])){
+          T.splice(T.length - 1, 1);
+          if (typeof sel !== "undefined" && sel && sel.t === "k") sel = null;
+          save(); drawPlan();
+        }
+      } catch(e){}
+      return r;
+    };
+  }
+  /* 長さチップの間仕切り・垂れ壁：外に出る物は置かない */
+  function guardLast(getArr, tname){
+    return function(orig){
+      return function(){
+        var A0 = getArr(), n0 = A0 ? A0.length : 0;
+        var r = orig.apply(null, arguments);
+        try {
+          var A = getArr();
+          if (A && A.length > n0 && !segIn(A[A.length - 1])){
+            A.splice(A.length - 1, 1);
+            if (typeof sel !== "undefined" && sel && sel.t === tname) sel = null;
+            save(); drawPlan();
+          }
+        } catch(e){}
+        return r;
+      };
+    };
+  }
+  if (typeof addStdPart === "function") addStdPart = guardLast(function(){ return S.parts2D; }, "p")(addStdPart);
+  if (typeof addStdPartFree === "function") addStdPartFree = guardLast(function(){ return S.parts2D; }, "p")(addStdPartFree);
+  if (typeof addStdTare === "function") addStdTare = guardLast(function(){ return S.tare; }, "r")(addStdTare);
 })();
 </script>
 </body>
