@@ -1979,7 +1979,9 @@ function tatFromStroke(pm){
       return;
     }
     const r = tatFromStroke(mm); if (!r){ toast("もう少し大きくなぞってください"); return; }
-    pushUndo(); S.tatami = (S.tatami || []).filter(o => !(o.x0 < r.x1 && r.x0 < o.x1 && o.y0 < r.y1 && r.y0 < o.y1)); S.tatami.push(r);
+    // CAD-141: 重なる既存レコードは丸ごと消さず、重なり分だけ引く（他の床経路と
+    // 同じ式に統一。検査1110 指摘6・潜在経路）
+    pushUndo(); S.tatami = (S.tatami || []).flatMap(o => rectSub(o, r)); S.tatami.push(r);
     save(); tatMode = false; document.body.classList.remove("tatmode"); drawPlan(); toast(`畳 ${fmt(tatCount(r), 1)}帖（新調）にしました。「畳」を押して畳をタップで表替え・既存に変更`);
   };
   slot.addEventListener("pointerup", end, true); slot.addEventListener("pointercancel", end, true);
@@ -2745,15 +2747,22 @@ function enclPrevSvg(P){
   else if (pick === "erase" || pick === "cut"){ fill = "rgba(198,40,40,.14)"; stroke = "#C62828"; tcol = "#C62828"; name = pick === "erase" ? "外周消" : "配置消"; }
   return `<g pointer-events="none"><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="${fill}" fill-opacity="${fo}" stroke="${stroke}" stroke-width="3" stroke-dasharray="8 5"/><text x="${cx}" y="${cy + 1}" text-anchor="middle" class="halo" style="font-size:15px;font-weight:900;fill:${tcol}">${name}</text><text x="${cx}" y="${cy + 17}" text-anchor="middle" class="halo" style="font-size:10.5px;font-weight:800;fill:${tcol}">${f5(r.x1 - r.x0)}×${f5(r.y1 - r.y0)}</text></g>`;
 }
+// CAD-141: 床レコードの複製。det は参照共有にしない（切れ端の片方を決め直すと
+// もう片方まで変わるため。検査1110 指摘7）。四角の複製は Object.assign の代わりにこれを使う。
+function cpRec141(a, patch){
+  const q = Object.assign({}, a, patch || {});
+  if (a && a.det) q.det = JSON.parse(JSON.stringify(a.det));
+  return q;
+}
 // 四角 a から 四角 r を引いた残り
 function rectSub(a, r){
   const ix0 = Math.max(a.x0, r.x0), ix1 = Math.min(a.x1, r.x1), iy0 = Math.max(a.y0, r.y0), iy1 = Math.min(a.y1, r.y1);
   if (ix0 >= ix1 || iy0 >= iy1) return [a];
   const out = [];
-  if (iy0 > a.y0) out.push(Object.assign({}, a, {y1: iy0}));
-  if (iy1 < a.y1) out.push(Object.assign({}, a, {y0: iy1}));
-  if (ix0 > a.x0) out.push(Object.assign({}, a, {x1: ix0, y0: iy0, y1: iy1}));
-  if (ix1 < a.x1) out.push(Object.assign({}, a, {x0: ix1, y0: iy0, y1: iy1}));
+  if (iy0 > a.y0) out.push(cpRec141(a, {y1: iy0}));
+  if (iy1 < a.y1) out.push(cpRec141(a, {y0: iy1}));
+  if (ix0 > a.x0) out.push(cpRec141(a, {x1: ix0, y0: iy0, y1: iy1}));
+  if (ix1 < a.x1) out.push(cpRec141(a, {x0: ix1, y0: iy0, y1: iy1}));
   return out.filter(q => q.x1 - q.x0 >= 100 && q.y1 - q.y0 >= 100);
 }
 // 畳・土間などの割り当てから、囲んだ範囲を切り取る
@@ -2965,7 +2974,7 @@ function clipRectToPoly(a){
     open = next;
   }
   open.forEach(o => rects.push(o));
-  return rects.filter(q => q.x1 - q.x0 >= 100 && q.y1 - q.y0 >= 100).map(q => Object.assign({}, a, q));
+  return rects.filter(q => q.x1 - q.x0 >= 100 && q.y1 - q.y0 >= 100).map(q => cpRec141(a, q));
 }
 // 畳・土間・水回り・収納が、外周の外に出たり、重なったりしないように整える（あとに置いた物が優先）
 function fixAssign(){
@@ -2982,7 +2991,10 @@ function fixAssign(){
   }
   S.tatami = outT; S.zones = outZ;
   mergeAssign(S.zones, (a, b) => a.k === b.k);
-  mergeAssign(S.tatami, (a, b) => (a.st || "new") === (b.st || "new"));
+  // CAD-141: 合体は st だけでなく fk・det・za・h・fin まで全部同じ時だけ。st だけで
+  // 見ていた頃は、隣り合う「CF住宅用」と「CF土足OK」が合体して片方の det が消えた
+  // （検査1110 指摘7）。
+  mergeAssign(S.tatami, (a, b) => (a.st || "new") === (b.st || "new") && (a.fk || "") === (b.fk || "") && !!a.za === !!b.za && (a.h || 0) === (b.h || 0) && (a.fin || "") === (b.fin || "") && JSON.stringify(a.det || null) === JSON.stringify(b.det || null));
 }
 // 同じ種類で、辺がぴったりつながる四角（間に壁が無いもの）を1つにまとめる
 function mergeAssign(arr, same){
@@ -10476,10 +10488,10 @@ document.addEventListener("click", function(e){
     const ix0 = Math.max(a.x0, r.x0), ix1 = Math.min(a.x1, r.x1), iy0 = Math.max(a.y0, r.y0), iy1 = Math.min(a.y1, r.y1);
     if (ix0 >= ix1 || iy0 >= iy1) return [a];
     const out = [];
-    if (iy0 > a.y0) out.push(Object.assign({}, a, {y1: iy0}));
-    if (iy1 < a.y1) out.push(Object.assign({}, a, {y0: iy1}));
-    if (ix0 > a.x0) out.push(Object.assign({}, a, {x1: ix0, y0: iy0, y1: iy1}));
-    if (ix1 < a.x1) out.push(Object.assign({}, a, {x0: ix1, y0: iy0, y1: iy1}));
+    if (iy0 > a.y0) out.push(cpRec141(a, {y1: iy0}));
+    if (iy1 < a.y1) out.push(cpRec141(a, {y0: iy1}));
+    if (ix0 > a.x0) out.push(cpRec141(a, {x1: ix0, y0: iy0, y1: iy1}));
+    if (ix1 < a.x1) out.push(cpRec141(a, {x0: ix1, y0: iy0, y1: iy1}));
     return out.filter(q => q.x1 > q.x0 && q.y1 > q.y0);
   }
   function pushFloor(rect, fk){
@@ -10487,10 +10499,12 @@ document.addEventListener("click", function(e){
     // CAD-140: 部分的に重なる既存の仕上げは、重なり分だけ引く。従来は「少しでも
     // 重なれば記録ごと削除」で、重なっていない残りが標準仕上げに化けた。
     S.tatami = S.tatami.flatMap(o => subFloor140(o, rect));
-    if (fk === "tatami") S.tatami.push({x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, st: "new"});
+    if (fk === "tatami"){ const trec = {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, st: "new"}; S.tatami.push(trec); if (window.__detNow141) window.__detNow141(trec); }
     else { const rec = {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, fk: fk, st: "fl:" + fk};
       if (fk === "flAge"){ rec.h = 300; rec.fin = "tatami"; }
       S.tatami.push(rec);
+      // CAD-141: 置いた瞬間に、そのレコードへ det を直接付ける（旧: save 時に一斉付与）
+      if (window.__detNow141) window.__detNow141(rec);
       if (fk === "flAge"){ const recObj = S.tatami[S.tatami.length - 1]; setTimeout(() => { const ix = S.tatami.indexOf(recObj); if (ix >= 0) try { tatSheet(ix); } catch(e){} }, 60); } }
   }
   window.__pushFloor = pushFloor;
@@ -13397,17 +13411,18 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (k === "tatami") return !r.fk;
     return r.fk === k;
   }
-  function attachPend138(){
-    if (!pend138 || typeof S === "undefined" || !S) return;
-    (S.tatami || []).forEach(function(r){
-      if (seen138.has(r)) return;
-      if (!pendMatch138(r)) return;
-      applyDet138(r, pend138.kind, pend138.det);
-    });
-  }
+  /* CAD-141: det は「置いた瞬間に、置いたそのレコードへ直接」付ける形に統一。
+     旧 attachPend138（save のたびに WeakSet に無い＝新しいと見なして一斉に付ける）は
+     廃止。戻る（JSON復元）・現場の切替・重ね置きの分割で既存レコードが別オブジェクトに
+     作り直されると、既存の床まで置き待ちの det に書き換わった（検査1110 指摘1）。
+     本体側の pushFloor が、新しいレコードを作るたびに下の受け口を呼ぶ。 */
+  window.__detNow141 = function(r){
+    if (!pend138 || !r) return;
+    try { if (pendMatch138(r)) applyDet138(r, pend138.kind, pend138.det); } catch(e){}
+  };
   try {
     var _save138 = save;
-    save = function(){ try { attachPend138(); } catch(e){} var r = _save138.apply(this, arguments); markSeen138(); return r; };
+    save = function(){ var r = _save138.apply(this, arguments); markSeen138(); return r; };
   } catch(e){}
 
   /* ---------- 枝分かれバー ---------- */
