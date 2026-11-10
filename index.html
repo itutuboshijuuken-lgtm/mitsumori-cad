@@ -12410,6 +12410,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!silent) { try { drawToolsUI(); } catch(e){} }
   }
   window.__partDrawOff = pdOff;
+  /* CAD-153: ピンチ確定時に進行中の指描きを取り消すためのフック（ゲートから呼ばれる） */
+  window.__pdCancel153 = function(){ if (pdInk){ try { pdInk.el.remove(); } catch(e){} pdInk = null; } };
 
   function pdOn(){
     if (window.__delMode && window.__delSet) window.__delSet(false);
@@ -12801,6 +12803,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!silent){ try{ drawToolsUI(); }catch(e){} }
   }
   window.__eraOff = eraOff;
+  /* CAD-153: ピンチ確定時に消しゴムの途中なぞりだけを取り消す（道具自体は落とさない）。
+     なぞり途中で既に消えた分は、ゲート側の undo 巻き戻しで戻る。 */
+  window.__eraCancel153 = function(){ if (eraInk){ try { eraInk.el.remove(); } catch(e){} eraInk = null; } };
   function eraOn(){
     try{ if (window.__delMode && window.__delSet) window.__delSet(false); }catch(e){}
     try{ if (window.__partDrawOff) window.__partDrawOff(true); }catch(e){}
@@ -13437,6 +13442,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     + "body.nbtutRun.ezEasy #grpSub [data-tt=\"light\"]{display:block!important}";
   document.head.appendChild(st);
 
+  /* CAD-153: ピンチは新しい瞬時判定ゲート（末尾の CAD-153 モジュール）が全ステップで
+     担当するため、136 のピンチ初期化はここで止める（grp136 の状態・CSS・PV は従来通り使う）。
+     止める理由: 136 はドラッグしか取り消せず、進行中の指描き（pdInk 等）が残って
+     2本指で間仕切りが記録される事故があった（本人の実機動画 2026-11-10）。 */
+  return;
   var wrap = document.getElementById("planWrap"), svg = document.getElementById("plan");
   if (!wrap || !svg) return;
   var pts = new Map(), pinching = false;
@@ -14429,5 +14439,233 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   window.__workFs150 = true;
 })();
 </script>
+
+<script>
+/* ================= CAD-153：ピンチ拡大縮小の作り直し（瞬時判定ゲート） =================
+   本人の条件（2026-11-10）:
+   ・二本指で触った瞬間にピンチと判定する「瞬時判定」を新しい仕組みとして作る
+     （初回の仕組み＝瞬時判定が無く一本指操作まで反応して誤作動した物の復活は禁止）。
+   ・一本指の操作（なぞる・置く・ドラッグ・タップ）は絶対に誤作動させない。
+   ・二本指は絶対に描く動作・置く動作に化けない（実機動画: 全画面で拡大しようと
+     二本指を置くと間仕切りが次々入った）。
+   仕組み:
+   ・window の capture で全 pointer イベントを最初に見るゲート。
+   ・図面サーフェス（#planWrap / #draw / #iso / #pvSvg / #sec / 小編集器）への
+     touch だけを数える。1本目はそのままアプリへ通す（従来通り）。
+   ・2本目が触れた瞬間、その pointerdown をアプリへ渡さずピンチ確定する。
+     進行中の一本指操作（各インク・ドラッグ）は取り消し、1本目の down で
+     既に記録されてしまった操作は undo スナップショットで巻き戻す。
+   ・ピンチ中と、その後 指が全部離れるまで（dead）は、サーフェスへの pointer
+     イベントを一切アプリへ渡さない。残った1本で線が伸びる事故も防ぐ。
+   ・拡大縮小: #plan は既存の PV（中心＋倍率）モデル。他の SVG は viewBox を
+     二本指の中点アンカーで拡縮する。倍率は #plan 1〜8倍、その他 1〜6倍。
+   ・CAD-136 のピンチ初期化は無効化済み（このゲートが全ステップで担当）。 */
+(function(){
+  "use strict";
+  window.__pinch153 = true;
+  var G = { mode: "idle", touch: {}, order: [], pz: null, undoDepth: -1, clickBlockUntil: 0, vb: {} };
+  var VB_IDS = { draw: 1, iso: 1, pvSvg: 1, sec: 1 };
+
+  var st = document.createElement("style");
+  st.textContent = "#draw, #iso, #pvSvg, #sec, #kt-svg, #kg-svg, #wl-svg { touch-action: none; }";
+  document.head.appendChild(st);
+
+  function surfOf(e){
+    var t = e.target;
+    if (!t || !t.closest) return null;
+    if (t.closest("#planWrap")) return document.getElementById("plan");
+    return t.closest("#draw, #iso, #pvSvg, #sec, #kt-svg, #kg-svg, #wl-svg");
+  }
+  function track(e, el){
+    var t = G.touch[e.pointerId];
+    if (!t){ t = G.touch[e.pointerId] = { x: 0, y: 0, el: null }; G.order.push(e.pointerId); }
+    t.x = e.clientX; t.y = e.clientY;
+    if (el) t.el = el;
+  }
+  function untrack(e){
+    if (G.touch[e.pointerId]){ delete G.touch[e.pointerId]; G.order = G.order.filter(function(id){ return id !== e.pointerId; }); }
+  }
+  function twoPts(){
+    if (G.order.length < 2) return null;
+    var a = G.touch[G.order[0]], b = G.touch[G.order[1]];
+    if (!a || !b) return null;
+    return { a: a, b: b, mid: [(a.x + b.x) / 2, (a.y + b.y) / 2], d: Math.max(10, Math.hypot(b.x - a.x, b.y - a.y)) };
+  }
+
+  /* 進行中の一本指操作を取り消す（データは触らない。記録済みの物は rollbackGesture で戻す） */
+  function cancelInProgress(){
+    /* 描く（#draw）の途中線 */
+    try { if (cur){ if (curEl) curEl.remove(); if (strokes && strokes.length && strokes[strokes.length - 1] === cur) strokes.pop(); else if (strokes) strokes = strokes.filter(function(s){ return s !== cur; }); cur = null; curEl = null; inkM = null; } } catch(err){}
+    /* 間取りの drawMode インク（pInk は点の配列。掃除は inkEnd と同じ形） */
+    try { if (pInk){ pInk = null; var g1 = document.getElementById("planInk"); if (g1) g1.innerHTML = ""; } } catch(err){}
+    /* 完成図のなぞり */
+    try { if (tr){ if (tr.line) tr.line.remove(); tr = null; } } catch(err){}
+    /* ドラッグ選択・移動 */
+    try { if (dragging){ clearTimeout(dragging.timer); var wasMoved = !!dragging.moved; if (wasMoved){ try { Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig))); } catch(e2){} } dragging = null; var w = document.getElementById("planWrap"); if (w) w.classList.remove("dragArmed"); if (wasMoved){ try { drawPlan(); } catch(e3){} } } } catch(err){}
+    /* モジュール内インク（フック経由） */
+    try { if (window.__pdCancel153) window.__pdCancel153(); } catch(err){}
+    try { if (window.__eraCancel153) window.__eraCancel153(); } catch(err){}
+    /* top-level let のインク類 */
+    try { if (tatInk){ if (tatInk.el) tatInk.el.remove(); tatInk = null; } } catch(err){}
+    try { if (enclInk){ if (enclInk.el) enclInk.el.remove(); enclInk = null; } } catch(err){}
+    try { if (eraInk){ if (eraInk.el) eraInk.el.remove(); eraInk = null; } } catch(err){}
+  }
+
+  /* 1本目の down 以後に pushUndo された分は、その down 直前の状態へ巻き戻す
+     （タップで即記録される道具・消しゴムの途中消去などが対象。
+       ドラッグ選択のスナップショットは中身が同じなので戻しても無害） */
+  function rollbackGesture(){
+    try {
+      if (G.undoDepth < 0 || typeof undoStack === "undefined") return;
+      if (undoStack.length > G.undoDepth){
+        var target = undoStack[G.undoDepth];
+        undoStack.length = G.undoDepth;
+        try { redoStack.length = 0; } catch(err){}
+        if (target) undoRestore(target);
+        if (typeof undoUi === "function") undoUi();
+        G.undoDepth = undoStack.length;
+      }
+    } catch(err){}
+  }
+
+  function readVB(el){ var a = (el.getAttribute("viewBox") || "").trim().split(/\s+/).map(Number); if (a.length !== 4 || a.some(isNaN)) return null; return { x: a[0], y: a[1], w: a[2], h: a[3] }; }
+  function vbStr(v){ return v.x + " " + v.y + " " + v.w + " " + v.h; }
+  function setVB(el, v){ el.setAttribute("viewBox", vbStr(v)); }
+  function clampPan(v, h0, hw, w){ if (w >= hw) return h0; return Math.max(h0, Math.min(h0 + hw - w, v)); }
+
+  function enterPinch(){
+    G.mode = "pinch";
+    G.clickBlockUntil = Date.now() + 450;
+    cancelInProgress();
+    rollbackGesture();
+    try { moved = true; tapCancel = true; } catch(err){}
+    var tp = twoPts();
+    G.pz = { kind: "block" };
+    if (!tp) return;
+    var el = tp.a.el;
+    if (el && el.id === "plan"){
+      try {
+        if (PV.cx == null){ var c = mViewCenterSvg(); PV.cx = c[0]; PV.cy = c[1]; }
+        G.pz = { kind: "plan", z0: PV.z, d0: tp.d, a: planPt({ clientX: tp.mid[0], clientY: tp.mid[1] }) };
+      } catch(err){ G.pz = { kind: "block" }; }
+    } else if (el && VB_IDS[el.id]){
+      var cur = readVB(el);
+      if (cur){
+        var stt = G.vb[el.id];
+        var home = (stt && stt.last === vbStr(cur)) ? stt.home : cur;
+        G.pz = { kind: "vb", el: el, home: home, z0: home.w / cur.w, d0: tp.d };
+      }
+    }
+  }
+
+  function reAnchor(){
+    var tp = twoPts(); if (!tp || !G.pz) return;
+    var pz = G.pz;
+    if (pz.kind === "plan"){ try { pz.z0 = PV.z; pz.a = planPt({ clientX: tp.mid[0], clientY: tp.mid[1] }); pz.d0 = tp.d; } catch(err){} }
+    else if (pz.kind === "vb"){ var cur = readVB(pz.el); if (cur){ pz.z0 = pz.home.w / cur.w; pz.d0 = tp.d; } }
+  }
+
+  function movePinch(){
+    var tp = twoPts(); if (!tp || !G.pz) return;
+    var pz = G.pz;
+    if (pz.kind === "plan"){
+      try {
+        PV.z = Math.max(1, Math.min(8, pz.z0 * tp.d / pz.d0));
+        applyPV();
+        var nw = planPt({ clientX: tp.mid[0], clientY: tp.mid[1] });
+        PV.cx += pz.a[0] - nw[0]; PV.cy += pz.a[1] - nw[1];
+        applyPV();
+      } catch(err){}
+    } else if (pz.kind === "vb"){
+      try {
+        var el = pz.el, home = pz.home; if (!el || !home) return;
+        var cur = readVB(el); if (!cur) return;
+        var z = Math.max(1, Math.min(6, pz.z0 * tp.d / pz.d0));
+        var rect = el.getBoundingClientRect(); if (!rect.width || !rect.height) return;
+        var fx = (tp.mid[0] - rect.left) / rect.width, fy = (tp.mid[1] - rect.top) / rect.height;
+        var ax = cur.x + fx * cur.w, ay = cur.y + fy * cur.h;
+        var nw2 = home.w / z, nh2 = home.h / z;
+        var nx = clampPan(ax - fx * nw2, home.x, home.w, nw2), ny = clampPan(ay - fy * nh2, home.y, home.h, nh2);
+        var vb = z <= 1.001 ? home : { x: nx, y: ny, w: nw2, h: nh2 };
+        setVB(el, vb);
+        G.vb[el.id] = { home: home, last: vbStr(vb) };
+      } catch(err){}
+    }
+  }
+
+  /* ピンチ終了時: 本体側の touches / pinch 状態を掃除する
+     （指の up を飲み込むため、本体の endT が走らず状態が残るのを防ぐ） */
+  function endPinch(){
+    G.pz = null;
+    G.clickBlockUntil = Date.now() + 450;
+    try { if (typeof touches !== "undefined" && touches && touches.clear) touches.clear(); } catch(err){}
+    try { pinch = null; } catch(err){}
+    try { moved = true; tapCancel = true; } catch(err){}
+  }
+
+  window.addEventListener("pointerdown", function(e){
+    if (e.pointerType !== "touch") return;
+    if (G.mode === "pinch" || G.mode === "dead"){
+      track(e, surfOf(e));
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (G.mode === "dead" && G.order.length >= 2) enterPinch();
+      return;
+    }
+    var el = surfOf(e);
+    if (!el) return;
+    var wasEmpty = G.order.length === 0;
+    track(e, el);
+    if (wasEmpty){
+      G.mode = "one";
+      try { G.undoDepth = undoStack.length; } catch(err){ G.undoDepth = -1; }
+      return;
+    }
+    /* 2本目: その場でピンチ確定。この pointerdown はアプリへ渡さない */
+    e.preventDefault(); e.stopImmediatePropagation();
+    enterPinch();
+  }, true);
+
+  window.addEventListener("pointermove", function(e){
+    if (e.pointerType !== "touch") return;
+    if (!G.touch[e.pointerId]) return;
+    track(e, null);
+    if (G.mode === "pinch"){ e.preventDefault(); e.stopImmediatePropagation(); movePinch(); }
+    else if (G.mode === "dead"){ e.preventDefault(); e.stopImmediatePropagation(); }
+  }, true);
+
+  function onUp(e){
+    if (e.pointerType !== "touch") return;
+    if (G.mode === "pinch"){
+      e.preventDefault(); e.stopImmediatePropagation();
+      untrack(e);
+      if (G.order.length >= 2) reAnchor();
+      else { G.mode = "dead"; endPinch(); }
+      return;
+    }
+    if (G.mode === "dead"){
+      e.preventDefault(); e.stopImmediatePropagation();
+      untrack(e);
+      if (!G.order.length) G.mode = "idle";
+      return;
+    }
+    if (G.touch[e.pointerId]){ untrack(e); if (!G.order.length) G.mode = "idle"; }
+  }
+  window.addEventListener("pointerup", onUp, true);
+  window.addEventListener("pointercancel", onUp, true);
+
+  /* ピンチ直後の click（fx のタップ配置など click で確定する物）を飲む */
+  window.addEventListener("click", function(e){
+    if (G.mode === "pinch" || G.mode === "dead" || Date.now() <= G.clickBlockUntil){
+      if (surfOf(e)){ e.preventDefault(); e.stopImmediatePropagation(); }
+    }
+  }, true);
+
+  /* Safari のジェスチャ拡大を図面サーフェスでは止める */
+  window.addEventListener("gesturestart", function(e){ if (surfOf(e)) e.preventDefault(); }, true);
+
+  window.__pinch153State = function(){ return { mode: G.mode, n: G.order.length }; };
+})();
+</script>
+
 </body>
 </html>
