@@ -1214,11 +1214,19 @@ const wakuOK = s => s.cat === "クローゼット" || (s.cat === "室内ドア" 
 const sPanels = s => s.cat === "クローゼット" ? (s.w > 1200 ? 4 : 2) : /掃き出し|腰窓/.test(s.cat) ? (s.w >= 2600 ? 4 : 2) : /小窓/.test(s.cat) ? 1 : /引違い/.test(s.name) ? 2 : 1;
 const sOpts = s => ipOK(s) ? (s.cat === "FIX" ? ["new", "keep", "waku", "ip"] : ["new", "keep", "waku", "ip", "shoji"]) : s.cat === "クローゼット" ? ["new", "keep", "fusuma"] : wakuOK(s) ? ["new", "keep", "fusuma", "shoji"] : ["new", "keep"];
 const sState = s => s.st || "new";
+// CAD-149: 窓・建具の状態はモードで分ける（本人の決定 2026-11-10「窓交換、インプラスもリフォームだけ」）。
+// 既存系の状態（既存のまま・窓枠交換・インプラス・襖/障子 張替え）は、新築・増築（zo）では選択肢に出さない。
+// 例外は sashAskState と同じ線引き： 増築で母屋側の辺（S.house）に付いた窓は「既存のまま」を聞く意味が
+// あるので、母屋側の物は今まで通り全部出す。rf / pt は無条件で今まで通り。
+// 記録済みの既存系の状態は書き換えない（計算・表示は従来通り。サイクルで押せば新設に戻る）。
+const sExist149 = ["keep", "waku", "ip", "fusuma", "shoji"];
+const sHouseWall149 = s => { try { if (!s || typeof S === "undefined" || !(S.house >= 0)) return false; if (s.host) return s.host.t === "e" && s.host.i === S.house; return s.wall === S.house; } catch(e){ return false; } };
+function sOptsMode149(s){ const o = sOpts(s); if (typeof S === "undefined" || S.mode !== "zo" || sHouseWall149(s)) return o; return o.filter(k => !sExist149.includes(k)); }
 // 窓枠交換・インプラス・襖/障子の張替えは、状態が「既存」系の時だけ出す（同じ操作・同じ呼び方）
-const sOptsShown = s => sOpts(s).filter(k => !["waku", "ip", "fusuma", "shoji"].includes(k) || ["keep", "waku", "ip", "fusuma", "shoji"].includes(sState(s)));
+const sOptsShown = s => sOptsMode149(s).filter(k => !["waku", "ip", "fusuma", "shoji"].includes(k) || ["keep", "waku", "ip", "fusuma", "shoji"].includes(sState(s)));
 const ipOK = s => /掃き出し|腰窓|小窓|FIX/.test(s.cat);
 const AVG_IP = {"掃き出し": 110000, "腰窓": 65000, "小窓": 35000, "FIX": 40000};   // インプラス 材工の仮の平均（単価を入れると置き換わる）
-function nextSState(s){ const o = sOpts(s); return o[(o.indexOf(sState(s)) + 1) % o.length]; }
+function nextSState(s){ const o = sOptsMode149(s); const ix = o.indexOf(sState(s)); return ix < 0 ? o[0] : o[(ix + 1) % o.length]; }
 // 窓枠：新設の窓は必ず、既存の窓は「窓枠交換」の時に積算する（上枠・下枠・縦枠2本。掃き出しは下枠なし。1950以下は小、超えると大）
 function wakuRows(s, two){
   const st = sState(s); if (!ipOK(s) || !(st === "new" || st === "waku")) return [];
@@ -8452,7 +8460,7 @@ function sashPickState(i){
   const s = S.sashes[i]; if (!s) return;
   const D = {new: ["新設", "新しく付ける"], keep: ["既存のまま", "見積に入りません"], waku: ["窓枠交換", "窓はそのまま、窓枠だけ交換"], ip: ["インプラス", "今の窓の内側に内窓を付ける"], fusuma: ["襖 張替え", "既存の襖を張り替える"], shoji: ["障子 張替え", "既存の障子を張り替える"]};
   const cur = sState(s);
-  $("mbox").innerHTML = `<h3>${i + 1}番　${s.cat} ${fmt(s.w)}</h3><p class="hint" style="margin-top:0">どうしますか？</p>${(ipOK(s) && sState(s) === "new") ? `<p class="hint" style="margin:0 0 6px">「既存のまま」を選ぶと、窓枠交換・インプラスが出ます。</p>` : ""}<div class="seg v">${sOptsShown(s).map(k => `<button type="button" data-sa2="${k}" aria-pressed="${cur === k}" style="min-height:54px;text-align:left;padding:6px 12px;${cur === k ? "background:var(--ai);color:#fff" : ""}"><b>${D[k][0]}</b><br><small style="font-weight:400;opacity:.85">${D[k][1]}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="sa2Close" type="button">閉じる</button></div>`;
+  $("mbox").innerHTML = `<h3>${i + 1}番　${s.cat} ${fmt(s.w)}</h3><p class="hint" style="margin-top:0">どうしますか？</p>${(ipOK(s) && sState(s) === "new" && sOptsMode149(s).includes("waku")) ? `<p class="hint" style="margin:0 0 6px">「既存のまま」を選ぶと、窓枠交換・インプラスが出ます。</p>` : ""}<div class="seg v">${sOptsShown(s).map(k => `<button type="button" data-sa2="${k}" aria-pressed="${cur === k}" style="min-height:54px;text-align:left;padding:6px 12px;${cur === k ? "background:var(--ai);color:#fff" : ""}"><b>${D[k][0]}</b><br><small style="font-weight:400;opacity:.85">${D[k][1]}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="sa2Close" type="button">閉じる</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-sa2]").forEach(b => b.onclick = () => { try { pushUndo(); } catch(e){} s.st = b.dataset.sa2; $("modal").hidden = true; save(); drawPlan(); try { drawSash(); } catch(e){} toast(`${i + 1}番：${SST[s.st][0]}`); });
   $("sa2Close").onclick = () => { $("modal").hidden = true; };
