@@ -12668,7 +12668,14 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     /* item 51: drawing-only / full-screen */
     "body.fsDraw{--hdrH:0px}",
     "body.fsDraw header.top{display:none!important}",
-    "body.fsDraw #stM .mtools,body.fsDraw #planBar{display:none!important}",
+    /* CAD-150: 全画面は「見るだけ」ではなく作業場。間取りの道具帯と #planBar は隠さず、図面の上に透明に浮かせる（CAD-144の方針）。#slotM を #stM いっぱいに広げ、道具帯の余白は pointer-events を通して指描きを妨げない */
+    "body.fsDraw #stM #slotM{position:absolute;inset:0;z-index:0}",
+    "body.fsDraw #stM .mtools{margin-top:calc(env(safe-area-inset-top,0px) + 52px)}",
+    "body.fsDraw.mSel #stM #planBar{margin-top:calc(env(safe-area-inset-top,0px) + 52px)}",
+    "body.fsDraw #stM .mtools,body.fsDraw #stM #planBar{position:relative;z-index:9;background:transparent;pointer-events:none}",
+    "body.fsDraw #stM .mtools .seg{background:transparent}",
+    "body.fsDraw #stM .mtools button,body.fsDraw #stM #planBar button{pointer-events:auto}",
+    "body.fsDraw #stM #floorPanel>div{background:rgba(255,255,255,.55);border-radius:4px;padding:1px 4px}",
     "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext{display:none!important}",
     /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
     "#closeAllFloat{position:fixed;right:10px;top:calc(var(--hdrH,100px) + 6px);z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:transparent;color:#37474F;font-size:14px;font-weight:900}",
@@ -12812,7 +12819,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     syncFloats();
   }
   function fsEnter(kind){
-    if (fsState !== "off"){ if (kind === "manual") fsState = "manual"; syncFloats(); return; }
+    if (fsState !== "off"){ if (kind === "manual") fsState = "manual"; else if (kind === "work" && fsState === "auto") fsState = "work"; syncFloats(); return; }
     fsState = kind;
     document.body.classList.add("fsDraw");
     afterFs();
@@ -12824,6 +12831,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     afterFs();
   }
   window.__fsExit = fsExit;
+  /* CAD-150: 入口（壁を描く／選んで置く／床の仕様）から全画面の作業場へ入る */
+  window.__fsEnterWork = function(){ fsEnter("work"); };
   function disarmCovered(){
     try{ if (window.__partDrawOff) window.__partDrawOff(true); }catch(e){}
     eraOff(true);
@@ -14291,6 +14300,38 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   if (typeof addStdPart === "function") addStdPart = guardLast(function(){ return S.parts2D; }, "p")(addStdPart);
   if (typeof addStdPartFree === "function") addStdPartFree = guardLast(function(){ return S.parts2D; }, "p")(addStdPartFree);
   if (typeof addStdTare === "function") addStdTare = guardLast(function(){ return S.tare; }, "r")(addStdTare);
+})();
+</script>
+
+<script>
+/* ================= CAD-150：入口から全画面の作業場へ =================
+   入口（壁を描く／選んで置く／床の仕様）を開いたら、全画面がその作業場になる。
+   入口自身の onclick が処理し終わった後（document へのバブル）で開いた状態を
+   判定するので、開くクリックでだけ入り、閉じるクリックでは入らない。
+   作業場を出るのは「閉じる」だけ（__closeAll が fsExit を含む）。
+   チュートリアル中は従来の表示を保つ（自動全画面も元々チュートリアルでは無効）。 */
+(function(){
+  "use strict";
+  document.addEventListener("click", function(e){
+    try {
+      if (!window.__pageM) return;
+      if (document.body.classList.contains("nbtutRun")) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      /* 入口の onclick は #toolTabs を作り直すため、クリックされたボタンは
+         バブルの時点では外れている事がある。祖先の判定は composedPath で行う */
+      var path = e.composedPath ? e.composedPath() : [];
+      var inTabs = path.some(function(n){ return n && (n.id === "toolTabs" || n.id === "grpSub"); })
+        || !!(t.closest("#toolTabs") || t.closest("#grpSub"));
+      if (!inTabs) return;
+      var open = false;
+      try { if (typeof toolOpen !== "undefined" && toolOpen) open = true; } catch(e2){}
+      if (window.grp136) open = true;
+      if (window.__floorTab) open = true;
+      if (open && window.__fsEnterWork) window.__fsEnterWork();
+    } catch(e){}
+  }, false);
+  window.__workFs150 = true;
 })();
 </script>
 </body>
