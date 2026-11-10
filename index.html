@@ -4878,14 +4878,14 @@ function calc0(...a){
    ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
    ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
 function framePos(){
-  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0};
+  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0};
   try {
     if (!S.edges || !S.edges.length) return Z;
     const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
     const colP = +S.colP || 1820, pv = pts(), runs = [];
     const addRun = (a, c, kind, isNew) => {
       const L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (!(L > 1)) return null;
-      const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], junc: new Set(), postT: new Set()};
+      const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], opsD: [], junc: new Set(), postT: new Set()};
       runs.push(r); return r;
     };
     const byKey = {};
@@ -4899,6 +4899,7 @@ function framePos(){
       const w = +sa.w || 0; if (!(w > 1) || w >= r.L + 1) return;
       const o0 = Math.max(0, Math.min(+sa.pos || 0, Math.max(0, r.L - w)));
       r.ops.push([o0, Math.min(r.L, o0 + w)]);
+      r.opsD.push({h: +sa.h || 0, cat: sa.cat || ""});   // CAD-161: 短い間柱の長さの根拠（サッシの高さ・種類）
     });
     const inOp = (r, t) => r.ops.some(o => t > o[0] + 1 && t < o[1] - 1);
     // 交点・取り合い（他のランの端点が触れる所＋交差）
@@ -4967,6 +4968,36 @@ function framePos(){
         else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
       }
     });
+    // CAD-161: 開口まわり（まぐさ・窓台）の短い間柱（本人の承認 2026-11-10「満点です」。CAD-154 では数えていなかった）
+    // 対象は外壁の開口だけ。位置は今の間柱と同じ並び（ラン始点の柱芯から 455 ピッチ＝k*M2）で、開口の幅の中に入る位置。
+    // 柱の半ピッチ以内は柱がその位置の役をするので数えない（CAD-154 N3c と同じ扱い）。
+    // 下＝窓台の下（土台天〜窓台：長さは 窓台高さ＋dfl）、上＝まぐさの上（サッシ上端〜桁・胴差の下：長さは ch＋fuko−窓台高さ−h）。
+    // 窓台高さはアプリ全体の約束事（立面図・立体図と同じ：ドア・掃き出しは 0、それ以外は 2030−h）。
+    // ※まぐさ自体の成（高さ）はアプリが持っていないので、上はサッシ上端から測る（柱・間柱を通しで Lc で拾う今の流儀と同じ）。
+    {
+      const sillOf = (cat, h) => (/玄関|勝手口|室内ドア|クローゼット/.test(cat) || /掃き出し/.test(cat)) ? 0 : Math.max(0, 2030 - h);
+      const dfl1 = +S.dfl || 40, ch1 = +S.ch || 2400, fuko1 = +S.fuko || 100;
+      const seen = new Set();
+      runs.forEach(r => {
+        if (r.kind !== "e") return;
+        r.ops.forEach((o, oi) => {
+          const d = r.opsD[oi]; if (!d || !(d.h > 0)) return;
+          const sill = sillOf(d.cat, d.h), upLen = ch1 + fuko1 - sill - d.h;
+          for (let k = 1; k * M2 < r.L - 1; k++){
+            const t = k * M2;
+            if (!(t > o[0] + 1 && t < o[1] - 1)) continue;
+            let nearPost = false;
+            r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost = true; });
+            if (nearPost) continue;
+            const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+            if (seen.has(kk)) continue; seen.add(kk); Z.opPosN++;
+            const thick = k % 2 === 0;
+            if (sill > 0){ Z.opStuds.push({x, y, thick, seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
+            if (upLen > 0){ Z.opStuds.push({x, y, thick, seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
+          }
+        });
+      });
+    }
     const cls = (x, y) => ({f: runs.some(r => r.kind === "e" && onRun(r, x, y)), p: runs.some(r => r.kind === "p" && r.isNew && onRun(r, x, y))});
     postMap.forEach(P0 => {
       const c = cls(P0.x, P0.y);
@@ -5481,6 +5512,17 @@ const clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm
   }
   // 柱・間柱（階ごと）
   const corners = S.edges.length; const F6 = framePos(); let colsEach = F6.frameN, studsPer = F6.studN, studThick = F6.thick, studThin = F6.thin;
+  // CAD-161: 開口まわりの短い間柱の長さ（階ごとに出し直す。2階の床の立ち上がりは Lc2 と同じ 40）
+  const opLens161 = f => {
+    const th = [], tn = [];
+    (F6.opStuds || []).forEach(p => {
+      const L = p.seg === "dn" ? (f === 2 ? 40 : (+S.dfl || 40)) + p.sill : (f === 2 ? (+S.ch2 || 2400) : (+S.ch || 2400)) + (+S.fuko || 100) - p.sill - p.h;
+      if (L > 0) (p.thick ? th : tn).push(Math.round(L));
+    });
+    return {th, tn};
+  };
+  const op1161 = opLens161(1), op2161 = opLens161(2);
+  const opNote161 = (op1161.th.length + op1161.tn.length + op2161.th.length + op2161.tn.length) ? "・開口の上下含む" : "";
 
   // 小屋
   const beams = yose ? Math.max(0, Math.ceil(D / S.hariP - 1e-9) - 1) : Math.max(0, Math.ceil(D / S.hariP - 1e-9) - 1), rowsB = beams + 2;
@@ -5558,12 +5600,12 @@ const clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm
     lum("hashira", "通し柱", 105, 105, Array(corners).fill(Lc + S.dosa + Lc2 + 120), `105角・長さ${fmt(Lc + S.dosa + Lc2)}`, true);
     lum("hashira", "1階 管柱", 105, 105, Array(colsEach - corners).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
     lum("hashira", "2階 管柱", 105, 105, Array(colsEach - corners).fill(Lc2 + 120), `105角・長さ${fmt(Lc2)}`, true);
-    if (S.mabaKata === "mix" && studThin > 0){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(Array(studThick).fill(Lc2)), `${ta}×${tb}・910の位置（継目）・1〜2階`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(Array(studThin).fill(Lc2)), `${na}×${nb}・455の位置・1〜2階`, false); }
-    else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(Array(studsPer).fill(Lc2)), `${ta}×${tb}・455間隔・1〜2階`, false); }
+    if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length + op2161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(Array(studThick).fill(Lc2), op1161.th, op2161.th), `${ta}×${tb}・910の位置（継目）・1〜2階${op1161.th.length + op2161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(Array(studThin).fill(Lc2), op1161.tn, op2161.tn), `${na}×${nb}・455の位置・1〜2階${op1161.tn.length + op2161.tn.length ? "・開口の上下含む" : ""}`, false); }
+    else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(Array(studsPer).fill(Lc2), op1161.th, op1161.tn, op2161.th, op2161.tn), `${ta}×${tb}・455間隔・1〜2階${opNote161}`, false); }
   } else {
     lum("hashira", "柱", 105, 105, Array(colsEach).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
-    if (S.mabaKata === "mix" && studThin > 0){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc), `${ta}×${tb}・910の位置（継目）`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc), `${na}×${nb}・455の位置`, false); }
-    else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc), `${ta}×${tb}・455間隔`, false); }
+    if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
+    else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
     { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ lum("hashira", "内部の柱", 105, 105, Array(zi.n).fill(Lc + 120), `105角・梁間${fmt(W)}を飛ばせないため（${zi.rows}列）`, true); lum("keta", "内部の桁（柱の上）", 105, S.hari, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(S.hari)}・${zi.rows}列`, true); work("kanamono", "内部の柱の金物", zi.n, "本"); } }
   }
   if (S.tr === "suji"){ lum("suji", "筋交い", 45, 105, Array(sujiN).fill(sujiL), `45×105・${S.suji === "tasuki" ? "たすき" : "片"}・長さ${fmt(sujiL)}`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
@@ -11657,6 +11699,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     const b = bbox(), F6 = framePos();
     const posts = F6.posts.map(q => ({x: q.x, y: q.y}));
     const studs = F6.studs.map(q => ({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}));
+    // CAD-161: 開口まわりの短い間柱も、間柱として同じ細長い長方形で描く（位置は下・上で同じ1か所）
+    { const seenOp = new Set(); (F6.opStuds || []).forEach(q => { const kk = Math.round(q.x * 2) + "," + Math.round(q.y * 2); if (seenOp.has(kk)) return; seenOp.add(kk); studs.push({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}); }); }
     let intN = 0, two = false;
     try {
       if (S.mode === "zo"){
@@ -11696,7 +11740,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         }
       }
     } catch(e){}
-    return {posts, studs, cols: F6.frameN + F6.partPostN + intN, frameCols: F6.frameN, corners: S.edges.length, intN, studN: F6.studN, thick: F6.thick, thin: F6.thin, partN: F6.partPostN, partStudN: F6.partStudN, partThick: F6.partThick, partThin: F6.partThin, two};
+    return {posts, studs, cols: F6.frameN + F6.partPostN + intN, frameCols: F6.frameN, corners: S.edges.length, intN, studN: F6.studN, thick: F6.thick, thin: F6.thin, partN: F6.partPostN, partStudN: F6.partStudN, partThick: F6.partThick, partThin: F6.partThin, opN: (F6.opDnN || 0) + (F6.opUpN || 0), opDn: F6.opDnN || 0, opUp: F6.opUpN || 0, opPos: F6.opPosN || 0, two};
   }
 
   /* ===== 寸法線 ===== */
@@ -11943,6 +11987,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     else h += `　${studIc} 間柱 ${F.studN}本`;
     if (F.two) h += pvMix() ? `（見積の間柱は2階分で 太${F.thick * 2}本・細${F.thin * 2}本）` : `（見積の間柱は2階分で ${F.studN * 2}本）`;
     if (F.partStudN) h += pvMix() ? `<br>間仕切りの間柱 太${F.partThick}本・細${F.partThin}本（柱 ${F.partN}本と合わせて見積に入っています）` : `<br>間仕切りの間柱 ${F.partStudN}本（柱 ${F.partN}本と合わせて見積に入っています）`;
+    if (F.opN) h += `<br>開口まわりの短い間柱 ${F.opPos}か所・${F.opN}本（窓台の下 ${F.opDn}本・まぐさの上 ${F.opUp}本）${F.two ? `（見積は2階分で ${F.opN * 2}本）` : ""}`;
     h += `<br>印の位置と本数は、見積と同じ数え方です。`;
     el.innerHTML = h;
   }
