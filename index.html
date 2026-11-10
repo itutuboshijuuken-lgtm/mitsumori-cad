@@ -4825,6 +4825,113 @@ function calc0(...a){
   } finally { added.forEach(e => { const i = S.extras.indexOf(e); if (i >= 0) S.extras.splice(i, 1); }); }
 }
 
+/* ---------- CAD-146 柱・間柱の配置エンジン（見積と平面図で共用） ----------
+   実物10件の型＋本人の決まり（harness/study138-柱間柱・図面の決まり）:
+   ・柱は壁の端・交点・取り合いに立つ（910通りの交点全部ではない）。開口（窓・建具）の中には置かず、両脇に置く。
+   ・間仕切りの端・交点にも柱が立つ。柱と柱の間が柱の間隔を超える所は910通りの位置で埋める（等分はしない）。
+   ・間柱は柱の芯から455ピッチ。910の位置（ボードの継目）は太い方、間の455は細い方。柱がある所は柱が継目の役。
+   ・間仕切りの柱は見積の管柱の本数に入れる（本人の決定 2026-11-10）。
+   ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
+   ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
+function framePos(){
+  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0};
+  try {
+    if (!S.edges || !S.edges.length) return Z;
+    const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+    const colP = +S.colP || 1820, pv = pts(), runs = [];
+    const addRun = (a, c, kind, isNew) => {
+      const L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (!(L > 1)) return null;
+      const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], junc: new Set(), postT: new Set()};
+      runs.push(r); return r;
+    };
+    const byKey = {};
+    S.edges.forEach((e, i) => { if (i === S.noWall) return; const r = addRun(pv[i], pv[(i + 1) % pv.length], "e", false); if (r) byKey["e" + i] = r; });
+    (S.parts2D || []).forEach((q, j) => { const st = pState(q); if (st === "remove") return; const r = addRun([q.x1, q.y1], [q.x2, q.y2], "p", st === "new"); if (r) byKey["p" + j] = r; });
+    if (!runs.length) return Z;
+    // 開口: サッシのホスト先のランに pos〜pos+w（pvSashes と同じクランプ）
+    (S.sashes || []).forEach(sa => {
+      if (!sa.drawn || !sa.host) return;
+      const r = byKey[(sa.host.t === "p" ? "p" : "e") + sa.host.i]; if (!r) return;
+      const w = +sa.w || 0; if (!(w > 1) || w >= r.L + 1) return;
+      const o0 = Math.max(0, Math.min(+sa.pos || 0, Math.max(0, r.L - w)));
+      r.ops.push([o0, Math.min(r.L, o0 + w)]);
+    });
+    const inOp = (r, t) => r.ops.some(o => t > o[0] + 1 && t < o[1] - 1);
+    // 交点・取り合い（他のランの端点が触れる所＋交差）
+    for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++){
+      const r = runs[i], q = runs[j];
+      const touch = (R, Q) => {
+        [[Q.ax, Q.ay], [Q.bx, Q.by]].forEach(E => {
+          const t = (E[0] - R.ax) * R.ux + (E[1] - R.ay) * R.uy;
+          if (t < -1 || t > R.L + 1) return;
+          if (Math.hypot(E[0] - (R.ax + R.ux * t), E[1] - (R.ay + R.uy * t)) <= 1.5) R.junc.add(Math.max(0, Math.min(R.L, t)));
+        });
+      };
+      touch(r, q); touch(q, r);
+      const d = r.ux * q.uy - r.uy * q.ux;
+      if (Math.abs(d) > 1e-9){
+        const dx = q.ax - r.ax, dy = q.ay - r.ay;
+        const t = (dx * q.uy - dy * q.ux) / d, u = (dx * r.uy - dy * r.ux) / d;
+        if (t > 1 && t < r.L - 1 && u > 1 && u < q.L - 1){ r.junc.add(t); q.junc.add(u); }
+      }
+    }
+    runs.forEach(r => {
+      const ts = new Set([0, r.L]);
+      r.junc.forEach(t => ts.add(t));
+      const base = [...ts];
+      r.ops.forEach(o => { [o[0], o[1]].forEach(f => { if (!base.some(t => Math.abs(t - f) <= 105)) ts.add(f); }); });
+      [...ts].forEach(t => { if (t > 0 && t < r.L && inOp(r, t)) ts.delete(t); });
+      const arr = [...ts].sort((a, b) => a - b);
+      for (let i = 0; i + 1 < arr.length; i++){
+        let a = arr[i]; const b = arr[i + 1]; let guard = 0;
+        while (b - a > colP + 0.5 && guard++ < 60){
+          let cand = Math.floor((a + colP) / M4 + 1e-9) * M4;
+          if (cand <= a + 0.5) cand = a + colP;
+          if (cand >= b - 0.5) break;
+          if (inOp(r, cand)){
+            const op = r.ops.find(o => cand > o[0] + 1 && cand < o[1] - 1);
+            cand = op[1];
+            if (cand <= a + 0.5 || cand >= b - 0.5) break;
+          }
+          ts.add(cand); a = cand;
+        }
+      }
+      r.postT = ts;
+    });
+    const key = (x, y) => Math.round(x * 2) + "," + Math.round(y * 2);
+    const onRun = (r, x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy; return t >= -1.5 && t <= r.L + 1.5 && Math.hypot(x - (r.ax + r.ux * t), y - (r.ay + r.uy * t)) <= 1.5; };
+    const postMap = new Map(), studMap = new Map();
+    runs.forEach(r => {
+      r.postT.forEach(t => {
+        const x = r.ax + r.ux * t, y = r.ay + r.uy * t, k = key(x, y);
+        if (!postMap.has(k)) postMap.set(k, {x, y});
+      });
+    });
+    runs.forEach(r => {
+      for (let k = 1; k * M2 < r.L - 1; k++){
+        const t = k * M2, x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+        if (postMap.has(kk)) continue;
+        const ex = studMap.get(kk);
+        if (ex){ if (k % 2 === 0) ex.thick = true; }
+        else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
+      }
+    });
+    const cls = (x, y) => ({f: runs.some(r => r.kind === "e" && onRun(r, x, y)), p: runs.some(r => r.kind === "p" && r.isNew && onRun(r, x, y))});
+    postMap.forEach(P0 => {
+      const c = cls(P0.x, P0.y);
+      Z.posts.push({x: P0.x, y: P0.y});
+      if (c.f) Z.frameN++; else if (c.p) Z.partPostN++;
+    });
+    studMap.forEach(S0 => {
+      const c = cls(S0.x, S0.y);
+      Z.studs.push(S0);
+      if (c.f){ Z.studN++; if (S0.thick) Z.thick++; else Z.thin++; }
+      else if (c.p){ Z.partStudN++; if (S0.thick) Z.partThick++; else Z.partThin++; }
+    });
+    Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind}));
+    return Z;
+  } catch(e){ return Z; }
+}
 function calc00(){
   const PT = S.mode === "pt";
   const R = PT ? {b: {w: 0, h: 0}} : roof(), {W, D, n, Lc, Lc2, Hd, two, Hk, ms, kerA, kerB, nokiA, nokiB, t} = R, kata = S.roof === "kata", yose = S.roof === "yose";
@@ -4964,9 +5071,10 @@ function calc00(){
     }
     if (!(pi.newLen > 0)) return;
     const L = pi.newLen;
-    { const nAll = Math.ceil(L / 455) + (S.parts2D || []).filter(q => pState(q) === "new").length; let nTh = 0; for (let i = 1; i <= nAll; i++) if ((455 * i) % 910 === 0 && 455 * i < L) nTh++; const nTn = nAll - nTh; const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP();
+    { const F6 = framePos(), nP = F6.partPostN, nTh = F6.partThick, nTn = F6.partThin, nAll = nTh + nTn; const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP();
+      if (nP > 0) lum("hashira", "新設間仕切り 柱", 105, 105, Array(nP).fill(ch + 100), `105角・壁の端と交点・壁 ${fmt(L / 1000, 2)}m`, false);
       if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nTh).fill(ch + 100), `${ta}×${tb}・910の位置（継目）・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, Array(nTn).fill(ch + 100), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
-      else lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nAll).fill(ch + 100), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
+      else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nAll).fill(ch + 100), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
     lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(L * 2 / 3900)).fill(4000), "45×105", false);
     const w = workP("ninku"), nin = Math.ceil(L / 1000 * 0.4 * 2) / 2;
     rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});
@@ -5321,8 +5429,7 @@ const clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm
     return {R, rows, genka, mitsu: genka / (1 - S.margin / 100), area, tsubo, nobe: area, nobeT: tsubo, wallA: wallN, roofA: 0, Lc, Hk, kata, two: false, rf: true, gomi};
   }
   // 柱・間柱（階ごと）
-  const corners = S.edges.length; let colsEach = corners, studsPer = 0, studThick = 0, studThin = 0;
-  lens.forEach((L, li) => { if (li === S.noWall) return; const seg = Math.ceil(L / S.colP - 1e-9); colsEach += seg - 1; studsPer += seg * Math.max(0, Math.ceil(L / seg / 455 - 1e-9) - 1); const segL = L / seg; for (let s2 = 0; s2 < seg; s2++) for (let k = 1; k * 455 < segL - 1; k++){ if ((k * 455) % 910 === 0) studThick++; else studThin++; } });
+  const corners = S.edges.length; const F6 = framePos(); let colsEach = F6.frameN, studsPer = F6.studN, studThick = F6.thick, studThin = F6.thin;
 
   // 小屋
   const beams = yose ? Math.max(0, Math.ceil(D / S.hariP - 1e-9) - 1) : Math.max(0, Math.ceil(D / S.hariP - 1e-9) - 1), rowsB = beams + 2;
@@ -11366,37 +11473,49 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 
   /* ===== 柱・間柱の位置と本数（calc00 の数え方をそのまま写す） ===== */
   function pvFrame(){
-    const p = pts(), b = bbox(), posts = [], studs = [];
-    let colsEach = p.length, studsPer = 0, studThick = 0, studThin = 0, intN = 0, two = false;
-    S.edges.forEach((e, i) => {
-      const a = p[i], c = p[(i + 1) % p.length], L = e.v;
-      const seg = Math.ceil(L / S.colP - 1e-9), segL = L / seg;
-      const Lh = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, ux = (c[0] - a[0]) / Lh, uy = (c[1] - a[1]) / Lh;
-      const open120 = i === S.noWall;
-      colsEach += open120 ? 0 : seg - 1;
-      studsPer += open120 ? 0 : seg * Math.max(0, Math.ceil(L / seg / 455 - 1e-9) - 1);
-      posts.push({x: a[0], y: a[1]});
-      for (let s2 = 1; s2 < seg && !open120; s2++) posts.push({x: a[0] + ux * segL * s2, y: a[1] + uy * segL * s2});
-      for (let s2 = 0; s2 < seg && !open120; s2++) for (let k = 1; k * 455 < segL - 1; k++){
-        const th = (k * 455) % 910 === 0; if (th) studThick++; else studThin++;
-        studs.push({x: a[0] + ux * (s2 * segL + k * 455), y: a[1] + uy * (s2 * segL + k * 455), thick: th});
-      }
-    });
+    const b = bbox(), F6 = framePos();
+    const posts = F6.posts.map(q => ({x: q.x, y: q.y}));
+    const studs = F6.studs.map(q => ({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}));
+    let intN = 0, two = false;
     try {
       if (S.mode === "zo"){
         const R = roof(); two = !!R.two;
         const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
         if (zi.n > 0 && zi.rows > 0 && zi.per > 0){
           intN = zi.n;
+          const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+          const pruns = F6.runs.filter(r => r.kind === "p"), seen = new Set();
           for (let i2 = 1; i2 <= zi.rows; i2++) for (let j2 = 1; j2 <= zi.per; j2++){
             const fx = R.spanY ? j2 / (zi.per + 1) : i2 / (zi.rows + 1);
             const fy = R.spanY ? i2 / (zi.rows + 1) : j2 / (zi.per + 1);
-            posts.push({x: b.x0 + b.w * fx, y: b.y0 + b.h * fy, interior: true});
+            let px = b.x0 + b.w * fx, py = b.y0 + b.h * fy;
+            // 支持ライン（内部の桁の通り）は 910 通りに寄せる
+            const sp = R.spanY ? b.h : b.w;
+            if (sp > M4){
+              if (R.spanY) py = Math.max(b.y0 + M2, Math.min(b.y1 - M2, b.y0 + Math.round((py - b.y0) / M4) * M4));
+              else px = Math.max(b.x0 + M2, Math.min(b.x1 - M2, b.x0 + Math.round((px - b.x0) / M4) * M4));
+            }
+            // ラインの近くで間仕切りと交わる点があれば、柱はそこに立てる（部屋の真ん中の格子にはしない）
+            let best = null, bd = M2;
+            pruns.forEach(r => {
+              const den = R.spanY ? r.uy : r.ux;
+              if (Math.abs(den) < 1e-9) return;
+              const t = R.spanY ? (py - r.ay) / r.uy : (px - r.ax) / r.ux;
+              if (t < 0 || t > r.L) return;
+              const qx = r.ax + r.ux * t, qy = r.ay + r.uy * t, dd = Math.hypot(qx - px, qy - py);
+              if (dd < bd){ bd = dd; best = [qx, qy]; }
+            });
+            if (best){ px = best[0]; py = best[1]; }
+            else if (R.spanY) px = b.x0 + Math.round((px - b.x0) / M4) * M4;
+            else py = b.y0 + Math.round((py - b.y0) / M4) * M4;
+            const kk = Math.round(px * 2) + "," + Math.round(py * 2);
+            if (seen.has(kk)) continue; seen.add(kk);
+            posts.push({x: px, y: py, interior: true});
           }
         }
       }
     } catch(e){}
-    return {posts, studs, cols: colsEach + intN, frameCols: colsEach, corners: p.length, intN, studN: studsPer, thick: studThick, thin: studThin, two};
+    return {posts, studs, cols: F6.frameN + F6.partPostN + intN, frameCols: F6.frameN, corners: S.edges.length, intN, studN: F6.studN, thick: F6.thick, thin: F6.thin, partN: F6.partPostN, partStudN: F6.partStudN, partThick: F6.partThick, partThin: F6.partThin, two};
   }
 
   /* ===== 寸法線 ===== */
@@ -11603,11 +11722,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   /* ===== 柱・間柱の印 ===== */
   function pvMarks(P, F, bandO, s){
     let g = "";
-    const szS = Math.max(3.4, bandO - 3.4);
+    const secA = (() => { try { return mabaSecP()[0] || 45; } catch(e){ return 45; } })();
+    const secB = (() => { try { return mabaThinP()[0] || 30; } catch(e){ return 30; } })();
     F.studs.forEach(st => {
-      const c = P([st.x, st.y]);
-      g += `<rect class="pvStud" data-thick="${st.thick ? 1 : 0}" x="${r2(c[0] - szS / 2)}" y="${r2(c[1] - szS / 2)}" width="${r2(szS)}" height="${r2(szS)}" fill="#fff" stroke="#111" stroke-width="1.1"/>`;
-      if (pvMix() && st.thick) g += `<circle cx="${r2(c[0])}" cy="${r2(c[1])}" r="${r2(Math.max(0.9, szS * 0.17))}" fill="#111"/>`;
+      // CAD-146: 間柱は実際の断面の形（壁方向に105、厚みは太=45/細=30）で細長く描く
+      const ux = st.ux == null ? 1 : st.ux, uy = st.uy == null ? 0 : st.uy, nx = -uy, ny = ux, hl = 52.5, ht = (st.thick ? secA : (pvMix() ? secB : secA)) / 2;
+      const cs = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a2, b2]) => P([st.x + ux * hl * a2 + nx * ht * b2, st.y + uy * hl * a2 + ny * ht * b2]));
+      g += `<polygon class="pvStud" data-thick="${st.thick ? 1 : 0}" points="${cs.map(c => r2(c[0]) + "," + r2(c[1])).join(" ")}" fill="#fff" stroke="#111" stroke-width="1.1"/>`;
     });
     F.posts.forEach(pt => {
       const c = P([pt.x, pt.y]), sz = pt.interior ? Math.max(3.2, 105 * s) : Math.max(3, bandO);
@@ -11631,14 +11752,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!pvStructOn || !F){ el.innerHTML = "「柱・間柱を表示」を押すと、見積で数えている柱・間柱の位置と本数が、そのまま図の上で確かめられます。"; return; }
     const sq = inner => `<svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:-2px">${inner}</svg>`;
     const postIc = sq(`<rect x="1" y="1" width="11" height="11" fill="#111"/>`);
-    const studIc = sq(`<rect x="2" y="2" width="9" height="9" fill="#fff" stroke="#111" stroke-width="1.6"/>`);
-    const thickIc = sq(`<rect x="2" y="2" width="9" height="9" fill="#fff" stroke="#111" stroke-width="1.6"/><rect x="5" y="5" width="3" height="3" fill="#111"/>`);
+    const studIc = sq(`<rect x="1" y="4.5" width="11" height="4" fill="#fff" stroke="#111" stroke-width="1.4"/>`);
+    const thickIc = sq(`<rect x="1" y="3" width="11" height="7" fill="#fff" stroke="#111" stroke-width="1.4"/>`);
     let h = `${postIc} 柱 ${F.cols}か所`;
     if (F.intN) h += `（うち内部の柱 ${F.intN}本）`;
+    if (F.partN) h += `（うち間仕切りの柱 ${F.partN}本）`;
     if (F.two) h += `（2階建て：通し柱 ${F.corners}本＋管柱 ${F.frameCols - F.corners}本×2階分）`;
     if (pvMix()) h += `　${thickIc} 間柱・太（910の位置）${F.thick}本　${studIc} 間柱・細（455の位置）${F.thin}本`;
     else h += `　${studIc} 間柱 ${F.studN}本`;
     if (F.two) h += pvMix() ? `（見積の間柱は2階分で 太${F.thick * 2}本・細${F.thin * 2}本）` : `（見積の間柱は2階分で ${F.studN * 2}本）`;
+    if (F.partStudN) h += pvMix() ? `<br>間仕切りの間柱 太${F.partThick}本・細${F.partThin}本（柱 ${F.partN}本と合わせて見積に入っています）` : `<br>間仕切りの間柱 ${F.partStudN}本（柱 ${F.partN}本と合わせて見積に入っています）`;
     h += `<br>印の位置と本数は、見積と同じ数え方です。`;
     el.innerHTML = h;
   }
