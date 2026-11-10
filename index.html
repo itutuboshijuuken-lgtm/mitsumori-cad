@@ -240,7 +240,6 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 .mrow[hidden]{display:none!important}
 #toolTabs{order:0}
 #partCh,#toolCh2,#toolCh3{order:1}
-#partCh #pdBtn{grid-column:span 2;white-space:nowrap}
 #toolCh{order:2}
 #toolTabs button{font-size:14px;min-height:36px}
 #toolTabs button[aria-pressed=true]{background:var(--ai);color:#fff;border-color:var(--ai)}
@@ -2504,7 +2503,7 @@ function pushUndo(){ undoStack.push(undoSnap()); redoStack.length = 0; if (undoS
 let sel = null, selStep = 10;
 function drawToolsUI(){
   drawNotchRow();
-  $("partCh").innerHTML = `<button class="p${window.__partDraw ? " armBlink" : ""}" id="pdBtn" type="button" aria-pressed="${!!window.__partDraw}">👆指で描く</button>` + [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>`;
+  $("partCh").innerHTML = [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>`;
   $("partCh").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => { if (b.dataset.pl === "waist"){ fxStartPlace("waist"); return; } if (b.dataset.pl === "tare") openPad({title: "垂れ壁の長さ", value: "", done: v => { if (v) addStdTare(v); }}); else if (b.dataset.pl === "pad") openPad({title: "間仕切りの長さ", value: "", done: v => { if (v) addStdPart(v); }}); else addStdPart(+b.dataset.pl); });
   $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
   $("toolCh").classList.toggle("winmode", toolOpen === "win" || toolOpen === "gen");
@@ -3322,13 +3321,19 @@ function drawToolTabs(){
   else if (toolOpen === null && window.grp136 === "wall") window.grp136 = null;
   const tabs = $("toolTabs");
   tabs.innerHTML = "";
-  [["part", "壁を描く"], ["put", "選んで置く"]].forEach(([k, n]) => {
+  [["part", "👆 壁を描く"], ["put", "選んで置く"]].forEach(([k, n]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
     const on = k === "part" ? toolOpen === "part" : window.grp136 === "put";
     b.setAttribute("aria-pressed", on ? "true" : "false");
+    if (k === "part" && window.__partDraw) b.classList.add("armBlink");
     b.onclick = () => {
       if (enclMode) enclReset();
-      if (k === "part"){ toolOpen = toolOpen === "part" ? null : "part"; }
+      if (k === "part"){
+        /* CAD-145: 「壁を描く」は押したらそのまま指で描ける (中の「指で描く」チップは廃止)。
+           もう一度押すと閉じて、指描きも解除する。 */
+        if (toolOpen === "part"){ toolOpen = null; if (window.__partDrawOff) window.__partDrawOff(true); }
+        else { toolOpen = "part"; if (window.__partDrawOn) window.__partDrawOn(); }
+      }
       else if (window.grp136 === "put"){ window.grp136 = null; toolOpen = null; }
       else { window.grp136 = "put"; toolOpen = window.putLeaf136 || "door"; }
       drawToolsUI(); drawPlan();
@@ -12165,8 +12170,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!window.__partDraw) return;
     window.__partDraw = false;
     document.body.classList.remove("partdraw");
-    var b = document.getElementById("pdBtn");
-    if (b){ b.classList.remove("armBlink"); b.setAttribute("aria-pressed", "false"); }
     if (!silent) { try { drawToolsUI(); } catch(e){} }
   }
   window.__partDrawOff = pdOff;
@@ -12181,10 +12184,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try { drawToolsUI(); } catch(e){}
     toast("指で線を描くと、間仕切りが入ります（もう一度押すとやめます）");
   }
+  window.__partDrawOn = pdOn;
 
   document.addEventListener("click", function(e){
-    var t = e.target && e.target.closest ? e.target.closest("#pdBtn") : null;
-    if (t){ if (window.__partDraw) pdOff(); else pdOn(); return; }
     if (e.target && e.target.closest && e.target.closest("#nazoruBtn,#delToolBtn")) pdOff(true);
     var tt = e.target && e.target.closest ? e.target.closest("#toolTabs [data-tt]") : null;
     if (tt && tt.dataset.tt !== "part") pdOff(true);
@@ -12513,11 +12515,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "body.fsDraw header.top{display:none!important}",
     "body.fsDraw #stM .mtools,body.fsDraw #planBar{display:none!important}",
     "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext{display:none!important}",
-    "#fsRestoreBtn{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);right:8px;z-index:9000;min-height:40px;padding:0 16px;border-radius:20px;border:2px solid var(--ai);background:transparent;color:var(--ai);font-size:14px;font-weight:900}",
     /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
     "#closeAllFloat{position:fixed;right:10px;top:calc(var(--hdrH,100px) + 6px);z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:transparent;color:#37474F;font-size:14px;font-weight:900}",
-    /* CAD-133: 全画面中はヘッダーが消えて右上に「戻す」が出るので、その下へ逃がす */
-    "body.fsDraw #closeAllFloat{top:calc(env(safe-area-inset-top,0px) + 58px)}",
+    /* CAD-145: 全画面中は「閉じる」を右上に置く（旧「戻す」ピルの位置。戻すは廃止し、閉じるに統一） */
+    "body.fsDraw #closeAllFloat{top:calc(env(safe-area-inset-top,0px) + 8px)}",
     /* item 49: eraser armed -> plan svg takes the drag */
     "body.eratool #slotM .card,body.eratool #slotM svg{touch-action:none!important}"
   ].join("\n");
@@ -12679,10 +12680,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   var zFsB = document.getElementById("zFs");
   if (zFsB) zFsB.onclick = function(){ if (fsState === "off") fsEnter("manual"); else fsExit(); };
 
-  var rb = document.createElement("button");
-  rb.id = "fsRestoreBtn"; rb.type = "button"; rb.textContent = "戻す"; rb.style.display = "none";
-  rb.onclick = function(){ disarmCovered(); fsExit(); };
-  document.body.appendChild(rb);
+  /* CAD-145: 全画面の「戻す」ピルは廃止。全画面から戻るのも下の「閉じる」が担う
+     （__closeAll は fsExit＋道具の解除を含む）。 */
 
   /* ---------------- item 50: close all ---------------- */
   window.__closeAll = function(){
@@ -12699,7 +12698,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     syncFloats();
   };
   var cab = document.createElement("button");
-  cab.id = "closeAllFloat"; cab.type = "button"; cab.textContent = "全部閉じる ✕"; cab.style.display = "none";
+  cab.id = "closeAllFloat"; cab.type = "button"; cab.textContent = "閉じる"; cab.style.display = "none";
   cab.onclick = function(){ window.__closeAll(); };
   document.body.appendChild(cab);
 
@@ -12719,10 +12718,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     /* CAD-133: 位置は原則 CSS の top (ステップ帯のすぐ下・右端) が決める。
        間取り (mfull) では道具帯 (#planBar) の下端が状態で上下するため、その下へ逃がす。
        仕様・見積などの先頭にはモード切替の帯があり、右端のボタンが候補位置に来るため、
-       最後に「中心が自分の矩形に入る表示中ボタン」の下へ最大3回逃がす (実測ドッジ)。
-       全画面中と、覆いのあるシート (モーダル/確認ダイアログ) 表示中は CSS 側に任せる。 */
-    var highSheet = (m && !m.hidden) || (ao && ao.style.display === "flex");
-    if (fsState !== "off" || highSheet) cab.style.top = "";
+       最後に「中心が自分の矩形に入る表示中ボタン」の下へ逃がす (実測ドッジ)。
+       全画面中は CSS 側 (右上) に任せる。
+       CAD-145: シート (モーダル/確認ダイアログ/有料案内) 表示中は、シートが
+       下から出る形なので、「閉じる」を画面上の暗幕の帯 (シートより上) に置く。
+       現場一覧の「＋ 作る」など、シート内のボタンには一切被らない。 */
+    var sheetOpen = false;
+    try{ sheetOpen = !!((m && !m.hidden) || (ao && ao.style.display === "flex") || (ps && ps.style.display && ps.style.display !== "none")); }catch(e){}
+    if (fsState !== "off") cab.style.top = "";
+    else if (sheetOpen) cab.style.top = "calc(env(safe-area-inset-top,0px) + 8px)";
     else {
       if (document.body.classList.contains("mfull")){
         var pbr = null;
@@ -12731,7 +12735,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       } else cab.style.top = "";
       if (showCab && !tut){
         try{
-          for (var pass = 0; pass < 3; pass++){
+          for (var pass = 0; pass < 6; pass++){
             var cr0 = cab.getBoundingClientRect(), nx = 0;
             document.querySelectorAll("button, input, select, textarea").forEach(function(el){
               if (el === cab) return;
@@ -12748,7 +12752,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }
     }
     cab.style.bottom = "auto";
-    rb.style.display = fsState !== "off" ? "" : "none";
   }
 
   /* ---------------- shared sync: eraser auto-off + FS auto + floats ---------------- */
@@ -13118,7 +13121,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
    (1) 間取り表示中は文書スクロールをロック (body.dlock は go() が付け外し。
        html には overflow を付けない: 付けるとヘッダーのメニューと図面の重なりで
        ヒットテストが反転し、メニューのボタンが押せなくなるため)。
-   (2) 間取り表示中 (__pageM) は、#stM 内と浮動要素 (#closeAllFloat / #fsRestoreBtn / .toast)
+   (2) 間取り表示中 (__pageM) は、#stM 内と浮動要素 (#closeAllFloat / .toast)
        から始まる touch の touchmove を、道具の有無を問わず preventDefault する。
        #drawnList と #modal の中は、シート側のスクロールに任せて除外する。
    (3) 重なる要素にも touch-action:none を付ける。
@@ -13136,7 +13139,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "#stM #selBar{touch-action:none!important}",
     "#stM #enclBar{touch-action:none!important}",
     "#closeAllFloat{touch-action:none!important}",
-    "#fsRestoreBtn{touch-action:none!important}",
     ".toast{touch-action:none!important}"
   ].join("\n");
   document.head.appendChild(st);
@@ -13147,7 +13149,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var t = e.target;
     if (!t || !t.closest) return;
     if (t.closest("#drawnList") || t.closest("#modal")) return;
-    if (t.closest("#stM") || t.closest("#closeAllFloat") || t.closest("#fsRestoreBtn") || t.closest(".toast")) e.preventDefault();
+    if (t.closest("#stM") || t.closest("#closeAllFloat") || t.closest(".toast")) e.preventDefault();
   }, {passive: false});
   window.__gest130 = true;
   window.__gest131 = true;
@@ -13800,7 +13802,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 (function(){
   "use strict";
 
-  // 選んだ間仕切りが「辺」になっている四角い部屋と、動かせる寸法の一覧
+  // 選んだ間仕切りに接する四角い部屋と、動かせる寸法の一覧。
+  // CAD-145: 片方向だけでなく、その部屋の「奥行」「横幅」の両方を出す。
+  // 選んだ間仕切り自体が辺でなくても、部屋の辺の線上にある間仕切りを動かす
+  // （applyRoomDim が線上の間仕切りを丸ごと動かすので、辺の指定だけで足りる）。
   function roomDimsFor(q){
     const out = [];
     try {
@@ -13810,24 +13815,52 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       const R = roomsCalc(); if (!R || !R.rooms.length) return out;
       const mx = (q.x1 + q.x2) / 2, my = (q.y1 + q.y2) / 2, seen = {};
       const probes = vert ? [[mx - 150, my], [mx + 150, my]] : [[mx, my - 150], [mx, my + 150]];
+      const rooms = [];
       probes.forEach(([px, py]) => {
         const rr = roomRectAt(px, py);
         if (!rr || rr.bad || seen[rr.cid]) return;
-        if (vert){
-          const side = Math.abs(q.x1 - rr.x0) < 5 ? "x0" : Math.abs(q.x1 - rr.x1) < 5 ? "x1" : null;
-          if (!side) return;
-          const ov = Math.min(Math.max(q.y1, q.y2), rr.y1) - Math.max(Math.min(q.y1, q.y2), rr.y0);
-          if (ov < 100) return;
-          seen[rr.cid] = 1;
-          out.push({cid: rr.cid, dim: "w", side, rect: rr, cur: Math.round(rr.x1 - rr.x0)});
-        } else {
-          const side = Math.abs(q.y1 - rr.y0) < 5 ? "y0" : Math.abs(q.y1 - rr.y1) < 5 ? "y1" : null;
-          if (!side) return;
-          const ov = Math.min(Math.max(q.x1, q.x2), rr.x1) - Math.max(Math.min(q.x1, q.x2), rr.x0);
-          if (ov < 100) return;
-          seen[rr.cid] = 1;
-          out.push({cid: rr.cid, dim: "h", side, rect: rr, cur: Math.round(rr.y1 - rr.y0)});
+        seen[rr.cid] = 1; rooms.push(rr);
+      });
+      const P = S.parts2D || [];
+      // 辺の線 (isV: x=line の縦線 / それ以外: y=line の横線) の上にあって、
+      // 部屋の範囲 [s0,s1] と重なる間仕切りの、最大の重なり長を返す
+      const overlapOn = (isV, line, s0, s1) => {
+        let best = 0;
+        P.forEach(z => {
+          if (pState(z) === "remove") return;
+          if (isV){
+            if (Math.abs(z.x1 - z.x2) >= 1 || Math.abs(z.x1 - line) >= 2) return;
+            best = Math.max(best, Math.min(Math.max(z.y1, z.y2), s1) - Math.max(Math.min(z.y1, z.y2), s0));
+          } else {
+            if (Math.abs(z.y1 - z.y2) >= 1 || Math.abs(z.y1 - line) >= 2) return;
+            best = Math.max(best, Math.min(Math.max(z.x1, z.x2), s1) - Math.max(Math.min(z.x1, z.x2), s0));
+          }
+        });
+        return best;
+      };
+      rooms.forEach(rr => {
+        const entries = [];
+        // 横幅: x0 / x1 の辺。選んだ間仕切りがその辺なら最優先、次に重なりの大きい辺
+        const candW = [["x0", rr.x0], ["x1", rr.x1]]
+          .map(([side, line]) => ({side, line, ov: overlapOn(true, line, rr.y0, rr.y1)}))
+          .filter(c => c.ov >= 100);
+        if (candW.length){
+          let pick = vert ? candW.find(c => Math.abs(c.line - q.x1) < 2) : null;
+          if (!pick) pick = candW.slice().sort((a, b) => b.ov - a.ov)[0];
+          entries.push({cid: rr.cid, dim: "w", side: pick.side, rect: rr, cur: Math.round(rr.x1 - rr.x0)});
         }
+        // 奥行: y0 / y1 の辺。同上
+        const candH = [["y0", rr.y0], ["y1", rr.y1]]
+          .map(([side, line]) => ({side, line, ov: overlapOn(false, line, rr.x0, rr.x1)}))
+          .filter(c => c.ov >= 100);
+        if (candH.length){
+          let pick = horiz ? candH.find(c => Math.abs(c.line - q.y1) < 2) : null;
+          if (!pick) pick = candH.slice().sort((a, b) => b.ov - a.ov)[0];
+          entries.push({cid: rr.cid, dim: "h", side: pick.side, rect: rr, cur: Math.round(rr.y1 - rr.y0)});
+        }
+        // 並びは「奥行 → 横幅」
+        entries.sort((a, b) => (a.dim === "h" ? 0 : 1) - (b.dim === "h" ? 0 : 1));
+        entries.forEach(en => out.push(en));
       });
     } catch(e){}
     return out;
@@ -13913,15 +13946,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
           btn.type = "button";
           btn.className = "rm139btn";
           btn.dataset.cid = en.cid; btn.dataset.dim = en.dim;
-          btn.textContent = "🏠 " + nm + "の" + (en.dim === "w" ? "幅 " : "奥行 ") + fmt(en.cur);
+          btn.textContent = "🚪" + nm + (en.dim === "w" ? "横幅 " : "奥行 ") + fmt(en.cur);
           btn.style.cssText = "flex:1;min-height:42px;font-size:14px;font-weight:700";
           btn.onclick = () => {
-            openPad({title: nm + "の" + (en.dim === "w" ? "幅" : "奥行"), unit: "mm", value: en.cur, done: v => {
+            openPad({title: nm + "の" + (en.dim === "w" ? "横幅" : "奥行"), unit: "mm", value: en.cur, done: v => {
               if (!v) return;
               const fin = applyRoomDim(en, Math.round(v));
               save(); drawPlan(); drawSelBar();
               const nd = en.side === "x0" ? en.rect.x1 - fin : en.side === "x1" ? fin - en.rect.x0 : en.side === "y0" ? en.rect.y1 - fin : fin - en.rect.y0;
-              toast(nm + "の" + (en.dim === "w" ? "幅" : "奥行") + "を " + fmt(Math.round(nd)) + " にしました");
+              toast(nm + "の" + (en.dim === "w" ? "横幅" : "奥行") + "を " + fmt(Math.round(nd)) + " にしました");
             }});
           };
           row.appendChild(btn);
