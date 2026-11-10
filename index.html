@@ -7111,6 +7111,7 @@ function ltPlanClick(mm){
     const x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
     const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました。続けて置けます`); };
     if (window.__ltAct && window.__ltAct.k === ltTool){ put(window.__ltAct.act); return true; }
+    if (S.mode === "zo"){ put("new"); return true; } // CAD-164: 新築・増築では状態を聞かない（新設しかない。本人の指示 2026-11-11「DL・CL押したらもう置いたらいい」）
     pickOne(`${LTN[ltTool]}：どうしますか`, ltOpts147(false), act => { window.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
     return true;
   }
@@ -10497,7 +10498,7 @@ function sujiWall(){
   function arm(key, entry, label){
     window.__pickSash = entry || null;
     window.__sashAct = null; sel = null;
-    window.__put = {g: "win", label, fn: () => addStdOpening(key)};
+    window.__put = {g: key.indexOf("gen") === 0 ? "gen" : "win", label, fn: () => addStdOpening(key)}; // CAD-164: 玄関のキーは g="gen"（toolOpen="gen" と合わせる。"win" 固定だと構えが即解除され置けなかった）
     toast(label + "：置きたい壁をタップ（続けて置けます）");
     drawToolsUI();
   }
