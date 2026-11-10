@@ -4674,7 +4674,7 @@ function drawExtras(){
   const tg = (i, key, on, off) => `<div class="seg"><button data-ti="${i}" data-tk="${key}" data-tv="1" aria-pressed="${!!S.extras[i][key]}" type="button">${on}</button><button data-ti="${i}" data-tk="${key}" data-tv="0" aria-pressed="${!S.extras[i][key]}" type="button">${off}</button></div>`;
   S.extras.forEach(normEx);
   $("exList").innerHTML = S.extras.map((e, i) => {
-    const d = EXT[e.k]; if (!d) return "";
+    const d = EXT[e.k]; if (!d || (e.k === "shinchiku" && S.mode !== "zo")) return ""; /* CAD-163: 新築の費用のカードも新築・増築の時だけ出す（データは残し、戻せば再び出る） */
     let h = `<div class="ex"><div class="hd"><span>${d.n}</span><button data-xd="${i}" type="button" aria-label="消す">×</button></div>`;
     if (e.k === "free") h += `<input class="nm" data-xn="${i}" placeholder="項目の名前（例：手すり取付）" value="${esc(e.name || "")}">`;
     h += `<div class="fs">${d.f.map(([f, n, u]) => `<button data-xi="${i}" data-xf="${f}" type="button">${fmt(e[f], 2)}${u}<small>${n}</small></button>`).join("")}</div>`;
@@ -5375,7 +5375,7 @@ function calc00(){
         if (e.tesuri) work("tTesuri", "手すり 取付", n2, "か所");
         if (e.consent) work("tConsent", "コンセント新設（電気工事）", n2, "か所");
       }
-      else if (e.k === "shinchiku"){
+      else if (e.k === "shinchiku" && S.mode === "zo"){ /* CAD-163: 新築の費用は新築・増築の時だけ数える（モードを切り替えても pt/rf に漏らさない） */
         if (e.jiban > 0) work("jibanSurvey", "地盤調査（スウェーデン式サウンディング）", e.jiban, "回");
         if (e.jbk > 0) work("jibanKairyo", "地盤改良（表層改良）", e.jbk, "㎡");
         if (e.kakunin > 0) work("kakuninShinsei", "確認申請・中間検査・完了検査", e.kakunin, "件");
