@@ -1216,11 +1216,14 @@ const sOpts = s => ipOK(s) ? (s.cat === "FIX" ? ["new", "keep", "waku", "ip"] : 
 const sState = s => s.st || "new";
 // CAD-149: 窓・建具の状態はモードで分ける（本人の決定 2026-11-10「窓交換、インプラスもリフォームだけ」）。
 // 既存系の状態（既存のまま・窓枠交換・インプラス・襖/障子 張替え）は、新築・増築（zo）では選択肢に出さない。
-// CAD-151: 149で残した母屋側（S.house）の例外を外した。本人の決定に例外はないので、zo では
-// 母屋側の辺に付いた窓も含めて「新設」だけにする。rf / pt は無条件で今まで通り。
+// 例外は sashAskState と同じ線引き： 増築で母屋側の辺（S.house）に付いた窓は既存の窓なので、
+// 母屋側の物は今まで通り全部出す。rf / pt は無条件で今まで通り。
+// CAD-151 で例外を外したが、本人が実務の形を検討し直し「母屋側は既存の壁なので窓交換・
+// インプラスもあり得る」と結論したため、CAD-152 で 149 の形（母屋側だけ例外）に戻した。
 // 記録済みの既存系の状態は書き換えない（計算・表示は従来通り。サイクルで押せば新設に戻る）。
 const sExist149 = ["keep", "waku", "ip", "fusuma", "shoji"];
-function sOptsMode149(s){ const o = sOpts(s); if (typeof S === "undefined" || S.mode !== "zo") return o; return o.filter(k => !sExist149.includes(k)); }
+const sHouseWall149 = s => { try { if (!s || typeof S === "undefined" || !(S.house >= 0)) return false; if (s.host) return s.host.t === "e" && s.host.i === S.house; return s.wall === S.house; } catch(e){ return false; } };
+function sOptsMode149(s){ const o = sOpts(s); if (typeof S === "undefined" || S.mode !== "zo" || sHouseWall149(s)) return o; return o.filter(k => !sExist149.includes(k)); }
 // 窓枠交換・インプラス・襖/障子の張替えは、状態が「既存」系の時だけ出す（同じ操作・同じ呼び方）
 const sOptsShown = s => sOptsMode149(s).filter(k => !["waku", "ip", "fusuma", "shoji"].includes(k) || ["keep", "waku", "ip", "fusuma", "shoji"].includes(sState(s)));
 const ipOK = s => /掃き出し|腰窓|小窓|FIX/.test(s.cat);
@@ -3953,8 +3956,14 @@ function drawPlan(){
   let Ht = 0;
   if (window.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ const asp128 = r.width > r.height; if (window.__aspM !== undefined && window.__aspM !== asp128) window.__pinH = 0; window.__aspM = asp128; window.__landM128 = asp128; if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (window.__pinH || 0)) window.__pinH = r.height; Ht = 360 * (window.__pinH || r.height) / r.width; if (asp128){ try{ const bb128 = bbox(); const sW128 = (360 - 32) / Math.max(1, bb128.w); const Hf128 = bb128.h * sW128 + 32; if (isFinite(Hf128) && Ht < Hf128) Ht = Hf128; }catch(e128){} } } }
   const p = pts(), b = bbox(), pad = window.__pageM ? (window.__landM128 ? 16 : 36) : 66, W = 360, maxH = Ht || (window.__pageM ? 470 : 340);
-  const s = Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
-  const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? (Ht - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
+  // CAD-152: 全画面（fsDraw）では道具帯と #planBar が図面の上に浮く。帯の下端より上に
+  // 寸法表示が来ない様、帯の高さ（topSvg152）分だけ図面の収まる範囲を下へずらす。
+  // 寸法表示は外形の外へ最大630mm出るので、その分も高さの見積りに入れる（寸法と文字は重ねない）。
+  let topSvg152 = 0;
+  if (window.__pageM && Ht && document.body.classList.contains("fsDraw")){ try { const rr = $("slotM").getBoundingClientRect(); let tp = 0; [document.querySelector("#stM .mtools"), $("planBar")].forEach(el => { if (el){ const bb = el.getBoundingClientRect(); if (bb.height > 0) tp = Math.max(tp, bb.bottom - rr.top); } }); if (tp > 0 && rr.width > 50) topSvg152 = tp * W / rr.width; } catch(e){} }
+  const maxH152 = Math.max(120, maxH - topSvg152);
+  const s = topSvg152 > 0 ? Math.min((W - pad * 2) / b.w, (maxH152 - pad * 2) / b.h, (maxH152 - 16) / (b.h + 1260)) : Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
+  const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + (maxH152 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
   const sp = p.map(P);
   window.__planT = {s, ox, oy}; window.__lbl = [];
@@ -7938,7 +7947,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     o.innerHTML = '<div style="text-align:center"><b style="font-size:18px">できました！</b><br><span style="color:#5B6775">ほかにも、こんなことができます</span></div>'
       + li("📄", "見積書のPDFを作って、お客様へLINEで送れる")
       + li("👷", "職人さんへ図面（金額なし）を渡せる")
-      + li("🧱", "剥がす壁（断熱・下地・白蟻まで）、アクセントクロス、照明・コンセント、窓の庇も置ける")
+      + li("🧱", "解体する壁（深さが選べる：仕上げ材のみ／下地から／撤去）、アクセントクロス、照明・コンセント、窓の庇も置ける")
       + li("🏠", "新築・増築も同じ流れ。屋根、完成図、地盤や申請の費用まで見積")
       + li("📁", "自分の現場は、右上「…」の「現場一覧」から作れます")
       + '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" data-ok style="flex:1 1 100%;min-height:46px;border-radius:10px;border:1px solid #C9D2DC;background:#fff;font-size:15px">OK</button></div>';
@@ -8297,16 +8306,37 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 /* ---------- CAD-86：間取りコーチ（mcoach）は本番から撤去（初期化・タイマー・吹き出し生成そのものをしない） ---------- */
 </script>
 <script>
-/* ---------- 既存壁剥がし：平面図で壁を選ぶ（外壁の内側・間仕切り）＋仕様の3つの質問 ---------- */
+/* ---------- 解体（旧・既存壁剥がし）：平面図で壁と深さを選ぶ（外壁の内側・間仕切り）＋仕様の質問 ---------- */
 (function(){
   window.__hgMode = false;
+  // CAD-152: 「壁を剥がす」を「解体」に作り替え、深さを3段にした（本人の決定 2026-11-10）。
+  //  fin=仕上げ材のみ解体（旧「壁を剥がす」の拾い相当・標準）/ sub=下地から解体 / rem=撤去（壁そのもの）
+  //  深さは壁ごとに hgD で持つ。旧データの読み替え： hgD が無い記録は fin として扱う。
+  //  旧「壁を剥がす」の拾い（剥がし解体・処分＋ボード張替え＋仕様の質問の行）は fin の拾いと
+  //  定義が一致するので、読み替えても見積は1行も変わらない。
+  window.__hgDepth = window.__hgDepth || "fin";
+  const HG_D152 = [["fin", "仕上げ材のみ解体", "仕上げ材のみ"], ["sub", "下地から解体", "下地から"], ["rem", "撤去", "撤去"]];
+  const hgDName = d => (HG_D152.find(x => x[0] === d) || HG_D152[0])[1];
+  const hgDShort = d => (HG_D152.find(x => x[0] === d) || HG_D152[0])[2];
+  const hgDepthOf = o => (o && (o.hgD === "sub" || o.hgD === "rem")) ? o.hgD : "fin";
+  const setHgD = (o, d) => { if (d === "fin") delete o.hgD; else o.hgD = d; };
   const parts = () => S.parts2D || [];
   function hgList(){
     const out = [], p = typeof pts === "function" && S.edges ? pts() : [];
-    (S.edges || []).forEach((e, i) => { if (e.hg && p[i]){ const a = p[i], b = p[(i + 1) % p.length]; out.push({t: "e", i, a, b, n: 1}); } });
-    parts().forEach((q, i) => { if (q.hg && pState(q) !== "remove") out.push({t: "p", i, a: [q.x1, q.y1], b: [q.x2, q.y2], n: q.hg === 2 ? 2 : 1}); });
+    (S.edges || []).forEach((e, i) => { if (e.hg && p[i]){ const a = p[i], b = p[(i + 1) % p.length]; out.push({t: "e", i, a, b, n: 1, d: hgDepthOf(e)}); } });
+    parts().forEach((q, i) => { if (q.hg && pState(q) !== "remove") out.push({t: "p", i, a: [q.x1, q.y1], b: [q.x2, q.y2], n: q.hg === 2 ? 2 : 1, d: hgDepthOf(q)}); });
     return out;
   }
+  // 深さごとの集計（a=面積㎡・n=面数・plen=間仕切りの長さm：撤去跡の補修用）
+  window.hgAreaD = function(){
+    const H = S.ch || 2400, D = {fin: {a: 0, n: 0, plen: 0}, sub: {a: 0, n: 0, plen: 0}, rem: {a: 0, n: 0, plen: 0}};
+    hgList().forEach(w => {
+      const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
+      const op = (S.sashes || []).filter(sa => sa.host && sa.host.t === w.t && sa.host.i === w.i).reduce((x, sa) => x + sa.w * sa.h * (sa.n || 1), 0);
+      const g = D[w.d]; g.a += Math.max(0, (L * H - op) * w.n) / 1e6; g.n += w.n; if (w.t === "p") g.plen += L / 1000;
+    });
+    return D;
+  };
   window.hgArea = function(){
     const H = S.ch || 2400; let a = 0, n = 0;
     hgList().forEach(w => {
@@ -8322,28 +8352,69 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     hgList().forEach(w => {
       const a = P(w.a), b = P(w.b), mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
       h += `<g pointer-events="none"><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#E07B00" stroke-width="9" stroke-opacity=".45" stroke-linecap="round"/><line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#E07B00" stroke-width="3" stroke-dasharray="4 4"/>` +
-        `<text x="${mx}" y="${my - 8}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:900;fill:#B35F00">剥がし${w.n === 2 ? "（両面）" : ""}</text></g>`;
+        `<text x="${mx}" y="${my - 8}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:900;fill:#B35F00">${w.d === "rem" ? "撤去" : w.d === "sub" ? "解体・下地から" : "解体"}${w.n === 2 ? "（両面）" : ""}</text></g>`;
     });
     return h;
   };
-  // ボタン（間仕切の列）
+  // ボタン（CAD-152：チップ列 #partCh の中に置く。旧 #hgRow の横いっぱい1行独占は廃止）
+  let hgBr = null; // 枝分かれの状態 {stage:-1|0, depth}
   const dt = drawToolsUI; drawToolsUI = function(){
     dt.apply(this, arguments);
     const pc = document.getElementById("partCh"); if (!pc) return;
-    let row = document.getElementById("hgRow");
-    if (!row){ row = document.createElement("div"); row.className = "mrow"; row.id = "hgRow"; row.style.order = "1"; pc.after(row); }
-    row.hidden = pc.hidden;
-    if (document.getElementById("hgBtn")) return;
-    const b = document.createElement("button"); b.className = "p"; b.id = "hgBtn"; b.type = "button";
-    b.style.cssText = "color:#B35F00;font-weight:800;min-height:38px"; row.appendChild(b); paintBtn();
-    b.onclick = () => { window.__hgMode = !window.__hgMode; paintBtn(); hgChip(); if (window.__hgMode) toast("剥がす壁をタップしてください（外壁の内側・間仕切り）"); };
+    let b = document.getElementById("hgBtn");
+    if (!b){ b = document.createElement("button"); b.className = "p"; b.id = "hgBtn"; b.type = "button";
+      b.style.cssText = "color:#B35F00;font-weight:800;min-height:38px";
+      b.onclick = () => hgBtnTap152(); }
+    if (b.parentNode !== pc) pc.appendChild(b);
+    paintBtn();
+    let br = document.getElementById("hgBranch");
+    if (!br){ br = document.createElement("div"); br.id = "hgBranch"; br.style.cssText = "order:1;background:transparent;border:none;box-shadow:none;padding:2px"; pc.after(br); }
+    renderHgBr();
   };
-  function paintBtn(){ const b = document.getElementById("hgBtn"); if (b){ b.textContent = window.__hgMode ? "🧱 剥がす：選び中" : "🧱 壁を剥がす"; b.setAttribute("aria-pressed", String(!!window.__hgMode)); } }
+  function paintBtn(){ const b = document.getElementById("hgBtn"); if (b){ b.textContent = window.__hgMode ? `🧱 解体：選び中（${hgDShort(window.__hgDepth)}）` : "🧱 解体"; b.setAttribute("aria-pressed", String(!!window.__hgMode)); } }
+  // 枝分かれ（床仕様と同じ「✓ 決定／さらにこだわる」の型）：押す→標準（仕上げ材のみ解体）で
+  // 決めるか、さらにこだわるで深さ（仕上げ材のみ／下地から／撤去）を選んでから決める
+  function hgBtnTap152(){
+    if (window.__hgMode){ window.__hgMode = false; paintBtn(); hgChip(); return; }
+    hgBr = hgBr ? null : {stage: -1, depth: window.__hgDepth || "fin"};
+    renderHgBr();
+  }
+  function renderHgBr(){
+    const br = document.getElementById("hgBranch"); if (!br) return;
+    const pc = document.getElementById("partCh");
+    if (!hgBr || !pc || pc.hidden || step !== "M"){ br.innerHTML = ""; br.style.display = "none"; return; }
+    const D = hgBr.depth;
+    let h = `<div style="font-weight:700;font-size:14px">🧱 解体 <small style="font-weight:400;color:#555">深さ：${hgDName(D)}</small></div>`;
+    if (hgBr.stage < 0){
+      h += `<p class="hint" style="margin:6px 0 4px">標準（仕上げ材のみ解体）でよければ「✓ 決定」。深さを選びたい時は「さらにこだわる」。</p>
+        <div style="display:flex;gap:6px;margin-top:8px">
+        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">✓ 決定（標準で選ぶ）</button>
+        <button type="button" data-hgmore="1" class="btn" style="flex:1">さらにこだわる</button>
+        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">やめる</button></div>`;
+    } else {
+      h += `<p class="hint" style="margin:6px 0 4px">解体の深さは？（深さで見積の拾いが変わります）</p>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${HG_D152.map(([v, n]) => `<button type="button" data-hgd="${v}" aria-pressed="${D === v}" style="flex:1 1 30%;min-height:44px">${n}${v === "rem" ? "（壁そのもの）" : ""}</button>`).join("")}</div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+        <button type="button" data-hgback="1" class="btn sub" style="flex:0 0 auto">← もどる</button>
+        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">✓ 決定（この深さで選ぶ）</button>
+        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">やめる</button></div>`;
+    }
+    br.innerHTML = h; br.style.display = "block";
+    br.querySelectorAll("[data-hgd]").forEach(x => x.onclick = () => { hgBr.depth = x.dataset.hgd; renderHgBr(); });
+    const bm = br.querySelector("[data-hgmore]"); if (bm) bm.onclick = () => { hgBr.stage = 0; renderHgBr(); };
+    const bb = br.querySelector("[data-hgback]"); if (bb) bb.onclick = () => { hgBr.stage = -1; renderHgBr(); };
+    const bc = br.querySelector("[data-hgcan]"); if (bc) bc.onclick = () => { hgBr = null; renderHgBr(); };
+    const bd = br.querySelector("[data-hgdec]"); if (bd) bd.onclick = () => {
+      window.__hgDepth = hgBr.depth; hgBr = null; renderHgBr();
+      window.__hgMode = true; paintBtn(); hgChip();
+      toast(`解体（${hgDName(window.__hgDepth)}）：壁をタップしてください（外壁の内側・間仕切り）`);
+    };
+  }
   function hgChip(){
     let c = document.getElementById("hgChip");
     if (!window.__hgMode || step !== "M"){ if (c) c.remove(); return; }
     if (!c){ c = document.createElement("button"); c.id = "hgChip"; c.type = "button"; c.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:84px;z-index:9000;min-height:40px;padding:0 16px;border-radius:20px;border:2px solid #E07B00;background:#FFF3E0;color:#7A4100;font-size:14px;font-weight:800;box-shadow:0 3px 12px rgba(0,0,0,.25)"; document.body.appendChild(c); c.onclick = () => { window.__hgMode = false; paintBtn(); hgChip(); }; }
-    const h = hgArea(); c.textContent = `いま：壁を剥がす（${h.n}面）　やめる ✕`;
+    const h = hgArea(); c.textContent = `いま：解体・${hgDShort(window.__hgDepth)}（${h.n}面）　やめる ✕`;
   }
   // 壁をタップ
   const slot = document.getElementById("slotM");
@@ -8355,38 +8426,63 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     p.forEach((a, i) => { const r = segDist(q, a, p[(i + 1) % p.length]); if (r.d < tol && (!best || r.d < best.d)) best = {t: "e", i, d: r.d}; });
     parts().forEach((z, i) => { if (pState(z) === "remove") return; const r = segDist(q, [z.x1, z.y1], [z.x2, z.y2]); if (r.d < tol && (!best || r.d < best.d)) best = {t: "p", i, d: r.d}; });
     if (!best){ toast("壁の線の近くをタップしてください"); return; }
+    // CAD-152: zo では解体は母屋側の壁（母屋側の辺・既存の間仕切り）だけ。新しく作った壁には使えない
+    if (S.mode === "zo"){
+      if (best.t === "e" && best.i !== S.house){ toast("解体は母屋側の壁だけに使えます（新しく作った壁には使えません）"); return; }
+      if (best.t === "p" && pState(parts()[best.i]) !== "keep"){ toast("解体は母屋側の壁だけに使えます（新しく作った壁には使えません）"); return; }
+    }
     try { pushUndo(); } catch(er){}
-    if (best.t === "e"){ const ed = S.edges[best.i]; ed.hg = !ed.hg; if (!ed.hg) delete ed.hg; toast(ed.hg ? "この壁を剥がします（内側の面）" : "剥がすのをやめました"); }
-    else { const z = parts()[best.i]; z.hg = !z.hg ? 1 : z.hg === 1 ? 2 : 0; if (!z.hg) delete z.hg; toast(z.hg === 1 ? "間仕切りを片面剥がします（もう一度で両面）" : z.hg === 2 ? "両面剥がします（もう一度でやめる）" : "剥がすのをやめました"); }
+    const D = window.__hgDepth || "fin", DN = hgDName(D);
+    if (best.t === "e"){ const ed = S.edges[best.i];
+      if (!ed.hg){ ed.hg = true; setHgD(ed, D); toast(`この壁を解体します（${DN}・内側の面）`); }
+      else if (hgDepthOf(ed) !== D){ setHgD(ed, D); toast(`深さを変えました（${DN}）`); }
+      else { delete ed.hg; delete ed.hgD; toast("解体をやめました"); } }
+    else { const z = parts()[best.i];
+      if (!z.hg){ z.hg = 1; setHgD(z, D); toast(`間仕切りを片面解体します（${DN}・もう一度で両面）`); }
+      else if (hgDepthOf(z) !== D){ setHgD(z, D); toast(`深さを変えました（${DN}）`); }
+      else { z.hg = z.hg === 1 ? 2 : 0; if (!z.hg){ delete z.hg; delete z.hgD; toast("解体をやめました"); } else toast(z.hg === 2 ? "両面解体します（もう一度でやめる）" : "片面解体します"); } }
     save(); drawPlan(); hgChip();
   }, true);
-  setInterval(() => { if (window.__hgMode && step !== "M"){ window.__hgMode = false; paintBtn(); } hgChip(); const r = document.getElementById("hgRow"), pc = document.getElementById("partCh"); if (r && pc) r.hidden = pc.hidden; }, 300);
+  setInterval(() => { if (window.__hgMode && step !== "M"){ window.__hgMode = false; paintBtn(); } hgChip(); const pc = document.getElementById("partCh"); if (hgBr && (!pc || pc.hidden || step !== "M")){ hgBr = null; renderHgBr(); } }, 300);
   // 仕様：3つの質問
   function specCard(){
     const st = document.getElementById("st4"); if (!st) return;
     let c = document.getElementById("hgSpec"); const h = hgArea();
     if (!h.n){ if (c) c.remove(); return; }
-    const key = [h.n, h.a.toFixed(2), S.hgDan, S.hgShita, S.hgAri].join("|");
+    const D152 = window.hgAreaD(); const key = [h.n, h.a.toFixed(2), D152.fin.a.toFixed(2), D152.sub.a.toFixed(2), D152.rem.a.toFixed(2), S.hgDan, S.hgShita, S.hgAri].join("|");
     if (!c){ c = document.createElement("div"); c.id = "hgSpec"; c.className = "card"; c.style.cssText = "border:2px solid #E07B00;margin:8px 0"; const ms = st.querySelector(".modeSeg"); if (ms) ms.after(c); else st.prepend(c); }
     if (c.dataset.k === key) return; c.dataset.k = key;
     const seg = (k, opts) => `<div class="seg" style="margin-top:4px">${opts.map(([v, n]) => `<button type="button" data-hk="${k}" data-hv="${v}" aria-pressed="${(S[k] || opts[0][0]) === v}">${n}</button>`).join("")}</div>`;
-    c.innerHTML = `<h2 style="margin:0 0 4px">🧱 既存壁剥がし（${h.n}面・約${fmt(h.a, 1)}㎡）</h2><p class="hint" style="margin:0 0 6px">壁は「間取り」→「間仕切」→「壁を剥がす」で選びます。</p>
-      <b>剥がした所に断熱材を入れる？</b>${seg("hgDan", [["in", "入れる"], ["out", "入れない"]])}
-      <b style="display:block;margin-top:8px">下地・間柱・柱の交換</b>${seg("hgShita", [["no", "なし"], ["yes", "あり（予備で見る）"]])}
-      <b style="display:block;margin-top:8px">白蟻の被害</b>${seg("hgAri", [["no", "なさそう"], ["maybe", "ありそう（防蟻・補修を見る）"]])}`;
+    const dl152 = [["fin", "仕上げ材のみ"], ["sub", "下地から"], ["rem", "撤去"]].filter(([k]) => D152[k].n > 0).map(([k, n]) => `${n} ${D152[k].n}面・約${fmt(D152[k].a, 1)}㎡`).join("／");
+    c.innerHTML = `<h2 style="margin:0 0 4px">🧱 解体（${h.n}面・約${fmt(h.a, 1)}㎡）</h2><p class="hint" style="margin:0 0 6px">壁と深さは「間取り」→「壁を描く」→「解体」で選びます。${dl152}</p>
+      ${D152.fin.n + D152.sub.n > 0 ? `<b>解体した所に断熱材を入れる？</b>${seg("hgDan", [["in", "入れる"], ["out", "入れない"]])}` : ""}
+      ${D152.fin.n > 0 ? `<b style="display:block;margin-top:8px">下地・間柱・柱の交換（仕上げ材のみの面）</b>${seg("hgShita", [["no", "なし"], ["yes", "あり（予備で見る）"]])}<p class="hint" style="margin:2px 0 0">「下地から解体」の面は、下地の交換を初めから含みます。</p>` : ""}
+      ${D152.fin.n + D152.sub.n > 0 ? `<b style="display:block;margin-top:8px">白蟻の被害</b>${seg("hgAri", [["no", "なさそう"], ["maybe", "ありそう（防蟻・補修を見る）"]])}` : ""}`;
     c.querySelectorAll("[data-hk]").forEach(b => b.onclick = () => { S[b.dataset.hk] = b.dataset.hv; save(); c.dataset.k = ""; specCard(); });
   }
   setInterval(() => { try { if (step === 4) specCard(); } catch(e){} }, 400);
   // 見積の行
   const fr = fxRows; fxRows = function(work){
     fr(work);
-    const h = hgArea(); if (!h.n || !(h.a > 0)) return;
-    const sp = `${h.n}面（${fmt(h.a, 1)}㎡）`;
-    work("kaitai", "既存壁 剥がし（解体・処分）", h.a, "㎡", sp);
-    work("fxDemoBd", "壁ボード張替え（剥がした面）", h.a, "㎡", sp);
-    if ((S.hgDan || "in") === "in") work("danW", "断熱 壁（剥がした面）", h.a * 1.05, "㎡", `${fmt(h.a, 1)}㎡（5%増し）`);
-    if (S.hgShita === "yes") work("hgShita", "下地・間柱・柱の交換（剥がした面）", h.a, "㎡", sp);
-    if (S.hgAri === "maybe") work("hgAri", "白蟻 防蟻処理・被害部の補修（予備）", h.a, "㎡", sp);
+    // CAD-152: 深さごとに拾いを分ける。fin は旧「壁を剥がす」と同じ行（読み替えで見積は不変）。
+    //  sub は下地の交換を初めから含む。rem は壁がなくなるので張替え・断熱は付けず、
+    //  間仕切りだけ撤去跡の補修（partPatch・長さ）を付ける（既存の間仕切り撤去の拾い方に合わせた）。
+    const D = window.hgAreaD();
+    const F = D.fin; if (F.n && F.a > 0){ const sp = `${F.n}面（${fmt(F.a, 1)}㎡）`;
+      work("kaitai", "既存壁 剥がし（解体・処分）", F.a, "㎡", sp);
+      work("fxDemoBd", "壁ボード張替え（剥がした面）", F.a, "㎡", sp);
+      if ((S.hgDan || "in") === "in") work("danW", "断熱 壁（剥がした面）", F.a * 1.05, "㎡", `${fmt(F.a, 1)}㎡（5%増し）`);
+      if (S.hgShita === "yes") work("hgShita", "下地・間柱・柱の交換（剥がした面）", F.a, "㎡", sp);
+      if (S.hgAri === "maybe") work("hgAri", "白蟻 防蟻処理・被害部の補修（予備）", F.a, "㎡", sp); }
+    const U = D.sub; if (U.n && U.a > 0){ const sp = `${U.n}面（${fmt(U.a, 1)}㎡）`;
+      work("kaitai", "既存壁 下地から解体（解体・処分）", U.a, "㎡", sp);
+      work("hgShita", "下地・間柱・柱の交換（下地から解体の面）", U.a, "㎡", sp);
+      work("fxDemoBd", "壁ボード張替え（下地から解体の面）", U.a, "㎡", sp);
+      if ((S.hgDan || "in") === "in") work("danW", "断熱 壁（下地から解体の面）", U.a * 1.05, "㎡", `${fmt(U.a, 1)}㎡（5%増し）`);
+      if (S.hgAri === "maybe") work("hgAri", "白蟻 防蟻処理・被害部の補修（予備）", U.a, "㎡", sp); }
+    const R = D.rem; if (R.n && R.a > 0){ const sp = `${R.n}面（${fmt(R.a, 1)}㎡）`;
+      work("kaitai", "既存壁 撤去（解体・処分）", R.a, "㎡", sp);
+      if (R.plen > 0) work("partPatch", "撤去跡の床・天井・壁の補修", R.plen, "m", `${fmt(R.plen, 2)}m × ${fmt(workP("partPatch").p)}円`); }
   };
   // 室内図の「壁の一部を剥がす」：同じ面に重ねない（あとから置いた方を残す）
   const sv = save; save = function(){
