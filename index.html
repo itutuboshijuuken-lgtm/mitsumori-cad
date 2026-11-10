@@ -15150,5 +15150,96 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   window.__v162 = { view: curView, sync: sync162 };
 })();
 </script>
+<script>
+/* CAD-165: 室内図（展開図）で、部屋の外接矩形の辺に無い壁（L字の凹みの壁など）の面も出す。
+   従来の roomFaces は部屋の外接矩形の4辺だけで面を作るため、凹みの壁に付いた窓・ドアが
+   どの部屋の展開図にも出なかった（probe165m で再現・161〜164 全版で同一）。
+   ここでは roomFaces を包み直し、本来の面は一切変えず、「部屋に接しているのに
+   既存の面に含まれない壁の区間」だけを検出して、その区間の面を末尾に足す。
+   矩形の部屋では追加はゼロ。データ形式・計算は無変更。 */
+(function(){
+  "use strict";
+  if (typeof roomFaces !== "function" || roomFaces.__v165) return;
+  var orig165 = roomFaces;
+  function extraFaces165(sr, faces){
+    var R = roomsCalc(); if (!R || !R.rooms || !sr.cells) return [];
+    var cellSet = new Set(sr.cells);
+    var st = R.st, bx = R.b.x0, by = R.b.y0, NX = R.NX;
+    function cellIn(x, y){
+      var ix = Math.floor((x - bx) / st), iy = Math.floor((y - by) / st);
+      if (ix < 0 || iy < 0 || ix >= NX) return false;
+      return cellSet.has(iy * NX + ix);
+    }
+    var p = pts(), walls = [];
+    p.forEach(function(a, i){ walls.push({ k: i, a: a, c: p[(i + 1) % p.length] }); });
+    (S.parts2D || []).forEach(function(q, i){ if (pState(q) !== "remove") walls.push({ k: 100 + i, a: [q.x1, q.y1], c: [q.x2, q.y2] }); });
+    var g = fxProj(), out = [];
+    walls.forEach(function(w){
+      var dx = w.c[0] - w.a[0], dy = w.c[1] - w.a[1], L = Math.hypot(dx, dy); if (L < 1) return;
+      var ux = dx / L, uy = dy / L, nx = -uy, ny = ux, OFF = 95;
+      var runs = [], cur = null, nSeg = Math.max(1, Math.round(L / st));
+      for (var si = 0; si < nSeg; si++){
+        var u0 = L * si / nSeg, u1 = L * (si + 1) / nSeg, um = (u0 + u1) / 2;
+        var mx = w.a[0] + ux * um, my = w.a[1] + uy * um;
+        var inP = cellIn(mx + nx * OFF, my + ny * OFF), inM = cellIn(mx - nx * OFF, my - ny * OFF);
+        var bord = inP !== inM, sideSign = inP ? 1 : -1;
+        if (bord && cur && cur.sideSign === sideSign && Math.abs(cur.u1 - u0) < 1) cur.u1 = u1;
+        else if (bord){ cur = { u0: u0, u1: u1, sideSign: sideSign }; runs.push(cur); }
+        else cur = null;
+      }
+      runs.forEach(function(run){
+        if (run.u1 - run.u0 < 50) return;
+        var ivs = [[run.u0, run.u1]];
+        faces.concat(out).forEach(function(F){
+          if (!F.r || !F.o) return;
+          F.pieces.forEach(function(pc){
+            if (pc.k !== w.k) return;
+            var po = F.o[0] * F.r[0] + F.o[1] * F.r[1];
+            var pa = w.a[0] * F.r[0] + w.a[1] * F.r[1];
+            var sgnF = (ux * F.r[0] + uy * F.r[1]) >= 0 ? 1 : -1;
+            var cu0 = (pc.x0 + po - pa) * sgnF, cu1 = (pc.x1 + po - pa) * sgnF;
+            var clo = Math.min(cu0, cu1), chi = Math.max(cu0, cu1), nxt = [];
+            ivs.forEach(function(iv){
+              if (chi <= iv[0] + 25 || clo >= iv[1] - 25){ nxt.push(iv); return; }
+              if (clo > iv[0] + 25) nxt.push([iv[0], clo]);
+              if (chi < iv[1] - 25) nxt.push([chi, iv[1]]);
+            });
+            ivs = nxt;
+          });
+        });
+        ivs.forEach(function(iv){
+          if (iv[1] - iv[0] < 50) return;
+          var nOut = [ -run.sideSign * nx, -run.sideSign * ny ];
+          var r = [ -nOut[1], nOut[0] ];
+          var A = [ w.a[0] + ux * iv[0], w.a[1] + uy * iv[0] ], B = [ w.a[0] + ux * iv[1], w.a[1] + uy * iv[1] ];
+          var pr = function(q){ return q[0] * r[0] + q[1] * r[1]; };
+          var o = pr(A) <= pr(B) ? A : B, po = pr(o);
+          var xa = pr(A) - po, xb = pr(B) - po;
+          var fw = fxWall(g, w.k);
+          var side = w.k >= 100 ? (((-nOut[0]) * -fw.uy + (-nOut[1]) * fw.ux) >= 0 ? 1 : -1) : 0;
+          var sgn = (fw.ux * r[0] + fw.uy * r[1]) >= 0 ? 1 : -1;
+          out.push({ n: nOut, r: r, o: o, len: iv[1] - iv[0], name: posWord(nOut), pieces: [ { k: w.k, x0: Math.min(xa, xb), x1: Math.max(xa, xb), H: fw.H, side: side, sgn: sgn } ] });
+        });
+      });
+    });
+    return out;
+  }
+  var wrapped165 = function(){
+    var faces = orig165.apply(this, arguments);
+    try {
+      var sr = (typeof selRoom === "function") ? selRoom() : null;
+      if (sr && faces && faces.length){
+        var ex = extraFaces165(sr, faces);
+        if (ex.length) faces = faces.concat(ex);
+      }
+    } catch(e){}
+    return faces;
+  };
+  wrapped165.__v165 = true;
+  roomFaces = wrapped165;
+  window.__v165 = { extra: extraFaces165 };
+})();
+</script>
+
 </body>
 </html>
