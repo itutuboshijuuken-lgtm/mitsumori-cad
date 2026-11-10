@@ -2822,7 +2822,16 @@ let txt = "";
 }
 function enclPrevSvg(P){
   if (!enclMode || !encl || !encl.r) return "";
-  const r = encl.r, a = P([r.x0, r.y0]), b = P([r.x1, r.y1]), cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2;
+  // CAD-159: 囲みを床として決める場面（囲み用の枝分かれバーが開いている時）は、
+  // 実際に記録される「なぞった形（raw）」でプレビューする。壁に吸着した四角の
+  // ままだと、色の付く四角と記録される範囲が食い違って見えるため。
+  // 手直しした後（raw が無い時）と、部屋・ゾーンの場面では従来通り encl.r を出す。
+  let r = encl.r;
+  if (!encl.edit && encl.raw){
+    const eb159 = document.getElementById("enclBranch");
+    if (eb159 && eb159.style.display !== "none" && eb159.innerHTML) r = encl.raw;
+  }
+  const a = P([r.x0, r.y0]), b = P([r.x1, r.y1]), cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2;
   const pick = encl.edit ? encl.edit.type : (encl.pick || "room");
   let fill = "rgba(37,99,176,.14)", fo = "1", stroke = "#2563B0", tcol = "#2563B0", name = "部屋";
   if (ZT[pick]){ fill = ZT[pick][1]; fo = ".8"; stroke = ZT[pick][2]; tcol = ZT[pick][2]; name = ZT[pick][0]; }
@@ -14762,25 +14771,29 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 
-<style id="cad156Sty">
-/* CAD-156: 横画面の配置と図面の大きさ
-   ・横画面では横の広さを使う（main・ヘッダーの 560px 上限を外す）
-   ・間取りは道具の帯と #planBar を左の列に寄せ、図面を右の広い場所に出す
-     （縦画面の配置をそのまま縮める形にしない）。物を選んだ時も図面の場所は
-     同じ列のまま動かさないので、選択の前後で図面の倍率・位置は変わらない
-   ・全画面（fsDraw）は帯が図面の上に浮く従来の形なので対象外 */
+<style id="cad159Sty">
+/* CAD-159: 横画面の単純化（本人の決定 2026-11-10夜）
+   ・156 の左列（道具を並べる配置）はやめた（図面が半分しか見えなかったため）。
+     通常表示の間取りは、縦画面と同じ積み方に戻す
+   ・入口を押したら道具類は消えて図面が全面になる（landA159 / landB159 の
+     クラスは CAD-159 のスクリプトが横画面の時だけ付ける。縦画面では無効）
+   ・他のステップは 156 のまま、横の広さを図面に使う（560px 上限を外す） */
 @media (orientation: landscape) and (max-height: 600px){
   main{max-width:none}
   .top .bar{max-width:none}
   .steps{max-width:none}
-  body:not(.fsDraw) #stM:not([hidden]){display:grid;grid-template-columns:364px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;column-gap:6px;row-gap:4px}
-  body:not(.fsDraw) #stM .mtools{grid-column:1;grid-row:1;min-height:0;overflow-y:auto}
-  body:not(.fsDraw) #stM #planBar{grid-column:1;grid-row:2;flex-wrap:wrap;justify-content:flex-start;gap:3px}
-  body:not(.fsDraw) #stM #slotM{grid-column:2;grid-row:1 / span 2;min-width:0;min-height:0}
-  body:not(.fsDraw) #stM #drawnList{grid-column:1;grid-row:1;align-self:end;position:relative;z-index:6;max-height:55%;overflow-y:auto}
-  body:not(.fsDraw) #stM .mrow button{font-size:12.5px}
-  body:not(.fsDraw) #stM #planBar button{font-size:11.5px;padding:0 3px;width:auto;min-width:34px;height:34px}
-  body:not(.fsDraw) #stM #planBar .pbG{flex-wrap:wrap;row-gap:3px}
+  /* A: 入口を開いたら、入口の行・下の帯・モード切替・案内を畳む */
+  body.landA159 #stM .modeSeg,
+  body.landA159 #stM #toolTabs,
+  body.landA159 #stM #guideLine,
+  body.landA159 #stM #planBar{display:none!important}
+  /* B: 道具が決まったら、選ぶ行も畳む（枝分かれバーは畳まない） */
+  body.landB159 #stM #grpSub,
+  body.landB159 #stM #partCh,
+  body.landB159 #stM #toolCh,
+  body.landB159 #stM #toolCh2,
+  body.landB159 #stM #toolCh3,
+  body.landB159 #stM #floorPanel{display:none!important}
 }
 </style>
 
@@ -14835,6 +14848,176 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   wrap157("drawEnclBar", "enclBar");
   wrap157("drawFxBar", "fxBar");
   window.__bindBar157 = bindBar157;
+})();
+</script>
+
+<script>
+/* ================= CAD-159：横画面で道具を畳む＋囲みプレビューの追従 =================
+   本人の決定（2026-11-10夜）: 横画面は単純に。入口を押したら道具類は消えて
+   図面が全面になる。作業中は今の道具と「閉じる」だけ（全画面の閉じるは従来）。
+   ここでは横画面の時だけ body に landA159 / landB159 を付け外しする
+   （見た目の規則は cad159Sty の中。縦画面ではクラスが付いても無効）。
+   あわせて、囲みの枝分かれバーが開閉した時に図面を描き直し、床プレビューが
+   raw の形へ即切り替わる様にする。 */
+(function(){
+  "use strict";
+  var MQ159 = "(orientation: landscape) and (max-height: 600px)";
+  function land159(){ try { return !!(window.matchMedia && window.matchMedia(MQ159).matches); } catch(e){ return false; } }
+  function vis159(el){ return !!(el && !el.hidden && el.style.display !== "none" && el.innerHTML); }
+  function branchOpen159(){
+    return vis159(document.getElementById("flBranch")) || vis159(document.getElementById("enclBranch"));
+  }
+  function toolName159(){
+    try {
+      if (window.__put && window.__put.label) return window.__put.label;
+      if (typeof ltTool !== "undefined" && ltTool) return (typeof LTN !== "undefined" && LTN[ltTool]) || "照明";
+      if (window.__floorArm) return (window.__FLN && window.__FLN[window.__floorArm]) || "床";
+      if (window.__partDraw) return "壁を描く";
+      if (typeof enclMode !== "undefined" && enclMode) return "なぞる";
+      if (typeof toolOpen !== "undefined" && toolOpen){
+        return {part: "壁を描く", door: "建具", win: "窓", gen: "玄関", etc: "設備・その他", light: "照明"}[toolOpen] || "道具";
+      }
+      if (window.__floorTab) return "床の仕様";
+      if (window.grp136 === "put") return "選んで置く";
+    } catch(e){}
+    return "道具";
+  }
+  function identity159(){
+    try {
+      return [
+        (typeof toolOpen !== "undefined" ? toolOpen : null),
+        window.grp136 || null,
+        (window.__put && window.__put.label) || null,
+        window.__floorArm || null,
+        (typeof ltTool !== "undefined" ? ltTool : null),
+        (typeof enclMode !== "undefined" && enclMode) ? 1 : 0,
+        window.__floorTab ? 1 : 0,
+        window.__partDraw ? 1 : 0
+      ].join("|");
+    } catch(e){ return ""; }
+  }
+  var mini159 = null, recallId159 = null, work159 = false;
+  function ensureMini159(){
+    if (mini159) return mini159;
+    var stM = document.getElementById("stM"); if (!stM) return null;
+    mini159 = document.createElement("div");
+    mini159.id = "landMini159";
+    mini159.style.cssText = "display:none;position:absolute;right:10px;bottom:10px;z-index:40;align-items:center;gap:6px";
+    mini159.innerHTML = "<span id='landMiniName159' style='background:rgba(255,255,255,.88);border:1px solid #B9C9DC;border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;color:#234'></span>"
+      + "<button type='button' id='landMiniBtn159' style='min-height:40px;padding:0 14px;border-radius:999px;background:#2563B0;color:#fff;font-weight:800;border:none;box-shadow:0 2px 8px rgba(0,0,0,.25)'>道具</button>";
+    stM.appendChild(mini159);
+    mini159.querySelector("#landMiniBtn159").onclick = function(){ recallId159 = identity159(); work159 = false; sync159(); };
+    return mini159;
+  }
+  function sync159(){
+    var body = document.body; if (!body) return;
+    var on = false, stageB = false;
+    try {
+      var stM = document.getElementById("stM");
+      var tut = body.classList.contains("nbtutRun");
+      if (land159() && window.__pageM && stM && !stM.hidden && !tut){
+        var armedB = false, choosing = false;
+        try {
+          /* B（選ぶ行まで畳む）に入る道具の決まり方:
+             ・指描き・床・照明・なぞるは、押した／決定した時点で作業に入るので即 B
+             ・置く道具（__put）は、葉を開くと先頭チップが自動で構わる作りのため、
+               構わっただけでは「選んでいる途中」として A に留め、図面を触って
+               作業に入ってから B にする（葉や道具の切り替えを邪魔しない） */
+          armedB = !!(window.__partDraw || window.__floorArm
+            || (typeof ltTool !== "undefined" && ltTool)
+            || (typeof enclMode !== "undefined" && enclMode)
+            || (window.__put && work159));
+          choosing = !!((typeof toolOpen !== "undefined" && toolOpen)
+            || window.grp136 === "put" || window.__floorTab);
+        } catch(e){}
+        var br = branchOpen159();
+        stageB = armedB && !br;
+        on = stageB || choosing || br;
+        /* 道具が何も構わっていない時は「作業中」を解除（古い状態を持ち越さない） */
+        try {
+          var anyArm = !!(window.__put || window.__partDraw || window.__floorArm
+            || (typeof ltTool !== "undefined" && ltTool)
+            || (typeof enclMode !== "undefined" && enclMode));
+          if (!anyArm) work159 = false;
+        } catch(e){}
+        if (recallId159 !== null){
+          if (identity159() === recallId159) on = false;
+          else recallId159 = null;
+        }
+      }
+    } catch(e){}
+    body.classList.toggle("landA159", on);
+    body.classList.toggle("landB159", on && stageB);
+    var m = ensureMini159();
+    if (m){
+      var sb = document.getElementById("selBar"), eb = document.getElementById("enclBar");
+      var barVis = !!((sb && !sb.hidden) || (eb && !eb.hidden));
+      var show = !!(on && land159() && !barVis);
+      m.style.display = show ? "flex" : "none";
+      if (show){ var nm = m.querySelector("#landMiniName159"); if (nm) nm.textContent = toolName159(); }
+    }
+  }
+  window.__syncLand159 = sync159;
+  /* 図面側を触ったら「作業中」として B へ（操作系の帯・ボタン・シートは除く。
+     トースト表示が図面に被っている時も、図面を触った事として扱う）。
+     道具の帯を触ったら「選んでいる途中」へ戻す */
+  window.addEventListener("pointerdown", function(e){
+    try {
+      if (!window.__pageM) return;
+      var t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest(".mtools") || t.closest("#planBar") || t.closest("#selBar") || t.closest("#enclBar")
+        || t.closest("#landMini159") || t.closest("#modal") || t.closest("button")
+        || t.closest("input") || t.closest("select") || t.closest("a")) return;
+      work159 = true; recallId159 = null; sync159();
+    } catch(err){}
+  }, true);
+  window.addEventListener("click", function(e){
+    try {
+      var t = e.target;
+      if (t && t.closest && (t.closest(".mtools") || t.closest("#planBar"))) work159 = false;
+    } catch(err){}
+  }, true);
+  function sig159(){
+    var b = document.body; if (!b) return "";
+    return (b.classList.contains("landA159") ? "A" : "") + (b.classList.contains("landB159") ? "B" : "");
+  }
+  var lastSig159 = "";
+  /* drawPlan の前で同期する（帯が消えた後の大きさで図面を合わせるため） */
+  try {
+    var _dp159 = window.drawPlan;
+    if (typeof _dp159 === "function" && !_dp159.__w159){
+      var w159 = function(){
+        try { sync159(); lastSig159 = sig159(); var sm = document.getElementById("slotM"); if (sm) void sm.clientHeight; } catch(e){}
+        return _dp159.apply(this, arguments);
+      };
+      w159.__w159 = true;
+      window.drawPlan = w159;
+    }
+  } catch(e){}
+  /* drawPlan を呼ばない操作（床の決定など）と、囲みバーの開閉にも追従する。
+     window の capture で受ける（床モジュールが document capture で
+     stopImmediatePropagation するクリックでも後追いが届く様に） */
+  window.addEventListener("click", function(e){
+    var inEncl = false;
+    try { inEncl = !!(e.target && e.target.closest && e.target.closest("#enclBar")); } catch(err){}
+    setTimeout(function(){
+      try {
+        sync159();
+        var changed = sig159() !== lastSig159;
+        lastSig159 = sig159();
+        if ((changed || inEncl) && window.__pageM && typeof window.drawPlan === "function") window.drawPlan();
+      } catch(err){}
+    }, 0);
+  }, true);
+  /* 画面の向きが変わったら付け直す */
+  try {
+    var mq159 = window.matchMedia(MQ159);
+    var onCh159 = function(){ try { recallId159 = null; sync159(); lastSig159 = sig159(); if (window.__pageM && typeof window.drawPlan === "function") window.drawPlan(); } catch(e){} };
+    if (mq159.addEventListener) mq159.addEventListener("change", onCh159);
+    else if (mq159.addListener) mq159.addListener(onCh159);
+  } catch(e){}
+  try { sync159(); lastSig159 = sig159(); } catch(e){}
 })();
 </script>
 </body>
