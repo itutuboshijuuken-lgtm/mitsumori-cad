@@ -3626,7 +3626,7 @@ if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText
     $("sbLen").onclick = () => openPad({title: "間仕切りの長さ", value: Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), extra: [455, 910, 1820, 2730, 3640].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); setLen(q, v); save(); drawPlan(); }})), done: v => { if (v){ pushUndo(); setLen(q, v); save(); drawPlan(); } }});
     $("sbFit").onclick = () => { pushUndo(); if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } save(); drawPlan(); };
     if ($("sbTop")) $("sbTop").onclick = () => openPad({title: "間仕切りの高さ", sub: "数字は床からの高さ。垂れ壁は天井から下がります", unit: "mm", std: false, value: q.top || "", extra: [{label: "天井まで", fn: () => { closePad(); pushUndo(); delete q.top; save(); drawPlan(); }}, {label: "垂れ壁（天井から）", fn: () => { closePad(); pushUndo(); const ix = S.parts2D.indexOf(q); if (ix >= 0) S.parts2D.splice(ix, 1); sel = null; S.tare = S.tare || []; const tt = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(tt); save(); drawPlan(); tareAsk(tt); }}].concat([1800, 2000, 2100].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); q.top = v; save(); drawPlan(); }}))), done: v => { if (v){ pushUndo(); q.top = Math.min(v, S.ch); save(); drawPlan(); } }});
-    $("sbNew").onclick = () => { pushUndo(); setPState(q, {keep: "new", new: "remove", remove: "keep"}[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
+    $("sbNew").onclick = () => { pushUndo(); setPState(q, (S.mode === "zo" ? {keep: "new", new: "keep", remove: "keep"} : {keep: "new", new: "remove", remove: "keep"})[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
     if ($("sbBeam")) $("sbBeam").onclick = () => beamAsk(q);
   } else {
     $("sbFlip").onclick = () => { pushUndo(); sa.flip = (sa.flip || 0) ^ 1; save(); drawPlan(); };
@@ -3887,7 +3887,7 @@ function partSheet(i){
   const off = horiz ? q.y1 - b.y0 : q.x1 - b.x0, st = horiz ? q.x1 - b.x0 : q.y1 - b.y0;
   const row = (id, label, val, sub) => `<div class="sub2" style="margin-top:8px">${label}：<b>${fmt(val)}</b>mm${sub ? `<small style="margin-left:4px">${sub}</small>` : ""}</div><div class="chips"><button data-${id}="-100" type="button">−100</button><button data-${id}="-10" type="button">−10</button><button data-${id}="10" type="button">＋10</button><button data-${id}="100" type="button">＋100</button><button data-${id}="pad" type="button">数字で</button></div>`;
   $("mbox").innerHTML = `<h3>間仕切り</h3>
-    <div class="seg">${["keep", "new", "remove"].map(k => `<button data-nw="${k}" aria-pressed="${pState(q) === k}" type="button">${PST[k][0]}</button>`).join("")}</div>
+    <div class="seg">${(S.mode === "zo" ? ["keep", "new"] : ["keep", "new", "remove"]).map(k => `<button data-nw="${k}" aria-pressed="${pState(q) === k}" type="button">${PST[k][0]}</button>`).join("")}</div>
     <div class="seg" style="margin-top:6px"><button data-or="h" aria-pressed="${horiz}" type="button">横向き</button><button data-or="v" aria-pressed="${!horiz}" type="button">縦向き</button></div>
     ${row("po", horiz ? "上の壁からの位置" : "左の壁からの位置", off)}${row("ps", horiz ? "始まり（左の壁から）" : "始まり（上の壁から）", st)}${row("pl", "長さ", L)}
     <div class="row"><button class="btn sub" id="psFit" type="button">壁から壁まで伸ばす</button></div>
@@ -7009,17 +7009,19 @@ function pickOne(title, opts, cb){
   $("poCan").onclick = () => { $("modal").hidden = true; };
 }
 function ltNear(mm){ let best = -1, bd = 260; (S.lights || []).forEach((l, i) => { const d = Math.hypot(l.x - mm[0], l.y - mm[1]); if (d < bd){ bd = d; best = i; } }); return best; }
+// CAD-147: 新築・増築では「撤去」「交換」を出さない（本人のルール 2026-11-10。新築に既存物はない）
+const ltOpts147 = erase => { const o = [["new", "新設"]]; if (S.mode !== "zo") o.push(["remove", "撤去", "#C62828"], ["swap", "交換", "#B5571A"]); if (erase) o.push(["erase", "消す", "#C62828"]); return o; };
 function ltPlanClick(mm){
   if (ltTool && ltNear(mm) < 0){
     const x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
-    const put = act => { pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました。続けて置けます`); };
+    const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました。続けて置けます`); };
     if (window.__ltAct && window.__ltAct.k === ltTool){ put(window.__ltAct.act); return true; }
-    pickOne(`${LTN[ltTool]}：どうしますか`, [["new", "新設"], ["remove", "撤去", "#C62828"], ["swap", "交換", "#B5571A"]], act => { window.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
+    pickOne(`${LTN[ltTool]}：どうしますか`, ltOpts147(false), act => { window.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
     return true;
   }
   const i = ltNear(mm); if (i < 0) return false;
   const l = S.lights[i];
-  pickOne(`${LTN[l.k]}（今は${LTA[l.act || "new"]}）`, [["new", "新設"], ["remove", "撤去", "#C62828"], ["swap", "交換", "#B5571A"], ["erase", "消す", "#C62828"]], v => {
+  pickOne(`${LTN[l.k]}（今は${LTA[l.act || "new"]}）`, ltOpts147(true), v => {
     pushUndo(); if (v === "erase") S.lights.splice(i, 1); else l.act = v; save(); drawPlan();
   });
   return true;
@@ -8592,7 +8594,7 @@ function drawSelBarL(bar){
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbDel").onclick = () => { pushUndo(); S.lights.splice(sel.i, 1); sel = null; save(); drawPlan(); };
   $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
-  $("sbLS").onclick = () => { pushUndo(); const A = ["new", "remove", "swap"]; l.act = A[(A.indexOf(l.act || "new") + 1) % 3]; save(); bar.dataset.k = ""; drawPlan(); };
+  $("sbLS").onclick = () => { pushUndo(); const A = S.mode === "zo" ? ["new"] : ["new", "remove", "swap"]; l.act = A[(A.indexOf(l.act || "new") + 1) % A.length]; save(); bar.dataset.k = ""; drawPlan(); };
   $("sbLK").onclick = () => { pushUndo(); l.k = l.k === "down" ? "ceil" : "down"; save(); bar.dataset.k = ""; drawPlan(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); l.x += ax * selStep; l.y += ay * selStep; save(); drawPlan(); };
   bar.querySelectorAll("[data-ar]").forEach(b => {
@@ -10343,7 +10345,7 @@ function sujiWall(){
     if (typeof ltTool !== "undefined" && ltTool){
       const a = window.__ltAct;
       return a ? LTN[ltTool] + "（" + LTA[a.act] + "）：置く所をタップ。置き終わったら「照明」のボタンをもう一度押して、次に進みます。"
-               : LTN[ltTool] + "：置く所をタップすると、新設・撤去・交換を選べます。";
+               : S.mode === "zo" ? LTN[ltTool] + "：置く所をタップ" : LTN[ltTool] + "：置く所をタップすると、新設・撤去・交換を選べます。";
     }
     if (toolOpen === "part") return "間仕切り：長さのボタンを押すと、その長さで入ります。図をタップすると、壁から壁まで入ります。";
     if (toolOpen === "door") return "建具：付けたい物を選んで、置きたい壁をタップ。選んだ物は、続けて置けます。";
