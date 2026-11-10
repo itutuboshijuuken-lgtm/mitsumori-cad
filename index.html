@@ -691,7 +691,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
   <section id="st6" hidden>
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
-    <div class="seg" id="pvSeg"><button data-pv="iso" type="button" aria-pressed="true">立体・室内図</button><button data-pv="plan" type="button" aria-pressed="false">平面図</button></div>
+    <div class="seg" id="pvSeg"><button data-pv="iso" type="button" aria-pressed="true">立体図</button><button data-pv="room" type="button" aria-pressed="false">室内図</button><button data-pv="plan" type="button" aria-pressed="false">平面図</button></div>
     <div id="pvBar">
       <div class="row" style="margin:0 0 6px"><button class="btn" id="pvStruct" type="button" aria-pressed="false" style="flex:1">柱・間柱を表示</button></div>
       <p id="pvLegend" style="margin:0 0 8px;font-size:12.5px;line-height:1.55;color:#5B6673"></p>
@@ -15071,5 +15071,83 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 描く・置く最中の帯（#selBar / #enclBar / #fxBar 等）は透明のまま（対象外）。 */
 #floorPanel{background:#fff;border-radius:8px}
 </style>
+<style id="cad162Sty">
+/* CAD-162: 完成図の「立体図」と「室内図」を別々の画面に分ける（本人の指示 2026-11-10）。
+   #pvSeg の「立体・室内図」1ボタンを「立体図」「室内図」の2ボタンに分け、
+   #st6 の data-v162 属性で出し分ける。平面図（.pvOn）・既存図（.bfOn）の時は従来どおり。 */
+#st6[data-v162="iso"]:not(.pvOn) #roomBar,
+#st6[data-v162="iso"]:not(.pvOn) #elevBox,
+#st6[data-v162="iso"]:not(.pvOn) #fxBar,
+#st6[data-v162="iso"]:not(.pvOn) #fxMenu,
+#st6[data-v162="iso"]:not(.pvOn) #fxHint,
+#st6[data-v162="iso"]:not(.pvOn) #fxList{display:none!important}
+#st6[data-v162="room"]:not(.pvOn) #pvIsoCard,
+#st6[data-v162="room"]:not(.pvOn) #pvRotRow,
+#st6[data-v162="room"]:not(.pvOn) #pvIsoHint{display:none!important}
+</style>
+<script>
+/* CAD-162: 完成図（⑥）の中で、立体図と室内図（室内の展開）を別々の画面にする。
+   従来は seg の「立体・室内図」ボタン1つの中に、立体（#pvIsoCard）と室内（#roomBar＋#elevBox＋fx系）が
+   小さな「立体で見る／4面で見る」トグルで同居していた。seg に「立体図」「室内図」の入口を分け、
+   S.roomView（iso/elev）＋ #st6 の data-v162 で出し分ける。データ形式・計算は無変更。
+   手順バーの「室内図」(data-step=7)／「完成図」(data-step=6) は従来どおり roomView を切り替えるので、
+   描画のたび＋定期に同期すれば、そのまま正しい方の画面になる。 */
+(function(){
+  "use strict";
+  var st6 = function(){ return document.getElementById("st6"); };
+  var segBtns = function(){ var s = document.getElementById("pvSeg"); return s ? Array.prototype.slice.call(s.querySelectorAll("[data-pv]")) : []; };
+  function curView(){
+    var s = st6(); if (!s) return "iso";
+    try { if (window.__bf129 && window.__bf129.on()) return "before"; } catch(e){}
+    if (s.classList.contains("pvOn")) return "plan";
+    try { if (typeof elevOn === "function" && elevOn()) return "room"; } catch(e){}
+    try { if (typeof S !== "undefined" && S.roomView === "elev") return "room"; } catch(e){}
+    return "iso";
+  }
+  var healing162 = false;
+  function sync162(){
+    var s = st6(); if (!s) return;
+    var v = curView();
+    if (v === "iso" || v === "room") s.setAttribute("data-v162", v); else s.removeAttribute("data-v162");
+    segBtns().forEach(function(b){ var want = String(b.dataset.pv === v); if (b.getAttribute("aria-pressed") !== want) b.setAttribute("aria-pressed", want); });
+    // 出し分けの本体は drawElev() が付ける hidden 属性（立体の親と回転行）。
+    // seg 以外の経路で立体に戻った時など、立体画面なのに hidden が残っていたら
+    // drawRoom() を一度呼んで付け外しを正させる（自己修復）。
+    try {
+      if (!healing162 && v === "iso"){
+        var iso = document.getElementById("iso");
+        if (iso && iso.parentNode && iso.parentNode.hidden){ healing162 = true; try { drawRoom(); } catch(e){} healing162 = false; }
+      }
+    } catch(e){}
+  }
+  function pickRoom(){
+    try { if (!selRoom()){ var R = roomsCalc(); if (R && R.rooms && R.rooms.length) S.roomPt = R.rooms[0].p; } } catch(e){}
+  }
+  var seg = document.getElementById("pvSeg");
+  if (seg) seg.addEventListener("click", function(e){
+    var t = e.target && e.target.closest ? e.target.closest("[data-pv]") : null;
+    if (!t) return;
+    var pv = t.dataset.pv, s = st6();
+    try {
+      if (pv === "iso"){ S.roomView = "iso"; save(); if (s) s.classList.remove("pvOn"); try { drawRoom(); } catch(e2){} sync162(); try { drawIso(); } catch(e2){} }
+      else if (pv === "room"){ S.roomView = "elev"; pickRoom(); save(); if (s) s.classList.remove("pvOn"); sync162(); try { drawRoom(); } catch(e2){} }
+    } catch(err){}
+    setTimeout(sync162, 0); setTimeout(sync162, 80);
+  }, true);
+  if (typeof drawIso === "function" && !drawIso.__v162){
+    var oIso = drawIso;
+    var wIso = function(){ var r = oIso.apply(this, arguments); try { sync162(); } catch(e){} return r; };
+    wIso.__v162 = true; drawIso = wIso;
+  }
+  if (typeof drawRoom === "function" && !drawRoom.__v162){
+    var oRoom = drawRoom;
+    var wRoom = function(){ var r = oRoom.apply(this, arguments); try { sync162(); } catch(e){} return r; };
+    wRoom.__v162 = true; drawRoom = wRoom;
+  }
+  setInterval(sync162, 500);
+  sync162();
+  window.__v162 = { view: curView, sync: sync162 };
+})();
+</script>
 </body>
 </html>
