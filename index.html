@@ -4936,6 +4936,13 @@ function framePos(){
       for (let k = 1; k * M2 < r.L - 1; k++){
         const t = k * M2, x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
         if (postMap.has(kk)) continue;
+        // CAD-154 (N3b): 開口の中の間柱は数えない（柱と同じ扱い。実測で練習の家 12 本あった）
+        if (inOp(r, t)) continue;
+        // CAD-154 (N3c): 本人の決まり「柱芯から455ピッチ」。柱の半ピッチ以内に来る間柱は
+        // 柱がその位置（継目）の役をするので数えない（開口脇の柱から 45〜165mm に立つ二重数えの解消）
+        let nearPost154 = false;
+        r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost154 = true; });
+        if (nearPost154) continue;
         const ex = studMap.get(kk);
         if (ex){ if (k % 2 === 0) ex.thick = true; }
         else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
@@ -4955,7 +4962,7 @@ function framePos(){
     });
     Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind}));
     return Z;
-  } catch(e){ return Z; }
+  } catch(e){ Z.err = true; try { window.__frameErr154 = true; } catch(_){} return Z; }
 }
 function calc00(){
   const PT = S.mode === "pt";
@@ -5716,7 +5723,9 @@ function drawEst(){
   $("genba").value = S.genba || ""; $("startD").value = S.startD || ""; $("addr").value = S.addr || "";
   drawKotsu();
   if (S.mode !== "pt" && (unknown() || dimErr.length)){ $("mat").innerHTML = ""; $("estTop").innerHTML = ""; $("areaBox4").innerHTML = ""; $("matWarn").innerHTML = `<div class="warn">先に②で寸法を入れてください。</div>`; return; }
+  window.__frameErr154 = false;
   const C = calc(), missN = C.rows.filter(r => r.miss).length, avgN = C.rows.filter(r => r.avg && !r.note).length;
+  if (window.__frameErr154) C.frameErr154 = true;
   const tax = Math.round(C.mitsu * 0.1);
   $("estTop").innerHTML = `<span>見積金額（税込）</span><strong>${fmt(Math.round(C.mitsu) + tax)}<small>円</small></strong>
     <div class="g"><div>税抜<b>${fmt(Math.round(C.mitsu))}</b></div><div>原価<b>${fmt(Math.round(C.genkaReal))}</b></div><div>利益<b>${fmt(Math.round(C.mitsu - C.genkaReal))}</b></div></div><div style="font-size:11px;color:#667;margin-top:4px">※「仮」の付いた金額は全国の目安です。実際の値段とは違うことがあります。</div>`;
@@ -5740,7 +5749,7 @@ function drawEst(){
   $("areaBox4").innerHTML = C.pt ? "" : `<div><span>${C.two ? "延床" : "床"}</span><b>${fmt(C.nobeT, 2)}<small>坪</small></b></div><div><span>外壁（窓を引く）</span><b>${fmt(C.wallA, 1)}<small>㎡</small></b></div><div><span>屋根</span><b>${fmt(C.roofA, 1)}<small>㎡</small></b></div>`;
   const gm = C.gomi || {}, gL = GCAT.filter(([k]) => gm[k] && gm[k].m3 > 0), gT = gL.reduce((x, [k]) => x + gm[k].m3, 0), gK = gL.reduce((x, [k]) => x + gm[k].kg, 0);
   const gomiBox = gT > 0 ? `<div class="card" style="margin-top:10px;font-size:14px"><b>🗑 解体廃材の目安：約${fmt(gT, 1)}立米・約${fmt(Math.round(gK))}kg</b>${gL.map(([k, nm]) => `<div>・${nm} ${fmt(gm[k].m3, 2)}立米／${fmt(Math.round(gm[k].kg))}kg</div>`).join("")}<div style="color:var(--sub);font-size:12px;margin-top:4px">軽トラ（約1立米・350kg）なら約${Math.max(Math.ceil(gT), Math.ceil(gK / 350))}杯、2tダンプ（約2立米・2t）なら約${Math.max(Math.ceil(gT / 2), Math.ceil(gK / 2000))}台</div></div>` : "";
-  $("matWarn").innerHTML = gomiBox + (avgN ? `<div class="warn"><b>「仮」の行（${avgN}か所）は、単価表にないので山口県あたりの平均単価（目安）で入れています。</b>タップすると自分の単価に直せます。</div>` : "") + (missN ? `<div class="warn">単価が出せない所が ${missN} か所あります。</div>` : "") + (isRect() || S.mode !== "zo" ? "" : `<div class="warn">L字などは、屋根・小屋組・大引を外まわりの四角で出した目安です。</div>`);
+  $("matWarn").innerHTML = (C.frameErr154 ? `<div class="warn"><b>柱・間柱を数えられなかったので、その分が見積に入っていません。</b>図面を確かめてから、もう一度見積を開いてください。</div>` : "") + gomiBox + (avgN ? `<div class="warn"><b>「仮」の行（${avgN}か所）は、単価表にないので山口県あたりの平均単価（目安）で入れています。</b>タップすると自分の単価に直せます。</div>` : "") + (missN ? `<div class="warn">単価が出せない所が ${missN} か所あります。</div>` : "") + (isRect() || S.mode !== "zo" ? "" : `<div class="warn">L字などは、屋根・小屋組・大引を外まわりの四角で出した目安です。</div>`);
   let sub = 0, html = `<tr><th>項目</th><th style="text-align:right">原価</th></tr>`;
   const subRow = () => { const r = sub ? `<tr class="sum"><td>小計</td><td class="cost">${fmt(Math.round(sub))}</td></tr>` : ""; sub = 0; return r; };
   const TR0 = TRADES[window.__trade];
@@ -14369,16 +14378,52 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      置けた物でも、四隅が外に出る物は取り除く（ずらし配置の暴走対策）。 */
   if (typeof addTenken === "function"){
     var at0 = addTenken;
+    /* CAD-154 (N4): タップ点が外形の外でも 455mm 以内（壁の帯など）なら、
+       いちばん近い外形線の点へ寄せてから置く（壁際タップで黙って置けない解消）。
+       455mm より遠い外は従来通り何もしない（外側禁止は本人の確定ルール）。 */
+    function nearIn154(x, y){
+      if (inPt(x, y)) return [x, y];
+      var P = poly(); if (P.length < 3) return null;
+      var best = null;
+      for (var i = 0; i < P.length; i++){
+        var a = P[i], c = P[(i + 1) % P.length];
+        var dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy;
+        var t = L2 ? ((x - a[0]) * dx + (y - a[1]) * dy) / L2 : 0;
+        t = Math.max(0, Math.min(1, t));
+        var px = a[0] + dx * t, py = a[1] + dy * t, d = Math.hypot(x - px, y - py);
+        if (!best || d < best.d) best = {d: d, p: [px, py]};
+      }
+      return (best && best.d <= 455) ? best.p : null;
+    }
+    /* CAD-154 (N4): 置けた物の角が外（L字の凹みなど）に出る時は、内側へ少しずつ
+       ずらして置ける位置を探す。見つからなければ従来通り取り除く。 */
+    function slideIn154(o){
+      if (rectIn(o)) return true;
+      var e; try { e = tkExt(o); } catch(err){ return false; }
+      var hx = e[0], hy = e[1], x0 = o.x, y0 = o.y, cand = [];
+      try { var b = bbox(); cand.push([Math.max(b.x0 + hx, Math.min(b.x1 - hx, x0)), Math.max(b.y0 + hy, Math.min(b.y1 - hy, y0))]); } catch(err){}
+      var R = Math.max(hx, hy) + 135;
+      for (var d = 45; d <= R; d += 45) cand.push([x0 + d, y0], [x0 - d, y0], [x0, y0 + d], [x0, y0 - d], [x0 + d, y0 + d], [x0 - d, y0 + d], [x0 + d, y0 - d], [x0 - d, y0 - d]);
+      for (var i = 0; i < cand.length; i++){ o.x = cand[i][0]; o.y = cand[i][1]; if (rectIn(o)) return true; }
+      o.x = x0; o.y = y0; return false;
+    }
     addTenken = function(k){
-      try { if (window.__putAt && !inPt(window.__putAt[0], window.__putAt[1])) return; } catch(e){}
+      try { if (window.__putAt && !inPt(window.__putAt[0], window.__putAt[1])){
+        var np154 = nearIn154(window.__putAt[0], window.__putAt[1]);
+        if (!np154) return;
+        window.__putAt = [Math.round(np154[0] / 5) * 5, Math.round(np154[1] / 5) * 5];
+      } } catch(e){}
       var n0 = (typeof S !== "undefined" && S.tenken) ? S.tenken.length : 0;
       var r = at0(k);
       try {
         var T = S.tenken || [];
         if (T.length > n0 && !rectIn(T[T.length - 1])){
-          T.splice(T.length - 1, 1);
-          if (typeof sel !== "undefined" && sel && sel.t === "k") sel = null;
-          save(); drawPlan();
+          if (slideIn154(T[T.length - 1])){ save(); drawPlan(); }
+          else {
+            T.splice(T.length - 1, 1);
+            if (typeof sel !== "undefined" && sel && sel.t === "k") sel = null;
+            save(); drawPlan();
+          }
         }
       } catch(e){}
       return r;
