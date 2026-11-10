@@ -1216,12 +1216,11 @@ const sOpts = s => ipOK(s) ? (s.cat === "FIX" ? ["new", "keep", "waku", "ip"] : 
 const sState = s => s.st || "new";
 // CAD-149: 窓・建具の状態はモードで分ける（本人の決定 2026-11-10「窓交換、インプラスもリフォームだけ」）。
 // 既存系の状態（既存のまま・窓枠交換・インプラス・襖/障子 張替え）は、新築・増築（zo）では選択肢に出さない。
-// 例外は sashAskState と同じ線引き： 増築で母屋側の辺（S.house）に付いた窓は「既存のまま」を聞く意味が
-// あるので、母屋側の物は今まで通り全部出す。rf / pt は無条件で今まで通り。
+// CAD-151: 149で残した母屋側（S.house）の例外を外した。本人の決定に例外はないので、zo では
+// 母屋側の辺に付いた窓も含めて「新設」だけにする。rf / pt は無条件で今まで通り。
 // 記録済みの既存系の状態は書き換えない（計算・表示は従来通り。サイクルで押せば新設に戻る）。
 const sExist149 = ["keep", "waku", "ip", "fusuma", "shoji"];
-const sHouseWall149 = s => { try { if (!s || typeof S === "undefined" || !(S.house >= 0)) return false; if (s.host) return s.host.t === "e" && s.host.i === S.house; return s.wall === S.house; } catch(e){ return false; } };
-function sOptsMode149(s){ const o = sOpts(s); if (typeof S === "undefined" || S.mode !== "zo" || sHouseWall149(s)) return o; return o.filter(k => !sExist149.includes(k)); }
+function sOptsMode149(s){ const o = sOpts(s); if (typeof S === "undefined" || S.mode !== "zo") return o; return o.filter(k => !sExist149.includes(k)); }
 // 窓枠交換・インプラス・襖/障子の張替えは、状態が「既存」系の時だけ出す（同じ操作・同じ呼び方）
 const sOptsShown = s => sOptsMode149(s).filter(k => !["waku", "ip", "fusuma", "shoji"].includes(k) || ["keep", "waku", "ip", "fusuma", "shoji"].includes(sState(s)));
 const ipOK = s => /掃き出し|腰窓|小窓|FIX/.test(s.cat);
