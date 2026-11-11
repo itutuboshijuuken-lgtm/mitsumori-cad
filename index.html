@@ -12122,8 +12122,17 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (e.button && e.button !== 0) return;
     const svg = document.getElementById("plan");
     if (!svg || !svg.contains(e.target)) return;
-    let pk = null;
-    try { const cands = pickCands(toMM(planPt(e))); pk = cands && cands[0]; } catch(err){}
+    let pk = null, mm = null;
+    try { mm = toMM(planPt(e)); const cands = pickCands(mm); pk = cands && cands[0]; } catch(err){}
+    /* CAD-169: 照明は pickCands の対象に入っておらず「消す」で消せなかった
+       （本人の実機報告 2026-11-11）。照明道具と同じ近さ判定 ltNear で拾い、
+       既存の候補より近い時だけ照明を削除対象にする（他の物は従来通り）。 */
+    try {
+      if (mm && typeof ltNear === "function"){
+        const li = ltNear(mm), L = li >= 0 ? (S.lights || [])[li] : null;
+        if (L){ const dL = Math.hypot(L.x - mm[0], L.y - mm[1]); if (!pk || dL <= pk.d) pk = {t: "lt", i: li, d: dL}; }
+      }
+    } catch(err){}
     if (!pk) return;
     e.preventDefault(); e.stopPropagation();
     pushUndo();
@@ -12131,6 +12140,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     else if (pk.t === "o"){ S.sashes.splice(pk.i, 1); save(); }
     else if (pk.t === "k"){ S.tenken.splice(pk.i, 1); save(); }
     else if (pk.t === "r"){ S.tare.splice(pk.i, 1); save(); }
+    else if (pk.t === "lt"){ S.lights.splice(pk.i, 1); save(); }
     sel = null;
     drawPlan();
     toast("消しました（↶で戻せます）");
