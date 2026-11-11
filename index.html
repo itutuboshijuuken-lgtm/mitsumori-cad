@@ -10984,8 +10984,27 @@ document.addEventListener("click", function(e){
     }
     const rect = floorRectFromStroke(mm);
     if (!rect){ toast("もう少し大きくなぞってください"); return; }
-    pushUndo(); pushFloor(rect, fk); fixAssign(); save(); drawPlan();
-    toast(`床を${FLN[fk] || fk}にしました（囲んだ範囲） ${fmt((rect.x1 - rect.x0) * (rect.y1 - rect.y0) / 1e6, 1)}㎡`);
+    /* CAD-174: チップを先に選んでから囲んだ時も、即適用せず囲みの寸法入力の段を
+       通す（本人の実機報告 2026-11-11「土間置いた後寸法がかえれなくなってる」。
+       CAD-173 の復活は「なぞってから囲みバーで選ぶ順」だけだった）。
+       囲みは、なぞる時（slotM 経路）と全く同じ形で開き、先に選ばれていた仕上げは
+       CAD-138 側のフックが保留（pendEncl173）へ引き継ぐ。幅・奥行などの数字は
+       囲みバーの寸法ボタンで直し、「決定」で初めて適用される（173 の形）。
+       フックが無い・失敗した時だけ、従来の即適用に倒す。 */
+    const r174 = eraFromStroke(mm);
+    enclMode = true; enclNew = S.mode === "zo"; tatMode = false; eraMode = false;
+    encl = {r: r174 || {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, ax0: false, ax1: false, ay0: false, ay1: false}, pick: "room", raw: rect};
+    document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
+    let pendOk174 = false;
+    try { pendOk174 = !!(window.__enclArmPend174 && window.__enclArmPend174()); } catch(er){}
+    if (!pendOk174){
+      enclReset();
+      pushUndo(); pushFloor(rect, fk); fixAssign(); save(); drawPlan();
+      toast(`床を${FLN[fk] || fk}にしました（囲んだ範囲） ${fmt((rect.x1 - rect.x0) * (rect.y1 - rect.y0) / 1e6, 1)}㎡`);
+      return;
+    }
+    try { drawToolsUI(); } catch(er){}
+    drawEnclBar(); drawPlan();
   };
   document.addEventListener("pointerup", flInkEnd158, true);
   document.addEventListener("pointercancel", e => { if (flInk158 && e.pointerId === flInk158.id) flInkClear158(); }, true);
@@ -13912,6 +13931,24 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     drawEnclBar();
     toast(kindName138(kind, det) + " を選びました。幅・奥行きは数字で直せます。よければ「決定」");
   }
+  /* CAD-174: パネルで先に仕上げを選んでから指で囲んだ時（CAD-158 の flInk 経路）は、
+     囲みが閉じた時点で即適用せず、囲みの寸法入力の段へ先に選んだ内容を引き継ぐ
+     （本人の実機報告 2026-11-11「土間置いた後寸法がかえれなくなってる」。
+     CAD-173 の復活は「なぞってからバーで選ぶ順」だけだった）。
+     選びは保留（pendEncl173）へ移し、構え（__floorArm・pend138）はここで落とす
+     （二重に持つと、決定前に部屋タップ等で即適用される事故が起きるため）。
+     CAD-158 側が囲み（encl）を開いた後に呼ぶ。成功したら true。 */
+  window.__enclArmPend174 = function(){
+    var fk = window.__floorArm; if (!fk) return false;
+    var kind, det, chipFk;
+    if (pend138){ kind = pend138.kind; det = JSON.parse(JSON.stringify(pend138.det)); chipFk = kind === "za" ? "za" : (window.__flBlinkChip140 || kind); }
+    else if (fk === "flOki" || fk === "flAge" || fk === "flPura"){ kind = "za"; det = stdZa138(fk === "flAge" ? "age" : fk === "flPura" ? "pura" : "oki"); chipFk = "za"; }
+    else if (window.__flBlinkChip140 === "flMuku30"){ kind = "flMuku"; det = stdDet138("flMuku"); det.t = 30; chipFk = "flMuku30"; }
+    else { kind = fk; det = stdDet138(kind); chipFk = window.__flBlinkChip140 || kind; }
+    pend138 = null; window.__floorArm = null; window.__zaActive138 = false; window.__flBlinkChip140 = null;
+    setPendEncl173(chipFk, kind, det);
+    return pendEnclOk173();
+  };
   function closeBar138(){
     br138 = null;
     renderBar138();
