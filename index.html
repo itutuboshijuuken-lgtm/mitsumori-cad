@@ -15089,7 +15089,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try { if (window.__bf129 && window.__bf129.on()) return "before"; } catch(e){}
     if (s.classList.contains("pvOn")) return "plan";
     try { if (typeof elevOn === "function" && elevOn()) return "room"; } catch(e){}
-    try { if (typeof S !== "undefined" && S.roomView === "elev") return "room"; } catch(e){}
+    // CAD-171: 部屋が選ばれていないのに roomView="elev" のままだと、drawElev 側は
+    // 立体を出す側（ elevOn=false ）なのに data-v162 が "room" になり、CSS で立体が
+    // 消えて両方の図が出なくなる（「全部」チップで部屋を外した時・保存状態の入口）。
+    // 室内図は「部屋が選ばれている時だけ」にし、未選択なら立体図に倒して揃える。
+    try { if (typeof S !== "undefined" && S.roomView === "elev" && typeof selRoom === "function" && selRoom()) return "room"; } catch(e){}
     return "iso";
   }
   var healing162 = false;
