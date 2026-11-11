@@ -3512,9 +3512,36 @@ function addStdPartFree(len){
   const q = {x1, y1: y, x2: x1 + len, y2: y, isNew: false};
   S.parts2D = S.parts2D || []; S.parts2D.push(q); sel = {t: "p", i: S.parts2D.length - 1}; flashAt = Date.now(); save(); drawPlan();
 }
+/* CAD-175: タップ点から壁までの距離を「画面px」で測る。
+   本人の実機報告（2026-11-11）：置く判定が広すぎて、戻るボタンの少し下を
+   押しただけで遠くの壁の端にドアが置けてしまう。nearestHost は距離の
+   上限なしで一番近い壁を返すため、addStdOpening はどれだけ遠いタップでも
+   一番近い壁へ吸着して置いていた。対策として、配置の成立を「タップが
+   画面表示上で壁から 25px 以内（指の幅程度）」に限る。px基準なので
+   ズーム・全画面でも体感距離は変わらない（mm基準だとズームで変わる）。
+   測れない環境とチュートリアル中は null を返し、呼び出し側は従来通り
+   通す（チュートリアルの配置判定には触らない）。 */
+function wallTapPx175(pt, h, t){
+  try {
+    if (window.__nbtut) return null;
+    const svg = document.getElementById("plan"), T = window.__planT;
+    if (!svg || !T || !svg.getScreenCTM || !svg.createSVGPoint) return null;
+    const seg = hostSeg(h); if (!seg) return null;
+    const a = seg[0], b = seg[1], tt = Math.max(0, Math.min(1, t || 0));
+    const proj = [a[0] + (b[0] - a[0]) * tt, a[1] + (b[1] - a[1]) * tt];
+    const conv = mm => { const q = svg.createSVGPoint(); q.x = mm[0] * T.s + T.ox; q.y = mm[1] * T.s + T.oy; return q.matrixTransform(svg.getScreenCTM()); };
+    const p1 = conv(pt), p2 = conv(proj);
+    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  } catch(e){ return null; }
+}
 function addStdOpening(ty){
   const c = window.__putAt || viewCenterMM(); let nh = nearestHost(c); if (!nh) return;
   if (window.__putAt && hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
+  /* CAD-175: 実タップが画面上で一番近い壁から 25px より遠ければ置かない
+     （何もしない。構えは残るので、壁の近くを押し直せば置ける）。
+     判定は狙った壁までの距離。狙った壁が満杯の時に別の壁へ回す既存の
+     fallback は、この先の従来処理にそのまま任せる。 */
+  if (window.__putAt){ const px175 = wallTapPx175(c, nh.h, nh.t); if (px175 != null && px175 > 25) return; }
   pushUndo();
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
   const x = (window.__pickSash && TYPE_CATS[ty](window.__pickSash)) ? window.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
@@ -3743,7 +3770,10 @@ function undoUi(){ if ($("undoBtn")) $("undoBtn").disabled = !undoStack.length; 
 $("undoBtn").addEventListener("click", () => { const u = undoStack.pop(); if (!u) return; redoStack.push(undoSnap()); undoRestore(u); undoUi(); toast("1つ戻しました"); });
 $("redoBtn").addEventListener("click", () => { const u = redoStack.pop(); if (!u) return; undoStack.push(undoSnap()); undoRestore(u); undoUi(); toast("1つ進めました"); });
 function placeOpening(ty, pt){
-  const nh = nearestHost(pt); if (!nh || nh.d > 900){ toast("壁の線の近くをタップしてください"); return false; }
+  const nh = nearestHost(pt); if (!nh){ toast("壁の線の近くをタップしてください"); return false; }
+  /* CAD-175: 距離判定は画面px基準（25px）。測れない環境では従来の 900mm。 */
+  const px175 = wallTapPx175(pt, nh.h, nh.t);
+  if (px175 != null ? px175 > 25 : nh.d > 900){ toast("壁の線の近くをタップしてください"); return false; }
   if (hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return false; }
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
   const x = (window.__pickSash && TYPE_CATS[ty](window.__pickSash)) ? window.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
