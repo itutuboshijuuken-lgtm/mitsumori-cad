@@ -16159,5 +16159,61 @@ return out.replace(/[0-9][0-9,]*(\.[0-9]+)?㎡/, totS + "㎡");
 })();
 </script>
 
+<script>
+/* ================= CAD-181：enclMode が残ったまま床レコードをタップした時の落下事故の修正 =================
+囲みの文脈（enclMode）が残った状態で、部屋いっぱいに広がる床レコード
+（rm 印の部屋タップ分・旧データの部屋埋め分）をタップすると、CAD-177 の
+編集入口をすり抜け（rm スキップ／部屋いっぱいは免除）、#slotM の
+短タップ処理が汎用の畳編集（enclStartEdit）に渡してしまう。実レコードの
+st（"fl:…"）は畳状態表 TST に無いため drawEnclBar0 で TypeError に
+なり（項目37の残り）、記録によっては汎用編集が開いて決定で fk が
+落ちる事故にもつながる。
+→ enclStartEdit を最外で包み、床レコードは汎用編集に決して渡さない。
+代わりに囲みの文脈を落として、レコード中心へのタップを実イベントと
+して流し直し、通常状態（enclMode 無し）と同じ行き先にする。 */
+(function(){
+"use strict";
+function isFloorRec181(r){
+  return !!(r && (r.fk || r.za || (r.st && String(r.st).indexOf("fl:") === 0)));
+}
+/* 流し直しの行き先（enclOff の後の通常経路がそのまま決める）:
+   ・構え無し → CAD-176 の部屋の編集
+   ・床チップ構え中 → ltPlanClick 経由の部屋タップ適用（CAD-170）
+   ・床の文脈で囲みをタップ → CAD-177 の囲み編集（入口 a/a2）
+   setTimeout で実タップの pointerup が終わってから流す（ピンチ判定や
+   他の捕捉リスナーと重ならないため）。 */
+function routeFloorTap181(r){
+  var cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+  try { enclOff(); } catch(e){}
+  setTimeout(function(){
+    try {
+      var svg = document.getElementById("plan"); if (!svg) return;
+      var T = window.__planT; if (!T) return;
+      var pt = new DOMPoint(T.ox + cx * T.s, T.oy + cy * T.s).matrixTransform(svg.getScreenCTM());
+      var x = Math.round(pt.x), y = Math.round(pt.y);
+      var tgt = document.elementFromPoint(x, y) || svg;
+      if (!tgt.closest || !tgt.closest("#plan")) tgt = svg;
+      var po = { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 181001, pointerType: "touch", isPrimary: true, button: 0, buttons: 0 };
+      tgt.dispatchEvent(new PointerEvent("pointerdown", po));
+      tgt.dispatchEvent(new PointerEvent("pointerup", po));
+      tgt.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, clientX: x, clientY: y, button: 0 }));
+    } catch(e){}
+  }, 0);
+}
+try {
+  var _ese181 = enclStartEdit;
+  enclStartEdit = function(kind, i){
+    try {
+      if (kind === "t"){
+        var r = (typeof S !== "undefined" && S.tatami) ? S.tatami[i] : null;
+        if (isFloorRec181(r)){ routeFloorTap181(r); return; }
+      }
+    } catch(e){}
+    return _ese181.apply(this, arguments);
+  };
+} catch(e){}
+})();
+</script>
+
 </body>
 </html>
