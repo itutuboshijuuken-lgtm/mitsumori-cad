@@ -15999,5 +15999,53 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 
+<script>
+/* ---------- CAD-179：室内図の「立体で見る」で回しても、部屋の中の立体のまま ---------- */
+(function(){
+  "use strict";
+  /* 文脈フラグ: 「いま #iso に出ているのが、選んだ部屋の中の立体（drawRoom）か」。
+     立て・落としは描画ラッパーだけが行い、回転ボタンの捕捉側は読むだけ。 */
+  window.__isoRoom179 = false;
+  if (typeof drawRoom === "function" && !drawRoom.__v179){
+    var oRoom179 = drawRoom;
+    var wRoom179 = function(){
+      var r = oRoom179.apply(this, arguments);
+      try { window.__isoRoom179 = (typeof S !== "undefined" && S.roomView === "iso" && typeof selRoom === "function" && !!selRoom()); } catch(e){}
+      return r;
+    };
+    wRoom179.__v179 = true; drawRoom = wRoom179;
+  }
+  if (typeof drawIso === "function" && !drawIso.__v179){
+    var oIso179 = drawIso;
+    var wIso179 = function(){
+      /* 家全体の立体が描かれる側なので入口で落とす。RF の委譲で内側から
+         drawRoom が呼ばれた時は、そちらのラッパーが文脈を立て直す。 */
+      window.__isoRoom179 = false;
+      return oIso179.apply(this, arguments);
+    };
+    wIso179.__v179 = true; drawIso = wIso179;
+  }
+  /* 回転ボタン（#rotL/#rotR の行）に捕捉リスナー。本文のハンドラは
+     ボタン自身に付いているので、親の行で捕捉すれば先に止められる。
+     文脈ONの時だけ止めて、回転量（rotL=+3／rotR=+1）と保存は従来と
+     全く同じにし、描き直し先を drawRoom（部屋の中の立体）にする。
+     文脈OFFでは何もしない。行は左右ボタン共通なのでリスナーは1つ。 */
+  var row179 = null;
+  ["rotL", "rotR"].forEach(function(id){ var b = document.getElementById(id); if (!row179 && b && b.parentNode) row179 = b.parentNode; });
+  if (row179 && !row179.__v179){
+    row179.__v179 = true;
+    row179.addEventListener("click", function(e){
+      if (!window.__isoRoom179) return;
+      var t = e.target, bL = document.getElementById("rotL"), bR = document.getElementById("rotR"), d = 0;
+      if (bL && (t === bL || (t && bL.contains && bL.contains(t)))) d = 3;
+      else if (bR && (t === bR || (t && bR.contains && bR.contains(t)))) d = 1;
+      else return;
+      e.stopPropagation(); e.preventDefault();
+      try { S.rot = (S.rot || 0) + d; save(); drawRoom(); } catch(err){}
+    }, true);
+  }
+})();
+</script>
+
 </body>
 </html>
