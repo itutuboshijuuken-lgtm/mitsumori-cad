@@ -16047,5 +16047,117 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 
+<script>
+/* ================= CAD-180：床の編集を開いている間の図面ドラッグ遮断＋つながった同じ仕上げのラベル統合 =================
+本人の実機動画（2026-11-12 00:44、CAD-179）への対応。
+置いた土間の編集バー（CAD-177）を開いたまま図面をなぞると、
+#slotM の囲みトレースが編集を新規の囲みに作り替えてしまい（encl.edit が
+消える）、その後のチップ→決定で土間が仕上げに上書きされて消えた。
+短いなぞりでは「もう少し大きくなぞってください」が出た。
+→ fl177 の編集を開いている間は、図面へのドラッグを通常処理へ流さない。
+同じ仕上げがつながっているのに、床のラベルがレコードごとに
+出て2つになる。→ 同じ仕上げ・同じ部屋でつながるグループは、ラベルを
+1つにして面積は合計を表示する（表示だけ。データ・見積は無変更）。 */
+(function(){
+"use strict";
+
+/* ---------- 問題A：編集バー表示中は図面のドラッグを受けない ---------- */
+function flEditOpen180(){
+try { return!!(typeof encl!== "undefined" && encl && encl.edit && encl.edit.fl177);}
+catch(e){ return false;}
+}
+/* document 捕捉で受ける。CAD-177 の document 捕捉リスナー（タップで別の
+囲みの編集へ切り替える入口）は登録が先なので従来通り先に動き、ここは
+その後段で #slotM 等への伝播だけを止める。対象は #plan の上だけ
+（バーやボタンの操作は止めない）。副ポインタ（ピンチ）は止めない。 */
+["pointerdown", "pointermove", "pointerup", "pointercancel"].forEach(function(type){
+document.addEventListener(type, function(e){
+try {
+if (e.isPrimary === false) return;
+if (!flEditOpen180()) return;
+var t = e.target;
+if (!t ||!t.closest ||!t.closest("#plan")) return;
+e.stopPropagation();
+} catch(err){}
+}, true);
+});
+
+/* ---------- 問題B：つながった同じ仕上げは、ラベルを1つにする ---------- */
+/* 仕上げの同一キーは CAD-178 と同じ定義（det は仕上げの詳細のみで ID や
+座標は入らないため、キー順を正規化した完全一致で比較する） */
+function norm180(v){
+if (v === null || typeof v!== "object") return JSON.stringify(v);
+if (Array.isArray(v)) return "[" + v.map(norm180).join(",") + "]";
+return "{" + Object.keys(v).sort().map(function(k){ return JSON.stringify(k) + ":" + norm180(v[k]);}).join(",") + "}";
+}
+function flKey180(r){
+if (!r) return null;
+if (r.za) return "za:" + norm180(r.det || {});
+if (!r.fk) return null; /* 畳（fk 無し）は対象外（CAD-178 と同じ） */
+return r.det? r.fk + ":" + norm180(r.det): r.fk;
+}
+/* レコードの中心が属する部屋。部屋が取れない物はグループに入れない */
+function roomKey180(r){
+try {
+var rm = roomAt((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2);
+return rm? "c" + rm.cid: null;
+} catch(e){ return null;}
+}
+/* 辺を共有しているか（区間の重なりが少しでもある事。CAD-178 と同じ物差し） */
+function touch180(a, b){
+var TOL = 1.5;
+if (Math.abs(a.x1 - b.x0) < TOL || Math.abs(b.x1 - a.x0) < TOL)
+return Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > 0.5;
+if (Math.abs(a.y1 - b.y0) < TOL || Math.abs(b.y1 - a.y0) < TOL)
+return Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > 0.5;
+return false;
+}
+/* r と同じキー・同じ部屋で、辺のつながりをたどれるグループ（r を含む）。
+グループでなければ null */
+function group180(r){
+var key = flKey180(r); if (!key) return null;
+var rk = roomKey180(r); if (rk === null) return null;
+var T = (typeof S!== "undefined" && S.tatami) || [];
+var seen = new Set([r]), queue = [r];
+while (queue.length){
+var cur = queue.shift();
+for (var i = 0; i < T.length; i++){
+var s = T[i];
+if (!s || seen.has(s)) continue;
+if (flKey180(s)!== key) continue;
+if (roomKey180(s)!== rk) continue;
+if (!touch180(cur, s)) continue;
+seen.add(s); queue.push(s);
+}
+}
+if (seen.size < 2) return null;
+return T.filter(function(s){ return seen.has(s);});
+}
+try {
+var _tSvg180 = tatSvg;
+tatSvg = function(r, P){
+var out = _tSvg180.apply(this, arguments);
+try {
+if (!r || typeof out!== "string") return out;
+var g = group180(r); if (!g) return out;
+/* 代表は面積が最大のレコード（同点なら並びの先の物）。
+ラベルの位置は代表の今の位置のまま */
+var rep = null, repA = -1, tot = 0;
+g.forEach(function(s){
+var a = (s.x1 - s.x0) * (s.y1 - s.y0);
+tot += a / 1e6;
+if (a > repA){ repA = a; rep = s;}
+});
+if (!rep) return out;
+if (r!== rep) return out.replace(/<text[^>]*>[\s\S]*?<\/text>/g, "");
+var totS;
+try { totS = fmt(tot, 1);} catch(e){ totS = (Math.round(tot * 10) / 10).toFixed(1);}
+return out.replace(/[0-9][0-9,]*(\.[0-9]+)?㎡/, totS + "㎡");
+} catch(e){ return out;}
+};
+} catch(e){}
+})();
+</script>
+
 </body>
 </html>
