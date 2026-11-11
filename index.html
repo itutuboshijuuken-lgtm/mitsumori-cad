@@ -3350,7 +3350,7 @@ function drawToolTabs(){
     const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
     const on = k === "part" ? toolOpen === "part" : window.grp136 === "put";
     b.setAttribute("aria-pressed", on ? "true" : "false");
-    if (k === "part" && window.__partDraw) b.classList.add("armBlink");
+    if (k === "part" && window.__partDraw && toolOpen === "part") b.classList.add("armBlink"); /* CAD-172：今いる画面の道具だけ点滅 */
     b.onclick = () => {
       if (enclMode) enclReset();
       if (k === "part"){
@@ -3359,8 +3359,8 @@ function drawToolTabs(){
         if (toolOpen === "part"){ toolOpen = null; if (window.__partDrawOff) window.__partDrawOff(true); }
         else { toolOpen = "part"; if (window.__partDrawOn) window.__partDrawOn(); }
       }
-      else if (window.grp136 === "put"){ window.grp136 = null; toolOpen = null; }
-      else { window.grp136 = "put"; toolOpen = window.putLeaf136 || "door"; }
+      else if (window.grp136 === "put"){ window.grp136 = null; toolOpen = null; if (window.__partDrawOff) window.__partDrawOff(true); /* CAD-172：置く側へ移ったら壁を描く状態を落とす */ }
+      else { window.grp136 = "put"; toolOpen = window.putLeaf136 || "door"; if (window.__partDrawOff) window.__partDrawOff(true); /* CAD-172 */ }
       drawToolsUI(); drawPlan();
     };
     tabs.appendChild(b);
@@ -8226,7 +8226,11 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
-      document.querySelectorAll("#toolCh button, #toolCh2 button").forEach(b => { if (b.hasAttribute("data-putdir")) return; b.classList.toggle("armBlink", !!(window.__put && b.textContent.trim() === window.__put.label)); });
+      /* CAD-172：サッシ系は label が「チップ名 大きさ名」になる（CAD-24 の arm）ため、完全一致が無い時は「チップ名＋空白」の前方一致でも点滅させる */
+      const btns172 = [...document.querySelectorAll("#toolCh button, #toolCh2 button")].filter(b => !b.hasAttribute("data-putdir"));
+      let hit172 = null;
+      if (window.__put){ hit172 = btns172.find(b => b.textContent.trim() === window.__put.label) || btns172.find(b => { const t172 = b.textContent.trim(); return !!t172 && window.__put.label.indexOf(t172 + " ") === 0; }) || null; }
+      btns172.forEach(b => b.classList.toggle("armBlink", b === hit172));
     } catch(e){}
   };
   const lp = ltPlanClick;
@@ -10993,7 +10997,7 @@ document.addEventListener("click", function(e){
     if (!document.getElementById("floorBtn")){
       const b = document.createElement("button");
       b.type = "button"; b.id = "floorBtn"; b.textContent = "床仕様";
-      b.onclick = () => { try { toolOpen = null; } catch(e){} window.__floorTab = !window.__floorTab; if (!window.__floorTab) window.__floorArm = null; try { drawToolsUI(); } catch(e){} };
+      b.onclick = () => { try { toolOpen = null; } catch(e){} if (window.__partDrawOff) window.__partDrawOff(true); /* CAD-172：床へ移ったら壁を描く状態を落とす */ window.__floorTab = !window.__floorTab; if (!window.__floorTab) window.__floorArm = null; try { drawToolsUI(); } catch(e){} };
       tabs.appendChild(b);
     }
     document.getElementById("floorBtn").setAttribute("aria-pressed", String(!!window.__floorTab));
