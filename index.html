@@ -13676,9 +13676,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 
   /* ---------- 標準値（決定だけ押した時＝137と同じ前提） ---------- */
   function stdZa138(m){
-    if (m === "age") return {za: 1, m: "age", h: 300, fin: "tatami", cf: "home", flsub: "choku", under: true};
-    if (m === "pura") return {za: 1, m: "pura", h: 200, fin: "flComp", cf: "home", flsub: "choku", under: true};
-    return {za: 1, m: "oki", h: 100, okiT: "std", ll: "45", fin: "none", cf: "home", flsub: "choku", under: true};
+    /* CAD-168: 配置では「下の床を引くか」を聞かないため、既定は見積の原則
+       「高めに拾う」に従い under=false（下の仕上げは引かずに数える）。
+       仕様画面の決め直しでは今まで通り切り替えられる。 */
+    if (m === "age") return {za: 1, m: "age", h: 300, fin: "tatami", cf: "home", flsub: "choku", under: false};
+    if (m === "pura") return {za: 1, m: "pura", h: 200, fin: "flComp", cf: "home", flsub: "choku", under: false};
+    return {za: 1, m: "oki", h: 100, okiT: "std", ll: "45", fin: "none", cf: "home", flsub: "choku", under: false};
   }
   function stdDet138(kind){
     if (kind === "za") return stdZa138("oki");
@@ -13850,20 +13853,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     save = function(){ var r = _save138.apply(this, arguments); markSeen138(); return r; };
   } catch(e){}
 
-  /* ---------- 枝分かれバー ---------- */
+  /* ---------- 床の選択（CAD-168で簡素化：選んだらそのまま決まる） ----------
+     本人の決定（2026-11-11）：床の派生は「選べるだけでいい、ごちゃごちゃしすぎる」。
+     ・床チップは押した瞬間に標準の内容で決まる。二段構え（決定／さらにこだわる）と
+       質問の段は床から外した。
+     ・座上げだけ、工法（置き床／小上がり／プラ束）と上の仕上げの2つを選ぶ小さな
+       選択欄を出す。仕上げを選んだ時点で決まる。高さ・タイプ・CFの種類・張り方・
+       「下の床を引くか」等の追加の質問は配置では出さない（仕様画面の決め直しには
+       今まで通り全部ある）。 */
   var br138 = null;
-  function hintSeen138(){ try { return localStorage.getItem("flBranchHint138") === "1"; } catch(e){ return true; } }
-  function hintDone138(){ try { localStorage.setItem("flBranchHint138", "1"); } catch(e){} }
-  function openBar138(mode, kind){
-    pend138 = null;
-    var k = kind, presetT = null;
-    if (kind === "flMuku30"){ k = "flMuku"; presetT = 30; }
-    br138 = {mode: mode, kind: k, det: stdDet138(k), stage: -1, hint: !hintSeen138()};
-    if (presetT) br138.det.t = presetT;
-    renderBar138();
-  }
   function closeBar138(){
-    if (br138 && br138.hint) hintDone138();
     br138 = null;
     renderBar138();
   }
@@ -13871,70 +13870,56 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!br138) return null;
     return br138.mode === "encl" ? $("enclBranch") : $("flBranch");
   }
+  function zaFins138(m){
+    return m === "age" ? [["tatami", "畳"], ["flComp", "フローリング"], ["flCF", "クッションフロア"], ["carpet", "カーペット"]]
+      : m === "pura" ? [["flComp", "フローリング"], ["flCF", "クッションフロア"], ["carpet", "カーペット"], ["tatami", "畳"]]
+      : [["none", "仕上げなし"], ["flComp", "フローリング"], ["flCF", "クッションフロア"], ["carpet", "カーペット"], ["tatami", "畳"]];
+  }
+  function openZa138(mode){
+    pend138 = null;
+    br138 = {mode: mode, kind: "za", det: stdZa138("oki")};
+    renderBar138();
+  }
   function renderBar138(){
     ["flBranch", "enclBranch"].forEach(function(id){
       var el = $(id); if (!el) return;
       if (!br138 || (id === "flBranch") !== (br138.mode === "panel")){ el.innerHTML = ""; el.style.display = "none"; }
     });
     var host = barHost138(); if (!host) return;
-    var qs = qs138(br138.kind, br138.det);
-    if (br138.stage > qs.length) br138.stage = qs.length;
-    var h = "<div style='font-weight:700;font-size:14px'>" + kindName138(br138.kind, br138.det)
-      + " <small style='font-weight:400;color:#555'>" + detSummary138(br138.kind, br138.det) + "</small></div>";
-    if (br138.hint) h += "<p class='hint' style='color:#B26A00;margin:4px 0'>「✓ 決定」を押すと、この内容で置けます。内容は、あとから「仕様」の画面で決め直せます。</p>";
-    if (br138.stage < 0){
-      h += "<p class='hint' style='margin:6px 0 4px'>標準の内容でよければ「✓ 決定」。細かく選びたい時は「さらにこだわる」。</p>"
-        + "<div style='display:flex;gap:6px;margin-top:8px'>"
-        + "<button type='button' data-bdec='1' class='btn pri" + (br138.hint ? " armBlink" : "") + "' style='flex:1'>✓ 決定（標準で置く）</button>"
-        + "<button type='button' data-bmore='1' class='btn' style='flex:1'>さらにこだわる</button>"
-        + "<button type='button' data-bcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
-    } else if (br138.stage < qs.length){
-      var q = qs[br138.stage];
-      h += "<p class='hint' style='margin:6px 0 4px'>" + (br138.stage + 1) + ". " + q.t + "</p>"
-        + "<div style='display:flex;flex-wrap:wrap;gap:6px'>"
-        + q.o.map(function(op, oi){ return "<button type='button' data-bq='" + br138.stage + "' data-bv='" + oi + "' aria-pressed='" + (String(br138.det[q.k]) === String(op[0])) + "' style='flex:1 1 30%;min-height:44px'>" + op[1] + "</button>"; }).join("")
-        + (q.num ? "<button type='button' data-bnum='1' style='flex:1 1 30%;min-height:44px'>数値で入力</button>" : "")
-        + "</div>";
-    } else {
-      h += "<p class='hint' style='margin:6px 0 4px'>この内容で置きます。</p>";
-    }
-    if (br138.stage >= 0) h += "<div style='display:flex;gap:6px;margin-top:8px'>"
-      + "<button type='button' data-bback='1' class='btn sub' style='flex:0 0 auto'>← もどる</button>"
-      + "<button type='button' data-bdec='1' class='btn pri" + (br138.hint ? " armBlink" : "") + "' style='flex:1'>✓ 決定（この内容で置く）</button>"
-      + "<button type='button' data-bcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
+    var d = br138.det;
+    var h = "<div style='font-weight:700;font-size:14px'>座上げ <small style='font-weight:400;color:#555'>工法と上の仕上げを選ぶと決まります</small></div>"
+      + "<p class='hint' style='margin:6px 0 4px'>工法</p>"
+      + "<div style='display:flex;flex-wrap:wrap;gap:6px'>"
+      + [["oki", "置き床"], ["age", "小上がり"], ["pura", "プラ束"]].map(function(op){
+          return "<button type='button' data-zm='" + op[0] + "' aria-pressed='" + (d.m === op[0]) + "' style='flex:1 1 30%;min-height:44px'>" + op[1] + "</button>";
+        }).join("")
+      + "</div>"
+      + "<p class='hint' style='margin:8px 0 4px'>上の仕上げ</p>"
+      + "<div style='display:flex;flex-wrap:wrap;gap:6px'>"
+      + zaFins138(d.m).map(function(op){
+          return "<button type='button' data-zf='" + op[0] + "' aria-pressed='" + (d.fin === op[0]) + "' style='flex:1 1 30%;min-height:44px'>" + op[1] + "</button>";
+        }).join("")
+      + "</div>"
+      + "<p class='hint' style='margin:6px 0 0'>高さなどは、あとから「仕様」の画面で決め直せます。</p>"
+      + "<div style='display:flex;gap:6px;margin-top:8px'>"
+      + "<button type='button' data-zcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
     host.innerHTML = h;
     host.style.display = "block";
-    host.querySelectorAll("[data-bq]").forEach(function(b){
+    host.querySelectorAll("[data-zm]").forEach(function(b){
+      b.onclick = function(){ br138.det = stdZa138(b.dataset.zm); renderBar138(); };
+    });
+    host.querySelectorAll("[data-zf]").forEach(function(b){
       b.onclick = function(){
-        var qq = qs138(br138.kind, br138.det)[+b.dataset.bq]; if (!qq) return;
-        var v = qq.o[+b.dataset.bv][0];
-        if (qq.k === "m"){ var keepU = br138.det.under; br138.det = stdZa138(v); br138.det.under = keepU; }
-        else br138.det[qq.k] = v;
-        br138.stage++;
-        renderBar138();
+        br138.det.fin = b.dataset.zf;
+        decideNow138(br138.mode, "za", br138.det);
       };
     });
-    var nb = host.querySelector("[data-bnum]");
-    if (nb) nb.onclick = function(){
-      openPad({title: "高さ（mm）", value: String(br138.det.h || ""), done: function(v){
-        var n = parseFloat(v);
-        if (n > 0){ br138.det.h = Math.round(n); br138.stage++; renderBar138(); }
-      }});
-    };
-    var bb = host.querySelector("[data-bback]");
-    if (bb) bb.onclick = function(){ br138.stage = br138.stage - 1; renderBar138(); };
-    var bc = host.querySelector("[data-bcan]");
+    var bc = host.querySelector("[data-zcan]");
     if (bc) bc.onclick = function(){ closeBar138(); };
-    var bd = host.querySelector("[data-bdec]");
-    if (bd) bd.onclick = function(){ decide138(); };
-    var bm = host.querySelector("[data-bmore]");
-    if (bm) bm.onclick = function(){ br138.stage = 0; renderBar138(); };
   }
-  function decide138(){
-    if (!br138) return;
-    var kind = br138.kind, det = br138.det;
-    if (br138.mode === "encl"){
-      if (typeof encl === "undefined" || !encl || !encl.r){ toast("先に範囲を囲んでください"); return; }
+  function decideNow138(mode, kind, det){
+    if (mode === "encl"){
+      if (typeof encl === "undefined" || !encl || !encl.r){ toast("先に範囲を囲んでください"); renderBar138(); return; }
       var fk = armFk138(kind, det);
       var r0 = (!encl.edit && encl.raw) ? encl.raw : encl.r, rect = {x0: r0.x0, y0: r0.y0, x1: r0.x1, y1: r0.y1};
       pushUndo();
@@ -13954,8 +13939,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     closeBar138();
     toast("この内容で置きます：部屋をタップ／一部は指で囲む（続けて指定できます）");
   }
+  function pickFloor138(mode, fk){
+    if (mode === "encl") pend138 = null;
+    var kind = fk, det;
+    if (fk === "flMuku30"){ kind = "flMuku"; det = stdDet138("flMuku"); det.t = 30; }
+    else det = stdDet138(kind);
+    decideNow138(mode, kind, det);
+  }
 
-  /* チップのタップでバーを開く（元の arm はそのまま効かせる。座上げだけ元の arm を止める） */
+  /* チップのタップで決める（CAD-168：押した瞬間に標準の内容で決定。
+     座上げだけ選択欄を開く。「やめる」（fk 空）は従来通り元の解除に流す） */
   document.addEventListener("click", function(e){
     var t = e.target;
     if (!t || !t.closest) return;
@@ -13963,20 +13956,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var b1 = t.closest("#floorPanel [data-flk]");
     if (b1){
       var fk = b1.dataset.flk;
-      /* CAD-140: arm は「決定」を押した後にだけ起きる。チップのタップでは元の arm を
-         止めて枝分かれバーだけを開く（本人の設計：押す→決定／さらにこだわる→
-         決めてから置く）。「やめる」（fk 空）は従来通り元の解除に流す。 */
-      if (fk){ e.preventDefault(); e.stopImmediatePropagation(); openBar138("panel", fk); return; }
+      if (fk){ e.preventDefault(); e.stopImmediatePropagation(); if (fk === "za") openZa138("panel"); else pickFloor138("panel", fk); return; }
       pend138 = null; window.__zaActive138 = false; closeBar138();
       return;
     }
     var b2 = t.closest("#enclBar [data-eflk]");
     if (b2){
-      /* 囲み側の床チップは押した瞬間に適用される作りなので、枝分かれバーの「決定」で
-         確定させるため、元の即時適用は止めてバーだけを開く */
+      /* 囲み側の床チップ：押した瞬間に標準の内容で適用する（座上げだけ選択欄） */
       var efk = b2.dataset.eflk;
       e.preventDefault(); e.stopImmediatePropagation();
-      if (efk) openBar138("encl", efk);
+      if (efk){ if (efk === "za") openZa138("encl"); else pickFloor138("encl", efk); }
     }
   }, true);
 
