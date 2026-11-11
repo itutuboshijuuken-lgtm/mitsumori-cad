@@ -10911,7 +10911,25 @@ document.addEventListener("click", function(e){
         });
         Object.keys(openR).forEach(key => cellRects.push(openR[key]));
         const rects = cellRects.map(c => floorSnap({x0: R.b.x0 + c.i0 * R.st, y0: R.b.y0 + c.j0 * R.st, x1: R.b.x0 + (c.i1 + 1) * R.st, y1: R.b.y0 + (c.j1 + 1) * R.st}));
-        pushUndo(); rects.forEach(rc => pushFloor(rc, window.__floorArm)); fixAssign(); save(); drawPlan();
+        pushUndo();
+        /* CAD-170: 囲みで置いた仕上げ（土間・畳など）が部屋タップで消える不具合の修正
+           （本人の実機報告 2026-11-11。間仕切りが無い家では「部屋」＝家全体になるため、
+           タップ1回で囲みの土間が丸ごと消えていた。仕切りのある部屋でも同様だった）。
+           部屋タップで置いた記録には rm の印を付け、囲みの記録（印なし）は残して
+           部屋の残りの部分にだけ新しい仕上げを置く。印つきの記録は pushFloor の
+           引き算で置き換わるので、部屋の仕上げ変更は従来通りできる。
+           印なしの記録だけで部屋がすき間なく埋まっている場合は、旧版の部屋タップの
+           記録とみなして従来通り部屋全体を置き換える（古いデータでも変更できる）。 */
+        let targets170 = rects;
+        {
+          let gaps170 = rects.slice();
+          (S.tatami || []).forEach(o => { if (!o.rm) gaps170 = gaps170.flatMap(p => subFloor140(p, o)); });
+          const roomA170 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+          const gapA170 = gaps170.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+          if (gapA170 > Math.max(1, roomA170 * 0.001)) targets170 = gaps170;
+        }
+        targets170.forEach(rc => { pushFloor(rc, window.__floorArm); const rec170 = S.tatami[S.tatami.length - 1]; if (rec170) rec170.rm = 1; });
+        fixAssign(); save(); drawPlan();
         toast("床を" + FLN[window.__floorArm] + "にしました（部屋全体）");
       } else toast("部屋の上をタップしてください");
       return true;
