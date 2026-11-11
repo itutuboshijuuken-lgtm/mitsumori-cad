@@ -16215,5 +16215,139 @@ try {
 })();
 </script>
 
+<script>
+/* ================= CAD-182：置いた床の囲みタップの入口の穴埋め =================
+本人の実機報告（2026-11-12、CAD-181）「置いた土間をタップしても
+編集バーが開かない」。probe182 の実測では、候補ゼロのタップでは
+CAD-176 が部屋バーを先に開き、CAD-177 の入口が「部屋バー表示中」を
+見て譲ってしまう（床タブを開いていても同じ）。チップ構え中と
+置いた直後だけ開いていた。通常状態では 177 の入口自体が床の文脈
+必須で発火しない。
+→ #plan の pointerup に入口(c)を足す。177 と同じタップ判定・同じ
+門（構え中・選択あり・消す/解体・照明が先）を使い、床の文脈は
+要求しない。部屋バー表示中でも、タップが実在の囲みに当たった
+時だけ開く（部屋バーは閉じる）。enclMode 中とチップ構え中は
+従来の入口が持ち場なので触らない。rm 記録・部屋いっぱいの記録
+は対象外（行き先は部屋の編集）。開く形は 177 と同じ
+（encl.edit.fl177）なので決定・見出し・CAD-180 の遮断が効く。 */
+(function(){
+  "use strict";
+  var tap182 = null;   // 直近の実タップ {mm, cx, cy, t, used, pid, maxDev, selB}
+
+  function gates182(selAtDown){
+    try {
+      if (!window.__pageM) return true;
+      if (window.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+      if (window.__armedAny && window.__armedAny()) return true;
+      if (selAtDown) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (window.__put) return true;
+      if (window.__floorArm) return true;   /* 構え中は入口(a)・部屋タップ適用が持ち場 */
+      if (window.__delMode || window.__hgMode || window.__partDraw) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (typeof toolOpen !== "undefined" && toolOpen === "part") return true;
+      return false;
+    } catch(e){ return true; }
+  }
+  function nearLight182(mm){
+    try { return (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); }
+    catch(e){ return false; }
+  }
+  /* 部屋いっぱいの記録は囲み扱いしない（CAD-177 と同じ） */
+  function fillsRoom182(r, pt){
+    try {
+      var rr = roomRectAt(pt[0], pt[1]);
+      if (!rr || rr.bad) return false;
+      return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
+             Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+    } catch(e){ return false; }
+  }
+  function hit182(mm){
+    var T = S.tatami || [];
+    for (var i = T.length - 1; i >= 0; i--){
+      var r = T[i];
+      if (!r || r.rm) continue;
+      if (mm[0] < r.x0 || mm[0] > r.x1 || mm[1] < r.y0 || mm[1] > r.y1) continue;
+      if (fillsRoom182(r, mm)) continue;
+      return { r: r, i: i };
+    }
+    return null;
+  }
+  function flName182(r){
+    if (r.za){
+      var m = r.det && r.det.m;
+      return m === "age" ? "小上がり" : m === "pura" ? "プラ束" : m === "oki" ? "置き床" : "座上げ";
+    }
+    if (r.fk) return (window.__FLN || {})[r.fk] || r.fk;
+    return "畳";
+  }
+  /* CAD-177 の openFlEdit と同じ形で開く */
+  function open182(hit){
+    var r = hit.r;
+    var nm = flName182(r);
+    window.__floorArm = null; window.__zaActive138 = false; window.__flBlinkChip140 = null;
+    try { sel = null; drawSelBar(); } catch(e){}
+    if (window.__closeRoom176){ try { window.__closeRoom176(); } catch(e){} }
+    enclMode = true;
+    try { document.body.classList.add("enclmode"); } catch(e){}
+    encl = { r: { x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, ax0: false, ax1: false, ay0: false, ay1: false },
+             edit: { kind: "t", i: hit.i,
+                     type: r.fk === "flDoma" ? "doma" : (!r.fk && !r.za) ? "tatami" : "room",
+                     st: "new", fl177: true, flName: nm },
+             raw: null };
+    try { drawEnclBar(); } catch(e){}
+    try { drawPlan(); } catch(e){}
+  }
+
+  /* 実タップの記録（CAD-177 と同じ作り） */
+  document.addEventListener("pointerdown", function(e){
+    try {
+      if (tap182 && !tap182.up && e.pointerId !== tap182.pid){ tap182 = null; return; }
+      if (e.isPrimary === false){ tap182 = null; return; }
+      var t = e.target;
+      if (!t || !t.closest || !t.closest("#plan")){ tap182 = null; return; }
+      var mm = toMM(planPt(e));
+      tap182 = { mm: [mm[0], mm[1]], cx: e.clientX, cy: e.clientY, t: Date.now(), used: false, up: false,
+                 pid: e.pointerId, maxDev: 0,
+                 selB: (typeof sel !== "undefined" && sel) ? 1 : 0 };
+    } catch(err){ tap182 = null; }
+  }, true);
+  document.addEventListener("pointercancel", function(){ tap182 = null; }, true);
+  /* 上げた事の記録は document 捕捉で必ず拾う（CAD-177 の入口(b)と同じ）。
+     #plan のリスナーだけだと、なぞり終わりの pointerup がポインタ
+     キャプチャで #slotM 等へ向かった時に拾えず、次のタップの記録が
+     「2本目の指」判定で消えてしまう（実測で確認した不発の原因）。 */
+  document.addEventListener("pointerup", function(e){
+    var d = tap182;
+    if (d && e.pointerId === d.pid) d.up = true;
+  }, true);
+  document.addEventListener("pointermove", function(e){
+    var d = tap182;
+    if (!d || e.pointerId !== d.pid) return;
+    var dev = Math.hypot(e.clientX - d.cx, e.clientY - d.cy);
+    if (dev > d.maxDev) d.maxDev = dev;
+  }, true);
+
+  /* 入口(c): #plan の pointerup（CAD-176・CAD-177 の処理の後） */
+  var plan182 = document.getElementById("plan");
+  if (plan182) plan182.addEventListener("pointerup", function(e){
+    var d = tap182;
+    if (!d || d.used) return;
+    if (e.pointerId === d.pid) d.up = true;
+    try {
+      if (typeof enclMode !== "undefined" && enclMode) return;   /* 置いた直後は入口(b)・CAD-181 が持ち場 */
+      if (typeof encl !== "undefined" && encl && encl.edit && encl.edit.fl177) return;   /* 177 がこのタップで開いた */
+      if (gates182(d.selB)) return;
+      if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
+      if (nearLight182(d.mm)) return;
+      var hit = hit182(d.mm); if (!hit) return;
+      d.used = true;
+      open182(hit);
+    } catch(err){}
+  }, false);
+})();
+</script>
+
 </body>
 </html>
