@@ -15927,5 +15927,77 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 
+<script>
+/* ---------- CAD-178：同じ仕上げがつながる所は、間の点線を出さない ---------- */
+(function(){
+  try {
+    var _tSvg178 = tatSvg;
+    /* 仕上げの同一キー。det は仕上げの詳細のみ（mat/paint、厚さ・樹種・塗装、
+       座上げの工法・仕上げ・高さ・下の床 等）で ID や座標は入らないため、
+       キー順を正規化した完全一致で「同じ仕上げ」とみなす。 */
+    function norm178(v){
+      if (v === null || typeof v !== "object") return JSON.stringify(v);
+      if (Array.isArray(v)) return "[" + v.map(norm178).join(",") + "]";
+      return "{" + Object.keys(v).sort().map(function(k){ return JSON.stringify(k) + ":" + norm178(v[k]); }).join(",") + "}";
+    }
+    function flKey178(r){
+      if (!r) return null;
+      if (r.za) return "za:" + norm178(r.det || {});
+      if (!r.fk) return null; /* 畳は破線 rect の対象外 */
+      return r.det ? r.fk + ":" + norm178(r.det) : r.fk;
+    }
+    /* [lo,hi] から消す区間 cuts を引いた残りの区間を返す */
+    function rest178(lo, hi, cuts){
+      var cs = cuts.filter(function(c){ return c[1] > c[0]; }).sort(function(a, b){ return a[0] - b[0]; });
+      var out = [], cur = lo;
+      cs.forEach(function(c){
+        if (c[0] > cur) out.push([cur, Math.min(c[0], hi)]);
+        if (c[1] > cur) cur = c[1];
+      });
+      if (cur < hi) out.push([cur, hi]);
+      return out.filter(function(s){ return s[1] - s[0] > 0.5; });
+    }
+    tatSvg = function(r, P){
+      var out = _tSvg178.apply(this, arguments);
+      try {
+        var key = flKey178(r);
+        if (!key || typeof out !== "string") return out;
+        var m = out.match(/<rect [^>]*stroke-dasharray=("|')5 3\1[^>]*>/);
+        if (!m) return out;
+        /* 同じ仕上げの隣接レコードと共有する辺の区間を集める（mm 空間） */
+        var TOL = 1.5, T = (typeof S !== "undefined" && S.tatami) || [], any = false;
+        var cutL = [], cutR = [], cutT = [], cutB = [];
+        for (var i = 0; i < T.length; i++){
+          var s = T[i];
+          if (s === r || !s || flKey178(s) !== key) continue;
+          var a, b;
+          if (Math.abs(s.x1 - r.x0) < TOL){ a = Math.max(r.y0, s.y0); b = Math.min(r.y1, s.y1); if (b - a > 0.5){ cutL.push([a, b]); any = true; } }
+          if (Math.abs(s.x0 - r.x1) < TOL){ a = Math.max(r.y0, s.y0); b = Math.min(r.y1, s.y1); if (b - a > 0.5){ cutR.push([a, b]); any = true; } }
+          if (Math.abs(s.y1 - r.y0) < TOL){ a = Math.max(r.x0, s.x0); b = Math.min(r.x1, s.x1); if (b - a > 0.5){ cutT.push([a, b]); any = true; } }
+          if (Math.abs(s.y0 - r.y1) < TOL){ a = Math.max(r.x0, s.x0); b = Math.min(r.x1, s.x1); if (b - a > 0.5){ cutB.push([a, b]); any = true; } }
+        }
+        if (!any) return out;
+        var tag = m[0];
+        function attr178(name){
+          var mm = tag.match(new RegExp(name + "=(\"|')(.*?)\\1"));
+          return mm ? mm[2] : null;
+        }
+        var fill = attr178("fill"), fo = attr178("fill-opacity"), stroke = attr178("stroke") || "#8A6D2F";
+        if (fill === null) return out;
+        var a0 = P([r.x0, r.y0]), b0 = P([r.x1, r.y1]);
+        var rep = "<rect x=\"" + a0[0] + "\" y=\"" + a0[1] + "\" width=\"" + (b0[0] - a0[0]) + "\" height=\"" + (b0[1] - a0[1]) + "\" fill=\"" + fill + "\"" + (fo !== null ? " fill-opacity=\"" + fo + "\"" : "") + "/>";
+        function seg178(p, q){ return "<line x1=\"" + p[0] + "\" y1=\"" + p[1] + "\" x2=\"" + q[0] + "\" y2=\"" + q[1] + "\" stroke=\"" + stroke + "\" stroke-width=\"1\" stroke-dasharray=\"5 3\"/>"; }
+        var lines = "";
+        rest178(r.y0, r.y1, cutL).forEach(function(sg){ lines += seg178(P([r.x0, sg[0]]), P([r.x0, sg[1]])); });
+        rest178(r.y0, r.y1, cutR).forEach(function(sg){ lines += seg178(P([r.x1, sg[0]]), P([r.x1, sg[1]])); });
+        rest178(r.x0, r.x1, cutT).forEach(function(sg){ lines += seg178(P([sg[0], r.y0]), P([sg[1], r.y0])); });
+        rest178(r.x0, r.x1, cutB).forEach(function(sg){ lines += seg178(P([sg[0], r.y1]), P([sg[1], r.y1])); });
+        return out.replace(tag, rep + lines);
+      } catch(e){ return out; }
+    };
+  } catch(e){}
+})();
+</script>
+
 </body>
 </html>
