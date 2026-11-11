@@ -1821,6 +1821,8 @@ function nearestHost(pt){
   (S.parts2D || []).forEach((q, i) => { if (pState(q) === "remove") return; const r = segDist(pt, [q.x1, q.y1], [q.x2, q.y2]); if (!best || r.d < best.d) best = {h: {t: "p", i}, ...r}; });
   return best;
 }
+// CAD-167: 解体で「撤去」にする壁・間仕切りには、新しい窓・建具は置けない（状態「撤去」の間仕切りと同じ扱い。第2ラウンドで直されていた物の移植）
+function hgRemHost(h){ const o = h.t === "e" ? (S.edges || [])[h.i] : (S.parts2D || [])[h.i]; return !!(o && o.hg && o.hgD === "rem"); }
 const pState = q => q.state || (q.isNew ? "new" : "keep");
 const PST = {keep: ["既存", "#2563B0"], new: ["新設", "#E8742C"], remove: ["撤去", "#C62828"]};
 // 壁の撤去：910以上なら柱や梁を受けていることが多いので、梁補強を提案する（q.beam：true＝入れる／false＝入れない／未回答＝要確認として入れる）
@@ -3512,6 +3514,7 @@ function addStdPartFree(len){
 }
 function addStdOpening(ty){
   const c = window.__putAt || viewCenterMM(); let nh = nearestHost(c); if (!nh) return;
+  if (window.__putAt && hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
   pushUndo();
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
   const x = (window.__pickSash && TYPE_CATS[ty](window.__pickSash)) ? window.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
@@ -3525,10 +3528,11 @@ function addStdOpening(ty){
     const cs = same.flatMap(o => [o.pos + o.w + 50, o.pos - x.w - 50]).map(v => Math.round(v / 5) * 5).filter(free).sort((a, b2) => Math.abs(a - p0) - Math.abs(b2 - p0));
     return cs.length ? cs[0] : null;
   };
-  if (spot(nh) == null){
-    const p = pts(), hs = p.map((a, i) => ({h: {t: "e", i}, ...segDist(c, a, p[(i + 1) % p.length])})).concat((S.parts2D || []).map((q, i) => pState(q) === "remove" ? null : ({h: {t: "p", i}, ...segDist(c, [q.x1, q.y1], [q.x2, q.y2])})).filter(Boolean)).filter(r => r.L >= x.w).sort((a, b2) => a.d - b2.d);
+  if (hgRemHost(nh.h) || spot(nh) == null){
+    const p = pts(), hs = p.map((a, i) => (S.edges[i] && S.edges[i].hg && S.edges[i].hgD === "rem") ? null : ({h: {t: "e", i}, ...segDist(c, a, p[(i + 1) % p.length])})).filter(Boolean).concat((S.parts2D || []).map((q, i) => (pState(q) === "remove" || (q.hg && q.hgD === "rem")) ? null : ({h: {t: "p", i}, ...segDist(c, [q.x1, q.y1], [q.x2, q.y2])})).filter(Boolean)).filter(r => r.L >= x.w).sort((a, b2) => a.d - b2.d);
     for (const r of hs){ const v = spot(r); if (v != null){ nh = r; break; } }
   }
+  if (hgRemHost(nh.h)){ undoStack.pop(); toast("撤去する壁には置けません"); return; }
   { const v = spot(nh); if (v != null) pos = v; }
   S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: (nh.h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0});
   sel = {t: "o", i: S.sashes.length - 1}; flashAt = Date.now(); save(); drawPlan();
@@ -3740,6 +3744,7 @@ $("undoBtn").addEventListener("click", () => { const u = undoStack.pop(); if (!u
 $("redoBtn").addEventListener("click", () => { const u = redoStack.pop(); if (!u) return; undoStack.push(undoSnap()); undoRestore(u); undoUi(); toast("1つ進めました"); });
 function placeOpening(ty, pt){
   const nh = nearestHost(pt); if (!nh || nh.d > 900){ toast("壁の線の近くをタップしてください"); return false; }
+  if (hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return false; }
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
   const x = (window.__pickSash && TYPE_CATS[ty](window.__pickSash)) ? window.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
   pushUndo();
@@ -3871,6 +3876,7 @@ function drawSheet(c){
     pickerBind(p, render, x => {
       const nh = nearestHost(c.c0);
       if (!nh){ toast("壁の近くに描いてください"); return; }
+      if (hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
       const pos = Math.max(0, Math.round((nh.t * nh.L - x.w / 2) / 5) * 5);
       pushUndo();
       const sa = {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: 0};
