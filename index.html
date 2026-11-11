@@ -13894,6 +13894,24 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
        「下の床を引くか」等の追加の質問は配置では出さない（仕様画面の決め直しには
        今まで通り全部ある）。 */
   var br138 = null;
+  /* ---------- CAD-173: 囲みの床は「選ぶ→寸法→決定」に戻す ----------
+     本人の実機報告（2026-11-11）：囲んで範囲を決める物（土間など）を描いた後、
+     幅や奥行きを数字で入れられる画面が出なくなった。CAD-168 の即決化で、
+     囲みバーの床チップを押した瞬間に適用され、囲みの寸法入力の段ごと
+     閉じてしまっていた（CAD-167 までは「決定」を押すまで寸法行が残っていた）。
+     直し：囲みバーの床チップは「選び」までにして、寸法入力（幅・奥行・左から・
+     上から）を使えるまま残し、バーの「決定」で初めて適用する。部屋タップの
+     即決とパネル側の即決（CAD-168 の本人の決定）は無変更。 */
+  var pendEncl173 = null;
+  function pendEnclOk173(){
+    return !!(pendEncl173 && typeof encl !== "undefined" && encl && encl.r && pendEncl173.forEncl === encl);
+  }
+  function setPendEncl173(chipFk, kind, det){
+    if (typeof encl === "undefined" || !encl || !encl.r){ toast("先に範囲を囲んでください"); return; }
+    pendEncl173 = {chipFk: chipFk, kind: kind, det: JSON.parse(JSON.stringify(det)), forEncl: encl};
+    drawEnclBar();
+    toast(kindName138(kind, det) + " を選びました。幅・奥行きは数字で直せます。よければ「決定」");
+  }
   function closeBar138(){
     br138 = null;
     renderBar138();
@@ -13943,6 +13961,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     host.querySelectorAll("[data-zf]").forEach(function(b){
       b.onclick = function(){
         br138.det.fin = b.dataset.zf;
+        /* CAD-173: 囲み側の座上げは、仕上げを選んでも即適用せず「決定」待ちに
+           する（囲みの寸法入力の段を残すため）。パネル側は CAD-168 の即決のまま。 */
+        if (br138.mode === "encl"){ var d173 = JSON.parse(JSON.stringify(br138.det)); closeBar138(); setPendEncl173("za", "za", d173); return; }
         decideNow138(br138.mode, "za", br138.det);
       };
     });
@@ -13994,11 +14015,35 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     }
     var b2 = t.closest("#enclBar [data-eflk]");
     if (b2){
-      /* 囲み側の床チップ：押した瞬間に標準の内容で適用する（座上げだけ選択欄） */
+      /* 囲み側の床チップ（CAD-173 で変更）：押した瞬間の適用はやめ、「選び」までに
+         する。寸法入力（幅・奥行・左から・上から）を直してから、バーの「決定」で
+         適用する。座上げは選択欄を開く（仕上げを選んだら同じく「決定」待ち）。 */
       var efk = b2.dataset.eflk;
       e.preventDefault(); e.stopImmediatePropagation();
-      if (efk){ if (efk === "za") openZa138("encl"); else pickFloor138("encl", efk); }
+      if (efk){
+        if (efk === "za") openZa138("encl");
+        else if (typeof encl !== "undefined" && encl && encl.r){
+          var kind173 = efk, det173;
+          if (efk === "flMuku30"){ kind173 = "flMuku"; det173 = stdDet138("flMuku"); det173.t = 30; }
+          else det173 = stdDet138(kind173);
+          setPendEncl173(efk, kind173, det173);
+        }
+        else pickFloor138("encl", efk);
+      }
+      return;
     }
+    /* CAD-173: 「決定」（新規は ecOkN、編集時は ecOk）に、選ばれている床があれば
+       それを適用する。床が選ばれていなければ元の動きに任せる（何もしない）。
+       種類チップ（data-et）を押し直したら、床の選びは取り消す
+       （ゾーンとして決める方へ切り替えたとみなす）。 */
+    var okB173 = t.closest ? t.closest("#ecOkN, #ecOk") : null;
+    if (okB173 && okB173.closest && okB173.closest("#enclBar") && pendEnclOk173()){
+      e.preventDefault(); e.stopImmediatePropagation();
+      var p173 = pendEncl173; pendEncl173 = null;
+      decideNow138("encl", p173.kind, p173.det);
+      return;
+    }
+    if (t.closest("#enclBar [data-et]")) pendEncl173 = null;
   }, true);
 
   /* 間取りのパネル：置き床・小上がりのチップを「座上げ」1つにまとめる */
@@ -14038,6 +14083,19 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
             bar.appendChild(d);
           }
           renderBar138();
+          /* CAD-173: 囲みの床が選ばれている間は、そのチップに枠を付け、「決定」に
+             床の名前を出す（寸法入力の段が生きていて、決定で床になる事の印）。
+             囲みが閉じた・作り直された場合は、選びを取り消す。 */
+          try {
+            if (pendEnclOk173()){
+              var chip173 = bar.querySelector('[data-eflk="' + pendEncl173.chipFk + '"]');
+              if (chip173) chip173.style.outline = "3px solid #2563B0";
+              var ok173 = bar.querySelector("#ecOkN") || bar.querySelector("#ecOk");
+              if (ok173) ok173.textContent = "決定（床：" + kindName138(pendEncl173.kind, pendEncl173.det) + "）";
+            } else if (pendEncl173 && (typeof encl === "undefined" || pendEncl173.forEncl !== encl)){
+              pendEncl173 = null;
+            }
+          } catch(e){}
         }
       } catch(e){}
       return r;
