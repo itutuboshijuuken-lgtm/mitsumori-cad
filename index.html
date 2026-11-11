@@ -15681,5 +15681,251 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 })();
 </script>
 
+<script>
+/* ================= CAD-177：床仕様で置いた囲み範囲をタップして直す =================
+   本人の実機報告（2026-11-11 17:49 動画）と確定（「そう」）への対応。
+   ・床仕様の文脈（床タブ表示中／床チップを構えている間）で、置き済みの
+     囲み範囲（rm 印の無い床レコード）をタップしたら、その範囲が選ばれて
+     囲み編集が開く。幅・奥行き・左から・上からを数字で直せる（既存の
+     enclEdit＋数値パッド）。床チップで仕上げだけ選び直す事もできる
+     （CAD-138 の pend→決定の仕組みをそのまま使う）。
+   ・部屋いっぱいに広がる記録（旧データの部屋タップ分）は囲み扱いしない
+     （CAD-170 の「旧データは部屋タップで置き換えられる」を守る）。
+   ・照明の近くは照明が先。部屋の何も無い所は従来の部屋タップのまま。
+   ・enclMode 継続中（置いた直後）は slotM が汎用の畳編集として開いて
+     しまう（決定で fk が落ちる）ため、pointerup 捕捉で先に受ける。
+   ・タッチのタップでは click が発生しない（実測）ため、enclMode でない
+     時は #plan の pointerup（本体と CAD-176 の処理の後）でも受ける。
+     CAD-176 の部屋バーが開いたタップでは譲る（ゲート）。 */
+(function(){
+  "use strict";
+  var tapRec177 = null;   // 直近の実タップ {mm, cx, cy, t, used}
+
+  function inFloorCtx177(){ return !!(window.__floorTab || window.__floorArm); }
+  function roomBarOpen177(){
+    var b = document.getElementById("roomBar176");
+    return !!(b && !b.hidden);
+  }
+  function gatesOff177(allowEncl, selAtDown){
+    try {
+      if (!window.__pageM) return true;
+      if (window.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+      if (window.__armedAny && window.__armedAny()) return true;
+      /* 選択の判定は「タップ開始時点」の状態で見る（クリック経由では、
+         このタップ自体が物を選んだ後になるため） */
+      var sNow = (typeof sel !== "undefined" && sel) ? 1 : 0;
+      if ((selAtDown !== undefined ? selAtDown : sNow)) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (window.__put) return true;
+      if (window.__delMode || window.__hgMode || window.__partDraw) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (typeof toolOpen !== "undefined" && toolOpen === "part") return true;
+      if (roomBarOpen177()) return true;
+      if (!allowEncl && typeof enclMode !== "undefined" && enclMode) return true;
+      return false;
+    } catch(e){ return true; }
+  }
+  function nearLight177(mm){
+    try { return (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); }
+    catch(e){ return false; }
+  }
+  /* 部屋いっぱいの記録（旧データの部屋タップ分）は囲み扱いしない */
+  function fillsRoom177(r, pt){
+    try {
+      var rr = roomRectAt(pt[0], pt[1]);
+      if (!rr || rr.bad) return false;
+      return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
+             Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+    } catch(e){ return false; }
+  }
+  function isFloorRec177(r){
+    return !!(r.fk || r.za || (r.st && String(r.st).indexOf("fl:") === 0));
+  }
+  function hitEncl177(mm, floorOnly){
+    /* S.tatami の床レコード（土間・畳・CF・座上げ等）を後ろから＝
+       見た目で上の記録から探す。部屋タップ分（rm 印）は対象外。
+       floorOnly の時は「床として置かれた記録」だけ（間取り側の
+       本物の畳囲み・ゾーンは従来の slotM 編集のままにするため）。 */
+    var T = S.tatami || [];
+    for (var i = T.length - 1; i >= 0; i--){
+      var r = T[i];
+      if (!r || r.rm) continue;
+      if (floorOnly && !isFloorRec177(r)) continue;
+      if (mm[0] < r.x0 || mm[0] > r.x1 || mm[1] < r.y0 || mm[1] > r.y1) continue;
+      if (fillsRoom177(r, mm)) continue;
+      return { r: r, i: i };
+    }
+    return null;
+  }
+  function flName177(r){
+    if (r.za){
+      var m = r.det && r.det.m;
+      return m === "age" ? "小上がり" : m === "pura" ? "プラ束" : m === "oki" ? "置き床" : "座上げ";
+    }
+    if (r.fk) return (window.__FLN || {})[r.fk] || r.fk;
+    return "畳";
+  }
+  function openFlEdit177(hit){
+    var r = hit.r;
+    var nm = flName177(r);
+    window.__floorArm = null; window.__zaActive138 = false; window.__flBlinkChip140 = null;
+    try { sel = null; drawSelBar(); } catch(e){}
+    if (window.__closeRoom176){ try { window.__closeRoom176(); } catch(e){} }
+    enclMode = true;
+    try { document.body.classList.add("enclmode"); } catch(e){}
+    encl = { r: { x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, ax0: false, ax1: false, ay0: false, ay1: false },
+             edit: { kind: "t", i: hit.i,
+                     type: r.fk === "flDoma" ? "doma" : (!r.fk && !r.za) ? "tatami" : "room",
+                     /* st は "new" 固定: 実レコードの st（"fl:…"）は畳状態表 TST に
+                        無く、drawEnclBar0 の TST[ed.st][0] で例外になりバーが
+                        描けない（項目37の PAGEERROR の正体）。fl177 の経路では
+                        ed.st は使われない（決定=177/138、消す=i のみ）。 */
+                     st: "new", fl177: true, flName: nm },
+             raw: null };
+    try { drawEnclBar(); } catch(e){}
+    try { drawPlan(); } catch(e){}
+  }
+
+  /* 実タップの記録（pointerdown 捕捉。#plan の上だけ）。
+     2本目の指が重なったタップ（ピンチ等）は無効化する。 */
+  document.addEventListener("pointerdown", function(e){
+    try {
+      if (tapRec177 && !tapRec177.up && e.pointerId !== tapRec177.pid){ tapRec177 = null; return; }
+      if (e.isPrimary === false){ tapRec177 = null; return; }
+      var t = e.target;
+      if (!t || !t.closest || !t.closest("#plan")){ tapRec177 = null; return; }
+      var mm = toMM(planPt(e));
+      tapRec177 = { mm: [mm[0], mm[1]], cx: e.clientX, cy: e.clientY, t: Date.now(), used: false, up: false,
+                    pid: e.pointerId, maxDev: 0,
+                    selB: (typeof sel !== "undefined" && sel) ? 1 : 0 };
+    } catch(err){ tapRec177 = null; }
+  }, true);
+  document.addEventListener("pointercancel", function(){ tapRec177 = null; }, true);
+  /* 押している間の最大移動量（囲みトレースは始点に戻って終わるため、
+     down/up の座標だけではタップと区別できない） */
+  document.addEventListener("pointermove", function(e){
+    var d = tapRec177;
+    if (!d || e.pointerId !== d.pid) return;
+    var dev = Math.hypot(e.clientX - d.cx, e.clientY - d.cy);
+    if (dev > d.maxDev) d.maxDev = dev;
+  }, true);
+
+  /* 入口(b): enclMode 継続中は slotM の汎用編集より先に受ける */
+  document.addEventListener("pointerup", function(e){
+    var d = tapRec177;
+    if (!d) return;
+    if (e.pointerId === d.pid) d.up = true;
+    if (d.used) return;
+    try {
+      if (!(typeof enclMode !== "undefined" && enclMode)) return;
+      if (gatesOff177(true)) return;
+      if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
+      if (nearLight177(d.mm)) return;
+      /* 床の文脈があれば全ての床レコード、無ければ「床として置かれた
+         記録」だけ（slotM の汎用編集で fk が落ちる事故の回避） */
+      var hit = hitEncl177(d.mm, !inFloorCtx177()); if (!hit) return;
+      d.used = true;
+      e.stopPropagation();
+      openFlEdit177(hit);
+    } catch(err){}
+  }, true);
+
+  /* 入口(a2): enclMode でない時は #plan の pointerup（本体・CAD-176 の処理の後）で受ける。
+     タッチのタップでは click 自体が発生しない（pointerdown の preventDefault で
+     抑止される）ため、L1800 の click 経由は実機でも届かない（probe177s2 で実測）。
+     部屋バー（CAD-176）がこのタップで開いた場合は gatesOff177 が譲る。 */
+  var plan177 = document.getElementById("plan");
+  if (plan177) plan177.addEventListener("pointerup", function(e){
+    var d = tapRec177;
+    if (!d || d.used) return;
+    try {
+      if (typeof enclMode !== "undefined" && enclMode) return;
+      if (!inFloorCtx177() || gatesOff177(false, d.selB)) return;
+      if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
+      if (nearLight177(d.mm)) return;
+      var hit = hitEncl177(d.mm); if (!hit) return;
+      d.used = true;
+      openFlEdit177(hit);
+    } catch(err){}
+  }, false);
+
+  /* 入口(a): ltPlanClick のラップ（構え中タップ／床タブのクリック経由）。
+     実タップ記録と一致した時だけ。プログラム的な呼び出し（CAD-176 の
+     部屋の編集など）は記録が無い・部屋バー表示中で対象外。 */
+  try {
+    var _lt177 = ltPlanClick;
+    ltPlanClick = function(mm){
+      try {
+        var d = tapRec177;
+        if (d && !d.used && !(d.maxDev > 14) && Date.now() - d.t < 2500 &&
+            Math.abs(d.mm[0] - mm[0]) < 2 && Math.abs(d.mm[1] - mm[1]) < 2 &&
+            inFloorCtx177() && !gatesOff177(false, d.selB) && !nearLight177(mm)){
+          var hit = hitEncl177(mm);
+          if (hit){ d.used = true; openFlEdit177(hit); return true; }
+        }
+      } catch(err){}
+      return _lt177.apply(this, arguments);
+    };
+  } catch(e){}
+
+  /* 「決定」: 仕上げを選び直した場合は CAD-138 の捕捉リスナー（先に登録）が
+     pend で処理して伝播を止める。ここに届くのは寸法だけの直しなので、
+     詳細（det）を保持したまま矩形だけ差し替える。 */
+  document.addEventListener("click", function(e){
+    var t = e.target; if (!t || !t.closest) return;
+    if (!t.closest("#enclBar #ecOk")) return;
+    var ed = (typeof encl !== "undefined" && encl && encl.edit) ? encl.edit : null;
+    if (!ed || !ed.fl177) return;
+    e.stopPropagation(); e.preventDefault();
+    try {
+      var old = (S.tatami || [])[ed.i]; if (!old) return;
+      pushUndo();
+      var nr = cpRec141(old, { x0: encl.r.x0, y0: encl.r.y0, x1: encl.r.x1, y1: encl.r.y1 });
+      S.tatami[ed.i] = nr;
+      var A = ((nr.x1 - nr.x0) * (nr.y1 - nr.y0) / 1e6).toFixed(2);
+      enclFinish("床 " + ed.flName + " " + A + "㎡");
+    } catch(err){}
+  }, true);
+
+  /* 編集バーの見た目: 床レコードの編集では旧ゾーン用の種類チップ列と
+     畳の状態ボタンを外し、見出しを実際の仕上げ名にする */
+  try {
+    var _deb177 = drawEnclBar;
+    drawEnclBar = function(){
+      var out = _deb177.apply(this, arguments);
+      try {
+        if (typeof encl !== "undefined" && encl && encl.edit && encl.edit.fl177){
+          var bar = document.getElementById("enclBar");
+          if (bar && !bar.hidden){
+            var et = bar.querySelector("[data-et]");
+            if (et && et.parentElement && et.parentElement !== bar) et.parentElement.remove();
+            var stb = bar.querySelector("#ecSt"); if (stb) stb.remove();
+            var hd = bar.querySelector(".r1 span");
+            if (hd) hd.textContent = encl.edit.flName + "（置いた範囲を直す）";
+          }
+        }
+      } catch(e){}
+      return out;
+    };
+  } catch(e){}
+
+  /* 図面上のプレビュー名も仕上げ名にする */
+  try {
+    var _prev177 = enclPrevSvg;
+    enclPrevSvg = function(P){
+      var out = _prev177.apply(this, arguments);
+      try {
+        if (typeof encl !== "undefined" && encl && encl.edit && encl.edit.fl177 && out){
+          var nm = encl.edit.flName || "";
+          if (nm) out = out.replace(/(<text[^>]*>)[^<]*<\/text>/, "$1" + nm + "</text>");
+        }
+      } catch(e){}
+      return out;
+    };
+  } catch(e){}
+})();
+</script>
+
 </body>
 </html>
