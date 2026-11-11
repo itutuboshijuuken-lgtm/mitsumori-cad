@@ -517,6 +517,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
     <div id="selBar" hidden></div>
+    <div id="roomBar176" hidden></div>
     <div id="enclBar" hidden></div>
     <div id="drawnList" hidden></div>
   </section>
@@ -14426,6 +14427,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     return target;
   }
 
+  /* CAD-176: 部屋タップの編集（CAD-176 ブロック）からも同じ仕組みを使う */
+  window.__roomDimsFor139 = roomDimsFor;
+  window.__applyRoomDim139 = applyRoomDim;
+
   const dsb139 = drawSelBar;
   drawSelBar = function(){
     const r = dsb139.apply(this, arguments);
@@ -15358,6 +15363,321 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   wrapped165.__v165 = true;
   roomFaces = wrapped165;
   window.__v165 = { extra: extraFaces165 };
+})();
+</script>
+
+<script>
+/* ================= CAD-176：間取りで部屋タップ→部屋の編集 =================
+   本人の実機報告（2026-11-11 16:25 動画）と確定（2回の「そう」）への対応。
+   ・間取りで部屋の中をタップしたら、その部屋の編集が開く。
+     中身は「部屋名／奥行き・横幅を数字で決める入口／床の仕上げの選択」。
+   ・奥行き・横幅は CAD-139 の roomDimsFor/applyRoomDim をそのまま使う
+     （間仕切りコントローラー内のチップと同じ物・同じ動き）。
+   ・床は本物の床パネルのチップと同じ入口（CAD-138 の decideNow）を使い、
+     適用は床仕様の部屋タップと全く同じ ltPlanClick 経由にする
+     （rm 印・det・二重取り防止の引き算まで同一。座上げは #flBranch の
+     工法＋仕上げの2段がそのまま決まる）。
+   入口は2つ（優先順位は従来通り「物・壁が先」）:
+   ①候補（pickCands）がゼロのタップ→その部屋の編集をすぐ開く。
+   ②物・壁が選ばれる場所は、同じ場所を続けてタップして既存の
+     「重なっている物を順に選ぶ」が一巡したら部屋の編集を開く
+     （小さい部屋は候補ゼロの地点が無く、①だけでは届かないため）。
+   道具を構えている時・消す/消しゴム・解体・なぞる（囲み）・床を構えて
+   いる時・チュートリアル中は一切触らない。閉じる操作は「閉じる」。 */
+(function(){
+  "use strict";
+  var roomSel176 = null;      // {pt:[x,y]} 部屋はタップした点で都度引き直す
+  var tapDown176 = null;      // pointerdown の記録（タップ判定用）
+  var spot176 = {x: 0, y: 0, sig: "", n: 0};
+  var zaForRoom176 = false;   // 部屋の編集から座上げの選択欄を開いている
+  var applying176 = false;    // 部屋の編集経由で床を適用している最中
+  var barSig176 = "";
+
+  var st176 = document.createElement("style");
+  st176.textContent =
+    "#stM #roomBar176{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:8;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:8px;touch-action:manipulation}"
+    + "#roomBar176[hidden]{display:none}"
+    + "#roomBar176 .r1{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;font-size:15px;font-weight:800}"
+    + "#roomBar176 .r1 button{min-height:40px;min-width:76px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;font-weight:800;color:var(--ai);padding:0 10px}"
+    + "#roomBar176 .rmDims176{display:flex;gap:6px;margin-bottom:8px}"
+    + "#roomBar176 .rmDims176 button{flex:1;min-height:44px;font-size:14px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ai);padding:0 4px}"
+    + "#roomBar176 .rmFlT176{font-size:12.5px;font-weight:700;color:#555;margin:2px 0 4px}"
+    + "#roomBar176 .rmFl176{display:flex;flex-wrap:wrap;gap:6px}"
+    + "#roomBar176 .rmFl176 button{flex:1 1 30%;min-height:42px;font-size:13.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:#fff;color:#222;padding:0 4px}"
+    + "#roomBar176 .rmFl176 button.on176{outline:3px solid #2563B0}"
+    + "#roomBar176 .rmZaHint176{margin-top:8px;font-size:12.5px;color:#8A6D00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 8px}";
+  document.head.appendChild(st176);
+
+  function gatesOff176(){
+    try {
+      if (!window.__pageM) return true;
+      if (window.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+      if (window.__armedAny && window.__armedAny()) return true;
+      if (window.__put || window.__floorArm) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (typeof enclMode !== "undefined" && enclMode) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (window.__delMode || window.__hgMode || window.__partDraw) return true;
+      if (typeof toolOpen !== "undefined" && toolOpen === "part") return true;
+      return false;
+    } catch(e){ return true; }
+  }
+  function roomAtPt176(pt){ try { return roomAt(pt[0], pt[1]); } catch(e){ return null; } }
+  function roomRect176(pt){ try { return roomRectAt(pt[0], pt[1]); } catch(e){ return null; } }
+
+  /* その部屋の「奥行」「横幅」の入口（CAD-139 の仕組みへの橋渡し）。
+     部屋の辺に乗っている間仕切りを1本選び、roomDimsFor の結果から
+     この部屋の分だけ返す。動かせる間仕切りが無い辺は入口自体を出さない
+     （間仕切りコントローラーと同じ決まり）。 */
+  function roomEntries176(pt){
+    var rr = roomRect176(pt); if (!rr || rr.bad) return [];
+    if (!window.__roomDimsFor139 || !window.__applyRoomDim139) return [];
+    var P = S.parts2D || [], best = null, bestOv = 100;
+    P.forEach(function(q){
+      if (pState(q) === "remove") return;
+      var vert = Math.abs(q.x1 - q.x2) < 1, horiz = Math.abs(q.y1 - q.y2) < 1;
+      if (!vert && !horiz) return;
+      var ov = 0;
+      if (vert && (Math.abs(q.x1 - rr.x0) < 2 || Math.abs(q.x1 - rr.x1) < 2)) ov = Math.min(Math.max(q.y1, q.y2), rr.y1) - Math.max(Math.min(q.y1, q.y2), rr.y0);
+      if (horiz && (Math.abs(q.y1 - rr.y0) < 2 || Math.abs(q.y1 - rr.y1) < 2)) ov = Math.min(Math.max(q.x1, q.x2), rr.x1) - Math.max(Math.min(q.x1, q.x2), rr.x0);
+      if (ov > bestOv){ bestOv = ov; best = q; }
+    });
+    if (!best) return [];
+    try { return window.__roomDimsFor139(best).filter(function(en){ return en.cid === rr.cid; }); }
+    catch(e){ return []; }
+  }
+
+  /* 四角い部屋だけ、今の床の表示名（記録の重なりの大きい物） */
+  function roomFloorLabel176(pt){
+    var rr = roomRect176(pt); if (!rr || rr.bad) return "";
+    var by = {}, best = "", ba = 0;
+    (S.tatami || []).forEach(function(r){
+      var ix = Math.min(rr.x1, r.x1) - Math.max(rr.x0, r.x0), iy = Math.min(rr.y1, r.y1) - Math.max(rr.y0, r.y0);
+      if (ix <= 0 || iy <= 0) return;
+      var nm;
+      if (r.za && r.det) nm = r.det.m === "age" ? "小上がり" : r.det.m === "pura" ? "プラ束" : "置き床";
+      else if (r.fk) nm = (window.__FLN || {})[r.fk] || r.fk;
+      else nm = "畳";
+      by[nm] = (by[nm] || 0) + ix * iy;
+      if (by[nm] > ba){ ba = by[nm]; best = nm; }
+    });
+    return best;
+  }
+
+  var FLCHIPS176 = ["flComp", "floorFin", "flCF", "flMuku", "flMuku30", "flDoma", "za", "tatami"];
+  function renderRoomBar176(){
+    var bar = $("roomBar176"); if (!bar) return;
+    if (!roomSel176){ bar.hidden = true; bar.innerHTML = ""; barSig176 = ""; return; }
+    var rm = roomAtPt176(roomSel176.pt);
+    if (!rm){ closeRoom176(); return; }
+    var nm = roomLbl(rm);
+    var entries = roomEntries176(roomSel176.pt);
+    var fl = roomFloorLabel176(roomSel176.pt);
+    barSig176 = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "|" + (zaForRoom176 ? "z" : "") + "|" + (window.__floorArm || "");
+    var h = "<div class='r1'><span>🚪" + nm + "の部屋</span><span><button id='rmClose176' type='button'>閉じる</button></span></div>";
+    if (entries.length){
+      h += "<div class='rmDims176'>" + entries.map(function(en, ix){
+        return "<button type='button' data-rmdim='" + ix + "'>🚪" + nm + (en.dim === "w" ? "横幅 " : "奥行 ") + fmt(en.cur) + "</button>";
+      }).join("") + "</div>";
+    }
+    h += "<div class='rmFlT176'>床の仕上げ" + (fl ? "（今：" + fl + "）" : "") + "</div>";
+    h += "<div class='rmFl176'>" + FLCHIPS176.map(function(fk){
+      var lbl = fk === "za" ? "座上げ" : ((window.__FLN || {})[fk] || fk);
+      var on = !!window.__floorArm && (window.__floorArm === fk || (fk === "za" && (window.__floorArm === "flOki" || window.__floorArm === "flAge" || window.__floorArm === "flPura")));
+      return "<button type='button' data-rmfl='" + fk + "'" + (on ? " class='on176'" : "") + ">" + lbl + "</button>";
+    }).join("") + "</div>";
+    if (zaForRoom176) h += "<div class='rmZaHint176'>座上げの選択欄が、道具の列の所に出ています。工法と上の仕上げを選ぶと、この部屋に入ります。</div>";
+    bar.innerHTML = h;
+    bar.hidden = false;
+    bar.querySelector("#rmClose176").onclick = function(){ closeRoom176(); };
+    bar.querySelectorAll("[data-rmdim]").forEach(function(b){
+      b.onclick = function(){
+        var en = entries[+b.dataset.rmdim]; if (!en) return;
+        openPad({title: nm + "の" + (en.dim === "w" ? "横幅" : "奥行"), unit: "mm", value: en.cur, done: function(v){
+          if (!v) return;
+          var fin = window.__applyRoomDim139(en, Math.round(v));
+          save(); drawPlan();
+          var nd = en.side === "x0" ? en.rect.x1 - fin : en.side === "x1" ? fin - en.rect.x0 : en.side === "y0" ? en.rect.y1 - fin : fin - en.rect.y0;
+          toast(nm + "の" + (en.dim === "w" ? "横幅" : "奥行") + "を " + fmt(Math.round(nd)) + " にしました");
+          renderRoomBar176();
+        }});
+      };
+    });
+    bar.querySelectorAll("[data-rmfl]").forEach(function(b){
+      b.onclick = function(){ roomFloorPick176(b.dataset.rmfl); };
+    });
+  }
+
+  function disarmFloor176(){
+    window.__floorArm = null; window.__zaActive138 = false; window.__flBlinkChip140 = null;
+  }
+  /* 床チップ: 本物の床パネルのチップを押すのと全く同じ入口を使い、
+     立った構えでこの部屋へ ltPlanClick（床仕様の部屋タップその物）を
+     通して適用する。適用後は構えを落とす（部屋の編集から1回だけ）。 */
+  function roomFloorPick176(fk){
+    if (!roomSel176) return;
+    var real = document.querySelector('#floorPanel [data-flk="' + fk + '"]');
+    if (!real){ toast("床仕様のタブから選んでください"); return; }
+    if (fk === "za"){ zaForRoom176 = true; applying176 = true; real.click(); applying176 = false; renderRoomBar176(); return; }
+    applying176 = true;
+    real.click();
+    setTimeout(function(){
+      try { if (window.__floorArm && roomSel176) ltPlanClick([roomSel176.pt[0], roomSel176.pt[1]]); } catch(e){}
+      disarmFloor176();
+      applying176 = false;
+      renderRoomBar176();
+    }, 30);
+  }
+  /* 座上げの仕上げが選ばれたら（#flBranch の2段が決まったら）この部屋へ。
+     捕捉（capture）で受ける事：仕上げボタンの自身の処理（decideNow→
+     closeBar138）が #flBranch の中身を消してからバブルが届くため、
+     バブル段階ではボタンが既に外れていて closest が届かない（実測）。 */
+  document.addEventListener("click", function(e){
+    if (!zaForRoom176 || !roomSel176) return;
+    var t = e.target; if (!t || !t.closest) return;
+    if (t.closest("#flBranch [data-zcan]")){ zaForRoom176 = false; renderRoomBar176(); return; }
+    if (t.closest("#flBranch [data-zf]")){
+      setTimeout(function(){
+        if (!zaForRoom176 || !roomSel176) return;
+        if (window.__floorArm){
+          zaForRoom176 = false; applying176 = true;
+          try { ltPlanClick([roomSel176.pt[0], roomSel176.pt[1]]); } catch(er){}
+          disarmFloor176(); applying176 = false;
+          renderRoomBar176();
+        }
+      }, 40);
+    }
+  }, true);
+
+  function openRoom176(pt){
+    roomSel176 = {pt: [pt[0], pt[1]]};
+    spot176.n = 0;
+    try { sel = null; } catch(e){}
+    try { drawSelBar(); } catch(e){}
+    renderRoomBar176();
+    try { drawPlan(); } catch(e){}
+  }
+  function closeRoom176(){
+    if (zaForRoom176){ var zc = document.querySelector("#flBranch [data-zcan]"); if (zc) zc.click(); zaForRoom176 = false; }
+    roomSel176 = null;
+    var bar = $("roomBar176"); if (bar){ bar.hidden = true; bar.innerHTML = ""; }
+    barSig176 = "";
+  }
+  window.__closeRoom176 = closeRoom176;
+
+  /* 画面を移動したら閉じる（CAD-138 の go ラップと同じ作法） */
+  try {
+    var _go176 = go;
+    go = function(){ try { closeRoom176(); } catch(e){} return _go176.apply(this, arguments); };
+  } catch(e){}
+
+  /* 選んでいる部屋の輪郭（ピンクの点線。光るのは部屋の線だけ） */
+  try {
+    var _dp176 = drawPlan;
+    drawPlan = function(){
+      var r = _dp176.apply(this, arguments);
+      try {
+        var old = document.getElementById("roomOut176"); if (old) old.remove();
+        if (roomSel176 && window.__pageM){
+          var rr = roomRect176(roomSel176.pt), svg = $("plan"), T = window.__planT;
+          if (rr && svg && T){
+            var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("id", "roomOut176"); g.setAttribute("pointer-events", "none");
+            var mk = function(x, y, w, h, stroke){
+              var rc = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              rc.setAttribute("x", x * T.s + T.ox); rc.setAttribute("y", y * T.s + T.oy);
+              rc.setAttribute("width", w * T.s); rc.setAttribute("height", h * T.s);
+              rc.setAttribute("fill", "rgba(255,0,200,.07)");
+              if (stroke){ rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "2"); rc.setAttribute("stroke-dasharray", "7 5"); }
+              g.appendChild(rc);
+            };
+            if (!rr.bad) mk(rr.x0, rr.y0, rr.x1 - rr.x0, rr.y1 - rr.y0, true);
+            else {
+              /* L字など四角でない部屋は、部屋のセル（roomsCalc の番号）を
+                 横の帯にまとめて薄く塗る */
+              var rm2 = roomAtPt176(roomSel176.pt);
+              if (rm2 && rm2.cells && typeof bbox === "function"){
+                var bb = bbox(), stp = (typeof RM_STEP !== "undefined" ? RM_STEP : 50);
+                var NX = Math.max(1, Math.ceil((bb.x1 - bb.x0) / stp)), rows = {};
+                rm2.cells.forEach(function(k){ var ci = k % NX, cj = (k - ci) / NX; (rows[cj] = rows[cj] || []).push(ci); });
+                Object.keys(rows).forEach(function(j){
+                  var xs = rows[j].sort(function(a, b){ return a - b; }), s0 = null, pv = null;
+                  xs.concat([Infinity]).forEach(function(ci){
+                    if (s0 === null){ s0 = ci; pv = ci; return; }
+                    if (ci === pv + 1){ pv = ci; return; }
+                    mk(bb.x0 + s0 * stp, bb.y0 + (+j) * stp, (pv - s0 + 1) * stp, stp, false); s0 = ci; pv = ci;
+                  });
+                });
+              }
+            }
+            svg.appendChild(g);
+          }
+        }
+      } catch(e){}
+      return r;
+    };
+  } catch(e){}
+
+  /* タップの入口: pointerdown で記録し、pointerup（本体の選択処理の後）で判定 */
+  var wrap176 = $("planWrap");
+  if (wrap176) wrap176.addEventListener("pointerdown", function(e){
+    if (e.isPrimary === false || tapDown176){ tapDown176 = null; return; }
+    if (gatesOff176()){ tapDown176 = null; return; }
+    var t = e.target;
+    if (!t || !t.closest || !t.closest("#plan")){ tapDown176 = null; return; }
+    var mm = null;
+    try { mm = toMM(planPt(e)); } catch(er){}
+    if (!mm){ tapDown176 = null; return; }
+    var cs = [];
+    try { cs = pickCands(mm) || []; } catch(er){ cs = []; }
+    tapDown176 = {cx: e.clientX, cy: e.clientY, t: Date.now(), mm: mm,
+      selBefore: (typeof sel !== "undefined" && sel) ? sel.t + ":" + sel.i : null,
+      cands: cs.map(function(c){ return c.t + ":" + c.i; })};
+  }, true);
+  if (wrap176) wrap176.addEventListener("pointercancel", function(){ tapDown176 = null; }, true);
+  var plan176 = $("plan");
+  if (plan176) plan176.addEventListener("pointerup", function(e){
+    var d = tapDown176; tapDown176 = null;
+    if (!d || gatesOff176()) return;
+    if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 700){ spot176.n = 0; return; }
+    var mm = d.mm;
+    /* 照明は pickCands の対象外で別に選ぶ物なので、その近くは任せる */
+    var nearLight = false;
+    try { nearLight = (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); } catch(er){}
+    if (nearLight) return;
+    var rm = roomAtPt176(mm);
+    if (!d.cands.length){
+      spot176.n = 0;
+      if (rm) openRoom176(mm);
+      else if (roomSel176) closeRoom176();
+      return;
+    }
+    if (d.selBefore && d.cands.indexOf(d.selBefore) >= 0 && rm){
+      var sig = d.cands.join(",");
+      if (Math.hypot(d.cx - spot176.x, d.cy - spot176.y) < 24 && sig === spot176.sig) spot176.n++;
+      else { spot176.x = d.cx; spot176.y = d.cy; spot176.sig = sig; spot176.n = 1; }
+      if (spot176.n >= d.cands.length){
+        spot176.n = 0;
+        openRoom176(mm);
+      }
+    } else spot176.n = 0;
+  }, false);
+
+  /* 状態の追随: 物が選ばれた・画面が変わった・部屋が無くなったら閉じる */
+  setInterval(function(){
+    try {
+      if (!roomSel176 || applying176 || zaForRoom176) return;
+      if (!window.__pageM){ closeRoom176(); return; }
+      if (typeof sel !== "undefined" && sel){ closeRoom176(); return; }
+      if ((typeof enclMode !== "undefined" && enclMode) || window.__put || window.__floorArm){ closeRoom176(); return; }
+      var rm = roomAtPt176(roomSel176.pt);
+      if (!rm){ closeRoom176(); return; }
+      var nm = roomLbl(rm), entries = roomEntries176(roomSel176.pt), fl = roomFloorLabel176(roomSel176.pt);
+      var sig = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "||" + (window.__floorArm || "");
+      if (sig !== barSig176) renderRoomBar176();
+    } catch(e){}
+  }, 300);
 })();
 </script>
 
