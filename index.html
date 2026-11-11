@@ -13561,42 +13561,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      止める理由: 136 はドラッグしか取り消せず、進行中の指描き（pdInk 等）が残って
      2本指で間仕切りが記録される事故があった（本人の実機動画 2026-11-10）。 */
   return;
-  var wrap = document.getElementById("planWrap"), svg = document.getElementById("plan");
-  if (!wrap || !svg) return;
-  var pts = new Map(), pinching = false;
-  wrap.addEventListener("pointerdown", function(e){
-    if (!window.__pageM || e.pointerType !== "touch") return;
-    if (!svg.contains(e.target)) return;
-    pts.set(e.pointerId, [e.clientX, e.clientY]);
-    if (pts.size !== 2 || pinching) return;
-    pinching = true;
-    try {
-      if (PV.cx == null){ var vc = mViewCenterSvg(); PV.cx = vc[0]; PV.cy = vc[1]; }
-      var a = [...pts.values()];
-      var m = [(a[0][0] + a[1][0]) / 2, (a[0][1] + a[1][1]) / 2];
-      var d0 = Math.max(12, Math.hypot(a[0][0] - a[1][0], a[0][1] - a[1][1]));
-      pinch = { z: PV.z, d: d0, c: [PV.cx, PV.cy], m: m, a: planPt({ clientX: m[0], clientY: m[1] }) };
-    } catch(err){}
-    try {
-      if (dragging){
-        clearTimeout(dragging.timer);
-        if (!dragging.moved) undoStack.pop();
-        else { Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig))); drawPlan(); }
-        dragging = null;
-        wrap.classList.remove("dragArmed");
-      }
-    } catch(err){}
-    tapCancel = true; moved = true;
-  }, true);
-  wrap.addEventListener("pointermove", function(e){ if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]); }, true);
-  function endP(e){
-    if (!pts.delete(e.pointerId)) return;
-    if (pinching && pts.size < 2){ pinching = false; moved = true; tapCancel = true; }
-    if (!pts.size) pinching = false;
-  }
-  wrap.addEventListener("pointerup", endP, true);
-  wrap.addEventListener("pointercancel", endP, true);
-  window.addEventListener("pointerup", function(e){ if (pts.delete(e.pointerId) && !pts.size) pinching = false; }, true);
 })();
 </script>
 
