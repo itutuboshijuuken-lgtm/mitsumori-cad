@@ -16731,5 +16731,270 @@ seg「立体図」を押すと、室内の立体ではなく屋根つきの外�
 })();
 </script>
 
+<script>
+
+/* ================= CAD-189：壁の面は部屋ごとに独立 =================
+本人の報告（2026-11-12）: 室内図でカウンターなどをある部屋の面に置くと、
+裏側（隣）の部屋の面にも影響する。正しい形は「面は部屋ごとに独立」。
+実態（probe189/189b で実測）:
+ ・間仕切りの通常配置（側つき）は従来から正しく分かれていた。
+ ・外壁は部屋の持ち分が無く、大きい部屋の面が小さい部屋の区間まで含むため、
+   小さい部屋の区間に置いた物が大きい部屋の面に出て、触れてしまった。
+ ・立体でなぞって置く物は間仕切りの側を持たず、両側の面に出た。
+ ・立体図の選択は側を見ず、反対側の物まで選べた。
+直し: 面のピースを「その部屋に実際に接している区間」だけに切り取り、
+ 面に出す物・触れる物をその区間で絞る。なぞり置きにも側を記録する。
+ アクセントクロスは位置を持たないため、置いた部屋を記録して面で絞る
+ （記録の無い既存分は従来通り壁単位）。見積・保存キーは無変更。 */
+function accOf189(k, sd){
+  try {
+    var sr = (typeof selRoom === "function") ? selRoom() : null;
+    var R = roomsCalc();
+    var f = (S.fx || []).find(function(q){ return q.k === "accent" && q.w === k && (!sd || !q.sd || q.sd === sd) && (!q.rm || (sr && q.rm === sr.cid) || !(R && R.byCid && R.byCid[q.rm])); });
+    return f ? (f.pat || "gray") : null;
+  } catch(e){ return accOf(k, sd); }
+}
+function fxSvgFace189(gF, backs, F){
+  var hide = null;
+  try {
+    hide = new Set();
+    var g = fxProj();
+    var pr = function(q){ return q[0] * F.r[0] + q[1] * F.r[1]; }, po = pr(F.o);
+    (S.fx || []).forEach(function(f, idx){
+      if (f.k === "accent") return;
+      var pcs = F.pieces.filter(function(pc){ return pc.k === f.w; });
+      if (!pcs.length) return;
+      var w = fxWall(g, f.w);
+      var X = function(u){ return pr([w.a[0] + w.ux * u, w.a[1] + w.uy * u]) - po; };
+      var a = X(f.u), b = X(f.u + (f.len || 0)), lo = Math.min(a, b), hi = Math.max(a, b);
+      var vis = pcs.some(function(pc){ return hi >= pc.x0 - 60 && lo <= pc.x1 + 60; });
+      if (!vis) hide.add(idx);
+    });
+  } catch(e){ hide = null; }
+  window.__fxHide189 = hide;
+  try { return fxSvg(gF, backs); } finally { window.__fxHide189 = null; }
+}
+
+fxSvg = function(g, backs){
+  const pp = a => a.map(v => v.join(",")).join(" "), U = fxU(g), px = v => v * U, out = [], labs = [];
+  const LB = (x, y, t, an, fs) => { const tw = [...t].length * fs * U * 0.95, x0 = an === "middle" ? x - tw / 2 : an === "start" ? x : x - tw; labs.push(`<polygon points="${x0},${y - fs * U} ${x0 + tw},${y + fs * U * 0.3}" fill="none" stroke="none"/>`); };
+  out.push(fxDefs(g));
+  const ELFX = ({elec: ["outlet", "switch", "alarm", "sconce", "indirect"], cross: ["accent", "niche"]})[window.__trade] || [];
+  const fxCen = f => { const w = fxWall(g, f.w), P = (u, z) => g.PJ(w.a[0] + w.ux * u, w.a[1] + w.uy * u, z), ty = FK[f.k][1]; return ty === "pt" ? P(f.u, f.z) : ty === "seg" ? (f.v ? P(f.u, f.z + f.len / 2) : P(f.u + f.len / 2, f.z)) : AREA.includes(f.k) ? P(f.u + f.len / 2, f.z + f.hgt / 2) : null; };
+  (S.fx || []).forEach((f, idx) => { const st0 = out.length; fxOne(f, idx); if (window.__trade && out.length > st0){ const seg = out.splice(st0); if (ELFX.includes(f.k)){ const c = fxCen(f); if (c) out.push(`<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${px(22)}" fill="#FFD400" fill-opacity=".22" stroke="#E0A800" stroke-width="${px(1.6)}" stroke-dasharray="${px(5)} ${px(4)}"/>`); out.push(...seg); } else out.push(`<g opacity=".3">${seg.join("")}</g>`); } });
+  function fxOne(f, idx){
+    if (!backs[f.w]) return;
+    if (g.sides && f.w >= 100 && f.sd && g.sides[f.w] && f.sd !== g.sides[f.w]) return;   // 間仕切りの反対側の面に付けた物は出さない
+    if (window.__fxHide189 && window.__fxHide189.has(idx)) return;   // CAD-189: その面の部屋の区間に無い物は出さない
+    if (g.noAccLabel && f.k === "accent") return;
+    const w = fxWall(g, f.w), P = (u, z) => g.PJ(w.a[0] + w.ux * u, w.a[1] + w.uy * u, z), col = FKCOL[f.k], isSel = !!sel && sel.t === "fx" && sel.i === idx;
+    const A0 = P(f.u, f.z), A1 = P(f.u + 100, f.z), up = Math.max(1e-6, Math.hypot(A1[0] - A0[0], A1[1] - A0[1]) / 100);
+    const sel8 = (pts2) => isSel ? `<polygon class="selBlink" points="${pp(pts2)}" fill="none" stroke="#FF00C8" stroke-width="${px(4)}" stroke-dasharray="${px(10)} ${px(6)}"/>` : "";
+    if (FK[f.k][1] === "pt"){
+      const c = P(f.u, f.z);
+      if (f.k === "alarm"){
+        const r = 55 * up;
+        out.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${col}" stroke-width="${px(3)}"/>`);
+        out.push(`<text x="${c[0]}" y="${c[1] + 25 * up}" text-anchor="middle" style="font-size:${70 * up}px;font-weight:900;fill:${col}">警</text>`);
+        if (isSel) out.push(`<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + px(6)}" fill="none" stroke="#FF00C8" stroke-width="${px(4)}" stroke-dasharray="${px(10)} ${px(6)}"/>`);
+      } else {
+        const hw = {outlet: 35, switch: 35, hanger: 50, sconce: 75}[f.k] || 50, hh = {outlet: 60, switch: 60, hanger: 50, sconce: 75}[f.k] || 50, q = [P(f.u - hw, f.z - hh), P(f.u + hw, f.z - hh), P(f.u + hw, f.z + hh), P(f.u - hw, f.z + hh)];
+        out.push(`<polygon points="${pp(q)}" fill="#fff" stroke="${col}" stroke-width="${px(3)}"/>`);
+        if (f.k === "outlet"){
+          [[-22, -8], [8, 22]].forEach(([a, b]) => { const sl = [P(f.u + a, f.z - 30), P(f.u + b, f.z - 30), P(f.u + b, f.z + 30), P(f.u + a, f.z + 30)]; out.push(`<polygon points="${pp(sl)}" fill="${col}"/>`); });
+        } else {
+          const ch = {switch: "S", hanger: "干", sconce: "照"}[f.k], fs = f.k === "switch" ? 85 : f.k === "hanger" ? 70 : 100;
+          out.push(`<text x="${c[0]}" y="${c[1] + fs * up * 0.36}" text-anchor="middle" style="font-size:${fs * up}px;font-weight:900;fill:${col}">${ch}</text>`);
+        }
+        { const lab = f.k === "outlet" ? "コ" : f.k === "switch" ? "SW" : ""; if (lab){ const lp = P(f.u + hw + 45, f.z); out.push(`<text x="${lp[0]}" y="${lp[1] + px(3)}" text-anchor="start" class="halo" style="font-size:${px(9)}px;font-weight:900;fill:${col}">${lab}</text>`); } }
+        out.push(sel8(
+          [P(f.u - hw - 45, f.z - hh - 45), P(f.u + hw + 45, f.z - hh - 45), P(f.u + hw + 45, f.z + hh + 45), P(f.u - hw - 45, f.z + hh + 45)]));
+      }
+    } else if (AREA.includes(f.k)){
+      const q = [P(f.u, f.z), P(f.u + f.len, f.z), P(f.u + f.len, f.z + f.hgt), P(f.u, f.z + f.hgt)];
+      const a = P(f.u, f.z), b = P(f.u + f.len, f.z + f.hgt), tp = P(f.u + f.len / 2, f.z + f.hgt + 90), lt = `${FK[f.k][0]} ${fmt(f.len)}×${fmt(f.hgt)}`;
+      if (f.k === "niche"){
+        const ins = 45, qi = [P(f.u + ins, f.z + ins), P(f.u + f.len - ins, f.z + ins), P(f.u + f.len - ins, f.z + f.hgt - ins), P(f.u + ins, f.z + f.hgt - ins)];
+        out.push(`<polygon points="${pp(q)}" fill="#EFEBE4" stroke="${col}" stroke-width="${px(3)}"/>`);
+        out.push(`<polygon points="${pp(qi)}" fill="#8F8A80" stroke="${col}" stroke-width="${px(1.5)}"/>`);
+        if (f.nb === "waku"){ const qs = [P(f.u + ins - 15, f.z + ins - 10), P(f.u + f.len - ins + 15, f.z + ins - 10), P(f.u + f.len - ins + 15, f.z + ins + 18), P(f.u + ins - 15, f.z + ins + 18)]; out.push(`<polygon points="${pp(qs)}" fill="#C9A877" stroke="#8A6A3A" stroke-width="${px(1.2)}"/>`); }
+      } else if (f.k === "board" || f.k === "tile" || f.k === "shikkui" || f.k === "demo"){
+        const fl = {board: "url(#fxPlank)", tile: "url(#fxTile)", shikkui: "url(#fxShikkui)", demo: "rgba(198,40,40,.28)"}[f.k];
+        out.push(`<polygon points="${pp(q)}" fill="${fl}" stroke="${col}" stroke-width="${px(2)}"/>`);
+      } else if (["waist", "counter", "cshelf"].includes(f.k)){
+        const FILL = {waist: "#E6DDCB", counter: "#C9B48A", cshelf: "#B9A27A"}[f.k];
+        out.push(`<polygon points="${pp(q)}" fill="${FILL}" stroke="${col}" stroke-width="${px(2.5)}"/>`);
+      } else if (f.k === "curtbox"){
+        out.push(`<polygon points="${pp(q)}" fill="#B3ADA2" stroke="${col}" stroke-width="${px(2.5)}"/>`);
+      } else {
+        out.push(`<polygon points="${pp(q)}" fill="#F3E7CF" stroke="${col}" stroke-width="${px(2)}"/>`);
+        out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${px(1.5)}"/>`);
+      }
+      LB(tp[0], tp[1], lt, "middle", 8);
+      out.push(`<text x="${tp[0]}" y="${tp[1]}" text-anchor="middle" class="halo" style="font-size:${px(8)}px;font-weight:900;fill:${col}">${lt}</text>`);
+      out.push(sel8(q.map(v => [v[0], v[1]])));
+    } else if (FK[f.k][1] === "seg"){
+      const a = f.v ? P(f.u, f.z) : P(f.u, f.z), b = f.v ? P(f.u, f.z + f.len) : P(f.u + f.len, f.z);
+      const m = f.v ? P(f.u + 130, f.z + f.len / 2) : P(f.u + f.len / 2, f.z + 130), lt = `${FK[f.k][0]} ${fmt(f.len)}`;
+      if (isSel) out.push(`<line class="selBlink" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#FF00C8" stroke-opacity=".45" stroke-width="${px(14)}" stroke-linecap="round"/>`);
+      out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${px(f.k === "rail" ? 4 : f.k === "indirect" ? 6 : 3)}" stroke-linecap="round"${f.k === "indirect" ? ` stroke-dasharray="${px(14)} ${px(7)}"` : ""}/>`);
+      out.push(`<circle cx="${a[0]}" cy="${a[1]}" r="${px(3.5)}" fill="${col}"/><circle cx="${b[0]}" cy="${b[1]}" r="${px(3.5)}" fill="${col}"/>`);
+      LB(m[0], m[1], lt, f.v ? "start" : "middle", 8);
+      out.push(`<text x="${m[0]}" y="${m[1]}" text-anchor="${f.v ? "start" : "middle"}" class="halo" style="font-size:${px(8)}px;font-weight:800;fill:${col}">${lt}</text>`);
+    } else {
+      const m = P(w.L / 2, w.H * 0.92);
+      const lt = `アクセント ${ACC[f.pat || "gray"][0]}`; LB(m[0], m[1], lt, "middle", 8);
+      out.push(`<text x="${m[0]}" y="${m[1]}" text-anchor="middle" class="halo" style="font-size:${px(8)}px;font-weight:900;fill:#5A4A2A">${lt}</text>`);
+    }
+  }
+  return out.join("") + labs.join("");
+};
+faceSvg = function(F, fi){
+  const Hc = chEff(), L = F.len, U = Math.max(1, L / 230), pr = q => q[0] * F.r[0] + q[1] * F.r[1], po = pr(F.o);
+  const gF = {p: pts(), H: Hc, U, PJ: (x, y, z) => [pr([x, y]) - po, Hc - z], sides: {}, noAccLabel: true};
+  const backs = [];
+  F.pieces.forEach(pc => { backs[pc.k] = true; if (pc.k >= 100) gF.sides[pc.k] = pc.side; });
+  let h = `<rect x="0" y="0" width="${L}" height="${Hc}" fill="#EEF0F3" stroke="#B9C0C9" stroke-width="${U * 1.2}" stroke-dasharray="${U * 6} ${U * 4}"/>`;
+  F.pieces.forEach(pc => {
+    const ac = accOf189(pc.k, pc.side), fill = ac ? ACC[ac][1] : (window.__trade === "cross" && crossWallOn() ? "#FFF3B0" : "#F7F4EE");
+    h += `<rect x="${pc.x0}" y="${Hc - pc.H}" width="${pc.x1 - pc.x0}" height="${pc.H}" fill="${fill}" stroke="#7C7266" stroke-width="${U * 1.5}"/>`;
+    if (ac) h += `<text x="${(pc.x0 + pc.x1) / 2}" y="${Hc - pc.H + U * 16}" text-anchor="middle" class="halo" style="font-size:${U * 8}px;font-weight:900;fill:#5A4A2A">アクセント ${ACC[ac][0]}</text>`;
+  });
+  // 窓・ドア（平面図で置いた位置のとおり）
+  const g = fxProj();
+  F.pieces.forEach(pc => {
+    const w = fxWall(g, pc.k), at = u => pr([w.a[0] + w.ux * u, w.a[1] + w.uy * u]) - po;
+    const on = (S.sashes || []).filter(sa => sa.drawn && sa.host && ((pc.k < 100 && sa.host.t === "e" && sa.host.i === pc.k) || (pc.k >= 100 && sa.host.t === "p" && sa.host.i === pc.k - 100)));
+    const even = pc.k < 100 ? (S.sashes || []).filter(sa => !(sa.drawn && sa.host) && sa.wall === pc.k).flatMap(sa => Array(sa.n || 1).fill(sa)) : [];
+    const list = on.map(sa => ({sa, u0: Math.max(0, Math.min(sa.pos || 0, w.L - sa.w))}));
+    { const uR = [(pc.x0 + po - pr(w.a)) * pc.sgn, (pc.x1 + po - pr(w.a)) * pc.sgn], uLo = Math.min(uR[0], uR[1]), uHi = Math.max(uR[0], uR[1]); for (let li = list.length - 1; li >= 0; li--){ const it9 = list[li]; if (it9.u0 + it9.sa.w < uLo - 1 || it9.u0 > uHi + 1) list.splice(li, 1); } }   // CAD-189: この面の区間に無い窓・ドアは出さない
+    if (even.length){ const tw = even.reduce((x, sa) => x + sa.w, 0), gap = Math.max(0, (w.L - tw) / (even.length + 1)); let u = gap; even.forEach(sa => { list.push({sa, u0: Math.min(u, w.L - sa.w)}); u += sa.w + gap; }); }
+    list.forEach(({sa, u0}) => {
+      const door = /玄関|勝手口|室内ドア|クローゼット/.test(sa.cat), sill = door || /掃き出し/.test(sa.cat) ? 0 : 2030 - sa.h;
+      const xa = at(u0), xb = at(u0 + sa.w);
+      h += `<rect x="${Math.min(xa, xb)}" y="${Hc - sill - sa.h}" width="${Math.abs(xb - xa)}" height="${sa.h}" fill="${door ? "#C9A36B" : "#A9C8E6"}" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+    });
+  });
+  h += fxSvgFace189(gF, backs, F);
+  // 模様のidを図ごとに分ける（同じページに図が何枚もあるため）
+  h = h.replace(/(id="|url\(#)(fx(?:Tile|Wood|Dot|Plank|Shikkui))/g, `$1$2_${fi}`);
+  // 面の外（隣の部屋の分）は切り取る
+  return `<svg viewBox="0 0 ${L} ${Hc}" data-fi="${fi}" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;height:auto;max-height:260px;cursor:crosshair;background:#fff;border-radius:8px;touch-action:manipulation"><defs><clipPath id="fcClip${fi}"><rect x="0" y="0" width="${L}" height="${Hc}"/></clipPath></defs><g clip-path="url(#fcClip${fi})">${h}</g></svg>`;
+};
+faceHitItem = function(F, x, z){
+  const pr = q => q[0] * F.r[0] + q[1] * F.r[1], po = pr(F.o), g = fxProj(); let best = -1, bd = Infinity;
+  (S.fx || []).forEach((f, i) => {
+    if (f.k === "accent") return;
+    const pc = F.pieces.find(p => p.k === f.w); if (!pc) return;
+    if (f.w >= 100 && f.sd && pc.side && f.sd !== pc.side) return;
+    const w = fxWall(g, f.w), X = u => pr([w.a[0] + w.ux * u, w.a[1] + w.uy * u]) - po;
+    { const xa = X(f.u), xb = X(f.u + (f.len || 0)); if (Math.max(xa, xb) < pc.x0 - 30 || Math.min(xa, xb) > pc.x1 + 30) return; }   // CAD-189: この面の区間の外の物は触れない
+    let d;
+    if (FK[f.k][1] === "pt"){ d = Math.hypot(x - X(f.u), z - f.z); if (d > 200) return; }
+    else if (FK[f.k][1] === "seg"){
+      if (f.v){ const dz = z < f.z ? f.z - z : z > f.z + f.len ? z - f.z - f.len : 0; d = Math.hypot(x - X(f.u), dz); }
+      else { const a = X(f.u), b = X(f.u + f.len), lo = Math.min(a, b), hi = Math.max(a, b), dx = x < lo ? lo - x : x > hi ? x - hi : 0; d = Math.hypot(dx, z - f.z); }
+      if (d > 160) return;
+    } else {
+      const a = X(f.u), b = X(f.u + f.len), lo = Math.min(a, b), hi = Math.max(a, b);
+      if (x < lo - 60 || x > hi + 60 || z < f.z - 60 || z > f.z + f.hgt + 60) return; d = 50;
+    }
+    if (d < bd){ bd = d; best = i; }
+  });
+  return best;
+};
+fxHitItem = function(q){
+  const g = fxProj(), B = fxBacks(g), U = fxU(g); let best = -1, bd = Infinity;
+  const segD = (p, a, b) => { const vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy || 1; let t = ((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / L2; t = Math.max(0, Math.min(1, t)); return Math.hypot(p[0] - a[0] - t * vx, p[1] - a[1] - t * vy); };
+  (S.fx || []).forEach((f, i) => {
+    if (!B[f.w]) return; const w = fxWall(g, f.w); if (f.w >= 100 && f.sd){ const vn9 = partVisibleNormal(f.w - 100); if (((vn9[0] * -w.uy + vn9[1] * w.ux) >= 0 ? 1 : -1) !== f.sd) return; } const P = (u, z) => g.PJ(w.a[0] + w.ux * u, w.a[1] + w.uy * u, z);   // CAD-189: 反対側の面の物は選ばない
+    const A0 = P(f.u, f.z), A1 = P(f.u + 100, f.z), up = Math.hypot(A1[0] - A0[0], A1[1] - A0[1]) / 100 || 0.01;
+    let d, thr;
+    if (FK[f.k][1] === "pt"){ const c = P(f.u, f.z); d = Math.hypot(q.x - c[0], q.y - c[1]); thr = 150 * up; }
+    else if (FK[f.k][1] === "seg"){ const a = P(f.u, f.z), b = f.v ? P(f.u, f.z + f.len) : P(f.u + f.len, f.z); d = segD([q.x, q.y], a, b); thr = 30 * U; }
+    else if (AREA.includes(f.k)){ const c = P(f.u + f.len / 2, f.z + f.hgt / 2); d = Math.hypot(q.x - c[0], q.y - c[1]); thr = Math.max(30 * U, Math.hypot(f.len, f.hgt) * up * 0.5); }
+    else return;
+    if (d < thr && d < bd){ bd = d; best = i; }
+  });
+  return best;
+};
+
+(function(){
+  "use strict";
+  // ---- roomFaces: ピースを「その部屋に接している区間」だけに切り取る ----
+  if (typeof roomFaces === "function" && !roomFaces.__v189){
+    var orig189 = roomFaces;
+    var trimFaces189 = function(faces){
+      var sr = (typeof selRoom === "function") ? selRoom() : null;
+      if (!sr || !faces || !faces.length) return faces;
+      var R = roomsCalc(); if (!R || !R.comp) return faces;
+      var st = R.st || 50;
+      faces.forEach(function(F){
+        if (!F || !F.pieces || !F.pieces.length || !F.r || !F.o || !F.n) return;
+        var out = [];
+        F.pieces.forEach(function(pc){
+          var len = pc.x1 - pc.x0;
+          if (!(len > 0)){ out.push(pc); return; }
+          var nS = Math.max(1, Math.ceil(len / st)), stepW = len / nS, runs = [], cur = null;
+          for (var i = 0; i < nS; i++){
+            var tc = pc.x0 + (i + 0.5) * stepW;
+            var px = F.o[0] + F.r[0] * tc - F.n[0] * 95, py = F.o[1] + F.r[1] * tc - F.n[1] * 95;
+            var rm = roomAt(px, py), inside = !!rm && rm.cid === sr.cid;
+            var r0 = tc - stepW / 2, r1 = tc + stepW / 2;
+            if (inside){ if (cur && Math.abs(cur[1] - r0) < 1) cur[1] = r1; else { cur = [r0, r1]; runs.push(cur); } }
+            else cur = null;
+          }
+          runs.forEach(function(rn){
+            var a = Math.max(pc.x0, rn[0]), b = Math.min(pc.x1, rn[1]);
+            if (b - a < 50) return;
+            var np = {}; for (var k in pc) np[k] = pc[k]; np.x0 = a; np.x1 = b; out.push(np);
+          });
+        });
+        F.pieces = out;
+      });
+      return faces;
+    };
+    var wrapped189 = function(){ var faces = orig189.apply(this, arguments); try { faces = trimFaces189(faces); } catch(e){} return faces; };
+    wrapped189.__v189 = true;
+    roomFaces = wrapped189;
+  }
+  // ---- fxPlaceArea: なぞり置きでも間仕切りの側を記録する ----
+  if (typeof fxPlaceArea === "function" && !fxPlaceArea.__v189){
+    var fpa189 = fxPlaceArea;
+    var wfpa = function(wi, u, z, len, hgt){
+      var n0 = (S.fx || []).length;
+      var r = fpa189.apply(this, arguments);
+      try {
+        if ((S.fx || []).length > n0){
+          var f = S.fx[S.fx.length - 1];
+          if (f && f.w >= 100 && !f.sd){ var w = fxWall(fxProj(), f.w), vn = partVisibleNormal(f.w - 100); f.sd = (vn[0] * -w.uy + vn[1] * w.ux) >= 0 ? 1 : -1; save(); }
+        }
+      } catch(e){}
+      return r;
+    };
+    wfpa.__v189 = true;
+    fxPlaceArea = wfpa;
+  }
+  // ---- fxPlace: アクセントに置いた部屋を記録する ----
+  if (typeof fxPlace === "function" && !fxPlace.__v189rm){
+    var fp189 = fxPlace;
+    var wfp = function(hit){
+      var n0 = (S.fx || []).length;
+      var r = fp189.apply(this, arguments);
+      try {
+        if ((S.fx || []).length > n0){
+          var f = S.fx[S.fx.length - 1];
+          if (f && f.k === "accent" && !f.rm){ var sr = selRoom(); if (sr){ f.rm = sr.cid; save(); } }
+        }
+      } catch(e){}
+      return r;
+    };
+    wfp.__v189rm = true;
+    fxPlace = wfp;
+  }
+})();
+
+</script>
+
 </body>
 </html>
