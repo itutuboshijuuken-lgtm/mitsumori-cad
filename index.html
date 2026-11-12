@@ -12038,9 +12038,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     const secA = (() => { try { return mabaSecP()[0] || 45; } catch(e){ return 45; } })();
     const secB = (() => { try { return mabaThinP()[0] || 30; } catch(e){ return 30; } })();
     F.studs.forEach(st => {
-      // CAD-146: 間柱は実際の断面の形（壁方向に105、厚みは太=45/細=30）で細長く描く
+      // CAD-190: 間柱は実際の断面の形で細長く描く（105の辺が壁の厚み方向＝壁に直角、厚み 太=45/細=30 の辺が壁方向）。
+      // CAD-146 の向きは90度逆で、ホゾの向きと勘違いしやすいという本人の指摘（2026-11-13）で回転させた
       const ux = st.ux == null ? 1 : st.ux, uy = st.uy == null ? 0 : st.uy, nx = -uy, ny = ux, hl = 52.5, ht = (st.thick ? secA : (pvMix() ? secB : secA)) / 2;
-      const cs = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a2, b2]) => P([st.x + ux * hl * a2 + nx * ht * b2, st.y + uy * hl * a2 + ny * ht * b2]));
+      const cs = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a2, b2]) => P([st.x + ux * ht * a2 + nx * hl * b2, st.y + uy * ht * a2 + ny * hl * b2]));
       g += `<polygon class="pvStud" data-thick="${st.thick ? 1 : 0}" points="${cs.map(c => r2(c[0]) + "," + r2(c[1])).join(" ")}" fill="#fff" stroke="#111" stroke-width="1.1"/>`;
     });
     F.posts.forEach(pt => {
@@ -12065,8 +12066,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!pvStructOn || !F){ el.innerHTML = "「柱・間柱を表示」を押すと、見積で数えている柱・間柱の位置と本数が、そのまま図の上で確かめられます。"; return; }
     const sq = inner => `<svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:-2px">${inner}</svg>`;
     const postIc = sq(`<rect x="1" y="1" width="11" height="11" fill="#111"/>`);
-    const studIc = sq(`<rect x="1" y="4.5" width="11" height="4" fill="#fff" stroke="#111" stroke-width="1.4"/>`);
-    const thickIc = sq(`<rect x="1" y="3" width="11" height="7" fill="#fff" stroke="#111" stroke-width="1.4"/>`);
+    const studIc = sq(`<rect x="4.5" y="1" width="4" height="11" fill="#fff" stroke="#111" stroke-width="1.4"/>`);   // CAD-190: 描画の向きに合わせて縦長
+    const thickIc = sq(`<rect x="3" y="1" width="7" height="11" fill="#fff" stroke="#111" stroke-width="1.4"/>`);   // CAD-190: 描画の向きに合わせて縦長
     let h = `${postIc} 柱 ${F.cols}か所`;
     if (F.intN) h += `（うち内部の柱 ${F.intN}本）`;
     if (F.partN) h += `（うち間仕切りの柱 ${F.partN}本）`;
