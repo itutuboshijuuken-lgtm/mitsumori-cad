@@ -13821,7 +13821,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
   function recSummary138(r){
     if (r.za && r.det) return detSummary138("za", r.det);
-    if (r.det) return detSummary138(r.fk || "tatami", r.det);
+    if (r.det) return detSummary138(r.fk || "tatami", r.det) + (!r.fk ? "・状態：" + TST[r.st || "new"][0] : "");   // CAD-191: 畳は状態も要約に出す
     if (r.fk === "flAge") return "高さ：" + (r.h || 300) + "mm・上の仕上げ：" + (r.fin === "flComp" ? "フローリング" : r.fin === "flMuku" ? "無垢板" : r.fin === "flCF" ? "クッションフロア" : "畳");
     return "";
   }
@@ -14229,7 +14229,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
   function grpKey183(r){
     if (!r.fk && !r.det) return null;
-    return (r.za ? "za" : (r.fk || "tatami")) + "|" + detKey183(r);
+    // CAD-191: 畳は状態（新調／表替え／既存）も内容の一部なので、状態が違う畳は1行にまとめない
+    return (r.za ? "za" : (r.fk || "tatami")) + "|" + detKey183(r) + (!r.fk && !r.za ? "|st:" + (r.st || "new") : "");
   }
   function restArea183(){
     try {
@@ -14269,6 +14270,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
           + q.o.map(function(op, oi){ return "<button type='button' data-gq='" + qi + "' data-gv='" + oi + "' aria-pressed='" + (String(r0.det[q.k]) === String(op[0])) + "'>" + op[1] + "</button>"; }).join("")
           + (q.num ? "<button type='button' data-gnum='" + qi + "'>数値で入力</button>" : "") + "</div>";
       });
+      if (kind === "tatami"){   // CAD-191: 合算した畳も、状態はまとめて変えられるようにする
+        h += "<p class='hint' style='margin:10px 0 4px'>状態</p><div class='seg' style='flex-wrap:wrap'>"
+          + [["new", "新調"], ["omote", "表替え"], ["keep", "既存"]].map(function(x){ return "<button type='button' data-gst191='" + x[0] + "' aria-pressed='" + ((r0.st || "new") === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>";
+      }
     } else {
       var FLKS = ["flComp", "floorFin", "flCF", "flMuku", "flMuku30", "flDoma", "flOki", "flAge", "tatami"];
       h += "<div class='seg' style='flex-wrap:wrap'>" + FLKS.map(function(fk){ return "<button type='button' data-gfk='" + fk + "' aria-pressed='" + (r0.fk === fk || (!r0.fk && fk === "tatami")) + "'>" + ((window.__FLN || {})[fk] || fk) + "</button>"; }).join("") + "</div>";
@@ -14294,6 +14299,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         });
         save(); drawPlan(); grpSheet183(idxs);
       };
+    });
+    $("mbox").querySelectorAll("[data-gst191]").forEach(function(b){   // CAD-191: 状態をグループ全件へ
+      b.onclick = function(){ pushUndo(); cur().forEach(function(r){ r.st = b.dataset.gst191; }); save(); drawPlan(); grpSheet183(idxs); };
     });
     $("mbox").querySelectorAll("[data-gnum]").forEach(function(b){
       b.onclick = function(){
@@ -14375,6 +14383,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         + q.o.map(function(op, oi){ return "<button type='button' data-sq='" + qi + "' data-sv='" + oi + "' aria-pressed='" + (String(d[q.k]) === String(op[0])) + "'>" + op[1] + "</button>"; }).join("")
         + (q.num ? "<button type='button' data-snum='" + qi + "'>数値で入力</button>" : "") + "</div>";
     });
+    if (kind === "tatami"){   // CAD-191: 畳の状態（新調／表替え／既存）も、この決め直しシートで変えられるようにする
+      h += "<p class='hint' style='margin:10px 0 4px'>状態</p><div class='seg' style='flex-wrap:wrap'>"
+        + [["new", "新調"], ["omote", "表替え"], ["keep", "既存"]].map(function(x){ return "<button type='button' data-sst191='" + x[0] + "' aria-pressed='" + ((r.st || "new") === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>";
+    }
     h += "<div class='row'><button class='btn sub' id='dsDel' type='button' style='color:var(--ng)'>この床を消す</button><button class='btn pri' id='dsOk' type='button'>決定</button></div>";
     $("mbox").innerHTML = h;
     $("modal").hidden = false;
@@ -14392,6 +14404,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         syncZaRecord138(r);
         save(); drawPlan(); detSheet138(i);
       };
+    });
+    $("mbox").querySelectorAll("[data-sst191]").forEach(function(b){   // CAD-191: 状態の書き換え（見積は tatamiRows が r.st を読んで連動）
+      b.onclick = function(){ pushUndo(); r.st = b.dataset.sst191; save(); drawPlan(); detSheet138(i); };
     });
     $("mbox").querySelectorAll("[data-snum]").forEach(function(b){
       b.onclick = function(){
