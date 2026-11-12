@@ -7729,13 +7729,39 @@ async function phRender(){
   $("phMode").textContent = PHT.pick ? "やめる" : "選ぶ";
   phBar();
 }
+/* ---------- CAD-184: 写真をまとめて選んで、分類をまとめて移す ---------- */
+let phMv184 = false;
+async function phMoveSel184(cat){
+  const ps = PHT.list.filter(p => PHT.sel.has(p.id));
+  if (!ps.length || cat === PHT.cat) return;
+  phMv184 = false;
+  for (const p of ps){ p.cat = cat; await phPut(p); }
+  const nm = (PH_CATS.find(c => c[0] === cat) || [])[1] || "";
+  PHT.pick = false; PHT.sel.clear();
+  toast(`${ps.length}枚を「${nm}」へ移しました`);
+  phRender();
+}
 function phBar(){
   const n = PHT.sel.size;
+  if (!PHT.pick || !n) phMv184 = false;
+  if (PHT.pick && phMv184){
+    $("phBarIn").innerHTML = `<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;font-weight:700">移す先を選んでください（${n}枚）</div><div style="display:flex;gap:6px">${PH_CATS.map(([k, nm]) => k === PHT.cat ? `<button type="button" disabled style="opacity:.45">${nm}（今）</button>` : `<button type="button" data-mv="${k}">${nm}</button>`).join("")}<button type="button" id="phMvCancel">やめる</button></div></div>`;
+    $("phBarIn").querySelectorAll("[data-mv]").forEach(b => b.onclick = () => phMoveSel184(b.dataset.mv));
+    $("phMvCancel").onclick = () => { phMv184 = false; phBar(); };
+    return;
+  }
   $("phBarIn").innerHTML = PHT.pick
-    ? `<button type="button" id="phAll">この分類を全部</button><button type="button" class="line" id="phSend" ${n ? "" : "disabled"}>LINEで送る（${n}枚）</button>`
+    ? `<button type="button" id="phAll">この分類を全部</button><button type="button" id="phBulkMove" ${n ? "" : "disabled"}${n ? "" : ' style="opacity:.45"'}>移す（${n}枚）</button><button type="button" class="line" id="phSend" ${n ? "" : "disabled"}>LINEで送る（${n}枚）</button>`
     : `<label>📷 撮る・選ぶ<input type="file" id="phIn" accept="image/*" multiple hidden></label><button type="button" class="line" id="phPick">LINEで送る</button>`;
   if (PHT.pick){
-    $("phAll").onclick = () => { PHT.list.filter(p => p.cat === PHT.cat).forEach(p => PHT.sel.add(p.id)); phRender(); };
+    const mine184 = PHT.list.filter(p => p.cat === PHT.cat);
+    if (mine184.length && mine184.every(p => PHT.sel.has(p.id))){
+      $("phAll").textContent = "全部はずす";
+      $("phAll").onclick = () => { PHT.sel.clear(); phRender(); };
+    } else {
+      $("phAll").onclick = () => { mine184.forEach(p => PHT.sel.add(p.id)); phRender(); };
+    }
+    $("phBulkMove").onclick = () => { phMv184 = true; phBar(); };
     $("phSend").onclick = phSend;
   } else {
     $("phIn").onchange = phAdd;
