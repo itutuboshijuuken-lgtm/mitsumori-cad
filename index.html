@@ -16564,5 +16564,26 @@ enclReset のラップと MutationObserver と保険タイマーで行い、切�
 })();
 </script>
 
+<script>
+/* ================= CAD-186：利益率の選択肢をグループごとに1行にまとめる =================
+本人の指示（2026-11-12）：「利益率はとりあえず1行づつにまとめるだけでいいや」。
+率チップは大工・材料（#mgCh）と設備機器・外注（#mgEqCh）で各6個
+（率5つ＋「ほか」）あり、今は4個＋2個の2行に折り返す。これを各グループ
+1行に収める。やるのは見た目だけ：この2つの箱だけ折り返しを止め、
+ボタンを均等幅で縮められる様にする。「ほか」にカスタム率（45.5%等）が
+出ても文字が切れない様に、この2グループだけ文字を少し小さくし、
+左右の余白を詰め、文字の折り返しを禁止する。他の .chips には触らない。
+率の値・保存先・有料ゲート（CAD-97）・金額計算は無変更。 */
+(function(){
+  "use strict";
+  var css = [
+    "#mgCh,#mgEqCh{flex-wrap:nowrap}",
+    "#mgCh>button,#mgEqCh>button{flex:1 1 0;min-width:0;padding:0 1px;font-size:14px;white-space:nowrap}"
+  ].join("\n");
+  var sty = document.createElement("style"); sty.id = "cad186Sty"; sty.className = "mgOneRow186"; sty.textContent = css;
+  document.head.appendChild(sty);
+})();
+</script>
+
 </body>
 </html>
