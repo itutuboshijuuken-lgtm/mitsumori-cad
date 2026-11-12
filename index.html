@@ -16636,5 +16636,100 @@ enclReset のラップと MutationObserver と保険タイマーで行い、切�
 })();
 </script>
 
+<script>
+/* ================= CAD-188：室内図の文脈では立体も回転も常に部屋の中 =================
+本人の実機報告（2026-11-12、動画）: 室内図で部屋の壁パネルを見たあと
+seg「立体図」を押すと、室内の立体ではなく屋根つきの外部立体図が出て、
+回しても外部のままだった。roomBar「立体で見る」では室内の立体が出る。
+「全部」を選んだ全体表示で回しても外部になった。
+原因は2つ:
+ 1. seg「立体図」のハンドラ（CAD-162）が文脈を見ず drawRoom の直後に
+    drawIso を無条件で呼び、ZO では外観で上書きしていた。
+ 2. 回転の振り分け（CAD-179）が、描画の後段で立て直される印
+    （__isoRoom179）頼みで、表示中の画面の文脈を見ていなかった。
+直し: 文脈（room=室内図 / iso=完成図）を「入口の操作」から決める。
+ window の capture で全てのクリック処理より先に記録し、seg「立体図」と
+ 回転は文脈で振り分ける。印は回転クリックの時点で文脈から付け直す
+ （描画順の競合に依存しない）。手順バーの入口でも印を付け直し、寄り道で
+ 立ったままの印が次の画面の最初の描画に漏れないようにする。
+ 外部立体図は完成図（⑤）の入口からのみ。
+ seg「立体図」を部屋の立体にするのは、室内図の文脈で展開図を見ている
+ 時だけ。それ以外はタブ本来の家全体表示（従来通り）。回転の印の付け直しは
+ 部屋未選択（全体表示）の時だけ（部屋選択中は CAD-179 の印が正しい）。
+描画・保存キー・金額計算は無変更。 */
+(function(){
+  "use strict";
+  var ctx188 = null;
+  window.__ctx188 = null;
+  function setCtx188(v){ ctx188 = v; try { window.__ctx188 = v; } catch(e){} }
+  function derive188(){
+    try {
+      if (typeof S !== "undefined" && S && S.roomView === "elev") return "room";
+      if (typeof elevOn === "function" && elevOn()) return "room";
+    } catch(e){}
+    return "iso";
+  }
+  function curCtx188(){ return ctx188 || derive188(); }
+  window.__ctx188cur = curCtx188;
+  window.addEventListener("click", function(e){
+    var t = e.target;
+    if (!t || !t.closest) return;
+    try {
+      if (t.closest("#rotL") || t.closest("#rotR")){
+        /* 回転: 部屋が選ばれている時は CAD-179 の印（描画で立つ）が正しい
+           ので触らない。部屋が選ばれていない時（「全部」の全体表示）だけ、
+           印が下りて振り分けできないため、文脈から付け直す:
+           室内図の入口から来た全体表示は内側、完成図側は家全体（従来通り） */
+        var hasRoom188 = false;
+        try { hasRoom188 = (typeof selRoom === "function" && !!selRoom()); } catch(e2){}
+        if (!hasRoom188) window.__isoRoom179 = (curCtx188() === "room");
+        return;
+      }
+      if (t.closest('[data-step="7"]')){ setCtx188("room"); window.__isoRoom179 = true; return; }
+      if (t.closest('[data-step="6"]')){ setCtx188("iso"); window.__isoRoom179 = false; return; }
+      var pv = t.closest("#pvSeg [data-pv]");
+      if (pv){
+        var v = pv.getAttribute("data-pv");
+        if (v === "iso"){
+          if (curCtx188() === "room" && typeof S !== "undefined" && S && S.roomView === "elev"){
+            /* 室内図で展開図を見ている時の seg「立体図」= その部屋を立体で
+               見る（本人の動画の場面）。162 のハンドラへ渡すと家全体の
+               外観で上書きされるため、ここで部屋の立体にする */
+            e.stopPropagation(); e.preventDefault();
+            var s6 = document.getElementById("st6"); if (s6) s6.classList.remove("pvOn");
+            S.roomView = "iso"; save(); drawRoom();
+            if (window.__v162 && window.__v162.sync) window.__v162.sync();
+          } else {
+            /* それ以外の seg「立体図」はタブ本来の役目（家全体の立体図。
+               CAD-162/179 の従来通り）へ渡し、文脈も完成図側に寄せる */
+            setCtx188("iso");
+          }
+        }
+        return;
+      }
+    } catch(err){}
+  }, true);
+  /* 完成図画面へ入った時は、着地した表示（roomView）で文脈を決め直す。
+     iso 文脈なら drawIso を最後にもう一度描く: 室内図へ寄り道した後は
+     CAD-162 の自己修復が drawRoom を呼び直し、部屋の内側で上書きして
+     しまうため（入口が完成図なら、最後の描画は外観でなければならない）。 */
+  var __go188 = go;
+  go = function(n){
+    var r = __go188.apply(this, arguments);
+    try {
+      if (n === 6){
+        setCtx188(derive188());
+        if (curCtx188() === "iso"){
+          setTimeout(function(){
+            try { if (curCtx188() === "iso" && typeof step !== "undefined" && step === 6 && typeof drawIso === "function") drawIso(); } catch(e){}
+          }, 0);
+        }
+      }
+    } catch(e){}
+    return r;
+  };
+})();
+</script>
+
 </body>
 </html>
