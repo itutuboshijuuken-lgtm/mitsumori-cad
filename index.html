@@ -16585,5 +16585,56 @@ enclReset のラップと MutationObserver と保険タイマーで行い、切�
 })();
 </script>
 
+<script>
+/* ================= CAD-187：種別不明の「見えないゾーン」が床の記録を切らない =================
+診断 diag187-floor-strip.md（2026-11-12）。部屋の下部に残る帯の正体は、
+ゾーン種別表 ZT に無い種類（k）のゾーンが保存データに残っている事だった。
+描画（zoneSvg）は種別不明では何も描かないのに、記録整理（fixAssign）は
+種別を問わず「ゾーン優先」で床の記録を切り戻していたため、部屋全体で
+選んだ仕上げが帯の部分だけ効かなかった。
+直しは2つ（診断の推奨 B＋A、「描かれない物は記録を切らない」でそろえる）:
+ B. fixAssign の間だけ、種別不明ゾーンを S.zones から退避させる。
+    種別表にあるゾーン（土間・浴室・トイレ・収納・廊下・階段室）の優先は
+    従来通り。囲み優先（床-5）の決まりも無変更。
+ A. 読み込み時に、種別不明ゾーンのうち「描画も付随物も生まない」物を
+    取り除く。見積の付随物（extras）に zid で結ばれている物は残す。
+    種別表にあるゾーンには一切触らない。
+保存キー・金額計算は無変更。 */
+(function(){
+  "use strict";
+  function isUnk187(z){ return !!z && !ZT[z.k]; }
+  function cleanZones187(){
+    try {
+      if (typeof S === "undefined" || !S || !Array.isArray(S.zones)) return 0;
+      var ex = S.extras || [];
+      var n0 = S.zones.length;
+      S.zones = S.zones.filter(function(z){
+        if (!isUnk187(z)) return true;
+        var hasEx = ex.some(function(e){ return e && e.zid && z.id && e.zid === z.id; });
+        return hasEx;
+      });
+      return n0 - S.zones.length;
+    } catch(e){ return 0; }
+  }
+  window.__cleanZones187 = cleanZones187;
+  var __fixAssign187 = fixAssign;
+  fixAssign = function(){
+    var unk = null;
+    try {
+      if (typeof S !== "undefined" && S && Array.isArray(S.zones)){
+        unk = S.zones.filter(isUnk187);
+        if (unk.length) S.zones = S.zones.filter(function(z){ return !isUnk187(z); });
+        else unk = null;
+      }
+    } catch(e){ unk = null; }
+    try { return __fixAssign187.apply(this, arguments); }
+    finally { if (unk) S.zones = (S.zones || []).concat(unk); }
+  };
+  var __loadProject187 = loadProject;
+  loadProject = function(){ var r = __loadProject187.apply(this, arguments); cleanZones187(); return r; };
+  cleanZones187();
+})();
+</script>
+
 </body>
 </html>
