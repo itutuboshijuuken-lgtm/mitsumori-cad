@@ -16477,5 +16477,92 @@ CAD-176 が部屋バーを先に開き、CAD-177 の入口が「部屋バー表�
 })();
 </script>
 
+<script>
+/* ================= CAD-185：囲みの寸法編集中は上の項目を閉じ、編集画面を図面に被せない =================
+本人の決定（2026-11-12）：囲みの寸法を確認・編集している間は、上の項目
+（手順・モード・道具の列）を閉じ、編集の画面を図面に被らない所へ出す。
+対象は (a) 囲んだ直後の寸法入力（173/174）と (b) 置いた囲みの編集
+（fl177）の両方で、どちらも enclMode かつ encl.r がある #enclBar の
+編集状態。なぞる構え中（encl.r 無し・案内バー）は寸法編集ではないので
+対象外。編集が終われば（決定でも戻る・終了でも）上の項目は元に戻る。
+全画面（fsDraw）では #slotM が全面 absolute で #enclBar が図面に被る
+ため、編集中はバーを #stM の下端に置き、#slotM の下端をバーの高さ分
+だけ上げて、図面と重なる領域を無くす。状態の検出は drawEnclBar /
+enclReset のラップと MutationObserver と保険タイマーで行い、切り替えは
+状態が変わった時だけ（閉じ忘れ・戻し忘れが起きない形）。 */
+(function(){
+  "use strict";
+  var css = [
+    "body.enclEdit185 header.top{display:none!important}",
+    "body.enclEdit185 #stM .mtools,body.enclEdit185 #stM #planBar{display:none!important}",
+    "body.fsDraw.enclEdit185 #stM #enclBar{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:30}"
+  ].join("\n");
+  var sty = document.createElement("style"); sty.id = "cad185Sty"; sty.textContent = css;
+  document.head.appendChild(sty);
+
+  var on185 = false;
+  function editing185(){
+    try {
+      if (window.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return false;
+      if (!window.__pageM) return false;
+      if (typeof enclMode === "undefined" || !enclMode) return false;
+      if (typeof encl === "undefined" || !encl || !encl.r) return false;
+      var bar = document.getElementById("enclBar");
+      if (!bar || bar.hidden) return false;
+      return true;
+    } catch(e){ return false; }
+  }
+  function fit185(){
+    var slot = document.getElementById("slotM");
+    if (!slot) return;
+    if (on185 && document.body.classList.contains("fsDraw")){
+      var bar = document.getElementById("enclBar");
+      var h = bar ? bar.offsetHeight : 0;
+      var want = (h + 14) + "px";
+      if (slot.style.bottom !== want) slot.style.bottom = want;
+    } else if (slot.style.bottom){
+      slot.style.bottom = "";
+    }
+  }
+  function sync185(){
+    var on = editing185();
+    if (on !== on185){
+      on185 = on;
+      document.body.classList.toggle("enclEdit185", on);
+      try {
+        if (on){
+          document.documentElement.style.setProperty("--hdrH", "0px");
+        } else {
+          var hd = document.querySelector("header.top");
+          document.documentElement.style.setProperty("--hdrH", (hd ? hd.offsetHeight : 100) + "px");
+        }
+      } catch(e){}
+      fit185();
+      try { drawPlan(); } catch(e){}
+    } else if (on){
+      fit185();
+    }
+  }
+  window.__syncEncl185 = sync185;
+  try {
+    var _deb185 = drawEnclBar;
+    drawEnclBar = function(){ var r = _deb185.apply(this, arguments); try { sync185(); } catch(e){} return r; };
+  } catch(e){}
+  try {
+    var _er185 = enclReset;
+    enclReset = function(){ var r = _er185.apply(this, arguments); try { sync185(); } catch(e){} return r; };
+  } catch(e){}
+  try {
+    var bar185 = document.getElementById("enclBar");
+    if (bar185 && window.MutationObserver){
+      new MutationObserver(function(){ try { sync185(); } catch(e){} }).observe(bar185, { attributes: true, attributeFilter: ["hidden"], childList: true });
+      new MutationObserver(function(){ try { sync185(); } catch(e){} }).observe(document.body, { attributes: true, attributeFilter: ["class"] });
+    }
+  } catch(e){}
+  try { setInterval(function(){ try { sync185(); } catch(e){} }, 500); } catch(e){}
+  try { sync185(); } catch(e){}
+})();
+</script>
+
 </body>
 </html>
