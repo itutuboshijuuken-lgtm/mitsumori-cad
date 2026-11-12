@@ -577,8 +577,6 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg" id="kisoSeg"><button data-kn="1" type="button">新設</button><button data-kn="0" type="button">既存利用</button></div>
     <h2>基礎の立ち上がり（GLから）</h2>
     <div class="chips" id="kisoCh"></div>
-    <h2>床</h2>
-    <div class="seg" id="floorSeg"><button data-fl="wood" type="button">床組（木造）</button><button data-fl="doma" type="button">土間</button><button data-fl="oki" type="button">土間＋置き床</button></div>
     <h2>耐力壁</h2>
     <div class="seg" id="trSeg"><button data-tr="menzai" type="button">面材（構造用合板）</button><button data-tr="suji" type="button">筋交い</button></div>
     <div id="trBox"></div>
@@ -588,8 +586,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div id="gaiBox"></div>
     </div>
     <div class="nopt">
-    <h2>床の仕上げ</h2>
-    <div class="chips" id="flType"></div>
+    <div id="specFl138"></div>
     <h2>完了清掃（美装）</h2>
     <div class="seg"><button data-bs="1" type="button">入れる</button><button data-bs="0" type="button">なし</button></div>
     <p class="hint" style="margin-top:4px">工事した床の広さ×㎡単価で計算します（最低料金あり）。</p>
@@ -639,10 +636,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
 <div id="tateguList"></div>
 <h2>建具枠</h2>
 <div id="tfrList"></div>
-<h2>垂れ壁</h2>
-<div id="tareList"></div>
 <div id="pilBox" hidden><h2>独立柱</h2><div id="pilList"></div></div>
-    <button class="btn" id="sashAdd" type="button" style="width:100%;margin-top:8px">＋ サッシを追加</button>
     </div>
     <h2 id="exH">部分工事</h2>
     <p class="hint" id="exHint">屋根・外壁の一面・軒天・雨樋・浴室・土台や柱の差し替えなど、部分的な工事を追加できます。</p>
@@ -769,10 +763,10 @@ function evalExpr(s){
 function toast(t){ const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
 
 /* ---------- 状態 ---------- */
-const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, keta: 180, hari: 180, moya: 90, tsuka: 90, roof: "kata", k: 2, muneStep: 600, geya: [], shokei: {mode: "pct", v: 5}, startD: "", high: "auto", ridge: "x", noki: 450, keraba: 300, colP: 1820, hariP: 1820, moyaP: 910, taruP: 455, genba: "",
+const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, keta: 180, hari: 180, moya: 90, tsuka: 90, roof: "kata", k: 2, muneStep: 600, geya: [], shokei: {mode: "pct", v: 5}, startD: "", high: "auto", ridge: "x", noki: 450, keraba: 300, colP: 1820, modul: "910", hariP: 1820, moyaP: 910, taruP: 455, genba: "",
   kisoNew: true, floor: "wood", tr: "menzai", suji: "kata", sujiN: null, gbW: "石膏ボード 12.5", gbC: "石膏ボード 9.5", cloth: true, precut: false,
   sp: { dodai: "ヒノキ", obiki: "ヒノキ", hashira: "ヒノキ", mabashira: "スギ", suji: "スギ", keta: "米松", hari: "米松", tsuka: "米松", moya: "米松", taruki: "米松", hafu: "スギ", sumigi: "米松", yukabari: "米松", tenjo: "スギ" },
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", mabaSec: "45x105", mabaKata: "all", joistSec: "60", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", mabaSec: "45x105", mabaKata: "all", joistSec: "45", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -4126,7 +4120,6 @@ const SETS = [
   ["tsuka", "小屋束の角", "90角なら90"],
   ["noki", "軒の出", "桁芯から（水平）"],
   ["keraba", "ケラバの出", "妻側（水平）"],
-  ["colP", "柱の間隔", "最大で"],
   ["hariP", "小屋梁の間隔", ""],
   ["moyaP", "母屋の間隔", "水平で"],
   ["taruP", "垂木の間隔", ""]
@@ -4438,9 +4431,6 @@ function drawRfTrees(){
   document.querySelectorAll("[data-tree]").forEach(b => { b.onclick = () => rfTSet(b.dataset.tree); });
 }
 function drawSpec(){ if (!S.rfCur) S.rfCur = "wood"; try { drawRfRec(); } catch(e){} if (!S.rfWallMat) S.rfWallMat = "cloth"; if (!S.rfCeilMat) S.rfCeilMat = "cloth"; if (!S.rfCeilCur) S.rfCeilCur = "board"; try { drawRfRooms(); } catch(e){}
-  const FT = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "CF"], ["flMuku", "無垢板15mm"], ["flMuku30", "無垢板30mm"]];
-  $("flType").innerHTML = FT.map(([k, n]) => `<button data-v="${k}" aria-pressed="${S.flType === k}" type="button">${n}</button>`).join("");
-  $("flType").querySelectorAll("button").forEach(b => b.onclick = () => { S.flType = b.dataset.v; save(); drawSpec(); });
   document.querySelectorAll("[data-dan]").forEach(b => { const k = b.dataset.dan, v = b.dataset.v === "1"; b.setAttribute("aria-pressed", String(!!S[k] === v)); b.onclick = () => { S[k] = v; save(); drawSpec(); }; });
   drawExtras();
   segBind("[data-bs]", "bisou", v => v === "1", drawSpec);
@@ -4480,8 +4470,8 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   const chipsKV = (id, opts, key, def) => { const el = $(id); if (!el) return; el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S[key] || def) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = b.dataset.v; save(); drawSpec(); }); };
   { const el = $("noWall"); if (el){ const opts = [[-1, "なし（全部の辺に壁）"]].concat((S.edges || []).map((e, i) => [i, `辺${i + 1}（${fmt(e.v)}mm）${i === S.house ? "・母屋側" : ""}`])); el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.noWall == null ? -1 : S.noWall) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.noWall = +b.dataset.v; save(); drawSpec(); }); } }
   chipsKV("mabaSec", [["45x105", "45×105（標準）"], ["30x105", "30×105"], ["30x90", "30×90"], ["45x90", "45×90"]], "mabaSec", "45x105");
-  chipsKV("mabaKata", [["all", "全部 同じ太さ"], ["mix", "910に太い方・間に細い方"]], "mabaKata", "all");
-  chipsKV("joistSec", [["60", "45×60（標準）"], ["45", "45×45"]], "joistSec", "60");
+  chipsKV("mabaKata", [["all", "全部 同じ太さ"], ["mix", "柱間30厚間柱"]], "mabaKata", "all");
+  chipsKV("joistSec", [["45", "45×45（標準）"], ["60", "45×60"]], "joistSec", "45");
   chipsKV("underMat", [["gohan", "合板（材工）"], ["mc95", "Mクロス 9.5"], ["mc125", "Mクロス 12.5"]], "underMat", "gohan");
   chipsKV("kPanelG", [["std", "標準"], ["mid", "中級"], ["high", "高級"]], "kPanelG", "std");
   $("spList").innerHTML = MEMBERS.filter(([k]) => !RF() || (k === "obiki" && (S.rfFloor === "frame" || S.rfFloor === "new")) || (k === "tenjo" && S.rfCeil === "frame")).filter(([k]) => RF() || !(k === "obiki" && S.floor === "doma") && !(k === "suji" && S.tr !== "suji") && !(k === "sumigi" && S.roof !== "yose") && !(k === "yukabari" && S.floors !== 2)).map(([k, n, sz]) => {
@@ -4533,8 +4523,7 @@ function sashSplit(){
 }
 function drawTfr(){
   const b = $("tfrList"); if (!b) return; S.tfr = S.tfr || [];
-  b.innerHTML = `<div class="seg"><button type="button" data-tf="door">＋ ドア枠</button><button type="button" data-tf="closet">＋ クローゼット枠</button></div>` + S.tfr.map((f, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">${TFR[f.k] ? TFR[f.k][0] : f.k}</b><button type="button" data-tfn="${i}" style="min-height:42px">${f.n}か所</button><button type="button" data-tfd="${i}" style="min-height:42px;color:#C62828">削除</button></div><div class="seg" style="margin-top:6px">${[["fixed", "固定枠"], ["casing", "ケーシング枠"]].map(([v, n]) => `<button type="button" data-tft="${i}" data-tfv="${v}" aria-pressed="${(f.t || "fixed") === v}">${n}</button>`).join("")}</div></div>`).join("") + `<div class="hint">扉は付けずに、枠だけを付ける・直す箇所を入れます（扉つきの新設は、上の室内建具で数えます）。</div>`;
-  b.querySelectorAll("[data-tf]").forEach(x => x.onclick = () => { S.tfr.push({k: x.dataset.tf, n: 1}); save(); drawTfr(); try { drawEst(); } catch(e){} });
+  b.innerHTML = S.tfr.map((f, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">${TFR[f.k] ? TFR[f.k][0] : f.k}</b><button type="button" data-tfn="${i}" style="min-height:42px">${f.n}か所</button><button type="button" data-tfd="${i}" style="min-height:42px;color:#C62828">削除</button></div><div class="seg" style="margin-top:6px">${[["fixed", "固定枠"], ["casing", "ケーシング枠"]].map(([v, n]) => `<button type="button" data-tft="${i}" data-tfv="${v}" aria-pressed="${(f.t || "fixed") === v}">${n}</button>`).join("")}</div></div>`).join("") + `<div class="hint">扉は付けずに枠だけの箇所です（間取りで入れた分だけが出ます）。枠だけの工事を足す時は、下の「部分工事」で入れてください。</div>`;
   b.querySelectorAll("[data-tfn]").forEach(x => x.onclick = () => { const f = S.tfr[+x.dataset.tfn]; openPad({title: f ? TFR[f.k][0] + "の数" : "数", unit: "か所", value: f ? f.n : 1, done: v => { if (f && v){ f.n = Math.round(v); save(); drawTfr(); try { drawEst(); } catch(e){} } }}); });
   b.querySelectorAll("[data-tfd]").forEach(x => x.onclick = () => { S.tfr.splice(+x.dataset.tfd, 1); save(); drawTfr(); try { drawEst(); } catch(e){} });
   b.querySelectorAll("[data-tft]").forEach(x => x.onclick = () => { const f = S.tfr[+x.dataset.tft]; if (f){ f.t = x.dataset.tfv; save(); drawTfr(); try { drawEst(); } catch(e){} } });
@@ -4643,11 +4632,6 @@ function drawSash0(){
   $("sashList").querySelectorAll("[data-sd]").forEach(el => el.onclick = () => { S.sashes.splice(+el.dataset.sd, 1); window.__sview = null; save(); drawSash(); });
   $("sashList").querySelectorAll("[data-sview]").forEach(el => el.onclick = () => { const k = +el.dataset.sview; window.__sview = window.__sview === k ? null : k; drawSash(); });
 }
-$("sashAdd").addEventListener("click", () => {
-  const front = S.edges.findIndex((e, i) => wallLabel(i).startsWith("正面"));
-  const x = RF() ? SASH.find(q => q.cat === "室内ドア") : SASH[4]; S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: front >= 0 ? front : 0, n: 1, price: 0}); save(); drawSash();
-});
-
 
 /* ---------- 追加の工事（部分工事） ---------- */
 const EXT = {
@@ -4665,6 +4649,7 @@ const EXT = {
   hashira: {n: "柱の差し替え・根継ぎ", f: [["n", "本数", "本", 1]], d: {fukkyu: true}},
   furo: {n: "浴室解体（在来・ユニットバス）", f: [["L", "縦", "m", 1.82], ["W", "横", "m", 1.82], ["wh", "タイルをはがす壁の高さ", "m", 1.2], ["ft", "床はつりの厚み", "mm", 100], ["dig", "掘る深さ（土）", "mm", 0], ["dt", "土間の厚み", "mm", 120]], d: {type: "tile", doma: true, method: "auto", saiseki: true, mesh: true}},
   doma: {n: "土間打ち", f: [["L", "縦", "m", 1.82], ["W", "横", "m", 1.82], ["dt", "厚み", "mm", 120]], d: {method: "auto", saiseki: true, mesh: true}},
+  porch: {n: "玄関ポーチ", f: [["rise", "高低差", "mm", 450], ["dan", "段数", "段", 2], ["w", "全体の幅", "m", 1.82], ["d", "全体の奥行き", "m", 0.91], ["tread", "階段の踏み面", "mm", 300]], d: {fin: "mortar"}},
   toilet: {n: "トイレ取替え", f: [["n", "台数", "台", 1], ["fa", "トイレの床の広さ", "㎡", 1.66]], d: {type: "qr", tearai: false, remodel: false, cf: true, cross: true, acc: true, tesuri: false, consent: false}},
   kitchen: {n: "キッチン取替え", f: [["w", "間口", "mm", 2550], ["n", "台数", "台", 1]], d: {tear: true, setsubi: true, ih: false, duct: true, panel: true, kbase: true, floor: false}},
   ub: {n: "ユニットバス取替え", f: [["n", "台数", "台", 1]], d: {size: "1616", from: "ub", tear: true, setsubi: true, denki: true, waku: true, dan: false}},
@@ -4731,9 +4716,10 @@ function drawExtras(){
     if (e.k === "parts"){ const DUPP = ["pTenkenF", "pTenkenC", "pDeSumi16", "pFloorOne", "pMadowakuA", "pMadowakuA2"]; h += `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#FFF4E0;border:1px solid #E8A33D;font-size:12.5px;line-height:1.5">自動で計算済みの物（点検口・出隅・フローリングなど）を、ここで足すと二重になります</div><select data-px="${i}" style="width:100%;margin-top:6px">${WORK.filter(w => /^p[A-Z]/.test(w[0])).map(w => `<option value="${w[0]}" ${e.key === w[0] ? "selected" : ""}>${w[1]}${DUPP.includes(w[0]) ? "（自動計算と重なります）" : ""}（${fmt(PR.work[w[0]] || w[4])}${w[2].replace("円", "円")}）</option>`).join("")}</select>`; }
     if (e.k === "senmen") h += `<div class="seg" style="margin-top:6px">${[["750", "W750 三面鏡"], ["600", "W600 二面鏡"]].map(([v, n]) => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${n}</button>`).join("")}</div><div class="sub2">クリナップ ファンシオ</div>` + tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "cf", "床CF張替え", "床そのまま");
     if (e.k === "bousui") h += `<div class="seg" style="margin-top:6px">${[["top", "トップコート塗り替え"], ["frp", "FRPやり直し"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>` + tg(i, "drain", "ドレン改修", "ドレンそのまま");
+    if (e.k === "porch") h += `<div class="sub2" style="margin-top:6px">仕上げ</div><div class="seg" style="flex-wrap:wrap">${[["mortar", "モルタル金ゴテ"], ["brush", "刷毛引き"], ["araidashi", "洗い出し"], ["tile", "タイル張り"], ["stone", "石張り"], ["sanwado", "三和土"], ["ptile", "Pタイル"], ["stamp", "スタンプ"], ["color", "カラー"], ["tousui", "透水性"]].map(([v, n]) => `<button data-ti="${i}" data-tk="fin" data-tv="${v}" aria-pressed="${e.fin === v}" type="button">${n}</button>`).join("")}</div><p class="hint" style="margin:6px 2px 0">蹴上は約${e.dan > 0 ? Math.round(e.rise / e.dan) : 0}mm／段。コンクリートは全体の大きさ（㎡）、仕上げは天端と階段（踏み面・蹴上）で計算します。</p>`;
     if (e.k === "deck") h += `<div class="seg" style="margin-top:6px">${[["hard", "ハードウッド"], ["jinko", "人工木"], ["hinoki", "ヒノキ・杉"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>`;
     if (e.k === "fence") h += `<div class="seg" style="margin-top:6px">${[["hinoki", "ヒノキの柵"], ["alu", "アルミ"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>`;
-    if (e.k === "wayo") h += `<p class="hint" style="margin:6px 2px 0">床は「仕様」の「床の仕上げ」で計算します。押入の扉（折れ戸）は「建具・窓」で追加してください。</p>`;
+    if (e.k === "wayo") h += `<p class="hint" style="margin:6px 2px 0">床は「仕様」の「床の範囲」で計算します。押入の扉（折れ戸）は、間取りの画面で置いてください。</p>`;
     if (e.k === "kitchen"){
       h += `<div class="sub2" style="margin-top:6px">基準：I型・標準グレード（シエラS・ミッテ・ラクエラ クラス）</div>`;
       h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "setsubi", "給排水・ガス接続", "なし") + tg(i, "duct", "レンジフード ダクト接続", "なし") + tg(i, "panel", "キッチンパネル（壁）", "パネルなし") + tg(i, "kbase", "壁下地補強", "補強なし") + tg(i, "ih", "IH用 200V回路", "ガスのまま") + tg(i, "floor", "キッチンの床張替え", "床そのまま");
@@ -4910,7 +4896,7 @@ function calc0(...a){
    実物10件の型＋本人の決まり（harness/study138-柱間柱・図面の決まり）:
    ・柱は壁の端・交点・取り合いに立つ（910通りの交点全部ではない）。開口（窓・建具）の中には置かず、両脇に置く。
    ・間仕切りの端・交点にも柱が立つ。柱と柱の間が柱の間隔を超える所は910通りの位置で埋める（等分はしない）。
-   ・間柱は柱の芯から455ピッチ。910の位置（ボードの継目）は太い方、間の455は細い方。柱がある所は柱が継目の役。
+   ・間柱は柱の芯から455ピッチ。910の位置（ボードの継目）は45×105、間の455は30×105（この数え方の名前は「柱間30厚間柱」）。柱がある所は柱が継目の役。
    ・間仕切りの柱は見積の管柱の本数に入れる（本人の決定 2026-11-10）。
    ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
    ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
@@ -5058,7 +5044,7 @@ function calc00(){
   const lens = PT ? [] : S.edges.map(e => e.v), per = lens.reduce((a, b) => a + b, 0);
   const GY = (!PT && S.mode === "zo" && two) ? (S.geya || []).map(g => geyaDim(g, R)) : [];
   const gyA = GY.reduce((x, g) => x + g.L * g.d, 0) / 1e6;
-  const area = PT ? 0 : areaMM() / 1e6, tsubo = area * 0.3025, nobe = area * F + gyA, nobeT = nobe * 0.3025, wood = S.floor === "wood";
+  const area = PT ? 0 : areaMM() / 1e6, tsubo = area * 0.3025, nobe = area * F + gyA, nobeT = nobe * 0.3025, wood = S.floor !== "doma" && S.floor !== "oki";   /* CAD-183: 床の種別は図面の記録から拾う。S.floor は全面土間・土間+置き床で作った旧物件の互換のためだけに残す */
   const rows = [];
   const grp = name => rows.push({grp: name});
   const gomi = {}; GCAT.forEach(([k]) => gomi[k] = {m3: 0, kg: 0});
@@ -5267,6 +5253,13 @@ function calc00(){
         if (e.doma) domaRows(e.L, e.W, e.dt, e, "風呂 ");
       }
       else if (e.k === "doma") domaRows(e.L, e.W, e.dt, e, "");
+      else if (e.k === "porch"){
+        const A = (e.w || 0) * (e.d || 0), finA = A + (e.rise || 0) / 1000 * (e.w || 0);
+        const FNM = {mortar: "モルタル金ゴテ", brush: "刷毛引き", araidashi: "洗い出し", tile: "タイル張り", stone: "石張り", sanwado: "三和土", ptile: "Pタイル", stamp: "スタンプ", color: "カラー", tousui: "透水性"};
+        const FKY = {araidashi: "domaArai", tile: "domaTile", stone: "domaStone", sanwado: "domaSan", ptile: "domaPT", stamp: "domaStamp", color: "domaColor", tousui: "domaTou"};
+        if (A > 0) work("domaCon", "玄関ポーチ コンクリート", A, "㎡", `全体 幅${fmt(e.w, 2)}m × 奥行き${fmt(e.d, 2)}m ＝ ${fmt(A, 2)}㎡ × ${fmt(workP("domaCon").p)}円`);
+        if (finA > 0) work(FKY[e.fin] || "domaFin", `玄関ポーチ 仕上げ（${FNM[e.fin] || "モルタル金ゴテ"}）`, finA, "㎡", `天端と階段（踏み面${fmt(e.tread)}mm × ${fmt(e.dan)}段・蹴上 約${e.dan > 0 ? Math.round(e.rise / e.dan) : 0}mm）＝ ${fmt(finA, 2)}㎡ × ${fmt(workP(FKY[e.fin] || "domaFin").p)}円`);
+      }
       else if (e.k === "parts"){ const w = WORK.find(x => x[0] === e.key); if (w && e.q > 0) work(e.key, w[1], e.q, w[2].replace("円/", "")); }
       else if (e.k === "repair"){
         [["fl", "rpFloor"], ["tg", "rpTategu"], ["cr", "rpCross"], ["am", "rpAmido"], ["sh", "rpShoji"], ["na", "rpNari"], ["te", "rpTeguruma"], ["ck", "rpCaulk"]].forEach(([f, k]) => { if (e[f] > 0){ const w = WORK.find(x => x[0] === k); work(k, w[1].replace("リペア ", ""), e[f], w[2].replace("円/", "")); } });
@@ -9180,48 +9173,38 @@ function zoNotesText(){ return [zoAttached() ? ZO_KAITAI_NOTE : "", zoBeta() ? Z
 })();
 </script>
 <script>
-/* ---------- 柱の間隔：桁せいと屋根の重さから自動（上限の計算に、約2割の余裕を見た値） ----------
-   計算：桁の幅105・ベイマツ・平屋・屋根だけ・負担幅2,270（梁間3,640＋軒の出）・たわみ L/200（変形増大係数2）
-   飛ばせる上限(瓦)  150:2275 180:2730 210:3640 240:4095 270:4550 300:5270 ／ (軽)  150:2730 180:3640 210:4095 240:4550 270:5460 300:6250
-   採用値 = 上限×0.8 を455mm単位に切り下げ。簡易な目安で、構造の確認は別途必要 */
-const COLP_TBL = {kawara: [[105, 1365], [120, 1365], [150, 1820], [180, 1820], [210, 2730], [240, 2730], [270, 3640], [300, 4095]], light: [[105, 1365], [120, 1820], [150, 1820], [180, 2730], [210, 2730], [240, 3640], [270, 4095], [300, 4550]]};
-function colPAuto(){
-  const tb = COLP_TBL[S.roofW === "light" ? "light" : "kawara"], k = +S.keta || 180; let v = tb[0][1];
-  tb.forEach(([h, p]) => { if (k >= h) v = p; });
-  return v;
-}
-function colAutoOn(){ return S.colAuto !== false; }
+/* ---------- CAD-183: 屋根の重さとモジュール（柱・間柱の基準） ----------
+   ・「柱の間隔（自動／手で決める）」は廃止（本人の決定 2026-11-12）。
+     柱の間隔の基準はモジュールだけ：910ピッチ→最大1820mm、1000モジュール→最大2000mm。
+     calc の間だけ S.colP をモジュール基準の値に差し替える（従来の自動計算と同じ仕組み）。
+     設定画面の「柱の間隔」の項目も廃止した（SETS から削除）。見積の注記行も出さない。
+   ・屋根の重さ（S.roofW）は柱の間隔以外にも使われているため残す：
+     屋根仕上げの単価（roofKey/roofLbl）、小屋梁が飛ばせる長さの目安（beamLimit→内部の柱・基礎）、
+     壁量（筋交い）の係数。見出しの説明を実態に合わせて直した。 */
+function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
 (function(){
   const c0 = calc;
   calc = function(){
     const sv = S.colP; let on = false;
-    try { if (S.mode === "zo" && colAutoOn()){ S.colP = colPAuto(); on = true; } } catch(e){}
-    try {
-      const C = c0.apply(this, arguments);
-      try {
-        if (on && C && Array.isArray(C.rows) && !C.rows.some(r => r.colNote)){
-          const row = {name: "柱の間隔", spec: `桁せい${fmt(S.keta)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}で ${fmt(S.colP)}mm（自動・簡易の目安）`, qty: "", cost: 0, note: "構造の確認は別途必要です", colNote: true, zoNote: true};
-          let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; });
-          if (last >= 0) C.rows.splice(last + 1, 0, row); else C.rows.unshift({grp: "ご注意"}, row);
-        }
-      } catch(e){}
-      return C;
-    } finally { if (on) S.colP = sv; }
+    try { if (S.mode === "zo"){ S.colP = colPEff183(); on = true; } } catch(e){}
+    try { return c0.apply(this, arguments); }
+    finally { if (on) S.colP = sv; }
   };
-  // 仕様の画面：屋根の重さ・柱の間隔
+  // 仕様の画面：屋根の重さ・モジュール
   function box(){
     try {
       const anchor = document.getElementById("kisoBeta") || document.getElementById("kisoCh"); if (!anchor) return;
       let b = document.getElementById("colBox");
       if (!b){ b = document.createElement("div"); b.id = "colBox"; anchor.after(b); }
-      const rw = S.roofW === "light" ? "light" : "kawara", auto = colAutoOn();
-      const sig = rw + "|" + auto + "|" + S.keta + "|" + S.colP + "|" + colPAuto();
+      const rw = S.roofW === "light" ? "light" : "kawara", md = S.modul === "1000" ? "1000" : "910";
+      const sig = rw + "|" + md;
       if (b.dataset.sig === sig) return; b.dataset.sig = sig;
-      b.innerHTML = `<h2>屋根の重さ（柱の間隔に使います）</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button></div>
-      <h2>柱の間隔</h2><div class="seg"><button type="button" data-ca="1" aria-pressed="${auto}">自動</button><button type="button" data-ca="0" aria-pressed="${!auto}">手で決める</button></div>
-      <p class="hint">${auto ? `自動：桁せい${fmt(S.keta)}・${rw === "light" ? "軽い屋根" : "瓦屋根"}で <b>${fmt(colPAuto())}mm</b>。飛ばせる上限の計算に、余裕を見た値です（雪・風は入っていません）。` : `手で決める：<b>${fmt(S.colP)}mm</b>（「設定」の「柱の間隔」で変えます）`}</p>`;
+      b.innerHTML = `<h2>屋根の重さ</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button></div>
+      <p class="hint">屋根の仕上げの金額、小屋梁が飛ばせる長さの目安、壁量の計算に使います。</p>
+      <h2>モジュール（柱・間柱の基準）</h2><div class="seg"><button type="button" data-md="910" aria-pressed="${md === "910"}">910ピッチ</button><button type="button" data-md="1000" aria-pressed="${md === "1000"}">1000モジュール</button></div>
+      <p class="hint">柱と柱の間は、最大で ${md === "1000" ? "2,000" : "1,820"}mm まで。図面の寸法は変わりません。</p>`;
       b.querySelectorAll("[data-rw]").forEach(x => x.onclick = () => { S.roofW = x.dataset.rw; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
-      b.querySelectorAll("[data-ca]").forEach(x => x.onclick = () => { S.colAuto = x.dataset.ca === "1"; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
+      b.querySelectorAll("[data-md]").forEach(x => x.onclick = () => { S.modul = x.dataset.md; S.colP = colPEff183(); save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
     } catch(e){}
   }
   setInterval(box, 800); box();
@@ -14211,29 +14194,148 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   } catch(e){}
 
   /* ---------- 仕様画面：床の範囲の一覧（決め直し） ---------- */
-  function specList138(){
-    var hostEl = $("flType"); if (!hostEl) return;
-    var box = $("specFl138");
-    if (!box){
-      box = document.createElement("div");
-      box.id = "specFl138";
-      hostEl.insertAdjacentElement("afterend", box);
+  function detKey183(r){
+    if (!r.det) return "";
+    var ks = Object.keys(r.det).sort(), o = {};
+    ks.forEach(function(k){ o[k] = r.det[k]; });
+    return JSON.stringify(o);
+  }
+  function grpKey183(r){
+    if (!r.fk && !r.det) return null;
+    return (r.za ? "za" : (r.fk || "tatami")) + "|" + detKey183(r);
+  }
+  function restArea183(){
+    try {
+      if (typeof S === "undefined" || !S || S.mode !== "zo") return 0;
+      var F = 1;
+      try { F = (typeof roof === "function" && roof().two) ? 2 : 1; } catch(e){ F = S.floors === 2 ? 2 : 1; }
+      return Math.max(0, areaMM() / 1e6 * F - tatArea());
+    } catch(e){ return 0; }
+  }
+  function restSheet183(){
+    var FT = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "CF"], ["flMuku", "無垢板15mm"], ["flMuku30", "無垢板30mm"]];
+    var cur = S.flType || "floorFin"; if (cur === "flSheet") cur = "flComp";
+    var ra = restArea183();
+    var h = "<h3>残りの床" + (ra > 0.05 ? "　" + fmt(ra, 1) + "㎡" : "") + "</h3>"
+      + "<p class='hint' style='margin-top:0'>間取りで指定していない分の床の仕上げです（見積に反映します）</p>"
+      + "<div class='seg' style='flex-wrap:wrap'>" + FT.map(function(x){ return "<button type='button' data-rfk='" + x[0] + "' aria-pressed='" + (cur === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>"
+      + "<div class='row'><button class='btn pri' id='rsOk' type='button'>決定</button></div>";
+    $("mbox").innerHTML = h;
+    $("modal").hidden = false;
+    $("mbox").querySelectorAll("[data-rfk]").forEach(function(b){
+      b.onclick = function(){ S.flType = b.dataset.rfk; save(); try { drawEst(); } catch(e){} restSheet183(); try { specList138(); } catch(e){} };
+    });
+    $("rsOk").onclick = function(){ $("modal").hidden = true; try { drawSpec(); } catch(e){} };
+  }
+  function grpSheet183(idxs){
+    var rs = idxs.map(function(i){ return S.tatami[i]; }).filter(Boolean);
+    if (!rs.length) return;
+    if (rs.length === 1){ tatSheet(S.tatami.indexOf(rs[0])); return; }
+    var r0 = rs[0], kind = r0.za ? "za" : (r0.fk || "tatami");
+    var totA = rs.reduce(function(a, r){ return a + area138(r); }, 0);
+    var h = "<h3>" + recTitle138(r0) + "　" + fmt(totA, 1) + "㎡（" + rs.length + "か所ぶん）</h3>"
+      + "<p class='hint' style='margin-top:0'>同じ仕上げ・同じ内容なので、まとめて決め直します（見積に反映します）</p>";
+    if (r0.det){
+      var qs = qs138(kind, r0.det);
+      qs.forEach(function(q, qi){
+        h += "<p class='hint' style='margin:10px 0 4px'>" + q.t + "</p><div class='seg' style='flex-wrap:wrap'>"
+          + q.o.map(function(op, oi){ return "<button type='button' data-gq='" + qi + "' data-gv='" + oi + "' aria-pressed='" + (String(r0.det[q.k]) === String(op[0])) + "'>" + op[1] + "</button>"; }).join("")
+          + (q.num ? "<button type='button' data-gnum='" + qi + "'>数値で入力</button>" : "") + "</div>";
+      });
+    } else {
+      var FLKS = ["flComp", "floorFin", "flCF", "flMuku", "flMuku30", "flDoma", "flOki", "flAge", "tatami"];
+      h += "<div class='seg' style='flex-wrap:wrap'>" + FLKS.map(function(fk){ return "<button type='button' data-gfk='" + fk + "' aria-pressed='" + (r0.fk === fk || (!r0.fk && fk === "tatami")) + "'>" + ((window.__FLN || {})[fk] || fk) + "</button>"; }).join("") + "</div>";
+      if (r0.fk === "flAge") h += "<p class='hint' style='margin:10px 0 4px'>高さ</p><div class='seg' style='flex-wrap:wrap'>" + [150, 200, 250, 300, 350, 400, 450].map(function(v){ return "<button type='button' data-gageh='" + v + "' aria-pressed='" + ((r0.h || 300) === v) + "'>FL+" + v + "</button>"; }).join("") + "</div>";
     }
-    var rows = (S.tatami || []).map(function(r, i){
-      var sm = recSummary138(r);
-      return "<div class='sprow'><div>" + recTitle138(r) + (sm ? "<small>" + sm + "</small>" : "") + "<small>" + fmt(r.x1 - r.x0) + "×" + fmt(r.y1 - r.y0) + "・" + fmt(area138(r), 1) + "㎡</small></div><div><button class='btn' data-specfl='" + i + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
-    }).join("");
-    box.innerHTML = "<h2>床の範囲（間取りで指定した分）</h2>" + (rows || "<p class='hint'>まだありません。</p>");
+    h += "<div class='row'><button class='btn sub' id='gsDel' type='button' style='color:var(--ng)'>この床を全部消す</button><button class='btn pri' id='gsOk' type='button'>決定</button></div>";
+    $("mbox").innerHTML = h;
+    $("modal").hidden = false;
+    var cur = function(){ return idxs.map(function(i){ return S.tatami[i]; }).filter(Boolean); };
+    $("mbox").querySelectorAll("[data-gq]").forEach(function(b){
+      b.onclick = function(){
+        var c0 = cur(); if (!c0.length) return;
+        var q = qs138(kind, c0[0].det)[+b.dataset.gq]; if (!q) return;
+        var v = q.o[+b.dataset.gv][0];
+        pushUndo();
+        c0.forEach(function(r){
+          if (q.k === "m"){
+            var keepU = r.det.under;
+            r.det = stdZa138(v); r.det.under = keepU;
+            r.fk = armFk138("za", r.det); r.st = "fl:" + r.fk;
+          } else r.det[q.k] = v;
+          syncZaRecord138(r);
+        });
+        save(); drawPlan(); grpSheet183(idxs);
+      };
+    });
+    $("mbox").querySelectorAll("[data-gnum]").forEach(function(b){
+      b.onclick = function(){
+        openPad({title: "高さ（mm）", value: String((cur()[0].det || {}).h || ""), done: function(v){
+          var n = parseFloat(v);
+          if (n > 0){ pushUndo(); cur().forEach(function(r){ r.det.h = Math.round(n); syncZaRecord138(r); }); save(); drawPlan(); grpSheet183(idxs); }
+        }});
+      };
+    });
+    $("mbox").querySelectorAll("[data-gfk]").forEach(function(b){
+      b.onclick = function(){
+        pushUndo();
+        cur().forEach(function(r){
+          if (b.dataset.gfk === "tatami"){ delete r.fk; r.st = "new"; } else { r.fk = b.dataset.gfk; r.st = "fl:" + b.dataset.gfk; }
+        });
+        save(); drawPlan(); grpSheet183(idxs);
+      };
+    });
+    $("mbox").querySelectorAll("[data-gageh]").forEach(function(b){
+      b.onclick = function(){ pushUndo(); cur().forEach(function(r){ r.h = +b.dataset.gageh; }); save(); drawPlan(); grpSheet183(idxs); };
+    });
+    $("gsOk").onclick = function(){ $("modal").hidden = true; };
+    $("gsDel").onclick = function(){
+      pushUndo();
+      idxs.slice().sort(function(a, b){ return b - a; }).forEach(function(i){ S.tatami.splice(i, 1); });
+      save(); $("modal").hidden = true; drawPlan(); try { drawSpec(); } catch(e){}
+    };
+  }
+  function specList138(){
+    var box = $("specFl138"); if (!box) return;
+    var list = S.tatami || [], byKey = {}, entries = [];
+    list.forEach(function(r, i){
+      var k = grpKey183(r);
+      if (!k){ entries.push([i]); return; }
+      if (byKey[k]) byKey[k].push(i); else { byKey[k] = [i]; entries.push(byKey[k]); }
+    });
+    var rows = "";
+    {
+      var cur = S.flType || "floorFin"; if (cur === "flSheet") cur = "flComp";
+      var nm = {flComp: "フローリング", floorFin: "フロアタイル", flCF: "CF", flMuku: "無垢板15mm", flMuku30: "無垢板30mm"}[cur] || "フロアタイル";
+      var ra = restArea183();
+      rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+    }
+    entries.forEach(function(idxs){
+      if (idxs.length > 1){
+        var r0 = list[idxs[0]], sm = recSummary138(r0);
+        var totA = idxs.reduce(function(a, i){ return a + area138(list[i]); }, 0);
+        rows += "<div class='sprow'><div>" + recTitle138(r0) + (sm ? "<small>" + sm + "</small>" : "") + "<small>" + fmt(totA, 1) + "㎡（" + idxs.length + "か所ぶん）</small></div><div><button class='btn' data-specgrp='" + idxs.join(",") + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+      } else {
+        var i = idxs[0], r = list[i], sm2 = recSummary138(r);
+        rows += "<div class='sprow'><div>" + recTitle138(r) + (sm2 ? "<small>" + sm2 + "</small>" : "") + "<small>" + fmt(r.x1 - r.x0) + "×" + fmt(r.y1 - r.y0) + "・" + fmt(area138(r), 1) + "㎡</small></div><div><button class='btn' data-specfl='" + i + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+      }
+    });
+    box.innerHTML = "<h2>床の範囲</h2>" + rows;
     box.querySelectorAll("[data-specfl]").forEach(function(b){
       b.onclick = function(){ tatSheet(+b.dataset.specfl); };
+    });
+    box.querySelectorAll("[data-specgrp]").forEach(function(b){
+      b.onclick = function(){ grpSheet183(b.dataset.specgrp.split(",").map(Number)); };
+    });
+    box.querySelectorAll("[data-specrest]").forEach(function(b){
+      b.onclick = function(){ restSheet183(); };
     });
   }
   try {
     var _ds138 = drawSpec;
     drawSpec = function(){ var r = _ds138.apply(this, arguments); try { specList138(); } catch(e){} return r; };
   } catch(e){}
-
-  /* ---------- 決め直しシート（det／za を持つレコード用） ---------- */
+/* ---------- 決め直しシート（det／za を持つレコード用） ---------- */
   function detSheet138(i){
     var r = (S.tatami || [])[i]; if (!r) return;
     var kind = r.za ? "za" : (r.fk || "tatami");
