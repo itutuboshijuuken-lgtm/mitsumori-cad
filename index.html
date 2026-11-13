@@ -5681,7 +5681,7 @@ function calc0(...a){
    ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
    ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
 function framePos(){
-  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0, jambN: 0};
+  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0, jambN: 0, ukeFull: 0, ukeShorts: [], ukePts: []};
   try {
     if (!S.edges || !S.edges.length) return Z;
     const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
@@ -5810,6 +5810,57 @@ function framePos(){
             if (sill > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
             if (upLen > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
           }
+        });
+      });
+    }
+    /* CAD-222: 入隅のボード受け（本人の確定仕様 2026-11-08/09、実装リスト item 29）。
+       ボードの端ごとに受け1本（張り伸ばさない前提）。受け材は 36×45。
+       ・家の角＝2本/か所 ・T字（間仕切りが外壁の途中にぶつかる所）＝4本/か所
+       ・間仕切り同士の取り合い＝1本/か所
+       ・外壁の入り口枠（玄関・勝手口・室内ドア）：枠が柱に付く面は短い受け（まぐさ上から桁まで）。
+         枠が取り合いの柱から少し（15〜105mm）離れる場合は、その面はフル1本にして、
+         枠の真横（柱側）に まぐさ〜床 の間柱1本を足す（変形ケース）。
+         角の柱に近い枠（家の端から105mm以内）は、角の受けで足りるので足さない。 */
+    {
+      const pk2 = (x, y) => Math.round(x * 2) + "," + Math.round(y * 2);
+      const eruns = runs.filter(r => r.kind === "e"), pruns2 = runs.filter(r => r.kind === "p");
+      const onSeg2 = (r, x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy, px = r.ax + r.ux * t, py = r.ay + r.uy * t; return {t, d: Math.hypot(x - px, y - py)}; };
+      for (let i = 0; i < pv.length; i++){
+        const pe = (i - 1 + pv.length) % pv.length;
+        if (S.noWall && (S.noWall[pe] || S.noWall[i])) continue;
+        if (!S.edges[pe] || !S.edges[i] || S.edges[pe].d === S.edges[i].d) continue;
+        Z.ukeFull += 2; Z.ukePts.push({x: pv[i][0], y: pv[i][1], k: "corner"});
+      }
+      const tSet = new Set();
+      pruns2.forEach(pr => [[pr.ax, pr.ay], [pr.bx, pr.by]].forEach(E => {
+        eruns.forEach(er => { const q = onSeg2(er, E[0], E[1]); if (q.d <= 1.5 && q.t > 1 && q.t < er.L - 1){ const kk = pk2(E[0], E[1]); if (!tSet.has(kk)){ tSet.add(kk); Z.ukeFull += 4; Z.ukePts.push({x: E[0], y: E[1], k: "T"}); } } });
+      }));
+      const ppSet = new Set();
+      const ppAdd = (x, y) => { if (eruns.some(er => onSeg2(er, x, y).d <= 1.5)) return; const kk = pk2(x, y); if (ppSet.has(kk) || tSet.has(kk)) return; ppSet.add(kk); Z.ukeFull += 1; Z.ukePts.push({x, y, k: "pp"}); };
+      for (let i = 0; i < pruns2.length; i++) for (let j = i + 1; j < pruns2.length; j++){
+        const A = pruns2[i], B = pruns2[j];
+        [[A.ax, A.ay], [A.bx, A.by]].forEach(E => { const q = onSeg2(B, E[0], E[1]); if (q.d <= 1.5 && q.t >= -1 && q.t <= B.L + 1) ppAdd(E[0], E[1]); });
+        [[B.ax, B.ay], [B.bx, B.by]].forEach(E => { const q = onSeg2(A, E[0], E[1]); if (q.d <= 1.5 && q.t >= -1 && q.t <= A.L + 1) ppAdd(E[0], E[1]); });
+        const den = A.ux * B.uy - A.uy * B.ux;
+        if (Math.abs(den) > 1e-9){ const t = ((B.ax - A.ax) * B.uy - (B.ay - A.ay) * B.ux) / den, u = ((B.ax - A.ax) * A.uy - (B.ay - A.ay) * A.ux) / den; if (t > 1 && t < A.L - 1 && u > 1 && u < B.L - 1) ppAdd(A.ax + A.ux * t, A.ay + A.uy * t); }
+      }
+      eruns.forEach(r => {
+        const base = [0, r.L].concat([...r.junc]);
+        (r.ops || []).forEach((o, oi) => {
+          const d = r.opsD[oi]; if (!d || !["玄関", "勝手口", "室内ドア"].includes(d.cat)) return;
+          [o[0], o[1]].forEach(tj => {
+            let bb = null, bd = Infinity; base.forEach(b => { const dd = Math.abs(tj - b); if (dd < bd){ bd = dd; bb = b; } });
+            const isEnd = (bb === 0 || bb === r.L);
+            const x = r.ax + r.ux * tj, y = r.ay + r.uy * tj;
+            if (isEnd && bd <= 105) return;
+            if (bd <= 15){ Z.ukeShorts.push(d.h); Z.ukePts.push({x, y, k: "short"}); return; }
+            if (bd <= 105){
+              Z.ukeFull += 1; Z.ukePts.push({x, y, k: "full-off"});
+              Z.opStuds.push({x, y, thick: true, k: "f", seg: "side", len: d.h, sill: 0, h: d.h, ux: r.ux, uy: r.uy});
+              return;
+            }
+            Z.ukeShorts.push(d.h); Z.ukePts.push({x, y, k: "short"});
+          });
         });
       });
     }
@@ -6429,7 +6480,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   const opLens161 = f => {
     const th = [], tn = [];
     (F6.opStuds || []).forEach(p => {
-      const L = p.seg === "dn" ? (f === 2 ? 40 : (+S.dfl || 40)) + p.sill : (f === 2 ? (+S.ch2 || 2400) : (+S.ch || 2400)) + (+S.fuko || 100) - p.sill - p.h;
+      const L = p.seg === "side" ? p.len : p.seg === "dn" ? (f === 2 ? 40 : (+S.dfl || 40)) + p.sill : (f === 2 ? (+S.ch2 || 2400) : (+S.ch || 2400)) + (+S.fuko || 100) - p.sill - p.h;   /* CAD-222: seg "side"＝枠の真横の間柱（まぐさ〜床、長さは p.len のまま） */
       if (L > 0) (p.thick ? th : tn).push(Math.round(L));
     });
     return {th, tn};
@@ -6520,6 +6571,19 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
     { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ lum("hashira", "内部の柱", 105, 105, Array(zi.n).fill(Lc + 120), `105角・梁間${fmt(W)}を飛ばせないため（${zi.rows}列）`, true); lum("keta", "内部の桁（柱の上）", 105, S.hari, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(S.hari)}・${zi.rows}列`, true); work("kanamono", "内部の柱の金物", zi.n, "本"); } }
+  }
+  /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
+     余り材は専用プールで拾う（lum の共有プール POOL を使うと、ほかの行の本数が動いてしまうため）。 */
+  { const ukF = F6.ukeFull || 0, ukS = F6.ukeShorts || [];
+    if (ukF > 0 || ukS.length){
+      const needs = [];
+      for (let i = 0; i < ukF; i++){ needs.push(Lc); if (two) needs.push(Lc2); }
+      ukS.forEach(h => { needs.push(Math.max(0, (+S.ch || 2400) + (+S.fuko || 100) - h)); if (two) needs.push(Math.max(0, (+S.ch2 || 2400) + (+S.fuko || 100) - h)); });
+      const pk = packStock(needs, []); let cost = null, miss = false, avg = false, conv = false;
+      Object.keys(pk.m).forEach(L => { const pr = lumberPrice("スギ", 36, 45, +L); if (!pr) miss = true; else { cost = (cost || 0) + pr.p * pk.m[L]; avg = avg || !!pr.avg; conv = conv || !!pr.conv; } });
+      const nStk = Object.values(pk.m).reduce((a, b) => a + b, 0);
+      rows.push({name: "入隅 ボード受け スギ", spec: `36×45・フル${ukF}本${ukS.length ? `＋短い物${ukS.length}本（まぐさ上）` : ""}${two ? "・1〜2階分" : ""}・${stockTxt(pk.m)}`, qty: `${nStk}本`, cost, avg, conv, miss, fix: {kind: "lumber", sp: "スギ", a: 36, b: 45, len: +Object.keys(pk.m).sort((a, b) => b - a)[0] || 3000, name: "入隅 ボード受け"}});
+    }
   }
   if (S.tr === "suji"){ lum("suji", "筋交い", 45, 105, Array(sujiN).fill(sujiL), `45×105・${S.suji === "tasuki" ? "たすき" : "片"}・長さ${fmt(sujiL)}`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
   if (two){
@@ -7890,7 +7954,12 @@ function fxSvg(g, backs){
     } else if (AREA.includes(f.k)){
       const q = [P(f.u, f.z), P(f.u + f.len, f.z), P(f.u + f.len, f.z + f.hgt), P(f.u, f.z + f.hgt)];
       const a = P(f.u, f.z), b = P(f.u + f.len, f.z + f.hgt), tp = P(f.u + f.len / 2, f.z + f.hgt + 90), lt = `${FK[f.k][0]} ${fmt(f.len)}×${fmt(f.hgt)}`;
-      if (f.k === "niche"){
+      if (f.k === "kuri"){
+        /* CAD-222: くりぬき＝壁を貫通した穴。枠＋中を暗く塗って「抜けている」見た目にする */
+        const ins = 45, qi = [P(f.u + ins, f.z + ins), P(f.u + f.len - ins, f.z + ins), P(f.u + f.len - ins, f.z + f.hgt - ins), P(f.u + ins, f.z + f.hgt - ins)];
+        out.push(`<polygon points="${pp(q)}" fill="#6B5636" stroke="${col}" stroke-width="${px(3)}"/>`);
+        out.push(`<polygon points="${pp(qi)}" fill="#171310" stroke="${col}" stroke-width="${px(1.5)}"/>`);
+      } else if (f.k === "niche"){
         const ins = 45, qi = [P(f.u + ins, f.z + ins), P(f.u + f.len - ins, f.z + ins), P(f.u + f.len - ins, f.z + f.hgt - ins), P(f.u + ins, f.z + f.hgt - ins)];
         out.push(`<polygon points="${pp(q)}" fill="#EFEBE4" stroke="${col}" stroke-width="${px(3)}"/>`);
         out.push(`<polygon points="${pp(qi)}" fill="#8F8A80" stroke="${col}" stroke-width="${px(1.5)}"/>`);
@@ -18901,9 +18970,9 @@ setInterval(gkSync208, 600);
   var PLACE219 = [
     {kind: "water", label: "水まわり", test: /トイレ|便所|洗面|脱衣|浴室|風呂|サニタリー/, members: ["paper", "towel", "mirror", "rail", "under", "tile", "sconce", "hanger"]},
     {kind: "storage", label: "収納", test: /収納|クローゼット|納戸|押入|物入|ウォークイン/, members: ["shelf", "pipe", "cshelf", "counter", "under", "rail"]},
-    {kind: "hall", label: "玄関・廊下", test: /玄関|廊下|ホール|土間/, members: ["coat", "hanger", "rail", "niche", "tile", "sconce", "outlet", "accent"]},
-    {kind: "kitchen", label: "キッチン・ダイニング", test: /キッチン|台所|ダイニング/, members: ["counter", "cshelf", "tile", "under", "outlet", "switch", "niche", "board"]},
-    {kind: "living", label: "居室", test: /./, members: ["tvwall", "picrail", "roll", "blind", "duct", "tv", "lan", "sensor", "dimmer", "eco", "rod", "curtbox", "accent", "board", "tile", "shikkui", "waist", "sconce", "indirect", "outlet", "switch", "niche", "counter", "cshelf", "under"]}
+    {kind: "hall", label: "玄関・廊下", test: /玄関|廊下|ホール|土間/, members: ["coat", "hanger", "rail", "niche", "kuri", "tile", "sconce", "outlet", "accent"]},
+    {kind: "kitchen", label: "キッチン・ダイニング", test: /キッチン|台所|ダイニング/, members: ["counter", "cshelf", "tile", "under", "outlet", "switch", "niche", "kuri", "board"]},
+    {kind: "living", label: "居室", test: /./, members: ["tvwall", "picrail", "roll", "blind", "duct", "tv", "lan", "sensor", "dimmer", "eco", "rod", "curtbox", "accent", "board", "tile", "shikkui", "waist", "sconce", "indirect", "outlet", "switch", "niche", "kuri", "counter", "cshelf", "under"]}
   ];
   var BR219 = {
     elec: {label: "電気", members: ["outlet", "switch", "alarm", "sconce", "indirect", "tv", "lan", "usb", "sensor", "dimmer", "doorphone", "panel", "duct", "spot", "pendant"], slots: ["分電盤"]},
@@ -19219,6 +19288,46 @@ setInterval(gkSync208, 600);
   };
 
   HB.__cad220 = {keys: Object.keys(ADD220)};
+})();
+</script>
+<script>
+/* ================= CAD-222：くりぬき（壁を貫通させる物） =================
+   本人の確認（2026-11-12）：ニッチはその面だけ、くりぬきは壁をくり抜いて貫通し、両面に出る。
+   ・fx の記録に sd（面）を持たせない形にする。描画（fxSvg／fxSvgFace189）と当たり判定
+     （fxHitItem／faceHitItem）は、sd がある時だけ片面に絞る作りなので、sd が無ければ
+     両面に出て、両面から選べる。記録は1つなので、片側から消せば両方消える。
+   ・置く操作（fxPlace／fxPlaceArea）は間仕切りで sd を付けるので、置いた直後に
+     くりぬきだけ sd を外すよう包む（CAD-220 と同じ後段方式）。
+   ・見積はニッチと同じ「か所」で拾う。仮単価 fxKuri＝18,000円/か所（材工）。 */
+(function(){
+  "use strict";
+  try {
+    FK.kuri = ["くりぬき", "area"];
+    FKDEF.kuri = {len: 600, z: 1200, hgt: 400};
+    FKPRE.kuri = {w: [300, 450, 600], h: [300, 400, 600]};
+    if (!AREA.includes("kuri")) AREA.push("kuri");
+    FKCOL.kuri = "#3A332A";
+    WORK.push(["fxKuri", "くりぬき（貫通・材工）", "円/か所", 0, 18000]);
+    var fxRows222base = fxRows;
+    fxRows = function(work, sheet){
+      fxRows222base(work, sheet);
+      var n = (S.fx || []).filter(function(f){ return f.k === "kuri"; }).length;
+      if (n) work("fxKuri", "くりぬき（貫通）", n, "か所");
+    };
+    var stripSd222 = function(n0){
+      try {
+        if ((S.fx || []).length > n0){
+          var f = S.fx[S.fx.length - 1];
+          if (f && f.k === "kuri" && f.sd){ delete f.sd; save(); }
+        }
+      } catch(e){}
+    };
+    var fxPlace222base = fxPlace;
+    fxPlace = function(hit){ var n0 = (S.fx || []).length; var r = fxPlace222base(hit); stripSd222(n0); return r; };
+    var fxPlaceArea222base = fxPlaceArea;
+    fxPlaceArea = function(a, b){ var n0 = (S.fx || []).length; var r = fxPlaceArea222base(a, b); stripSd222(n0); return r; };
+    HB.__cad222 = {kuri: true, fxKuriPrice: 18000};
+  } catch(e){}
 })();
 </script>
 </body>
