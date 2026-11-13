@@ -18824,5 +18824,215 @@ setInterval(gkSync208, 600);
   window.__landView218 = { shown: function(){ return shown; }, sync: sync218 };
 })();
 </script>
+<style id="cad219Sty">
+/* CAD-219: ③室内図の土台。
+   1) 室内図（room表示）の間は表示タブ #pvSeg を出さない（立体図・完成の平面図は⑤完成図の画面だけに寄せる）。
+   2) 小さい平面図 #miniPlan219 は室内図の時だけ出す（壁の辺タップで面を選ぶ）。
+   3) パレットの枝バー #fxBranch219 も室内図の時だけ出す（場所ベースの枝の器）。 */
+#st6[data-v162="room"]:not(.pvOn) #pvSeg{display:none!important}
+#st6:not([data-v162="room"]) #miniPlan219{display:none!important}
+#st6:not([data-v162="room"]) #fxBranch219{display:none!important}
+#miniPlan219{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px;margin-bottom:8px}
+#miniPlan219 .mpCap{font-size:12px;font-weight:700;color:#5B6673;margin:0 0 4px}
+#miniPlan219 svg{display:block;width:100%;height:auto}
+#miniPlan219 .mfHit{cursor:pointer}
+#miniPlan219 .mfRoom{cursor:pointer}
+#elevBox .card.mfCard219{outline:3px solid #FF00C8;outline-offset:-3px}
+#fxBranch219{margin-top:8px}
+#fxBranch219 .fbRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#fxBranch219 .fbRow button{min-height:38px;padding:0 12px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--ai);font-weight:800;font-size:13.5px}
+#fxBranch219 .fbRow button[aria-pressed="true"]{background:var(--ai);color:#fff;border-color:var(--ai)}
+#fxBranch219 .fbRow button[disabled]{opacity:.5;color:#5B6673}
+#fxBranch219 .fbCap{font-size:12px;color:#5B6673;margin:4px 2px 0;line-height:1.5}
+</style>
+<script>
+/* ================= CAD-219：③室内図の土台 =================
+   本人の決定（2026-11-12/13）に基づく3点。新しい物の追加は次版 CAD-220 で行うため、
+   ここでは「器」だけを作り、既存の項目・見積・保存キー・データ構造は一切変えない。
+   1. 室内図に小さい平面図を常に出す：平面図の壁の辺をタップすると、その壁の面が選ばれ、
+      面のカード（従来の壁の一覧＝#elevBox）にも印が付き、自動でスクロールして出る。
+      選ばれている辺は、その辺だけが点滅する（画面全体は光らせない）。
+      平面図の部屋の部分をタップすると、その部屋に切り替わる。
+   2. 立体図と室内図の混ざりの整理：室内図（room表示）の間は表示タブ #pvSeg を出さない
+      （上の CSS）。立体図・完成の平面図は⑤完成図の画面（手順バーの「完成図」）だけに寄せる。
+   3. パレットの派生を場所ベースに組み替える器：#fxMenu の上に枝バーを置く。
+      枝は「この部屋でよく使う（部屋の場所から決まる）／電気／設備／全部」。
+      枝を選ぶと、その枝の物だけが #fxMenu に出る（全部の項目は「全部」で従来通り全部出る）。
+      電気と設備は別々の枝。分電盤は電気の枝に「準備中」の場所を用意した（本体は CAD-220）。
+      新しい物は、この下の PLACE219／BR219 の表に足すだけで枝に入る。 */
+(function(){
+  "use strict";
+  var $219 = function(id){ return document.getElementById(id); };
+  /* ---------- 枝の定義（場所ベース。CAD-220 で物を足す時はここへ） ---------- */
+  var PLACE219 = [
+    {kind: "water", label: "水まわり", test: /トイレ|便所|洗面|脱衣|浴室|風呂|サニタリー/, members: ["rail", "under", "tile", "sconce", "hanger"]},
+    {kind: "storage", label: "収納", test: /収納|クローゼット|納戸|押入|物入|ウォークイン/, members: ["cshelf", "counter", "under", "rail"]},
+    {kind: "hall", label: "玄関・廊下", test: /玄関|廊下|ホール|土間/, members: ["hanger", "rail", "niche", "tile", "sconce", "outlet", "accent"]},
+    {kind: "kitchen", label: "キッチン・ダイニング", test: /キッチン|台所|ダイニング/, members: ["counter", "cshelf", "tile", "under", "outlet", "switch", "niche", "board"]},
+    {kind: "living", label: "居室", test: /./, members: ["rod", "curtbox", "accent", "board", "tile", "shikkui", "waist", "sconce", "indirect", "outlet", "switch", "niche", "counter", "cshelf", "under"]}
+  ];
+  var BR219 = {
+    elec: {label: "電気", members: ["outlet", "switch", "alarm", "sconce", "indirect"], slots: ["分電盤"]},
+    setsubi: {label: "設備", members: ["hanger"], slots: []}
+  };
+  var state = {selFi: -1, selCid: null, brMode: "place", brCid: null};
+  window.__mini219 = state;   /* 検証用に状態を出す（HB 内部専用の口と同じ扱い） */
+
+  function faces219(){
+    try { if (typeof elevFaces !== "undefined" && elevFaces && elevFaces.length) return elevFaces; } catch(e){}
+    try { return roomFaces(); } catch(e){ return []; }
+  }
+  function curRoom219(){ try { return selRoom(); } catch(e){ return null; } }
+  function isRoomView219(){
+    var st6 = $219("st6"); if (!st6) return false;
+    if (st6.classList.contains("pvOn")) return false;
+    try { if (HB.__v162 && HB.__v162.view) return HB.__v162.view() === "room"; } catch(e){}
+    return st6.getAttribute("data-v162") === "room";
+  }
+
+  /* ---------- 1. 小さい平面図 ---------- */
+  function renderMini219(){
+    var svg = $219("miniSvg219"); if (!svg) return;
+    var sr = curRoom219();
+    var R = null; try { R = roomsCalc(); } catch(e){}
+    if (!sr || !R || !R.rooms || !R.rooms.length){ svg.innerHTML = ""; return; }
+    if (state.selCid !== sr.cid){ state.selFi = -1; state.selCid = sr.cid; }
+    var b = bbox(), pad = 420, W = b.w + pad * 2, H = b.h + pad * 2;
+    var X = function(x){ return x - b.x0 + pad; }, Y = function(y){ return y - b.y0 + pad; };
+    var h = "";
+    R.rooms.forEach(function(r){
+      var on = r.cid === sr.cid;
+      h += "<g class=\"mfRoom\" data-mroom=\"" + r.cid + "\">";
+      r.cells.forEach(function(k){
+        var ix = k % R.NX, iy = Math.floor(k / R.NX);
+        h += "<rect x=\"" + X(R.b.x0 + ix * R.st) + "\" y=\"" + Y(R.b.y0 + iy * R.st) + "\" width=\"" + R.st + "\" height=\"" + R.st + "\" fill=\"" + (on ? "#FFE7C7" : "#EDF2F8") + "\"/>";
+      });
+      h += "</g>";
+    });
+    (S.parts2D || []).forEach(function(q){
+      try { if (pState(q) === "remove") return; } catch(e){}
+      h += "<line x1=\"" + X(q.x1) + "\" y1=\"" + Y(q.y1) + "\" x2=\"" + X(q.x2) + "\" y2=\"" + Y(q.y2) + "\" stroke=\"#5B6673\" stroke-width=\"42\"/>";
+    });
+    var pp = pts();
+    h += "<polygon points=\"" + pp.map(function(q){ return X(q[0]) + "," + Y(q[1]); }).join(" ") + "\" fill=\"none\" stroke=\"#1F2833\" stroke-width=\"60\"/>";
+    R.rooms.forEach(function(r){
+      var on = r.cid === sr.cid;
+      h += "<text x=\"" + X(r.p[0]) + "\" y=\"" + Y(r.p[1]) + "\" text-anchor=\"middle\" pointer-events=\"none\" style=\"font-size:300px;font-weight:900;fill:" + (on ? "#C2571A" : "#5B7BA6") + "\">" + esc(roomLbl(r)) + "</text>";
+    });
+    var F = faces219();
+    F.forEach(function(f, fi){
+      var ax = X(f.o[0]), ay = Y(f.o[1]), bx = X(f.o[0] + f.r[0] * f.len), by = Y(f.o[1] + f.r[1] * f.len), selF = fi === state.selFi;
+      if (selF) h += "<line class=\"selBlink\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"#FF00C8\" stroke-width=\"230\" stroke-linecap=\"round\" pointer-events=\"none\"/>";
+      h += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"95\" stroke-linecap=\"round\" opacity=\".85\" pointer-events=\"none\"/>";
+      h += "<line class=\"mfHit\" data-mfi=\"" + fi + "\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"520\" stroke-linecap=\"round\"/>";
+    });
+    svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+    svg.innerHTML = h;
+  }
+  function markCard219(scroll){
+    var box = $219("elevBox"); if (!box) return;
+    var cards = box.querySelectorAll(".card");
+    for (var i = 0; i < cards.length; i++) cards[i].classList.toggle("mfCard219", i === state.selFi);
+    if (scroll && state.selFi >= 0 && cards[state.selFi]){ try { cards[state.selFi].scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} }
+  }
+  function selectFace219(fi){
+    state.selFi = fi;
+    renderMini219();
+    markCard219(true);
+  }
+  document.addEventListener("click", function(e){
+    var t = e.target; if (!t || !t.closest) return;
+    var svg = $219("miniSvg219"); if (!svg || !svg.contains(t)) return;
+    var hit = t.closest("[data-mfi]");
+    if (hit){ selectFace219(+hit.getAttribute("data-mfi")); return; }
+    var rm = t.closest("[data-mroom]");
+    if (rm){
+      try {
+        var R = roomsCalc(), room = R && R.byCid ? R.byCid[+rm.getAttribute("data-mroom")] : null, sr = curRoom219();
+        if (room && (!sr || sr.cid !== room.cid)){ S.roomPt = room.p; save(); drawRoom(); }
+      } catch(err){}
+    }
+  }, true);
+
+  /* ---------- 3. 場所ベースの枝（器） ---------- */
+  function roomKind219(){
+    var sr = curRoom219(); if (!sr) return null;
+    var nm = ""; try { nm = roomLbl(sr) || ""; } catch(e){}
+    for (var i = 0; i < PLACE219.length; i++){ if (PLACE219[i].test.test(nm)) return PLACE219[i]; }
+    return PLACE219[PLACE219.length - 1];
+  }
+  function effBranch219(){
+    if (state.brMode === "elec") return {key: "elec", label: "電気", members: BR219.elec.members};
+    if (state.brMode === "setsubi") return {key: "setsubi", label: "設備", members: BR219.setsubi.members};
+    if (state.brMode === "all") return {key: "all", label: "全部", members: null};
+    var k = roomKind219();
+    if (!k) return {key: "all", label: "全部", members: null};
+    return {key: "place:" + k.kind, label: k.label, members: k.members};
+  }
+  function renderBranch219(){
+    var bar = $219("fxBranch219"); if (!bar) return;
+    var eff = effBranch219();
+    var btn = function(mode, label){ return "<button type=\"button\" data-br219=\"" + mode + "\" aria-pressed=\"" + String(state.brMode === mode) + "\">" + label + "</button>"; };
+    var h = "<div class=\"fbRow\">" + btn("place", "この部屋でよく使う") + btn("elec", "電気") + btn("setsubi", "設備") + btn("all", "全部");
+    if (eff.key === "elec") BR219.elec.slots.forEach(function(s){ h += "<button type=\"button\" disabled title=\"次の版で追加します\">" + s + "（準備中）</button>"; });
+    h += "</div>";
+    h += "<p class=\"fbCap\">" + (eff.key === "all" ? "全部の項目を出しています。"
+      : eff.key === "elec" ? "電気の枝です。設備とは分かれています。"
+      : eff.key === "setsubi" ? "設備の枝です。電気とは分かれています。"
+      : "「" + eff.label + "」でよく使う物を出しています。全部の項目は「全部」から出せます。") + "</p>";
+    bar.innerHTML = h;
+    bar.querySelectorAll("[data-br219]").forEach(function(bd){
+      bd.onclick = function(){ state.brMode = bd.getAttribute("data-br219"); renderBranch219(); applyBranch219(); };
+    });
+  }
+  function applyBranch219(){
+    var menu = $219("fxMenu"); if (!menu) return;
+    var roomView = isRoomView219(), eff = effBranch219();
+    var pend = null; try { pend = fxPending; } catch(e){}
+    menu.querySelectorAll("[data-fk]").forEach(function(bd){
+      if (!roomView || !eff.members){ bd.style.display = ""; return; }
+      var k = bd.getAttribute("data-fk");
+      bd.style.display = (eff.members.indexOf(k) >= 0 || pend === k) ? "" : "none";
+    });
+  }
+
+  /* ---------- 同期（既存の sync162 と同じ作法：定期チェックで描き直しに追随） ---------- */
+  var lastSig219 = "";
+  function sync219(){
+    var sr = curRoom219();
+    if (sr && state.brCid !== sr.cid){ state.brCid = sr.cid; state.brMode = "place"; state.selFi = -1; state.selCid = sr.cid; }
+    var F = []; try { F = faces219(); } catch(e){}
+    var sig = [typeof step !== "undefined" ? String(step) : "", isRoomView219() ? "room" : "other",
+      sr ? sr.cid : "-", F.length, state.selFi, state.brMode, sr ? roomLbl(sr) : ""].join("|");
+    if (sig === lastSig219) return;
+    lastSig219 = sig;
+    if (isRoomView219()){ renderMini219(); renderBranch219(); }
+    applyBranch219();
+    markCard219(false);
+  }
+  function init219(){
+    var rb = $219("roomBar");
+    if (rb && !$219("miniPlan219")){
+      var mp = document.createElement("div"); mp.id = "miniPlan219";
+      mp.innerHTML = "<p class=\"mpCap\">平面図：壁の辺をタップすると、その面のカードが出ます</p><svg id=\"miniSvg219\" viewBox=\"0 0 360 300\" aria-label=\"小さい平面図\"></svg>";
+      rb.parentNode.insertBefore(mp, rb.nextSibling);
+    }
+    var menu = $219("fxMenu");
+    if (menu && !$219("fxBranch219")){
+      var bb = document.createElement("div"); bb.id = "fxBranch219";
+      menu.parentNode.insertBefore(bb, menu);
+    }
+    try {
+      var mo = new MutationObserver(function(){ applyBranch219(); });
+      if (menu) mo.observe(menu, {childList: true});
+    } catch(e){}
+    setInterval(sync219, 400);
+    sync219();
+  }
+  init219();
+  HB.__cad219 = {state: state, selectFace: selectFace219, branch: effBranch219, sync: sync219};
+})();
+</script>
 </body>
+</html>
 </html>
