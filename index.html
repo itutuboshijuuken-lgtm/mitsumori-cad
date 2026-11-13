@@ -5727,8 +5727,8 @@ function framePos(){
             const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
             if (seen.has(kk)) continue; seen.add(kk); Z.opPosN++;
             const thick = k % 2 === 0;
-            if (sill > 0){ Z.opStuds.push({x, y, thick, seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
-            if (upLen > 0){ Z.opStuds.push({x, y, thick, seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
+            if (sill > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
+            if (upLen > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
           }
         });
       });
@@ -5736,11 +5736,12 @@ function framePos(){
     const cls = (x, y) => ({f: runs.some(r => r.kind === "e" && onRun(r, x, y)), p: runs.some(r => r.kind === "p" && r.isNew && onRun(r, x, y))});
     postMap.forEach(P0 => {
       const c = cls(P0.x, P0.y);
-      Z.posts.push({x: P0.x, y: P0.y});
+      Z.posts.push({x: P0.x, y: P0.y, k: c.f ? "f" : (c.p ? "p" : "")});
       if (c.f) Z.frameN++; else if (c.p) Z.partPostN++;
     });
     studMap.forEach(S0 => {
       const c = cls(S0.x, S0.y);
+      S0.k = c.f ? "f" : (c.p ? "p" : "");
       Z.studs.push(S0);
       if (c.f){ Z.studN++; if (S0.thick) Z.thick++; else Z.thin++; }
       else if (c.p){ Z.partStudN++; if (S0.thick) Z.partThick++; else Z.partThin++; }
@@ -12654,10 +12655,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   /* ===== 柱・間柱の位置と本数（calc00 の数え方をそのまま写す） ===== */
   function pvFrame(){
     const b = bbox(), F6 = framePos();
-    const posts = F6.posts.map(q => ({x: q.x, y: q.y}));
-    const studs = F6.studs.map(q => ({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}));
+    // CAD-209: 印は全モード共通で「見積で数えている柱・間柱」だけ（本人の決定 2026-11-13）。
+    // どう拾っているかを目で確かめるための表示なので、数えていない物は出さない。
+    // zo は従来通り全部。rf は新設間仕切りだけ（見積の partNewRows が数える分。既存の家の
+    // 柱・間柱は見積に入らないので出さない）。pt は見積が柱・間柱を数えないので無し。
+    // 切り分けは framePos が付けた k（f=外壁まわり／p=新設間仕切り）を使う。
+    const cntK = q => S.mode === "zo" ? true : S.mode === "rf" ? q.k === "p" : false;
+    const posts = F6.posts.filter(cntK).map(q => ({x: q.x, y: q.y}));
+    const studs = F6.studs.filter(cntK).map(q => ({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}));
     // CAD-161: 開口まわりの短い間柱も、間柱として同じ細長い長方形で描く（位置は下・上で同じ1か所）
-    { const seenOp = new Set(); (F6.opStuds || []).forEach(q => { const kk = Math.round(q.x * 2) + "," + Math.round(q.y * 2); if (seenOp.has(kk)) return; seenOp.add(kk); studs.push({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}); }); }
+    { const seenOp = new Set(); (F6.opStuds || []).forEach(q => { if (!cntK(q)) return; const kk = Math.round(q.x * 2) + "," + Math.round(q.y * 2); if (seenOp.has(kk)) return; seenOp.add(kk); studs.push({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}); }); }
     let intN = 0, two = false;
     try {
       if (S.mode === "zo"){
@@ -12697,7 +12704,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         }
       }
     } catch(e){}
-    return {posts, studs, cols: F6.frameN + F6.partPostN + intN, frameCols: F6.frameN, corners: S.edges.length, intN, studN: F6.studN, thick: F6.thick, thin: F6.thin, partN: F6.partPostN, partStudN: F6.partStudN, partThick: F6.partThick, partThin: F6.partThin, opN: (F6.opDnN || 0) + (F6.opUpN || 0), opDn: F6.opDnN || 0, opUp: F6.opUpN || 0, opPos: F6.opPosN || 0, two};
+    const zo = S.mode === "zo", rf = S.mode === "rf";
+    return {posts, studs, cols: zo ? F6.frameN + F6.partPostN + intN : rf ? F6.partPostN : 0, frameCols: zo ? F6.frameN : 0, corners: S.edges.length, intN: zo ? intN : 0, studN: zo ? F6.studN : rf ? F6.partStudN : 0, thick: zo ? F6.thick : rf ? F6.partThick : 0, thin: zo ? F6.thin : rf ? F6.partThin : 0, partN: zo ? F6.partPostN : 0, partStudN: zo ? F6.partStudN : 0, partThick: zo ? F6.partThick : 0, partThin: zo ? F6.partThin : 0, opN: zo ? (F6.opDnN || 0) + (F6.opUpN || 0) : 0, opDn: zo ? F6.opDnN || 0 : 0, opUp: zo ? F6.opUpN || 0 : 0, opPos: zo ? F6.opPosN || 0 : 0, two: zo ? two : false, cnt: posts.length + studs.length};
   }
 
   /* ===== 寸法線 ===== */
@@ -12929,10 +12937,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   /* ===== 凡例 ===== */
   function pvLegend(F){
     const el = $id("pvLegend"), btn = $id("pvStruct"); if (!el) return;
-    const zo = S.mode === "zo";
-    if (btn) btn.style.display = zo ? "" : "none";
-    if (!zo){ el.innerHTML = "柱・間柱の表示は、新築・増築モードで見積と連動します。"; return; }
+    if (btn) btn.style.display = "";
     if (!pvStructOn || !F){ el.innerHTML = "「柱・間柱を表示」を押すと、見積で数えている柱・間柱の位置と本数が、そのまま図の上で確かめられます。"; return; }
+    if (!F.cnt){ el.innerHTML = "見積で数えている柱・間柱はありません。"; return; }
     const sq = inner => `<svg width="13" height="13" viewBox="0 0 13 13" style="vertical-align:-2px">${inner}</svg>`;
     const postIc = sq(`<rect x="1" y="1" width="11" height="11" fill="#111"/>`);
     const studIc = sq(`<rect x="4.5" y="1" width="4" height="11" fill="#fff" stroke="#111" stroke-width="1.4"/>`);   // CAD-190: 描画の向きに合わせて縦長
@@ -12964,7 +12971,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     g += pvSashes(P, s, bandO, bandP);
     g += pvRooms(P);
     const F = pvFrame();
-    if (pvStructOn && S.mode === "zo") g += pvMarks(P, F, bandO, s);
+    if (pvStructOn) g += pvMarks(P, F, bandO, s);
     g += pvNorth(W);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.innerHTML = g;
