@@ -3605,6 +3605,35 @@ function enclStartEdit(kind, i){
   })();
   if (HB.__eseSeg50){ try { if (kind === "t" && typeof encl !== "undefined" && encl && encl.edit) encl.edit.st = "new"; } catch(e){} }   /* 旧 blk50 後段：床の範囲では状態を引き継がない */
 }
+/* CAD-212: 囲み編集でゾーン・床レコードを小さく（または消去）した時、空いた分を
+   「切り取られていた隣の床レコード」へ戻す。fixAssign は後勝ちで床レコードを切り取る
+   だけで、切り取った相手が縮んでも戻す処理が無かったため、空いた分が標準の床
+   （初期設定の仕上げ）に落ちて、図面では白い帯・見積では別の床になっていた。
+   戻す先は、空いた四角と辺を共有し、合わせると1つの四角になり、間に壁が無い
+   床レコードだけ（壁の向こうの床には戻さない）。戻した切れ端は fixAssign の
+   mergeAssign が本体と合体させる。隣が「残りの床」だけの所は、見積が元々
+   延床から引いて数えているので何もしない。 */
+function restoreFloorVacated212(oldR, newR){
+  if (!oldR) return;
+  let vac = newR ? rectSub({x0: oldR.x0, y0: oldR.y0, x1: oldR.x1, y1: oldR.y1}, newR) : [{x0: oldR.x0, y0: oldR.y0, x1: oldR.x1, y1: oldR.y1}];
+  vac = vac.map(q => ({x0: q.x0, y0: q.y0, x1: q.x1, y1: q.y1})).filter(q => q.x1 - q.x0 >= 100 && q.y1 - q.y0 >= 100);
+  if (!vac.length) return;
+  const wallOn = (vert, c, lo, hi) => (S.parts2D || []).some(q => pState(q) !== "remove" && (vert ? (Math.abs(q.x1 - q.x2) < 1 && Math.abs(q.x1 - c) < 1 && Math.min(q.y1, q.y2) < hi - 1 && Math.max(q.y1, q.y2) > lo + 1) : (Math.abs(q.y1 - q.y2) < 1 && Math.abs(q.y1 - c) < 1 && Math.min(q.x1, q.x2) < hi - 1 && Math.max(q.x1, q.x2) > lo + 1)));
+  vac.forEach(p => {
+    let best = null, bestLen = 0;
+    (S.tatami || []).forEach(r => {
+      if (!r || r.x1 - r.x0 < 100 || r.y1 - r.y0 < 100) return;
+      if (newR && r.x0 === newR.x0 && r.y0 === newR.y0 && r.x1 === newR.x1 && r.y1 === newR.y1) return;   /* 直した本人には戻さない */
+      let len = 0, vert = null, c = 0;
+      if (r.x0 === p.x0 && r.x1 === p.x1 && (r.y1 === p.y0 || r.y0 === p.y1)){ len = p.x1 - p.x0; vert = false; c = (r.y1 === p.y0) ? p.y0 : p.y1; }
+      else if (r.y0 === p.y0 && r.y1 === p.y1 && (r.x1 === p.x0 || r.x0 === p.x1)){ len = p.y1 - p.y0; vert = true; c = (r.x1 === p.x0) ? p.x0 : p.x1; }
+      if (!len || len <= bestLen) return;
+      if (wallOn(vert, c, vert ? p.y0 : p.x0, vert ? p.y1 : p.x1)) return;
+      best = r; bestLen = len;
+    });
+    if (best) S.tatami.push(cpRec141(best, {x0: p.x0, y0: p.y0, x1: p.x1, y1: p.y1}));
+  });
+}
 function enclApply(type){
   if (!encl || !encl.r) return;
   const r = encl.r, rr = {x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1}, w = rr.x1 - rr.x0, h = rr.y1 - rr.y0, ed = encl.edit, sz = `${f5(w)}×${f5(h)}`;
@@ -3612,8 +3641,9 @@ if (encl.edit && encl.edit.kind === "room"){ enclRoomApply(type); return; }
   if (ed){
     pushUndo();
     const arr = ed.kind === "t" ? S.tatami : S.zones, old = arr.splice(ed.i, 1)[0];
-    if (type === "del"){ enclFinish("消去"); return; }
+    if (type === "del"){ if (old) restoreFloorVacated212(old, null); enclFinish("消去"); return; }
     placeAssign(type, rr, ed.st, ed.kind === "z" && old && old.k === type ? old.id : null);
+    if (old) restoreFloorVacated212(old, rr);   /* CAD-212: 小さくして空いた分を、隣の床レコードへ戻す */
     if (ed.kind === "z" && old && old.k === type && type === "ub" && old.door){ const nz205 = S.zones[S.zones.length - 1]; if (nz205 && nz205.id === old.id) nz205.door = old.door; }   /* CAD-205：浴室の入口は寸法の直しでも引き継ぐ */
     enclFinish(`${type === "tatami" ? "畳" : ZT[type][0]} ${sz}`); return;
   }
@@ -14933,10 +14963,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var fk = armFk138(kind, det);
       var r0 = (!encl.edit && encl.raw) ? encl.raw : encl.r, rect = {x0: r0.x0, y0: r0.y0, x1: r0.x1, y1: r0.y1};
       pushUndo();
-      if (encl.edit){ var arr = encl.edit.kind === "t" ? S.tatami : S.zones; if (arr) arr.splice(encl.edit.i, 1); }
+      var oldRec212 = null;
+      if (encl.edit){ var arr = encl.edit.kind === "t" ? S.tatami : S.zones; if (arr){ oldRec212 = arr[encl.edit.i] || null; arr.splice(encl.edit.i, 1); } }
       HB.__pushFloor(rect, fk);
       var rec = (S.tatami || [])[(S.tatami || []).length - 1];
       if (rec) applyDet138(rec, kind, det);
+      if (oldRec212 && typeof restoreFloorVacated212 === "function") restoreFloorVacated212(oldRec212, rect);   /* CAD-212: 小さくして空いた分を、隣の床レコードへ戻す */
       var nm = kindName138(kind, det);
       closeBar138();
       enclFinish("床 " + nm + " " + fmt((rect.x1 - rect.x0) * (rect.y1 - rect.y0) / 1e6, 1) + "㎡");
@@ -16918,6 +16950,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       pushUndo();
       var nr = cpRec141(old, { x0: encl.r.x0, y0: encl.r.y0, x1: encl.r.x1, y1: encl.r.y1 });
       S.tatami[ed.i] = nr;
+      if (typeof restoreFloorVacated212 === "function") restoreFloorVacated212(old, nr);   /* CAD-212: 小さくして空いた分を、隣の床レコードへ戻す */
       var A = ((nr.x1 - nr.x0) * (nr.y1 - nr.y0) / 1e6).toFixed(2);
       enclFinish("床 " + ed.flName + " " + A + "㎡");
     } catch(err){}
