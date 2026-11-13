@@ -428,6 +428,8 @@ body.pt .steps{grid-template-columns:repeat(2,1fr)!important}
 </style>
 </head>
 <body>
+<script>/* CAD-194: 画面デザイン（黒×金）の先行適用。描画前に保存済みの見た目を付ける */
+try{ if (localStorage.getItem("gosei-theme-v1") === "gold") document.body.classList.add("gold"); }catch(e){}</script>
 <header class="top">
   <div class="bar"><h1>見積即答CAD</h1><div style="display:flex;gap:6px"><button id="saveBtn" type="button" style="background:#fff;color:var(--ai);border-color:#fff">保存</button><details class="mo"><summary>⋯</summary><div class="mm"><button id="photoBtn" type="button">写真</button><button id="shoruiBtn" type="button">書類</button><button id="priceBtn" type="button">単価表</button><button id="newBtn" type="button">現場一覧</button></div></details><script>
 // アプリ名：「見積即答CAD」に決定（2026/11/3）。変えるときはここ1か所だけ
@@ -472,10 +474,10 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     </div>
     <h2 class="shp">または、指で外形を描く</h2>
     <div class="card"><svg id="draw" viewBox="0 0 360 418" aria-label="指で形を描く所">
-      <defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#2A2F36" stroke-width="1"/></pattern></defs>
-      <rect width="360" height="418" fill="#15181C"/><rect width="360" height="418" fill="url(#grid)"/>
-      <g id="inkG" fill="none" stroke="#E3C777" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px rgba(227,199,119,.8))"></g>
-      <text id="drawHint" x="180" y="180" text-anchor="middle" style="font-size:16px;font-weight:700;fill:#B9B4A6">指で外形をなぞってください</text>
+      <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9F0" stroke-width="1"/></pattern><pattern id="gridGold" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#2A2F36" stroke-width="1"/></pattern></defs>
+      <rect id="drawGround" width="360" height="418" fill="#15181C"/><rect id="gridRect" width="360" height="418" fill="url(#grid)"/>
+      <g id="inkG" fill="none" stroke="#2563B0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>
+      <text id="drawHint" x="180" y="180" text-anchor="middle" style="font-size:16px;font-weight:700;fill:#8A96A3">指で外形をなぞってください</text>
     </svg></div>
     <p class="hint">指で<b>おおよその外形</b>を一周なぞると、<b>自動で直線に整います</b>。何回かに分けて描いた時は「整える」を押してください。</p>
     <div class="row"><button class="btn sub" id="clearInk" type="button">クリア</button><button class="btn pri" id="fixInk" type="button">整える</button></div>
@@ -1446,6 +1448,8 @@ function projectSheet(){
     <p class="hint">入力した内容は、変えるたびにこのスマホへ自動で保存されます。${CL ? `クラウドにも自動で控えを取っています（最後：${clLast.at ? new Date(clLast.at).toLocaleString("ja-JP", {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"}) : "まだ"}）。機種変更や消えた時は「クラウドから戻す」を押してください。` : ""}</p>
     ${CL ? `<button class="btn" id="clRestore" type="button" style="width:100%">☁ クラウドから戻す</button>` : ""}
     <div class="row"><button class="btn" id="coBtn" type="button" style="flex:1">🏢 会社名・電話を設定</button></div>
+    <p class="hint" style="margin:10px 2px 4px">画面デザイン（作業画面の色です。完成図と書類は、どちらでも変わりません）</p>
+    <div class="seg" id="themeSeg"><button data-th="std" type="button" aria-pressed="${themeNow194() === "std"}">標準</button><button data-th="gold" type="button" aria-pressed="${themeNow194() === "gold"}">黒×金</button></div>
     <div class="row"><button class="btn" id="sampleOpen" type="button" style="flex:1">🔍 確認用の見本を開く</button></div>
     <div class="row"><button class="btn" id="bkOut" type="button" style="flex:1">💾 バックアップ保存</button><button class="btn" id="bkIn" type="button" style="flex:1">📂 読み込む</button></div>
     <p class="hint">バックアップ保存＝現場・見積・台帳・顧客・書類・単価表・設定を1つのファイルに保存します（写真は含まれません）。新しい版や別のスマホでは「読み込む」で元に戻せます。</p>
@@ -1456,6 +1460,7 @@ function projectSheet(){
   $("phCur").onclick = () => { save(); $("modal").hidden = true; openPhotos(PJ.cur, S.genba || "現場"); };
   if ($("clRestore")) $("clRestore").onclick = cloudRestore;
   $("bkOut").onclick = bkExport; $("bkIn").onclick = bkImport; $("coBtn").onclick = coSheet; $("sampleOpen").onclick = openSampleHouse;
+  $("mbox").querySelectorAll("[data-th]").forEach(b => b.onclick = () => { setTheme194(b.dataset.th); $("mbox").querySelectorAll("[data-th]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.th === b.dataset.th))); });
   $("pjNew").onclick = () => { newProject($("pjName").value.trim()); $("modal").hidden = true; toast("新しい現場を作りました"); go(S.mode === "pt" ? 4 : 1); };
   $("mbox").querySelectorAll("[data-po]").forEach(b => b.onclick = () => { save(); loadProject(b.dataset.po); $("modal").hidden = true; clearInk(); go(S.mode === "pt" ? 4 : S.edges ? 2 : 1); toast(`「${S.genba || "現場"}」を開きました`); });
   $("mbox").querySelectorAll("[data-pc2]").forEach(b => b.onclick = () => { save(); const src = LSg("zochiku-p-" + b.dataset.pc2) || {}, id = "p" + Date.now().toString(36), nm = (src.genba || "現場") + "（コピー）"; src.genba = nm; LSs("zochiku-p-" + id, src); PJ.list.unshift({id, name: nm, upd: Date.now(), mode: src.mode}); LSs("zochiku-projects-v1", PJ); projectSheet(); });
@@ -17036,29 +17041,86 @@ fxHitItem = function(q){
 </script>
 
 
-<style id="gold193">
-/* CAD-193 試し: 「描く」画面（#st1）だけ金×黒。色は Claude 動画の実物（Claudeから-動画の金×黒の色-1113.md） */
-#st1{margin:-12px -12px 0;padding:14px 12px 20px;background:radial-gradient(130% 55% at 50% 0%,#2A2418 0%,#14161A 55%,#0B0D10 100%);border-radius:0 0 18px 18px;color:#FFFFFF}
-#st1 h2{color:#FFFFFF}
-#st1 .hint{color:#B9B4A6}
-#st1 .hint b{color:#F5E3A6}
-#st1 .card{background:#15181C;border-color:#3A3D44;color:#FFFFFF}
-#st1 .seg{background:#1F2328;border-bottom:2px solid #B08A3E}
-#st1 .seg button{color:#B9B4A6}
-#st1 .seg button[aria-pressed="true"]{background:#0B0D10;color:#E3C777;box-shadow:inset 0 -2px 0 #B08A3E}
-#st1 .btn{background:#1F2328;border-color:#B08A3E;color:#F5E3A6}
-#st1 .btn.pri{background:#B08A3E;border-color:#B08A3E;color:#14161A}
-#st1 .btn.sub{background:#1F2328;border-color:#3A3D44;color:#B9B4A6}
-#st1 .set{border-bottom-color:#3A3D44;color:#FFFFFF}
-#st1 .set span small{color:#B9B4A6}
-#st1 .set b{color:#F5E3A6;background:#1F2328}
-#st1 .tsopts button{background:#1F2328;border-color:#3A3D44;color:#FFFFFF}
-#st1 .tsopts small{color:#B9B4A6}
-#st1 .tsopts rect{fill:rgba(227,199,119,.14);stroke:#E3C777}
-#st1 #draw{background:#15181C}
-#st1 #compassBox circle{fill:#1F2328;stroke:#3A3D44}
-#st1 #compassBox path{stroke:#8D9099}
-#st1 #compassBox text{fill:#B9B4A6}
+<style id="theme194">
+/* CAD-194: 画面デザイン切り替え「標準／黒×金」。body.gold の時だけ効く。
+   色は Claude 動画の実物（Claudeから-動画の金×黒の色-1113.md）。
+   対象は作業画面（描く・寸法・間取り・屋根・仕様・見積・単価表）と、共通の帯・ボタン・カード類。
+   完成図の図面（#iso・#pvSvg の載るカード）は白地のまま（下の2行で戻している）。
+   金額の合計はゴールドにしない（.est/.res は暗い帯＋白文字）。点滅の色（#FF00C8／黄色）は不変。 */
+#drawGround{display:none}
+body.gold #drawGround{display:block}
+body.gold{background:#0B0D10}
+body.gold::before{background:#1F2328}
+body.gold #st1,body.gold #st2,body.gold #stM,body.gold #st3,body.gold #st4,body.gold #st5,body.gold #st6,body.gold #stP,body.gold .mbox,body.gold .pad{--bg:#0B0D10;--panel:#15181C;--ink:#FFFFFF;--sub:#B9B4A6;--line:#3A3D44;--ai:#B08A3E;--ai-soft:#2A2F36;--calc:#1F2328;color:#FFFFFF}
+body.gold .top{background:#1F2328;border-bottom:2px solid #B08A3E}
+body.gold .top .bar button{border-color:rgba(227,199,119,.55);color:#F5E3A6}
+body.gold #saveBtn{background:#B08A3E!important;color:#14161A!important;border-color:#B08A3E!important}
+body.gold .mo .mm{background:#15181C;border:1px solid #3A3D44}
+body.gold .top .bar .mo .mm button{background:#1F2328;color:#F5E3A6;border-color:#3A3D44}
+body.gold .steps button{background:rgba(227,199,119,.10);color:#B9B4A6}
+body.gold .steps button[aria-current="step"]{background:#B08A3E;color:#14161A}
+body.gold #st1{margin:-12px -12px 0;padding:14px 12px 20px;background:radial-gradient(130% 55% at 50% 0%,#2A2418 0%,#14161A 55%,#0B0D10 100%);border-radius:0 0 18px 18px}
+body.gold #gridRect{fill:url(#gridGold)}
+body.gold #inkG{stroke:#E3C777;filter:drop-shadow(0 0 3px rgba(227,199,119,.8))}
+body.gold #drawHint{fill:#B9B4A6!important}
+body.gold #draw{background:#15181C}
+body.gold #compassBox circle{fill:#1F2328;stroke:#3A3D44}
+body.gold #compassBox path{stroke:#8D9099}
+body.gold #compassBox text{fill:#B9B4A6}
+body.gold .btn{background:#1F2328;color:#F5E3A6}
+body.gold .btn.pri{color:#14161A}
+body.gold .btn.sub{color:#B9B4A6}
+body.gold .chips button{background:#1F2328;color:#FFFFFF}
+body.gold .chips button[aria-pressed="true"]{background:#B08A3E;color:#14161A;border-color:#B08A3E}
+body.gold .seg{border-bottom:2px solid #B08A3E}
+body.gold .seg button[aria-pressed="true"]{background:#0B0D10;color:#E3C777;box-shadow:inset 0 -2px 0 #B08A3E}
+body.gold .set b{color:#F5E3A6;background:#1F2328}
+body.gold .hint b{color:#F5E3A6}
+body.gold [style*="background:#FFF8DC"]{color:#5B4A00}
+body.gold [style*="background:#FFF8DC"] b{color:#5B4A00}
+body.gold [style*="background:#FFF8E1"]{color:#18202A}
+body.gold .tsopts button{background:#1F2328;border-color:#3A3D44;color:#FFFFFF}
+body.gold .tsopts rect{fill:rgba(227,199,119,.14);stroke:#E3C777}
+body.gold .mrow button{background:#1F2328;color:#FFFFFF}
+body.gold .mrow button.p{color:#E3C777}
+body.gold .ex,body.gold .sash,body.gold .ocr{background:#15181C}
+body.gold .mat{background:#15181C}
+body.gold .mat tr.grp td{background:#2A2519;color:#E3C777}
+body.gold .pgrp{background:#2A2519;color:#E3C777}
+body.gold .est,body.gold .res{background:#1F2328;border:1px solid #B08A3E;color:#FFFFFF}
+body.gold input,body.gold select,body.gold textarea{background:#1F2328;color:#FFFFFF;border-color:#3A3D44}
+body.gold #selBar{background:#15181C}
+body.gold #selBar button,body.gold #fxBar button{background:#1F2328}
+body.gold #selBar .dpad .ar,body.gold #fxBar .dpad .ar{background:#1F2328}
+body.gold #selBar .dpad .ar.on,body.gold #fxBar .dpad .ar.on{background:#B08A3E;color:#FFFFFF}
+body.gold .selgrid button,body.gold .selbtn{background:#1F2328;color:#F5E3A6}
+body.gold .mfloat button{background:rgba(21,24,28,.95)}
+body.gold #zOut,body.gold #zIn,body.gold #zAll,body.gold #zFs{background:#1F2328!important;color:#F5E3A6!important;border-color:#3A3D44!important}
+body.gold .mbox{background:#15181C}
+body.gold .pad{background:#15181C}
+body.gold .padgrid button,body.gold .padval,body.gold .padhead button,body.gold #padExtra button{background:#1F2328;color:#FFFFFF}
+body.gold .padgrid .op{background:#23262C}
+body.gold .padgrid .ok{color:#14161A}
+body.gold #padExtra button.on{background:#B08A3E;color:#14161A}
+body.gold #pvCard,body.gold #st6 .card:has(> #iso){background:#FFFFFF;border-color:#DCE3EB}
+body.gold #pvLegend{color:#B9B4A6!important}
+body.gold #fxMenu button{background:#1F2328;color:#F5E3A6;border-color:#3A3D44}
+body.gold #fxMenu button[aria-pressed="true"]{background:#B08A3E;color:#14161A;border-color:#B08A3E}
+body.gold #roomBar button{background:#1F2328;color:#FFFFFF;border:1px solid #3A3D44;border-radius:8px;min-height:34px;padding:0 10px;font-weight:700}
+body.gold #roomBar button[aria-pressed="true"]{background:#B08A3E;color:#14161A;border-color:#B08A3E}
+body.gold #stM #roomBar176{background:#15181C}
+body.gold #roomBar176 button{background:#1F2328}
+body.gold #enclBar{background:#15181C}
+body.gold #enclBar button,body.gold #enclBar .r1 button,body.gold #enclBar .ecd button{background:#1F2328}
 </style>
+<script>
+/* CAD-194: 画面デザインの切り替え（標準／黒×金）。保存は新規キー gosei-theme-v1 のみ。
+   既定は「標準」。選んだ見た目は次に開いた時もそのまま（<body> 直後の先行適用と対になる）。 */
+const THEME_KEY194 = "gosei-theme-v1";
+function themeNow194(){ try { return localStorage.getItem(THEME_KEY194) === "gold" ? "gold" : "std"; } catch(e){ return "std"; } }
+function applyTheme194(){ document.body.classList.toggle("gold", themeNow194() === "gold"); }
+function setTheme194(t){ try { localStorage.setItem(THEME_KEY194, t === "gold" ? "gold" : "std"); } catch(e){} applyTheme194(); }
+applyTheme194();
+</script>
 </body>
 </html>
