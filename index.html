@@ -1915,7 +1915,10 @@ HB.__cands = cands;
     try { $("plan").setPointerCapture(e.pointerId); } catch(er){}
     drawSelBar(); e.stopImmediatePropagation(); return;
   }
-  if (HB.__pageM && !onItem && sel && PV.z <= 1){ sel = null; drawPlan(); }
+  /* CAD-217：ドア・窓・玄関の配置中（置いた建具が選択中）は、押した瞬間の選択解除をしない。
+     解除→再描画で図面の収まりが変わると、続くクリックの位置がずれて次の1つが置けなくなるため。
+     タップの意味（選ぶ／次を置く／外す）はクリック側の ltPlanClick（段5a・段5）が決める。 */
+  if (HB.__pageM && !onItem && sel && PV.z <= 1 && !(HB.__put && sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))){ sel = null; drawPlan(); }
   if (false && !HB.__pageM && !tool && PV.z > 1 && !onItem){ try { $("plan").setPointerCapture(e.pointerId); } catch(er){} const r = $("plan").getBoundingClientRect(); panning = {p: [e.clientX, e.clientY], c: [PV.cx, PV.cy], k: (PV.W / PV.z) / r.width, dx: 0, dy: 0}; $("plan").style.willChange = "transform"; }
 }, true);
 $("plan").addEventListener("pointermove", e => {
@@ -4293,14 +4296,15 @@ function drawSelBar0(){
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   // 左：あまり使わない操作　真ん中：十字キー（真ん中で回転）　右：戻す・消す
-  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
+  const okTxt217 = (!isP && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了" : "✓ 決定";   /* CAD-217：ドア・窓の配置の流れの中では終わるボタンは「終了」 */
+  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">${okTxt217}</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${isP ? "" : " o"}">${isP
       ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button>` : `<button id="sbTop" type="button">高さ寸法</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
       : `<button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbSt" type="button" style="color:${SST[sState(sa)][1]}">${SST[sState(sa)][0]} ▸</button><button id="sbSize" type="button">大きさ・種類</button>`}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${isP ? `<button id="sbRot" class="rot" type="button">⟳<small>90°</small></button>` : `<button id="sbFlip" class="rot" type="button">⟳<small>向き</small></button>`}</div>
     <div class="sbR">${isP ? `<button id="sbStep" class="stp" type="button">${selStep}mm</button>` : "<span></span>"}<button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
   $("sbUndo").onclick = () => $("undoBtn").click();
-  $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; HB.__put = null; HB.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
+  $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; HB.__put = null; HB.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast(okTxt217 === "終了" ? "終了しました" : "決定しました"); };
 if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText += ";text-decoration:underline dotted;cursor:pointer"; tt.onclick = () => changeSheet(sel.i); } }
   $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; drawSelBar(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number);
@@ -8088,6 +8092,24 @@ function pickOne(title, opts, cb){
 function ltNear(mm){ let best = -1, bd = 260; (S.lights || []).forEach((l, i) => { const d = Math.hypot(l.x - mm[0], l.y - mm[1]); if (d < bd){ bd = d; best = i; } }); return best; }
 // CAD-147: 新築・増築では「撤去」「交換」を出さない（本人のルール 2026-11-10。新築に既存物はない）
 const ltOpts147 = erase => { const o = [["new", "新設"]]; if (S.mode !== "zo") o.push(["remove", "撤去", "#C62828"], ["swap", "交換", "#B5571A"]); if (erase) o.push(["erase", "消す", "#C62828"]); return o; };
+/* CAD-217：タップ点に一番近い建具（ドア・窓・玄関）の番号を返す。pickCands の建具の
+   判定と同じ物差し（26px 相当・ドアは中心も見る）。構え中は pickCands が [] を返すため、
+   配置の流れ専用にここで測る。当たらなければ -1。 */
+function sashHit217(pt){
+  try {
+    const r = $("plan").getBoundingClientRect(), mmPx = (HB.__pageM ? PV.W : PV.W / PV.z) / r.width / HB.__planT.s, rad = 26 * mmPx;
+    let best = -1, bd = Infinity;
+    (S.sashes || []).forEach((sa, i) => {
+      if (!sa.drawn || !sa.host) return; const seg = hostSeg(sa.host); if (!seg) return;
+      const L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
+      const A = [seg[0][0] + u[0] * sa.pos, seg[0][1] + u[1] * sa.pos], B = [A[0] + u[0] * sa.w, A[1] + u[1] * sa.w];
+      let d = segDist(pt, A, B).d;
+      if (typeOf(sa) === "door"){ const m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; d = Math.min(d, Math.max(0, Math.hypot(pt[0] - m[0], pt[1] - m[1]) - sa.w * 0.45)); }
+      if (d < rad && d < bd){ bd = d; best = i; }
+    });
+    return best;
+  } catch(e){ return -1; }
+}
 function ltPlanClick(mm){
   /* 段階1で一本化（旧連鎖：blk77（段1）→ blk69（段2）→ blk50（段3）→ blk22（段4）→ blk06（段5）→ 本体。
      戻り値の合成規則：段は元の実行順に並び、当たった段が true（＝タップを消費した）を返した時点で終わる短絡 OR。
@@ -8107,12 +8129,23 @@ function ltPlanClick(mm){
     const i = ltNear(mm);
     if (i >= 0){ sel = {t: "lt", i}; drawPlan(); return true; }
   }
-  /* 段5（旧 blk06・置く物の配置。本文 verbatim） */
+  /* 段5a（CAD-217・ドアと窓を照明と同じ流れに）：建具・窓・玄関の道具を構えている間、
+     既にある建具をタップしたら、その建具を選ぶ（照明の段4と同じ考え方。置いた物を
+     タップし直せば、そのまま調整できる）。建具以外の場所のタップは段5の配置へ進む。 */
+  if (HB.__put && !ltTool && toolOpen === HB.__put.g && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")){
+    const hit217 = sashHit217(mm);
+    if (hit217 >= 0){ sel = {t: "o", i: hit217}; drawPlan(); return true; }
+  }
+  /* 段5（旧 blk06・置く物の配置。本文 verbatim。ただし CAD-217 でドア・窓・玄関だけ変更：
+     置いた直後の建具が選択中でも、別の場所のタップで次の1つが置けるよう !sel の条件を外し
+     （建具の上のタップは段5aが先に受ける）、置けた時は選択を消さずコントローラーを出したままにする） */
   if (HB.__ltSeg06){
-    if (HB.__put && !sel && !ltTool && toolOpen === HB.__put.g){
+    if (HB.__put && (!sel || (sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))) && !ltTool && toolOpen === HB.__put.g){
       HB.__putAt = mm;
+      const g217 = HB.__put.g, n217 = (S.sashes || []).length;
       try { HB.__put.fn(); } catch(e){} finally { HB.__putAt = null; }
-      sel = null; drawPlan(); return true;
+      if (!((g217 === "door" || g217 === "win" || g217 === "gen") && (S.sashes || []).length > n217 && sel && sel.t === "o")) sel = null;
+      drawPlan(); return true;
     }
   }
   /* 本体（旧 blk02・照明を置く／置いてある照明の状態変更。本文 verbatim） */
@@ -9687,7 +9720,10 @@ HB.__padStdSeg12 = true;
       try { drawSelBar(); } catch(er){}
       return;
     }
-    if (sel){ sel = null; try { drawSelBar(); } catch(er){} }   // 何もない所：選択を外して、そのまま置けるように
+    /* CAD-217：ドア・窓・玄関の配置中は、壁の近くのタップ（部屋の塗りポリゴン等が最前面でも）を
+       「何もない所」と誤判定して選択解除しない。解除すると再描画で図面の収まりが変わり、続くクリックの
+       位置がずれて置けなくなる。置けるかどうかはクリック側（ltPlanClick）が壁との距離で決める。 */
+    if (sel && !(HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))){ sel = null; try { drawSelBar(); } catch(er){} }   // 何もない所：選択を外して、そのまま置けるように
   }, true);
   ["click", "pointerup", "mousedown", "touchstart"].forEach(ev => host.addEventListener(ev, e => { if (swallow && Date.now() - swallow < 1500){ e.stopPropagation(); if (ev !== "touchstart") e.preventDefault(); if (ev === "click") swallow = 0; } }, true));
 })();
@@ -11535,7 +11571,7 @@ HB.__dskSeg32 = true;
       L.push("寸法・幅のボタン：大きさを切り替えます。");
       L.push("⟳向き：向きを変えます。");
     } else return null;
-    L.push("✓決定：終わりです。消す：この物を消します。↶戻す：直前の操作を1つ戻します。");
+    L.push((sel.t === "o" && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了：置くのを終わりにします。消す：この物を消します。↶戻す：直前の操作を1つ戻します。" : "✓決定：終わりです。消す：この物を消します。↶戻す：直前の操作を1つ戻します。");   /* CAD-217：配置の流れでは「終了」 */
     return L.join("<br>");
   }
   let helpOpen = true;
