@@ -7846,7 +7846,7 @@ function fxSvg(g, backs){
         if (f.k === "outlet"){
           [[-22, -8], [8, 22]].forEach(([a, b]) => { const sl = [P(f.u + a, f.z - 30), P(f.u + b, f.z - 30), P(f.u + b, f.z + 30), P(f.u + a, f.z + 30)]; out.push(`<polygon points="${pp(sl)}" fill="${col}"/>`); });
         } else {
-          const ch = {switch: "S", hanger: "干", sconce: "照"}[f.k], fs = f.k === "switch" ? 85 : f.k === "hanger" ? 70 : 100;
+          const ch = {switch: "S", hanger: "干", sconce: "照", paper: "紙", tvwall: "TV", spot: "ス", pendant: "ペ", tv: "テ", lan: "L", usb: "U", sensor: "感", dimmer: "調", coat: "コ", doorphone: "ド", panel: "盤"}[f.k] || "", fs = f.k === "switch" ? 85 : f.k === "hanger" ? 70 : 100;
           out.push(`<text x="${c[0]}" y="${c[1] + fs * up * 0.36}" text-anchor="middle" style="font-size:${fs * up}px;font-weight:900;fill:${col}">${ch}</text>`);
         }
         { const lab = f.k === "outlet" ? "コ" : f.k === "switch" ? "SW" : ""; if (lab){ const lp = P(f.u + hw + 45, f.z); out.push(`<text x="${lp[0]}" y="${lp[1] + px(3)}" text-anchor="start" class="halo" style="font-size:${px(9)}px;font-weight:900;fill:${col}">${lab}</text>`); } }
@@ -18865,15 +18865,15 @@ setInterval(gkSync208, 600);
   var $219 = function(id){ return document.getElementById(id); };
   /* ---------- 枝の定義（場所ベース。CAD-220 で物を足す時はここへ） ---------- */
   var PLACE219 = [
-    {kind: "water", label: "水まわり", test: /トイレ|便所|洗面|脱衣|浴室|風呂|サニタリー/, members: ["rail", "under", "tile", "sconce", "hanger"]},
-    {kind: "storage", label: "収納", test: /収納|クローゼット|納戸|押入|物入|ウォークイン/, members: ["cshelf", "counter", "under", "rail"]},
-    {kind: "hall", label: "玄関・廊下", test: /玄関|廊下|ホール|土間/, members: ["hanger", "rail", "niche", "tile", "sconce", "outlet", "accent"]},
+    {kind: "water", label: "水まわり", test: /トイレ|便所|洗面|脱衣|浴室|風呂|サニタリー/, members: ["paper", "towel", "mirror", "rail", "under", "tile", "sconce", "hanger"]},
+    {kind: "storage", label: "収納", test: /収納|クローゼット|納戸|押入|物入|ウォークイン/, members: ["shelf", "pipe", "cshelf", "counter", "under", "rail"]},
+    {kind: "hall", label: "玄関・廊下", test: /玄関|廊下|ホール|土間/, members: ["coat", "hanger", "rail", "niche", "tile", "sconce", "outlet", "accent"]},
     {kind: "kitchen", label: "キッチン・ダイニング", test: /キッチン|台所|ダイニング/, members: ["counter", "cshelf", "tile", "under", "outlet", "switch", "niche", "board"]},
-    {kind: "living", label: "居室", test: /./, members: ["rod", "curtbox", "accent", "board", "tile", "shikkui", "waist", "sconce", "indirect", "outlet", "switch", "niche", "counter", "cshelf", "under"]}
+    {kind: "living", label: "居室", test: /./, members: ["tvwall", "picrail", "roll", "blind", "duct", "tv", "lan", "sensor", "dimmer", "eco", "rod", "curtbox", "accent", "board", "tile", "shikkui", "waist", "sconce", "indirect", "outlet", "switch", "niche", "counter", "cshelf", "under"]}
   ];
   var BR219 = {
-    elec: {label: "電気", members: ["outlet", "switch", "alarm", "sconce", "indirect"], slots: ["分電盤"]},
-    setsubi: {label: "設備", members: ["hanger"], slots: []}
+    elec: {label: "電気", members: ["outlet", "switch", "alarm", "sconce", "indirect", "tv", "lan", "usb", "sensor", "dimmer", "doorphone", "panel", "duct", "spot", "pendant"], slots: ["分電盤"]},
+    setsubi: {label: "設備", members: ["hanger", "paper", "towel", "mirror"], slots: []}
   };
   var state = {selFi: -1, selCid: null, brMode: "place", brCid: null};
   window.__mini219 = state;   /* 検証用に状態を出す（HB 内部専用の口と同じ扱い） */
@@ -18974,7 +18974,7 @@ setInterval(gkSync208, 600);
     var eff = effBranch219();
     var btn = function(mode, label){ return "<button type=\"button\" data-br219=\"" + mode + "\" aria-pressed=\"" + String(state.brMode === mode) + "\">" + label + "</button>"; };
     var h = "<div class=\"fbRow\">" + btn("place", "この部屋でよく使う") + btn("elec", "電気") + btn("setsubi", "設備") + btn("all", "全部");
-    if (eff.key === "elec") BR219.elec.slots.forEach(function(s){ h += "<button type=\"button\" disabled title=\"次の版で追加します\">" + s + "（準備中）</button>"; });
+    if (eff.key === "elec") BR219.elec.slots.forEach(function(s){ h += "<button type=\"button\" data-slot220=\"panel\">" + s + "</button>"; });   /* CAD-220：分電盤の場所を本物にした（押すと分電盤を構える） */
     h += "</div>";
     h += "<p class=\"fbCap\">" + (eff.key === "all" ? "全部の項目を出しています。"
       : eff.key === "elec" ? "電気の枝です。設備とは分かれています。"
@@ -18983,6 +18983,9 @@ setInterval(gkSync208, 600);
     bar.innerHTML = h;
     bar.querySelectorAll("[data-br219]").forEach(function(bd){
       bd.onclick = function(){ state.brMode = bd.getAttribute("data-br219"); renderBranch219(); applyBranch219(); };
+    });
+    bar.querySelectorAll("[data-slot220]").forEach(function(bd){
+      bd.onclick = function(){ var mb = document.querySelector("#fxMenu [data-fk=\"" + bd.getAttribute("data-slot220") + "\"]"); if (mb) mb.click(); };
     });
   }
   function applyBranch219(){
@@ -19031,6 +19034,157 @@ setInterval(gkSync208, 600);
   }
   init219();
   HB.__cad219 = {state: state, selectFace: selectFace219, branch: effBranch219, sync: sync219};
+})();
+</script>
+<script>
+/* ================= CAD-220：③室内図に壁付け物を全件追加 =================
+   本人の決定（2026-11-12）で承認された壁付け物を、CAD-219 の枝の器
+   （PLACE219／BR219。定義表への項目追加は 219 ブロック側で実施済み）に足す。
+   ・新しい物は FK／FKDEF／FKPRE／AREA／FKCOL へ定義を足し、見積は fxRows の後段で拾う。
+   ・下地が要る物（紙巻器・タオル掛け・姿見・壁掛けテレビ・可動棚・ハンガーパイプ・
+     コート掛け）は、見積の行に「下地込み」と明記し、単価も下地込みの材工にする
+     （下地補強を別に足し忘れる形にしない。本人の指示 2026-11-12）。
+   ・可動棚は「レールの長さ（m）＋棚板の数（枚）」で拾う（本人の決定 2026-11-13）。
+     棚板の数は、置いた後の操作盤（fxBar）のボタンで変える。
+   ・カーテンレールのダブルと、室内物干しの壁付け型は、詳細種類として置いた後に
+     操作盤で切り替える（ニッチの下面と同じ作法）。見積では種類ごとに分けて拾う。
+   ・ダクトレールは「レール（m）＋器具（個数）」で拾う（監査メモ 2026-11-12 の形）。
+     スポットライト・ペンダントライトはレール用の器具として別に数える。
+   ・単価は全て価格キー（利用者が単価画面で変えられる）。数字は仮単価で、
+     画面では従来通り「仮」の扱いになる。 */
+(function(){
+  "use strict";
+  /* ---------- 定義の追加 ---------- */
+  var ADD220 = {
+    paper: ["紙巻器", "pt"], towel: ["タオル掛け", "seg"], mirror: ["姿見", "area"],
+    tvwall: ["壁掛けテレビ", "pt"], picrail: ["ピクチャーレール", "seg"],
+    roll: ["ロールスクリーン", "seg"], blind: ["ブラインド", "seg"],
+    duct: ["ダクトレール", "seg"], spot: ["スポットライト", "pt"], pendant: ["ペンダントライト", "pt"],
+    tv: ["テレビ端子", "pt"], lan: ["LAN端子", "pt"], usb: ["USBコンセント", "pt"],
+    sensor: ["人感センサー", "pt"], dimmer: ["調光スイッチ", "pt"],
+    eco: ["エコカラット", "area"], shelf: ["可動棚", "seg"], pipe: ["ハンガーパイプ", "seg"],
+    coat: ["コート掛け", "pt"], doorphone: ["テレビドアホン", "pt"], panel: ["分電盤", "pt"]
+  };
+  Object.keys(ADD220).forEach(function(k){ FK[k] = ADD220[k]; });
+  var DEF220 = {
+    towel: {len: 600, z: 1200}, mirror: {len: 450, z: 200, hgt: 1300},
+    picrail: {len: 1820, z: 2000}, roll: {len: 1820, z: 2000}, blind: {len: 1820, z: 2000},
+    duct: {len: 1820, z: 2300}, eco: {len: 1820, z: 0, hgt: 2100},
+    shelf: {len: 910, z: 900}, pipe: {len: 910, z: 1800}
+  };
+  Object.keys(DEF220).forEach(function(k){ FKDEF[k] = DEF220[k]; });
+  FKPRE.mirror = {w: [300, 450, 600], h: [900, 1200, 1300, 1500]};
+  FKPRE.eco = {w: [910, 1820, 2730], h: [900, 1200, 2100]};
+  ["mirror", "eco"].forEach(function(k){ if (AREA.indexOf(k) < 0) AREA.push(k); });
+  var COL220 = {paper: "#4A6B8A", towel: "#3E6B7A", mirror: "#5B7A8C", tvwall: "#1F2833", picrail: "#8A6A12",
+    roll: "#6E5A8C", blind: "#5A6E8C", duct: "#B07A12", spot: "#C2571A", pendant: "#A85B12",
+    tv: "#2A5A8C", lan: "#2A7A5B", usb: "#7A5B2A", sensor: "#8C2A5B", dimmer: "#5B2A8C",
+    eco: "#4A7A6B", shelf: "#7A5226", pipe: "#3E4A57", coat: "#6B4A2A", doorphone: "#2A4A6B", panel: "#8C2A2A"};
+  Object.keys(COL220).forEach(function(k){ FKCOL[k] = COL220[k]; });
+
+  /* ---------- 単価（仮単価。単価画面で利用者が変えられる） ---------- */
+  WORK.push(
+    ["fxPaper", "紙巻器（下地・材工）", "円/か所", 0, 8000],
+    ["fxTowel", "タオル掛け（下地・材工）", "円/か所", 0, 8000],
+    ["fxMirror", "姿見（下地・材工）", "円/か所", 0, 25000],
+    ["fxTvWall", "壁掛けテレビ 金具・取付（下地込み・材工）", "円/か所", 0, 35000],
+    ["fxPicRail", "ピクチャーレール（材工）", "円/m", 0, 6000],
+    ["fxRoll", "ロールスクリーン（材工）", "円/m", 0, 12000],
+    ["fxBlind", "ブラインド（材工）", "円/m", 0, 10000],
+    ["fxDuct", "ダクトレール（材工）", "円/m", 0, 8000],
+    ["fxSpot", "スポットライト（レール用・器具と取付）", "円/か所", 0, 12000],
+    ["fxPendant", "ペンダントライト（レール用・器具と取付）", "円/か所", 0, 15000],
+    ["fxTv", "テレビ端子（材工）", "円/か所", 0, 8000],
+    ["fxLan", "LAN端子（材工）", "円/か所", 0, 8000],
+    ["fxUsb", "USBコンセント（材工）", "円/か所", 0, 9000],
+    ["fxSensor", "人感センサースイッチ（材工）", "円/か所", 0, 12000],
+    ["fxDimmer", "調光スイッチ（材工）", "円/か所", 0, 12000],
+    ["fxEco", "エコカラット（材工）", "円/㎡", 0, 18000],
+    ["fxShelfRail", "可動棚 レール・棚受（下地・材工）", "円/m", 0, 8000],
+    ["fxShelfBoard", "可動棚 棚板（材工）", "円/枚", 0, 6000],
+    ["fxPipe", "ハンガーパイプ（下地・材工）", "円/m", 0, 6000],
+    ["fxCoat", "コート掛け（下地・材工）", "円/か所", 0, 10000],
+    ["fxDoorPhone", "テレビドアホン（材工）", "円/か所", 0, 45000],
+    ["fxPanel", "分電盤（材工）", "円/か所", 0, 60000],
+    ["fxRodD", "カーテンレール ダブル（材工）", "円/m", 0, 5000],
+    ["fxHangerW", "室内物干し 壁付け型（材工）", "円/か所", 0, 15000]
+  );
+
+  /* ---------- 見積：fxRows の後段 ---------- */
+  var fxRows220base = fxRows;
+  fxRows = function(work, sheet){
+    /* 詳細種類の振り分け：ダブルのカーテンレールと壁付けの室内物干しは、
+       本体の拾い（シングル／天井付けの単価）から外し、後段で種類別に拾う。
+       計算の間だけ種類の印を変え、終わったら必ず元に戻す。 */
+    var sw = [];
+    (S.fx || []).forEach(function(f){
+      if (f.k === "rod" && f.rd === "d"){ f.__k220 = f.k; f.k = "rodD220"; sw.push(f); }
+      else if (f.k === "hanger" && f.hk === "wall"){ f.__k220 = f.k; f.k = "hangerw220"; sw.push(f); }
+    });
+    try { fxRows220base(work, sheet); }
+    finally { sw.forEach(function(f){ f.k = f.__k220; delete f.__k220; }); }
+    var F = S.fx || [];
+    var cnt = function(k){ return F.filter(function(f){ return f.k === k; }).length; };
+    var sumL = function(k){ return F.filter(function(f){ return f.k === k; }).reduce(function(a, f){ return a + f.len; }, 0) / 1000; };
+    var area = function(k){ return F.filter(function(f){ return f.k === k; }).reduce(function(a, f){ return a + f.len * f.hgt / 1e6; }, 0); };
+    if (cnt("paper")) work("fxPaper", "紙巻器（下地込み）", cnt("paper"), "か所");
+    if (cnt("towel")) work("fxTowel", "タオル掛け（下地込み）", cnt("towel"), "か所", F.filter(function(f){ return f.k === "towel"; }).map(function(f){ return "長さ" + fmt(f.len); }).join("、"));
+    if (cnt("mirror")) work("fxMirror", "姿見（下地込み）", cnt("mirror"), "か所", F.filter(function(f){ return f.k === "mirror"; }).map(function(f){ return fmt(f.len) + "×" + fmt(f.hgt); }).join("、"));
+    if (cnt("tvwall")) work("fxTvWall", "壁掛けテレビ（金具・下地込み）", cnt("tvwall"), "か所");
+    if (sumL("picrail")) work("fxPicRail", "ピクチャーレール", sumL("picrail"), "m");
+    if (sumL("roll")) work("fxRoll", "ロールスクリーン", sumL("roll"), "m");
+    if (sumL("blind")) work("fxBlind", "ブラインド", sumL("blind"), "m");
+    if (sumL("duct")) work("fxDuct", "ダクトレール", sumL("duct"), "m");
+    if (cnt("spot")) work("fxSpot", "スポットライト（レール用）", cnt("spot"), "か所");
+    if (cnt("pendant")) work("fxPendant", "ペンダントライト（レール用）", cnt("pendant"), "か所");
+    if (cnt("tv")) work("fxTv", "テレビ端子", cnt("tv"), "か所");
+    if (cnt("lan")) work("fxLan", "LAN端子", cnt("lan"), "か所");
+    if (cnt("usb")) work("fxUsb", "USBコンセント", cnt("usb"), "か所");
+    if (cnt("sensor")) work("fxSensor", "人感センサースイッチ", cnt("sensor"), "か所");
+    if (cnt("dimmer")) work("fxDimmer", "調光スイッチ", cnt("dimmer"), "か所");
+    if (area("eco")) work("fxEco", "エコカラット", area("eco"), "㎡");
+    if (cnt("shelf")){
+      var boards = F.filter(function(f){ return f.k === "shelf"; }).reduce(function(a, f){ return a + (f.n || 3); }, 0);
+      work("fxShelfRail", "可動棚 レール・棚受（下地込み）", sumL("shelf"), "m");
+      work("fxShelfBoard", "可動棚 棚板", boards, "枚", "レール " + fmt(sumL("shelf"), 1) + "m・棚板 " + boards + "枚");
+    }
+    if (sumL("pipe")) work("fxPipe", "ハンガーパイプ（下地込み）", sumL("pipe"), "m");
+    if (cnt("coat")) work("fxCoat", "コート掛け（下地込み）", cnt("coat"), "か所");
+    if (cnt("doorphone")) work("fxDoorPhone", "テレビドアホン", cnt("doorphone"), "か所");
+    if (cnt("panel")) work("fxPanel", "分電盤", cnt("panel"), "か所");
+    var rdD = F.filter(function(f){ return f.k === "rod" && f.rd === "d"; });
+    if (rdD.length) work("fxRodD", "カーテンレール（ダブル）", rdD.reduce(function(a, f){ return a + f.len; }, 0) / 1000, "m");
+    var hgW = F.filter(function(f){ return f.k === "hanger" && f.hk === "wall"; });
+    if (hgW.length) work("fxHangerW", "室内物干し（壁付け）", hgW.length, "か所");
+  };
+
+  /* ---------- 操作盤（fxBar）への詳細種類ボタンの追加 ---------- */
+  var drawFxBar220base = drawFxBar;
+  drawFxBar = function(){
+    drawFxBar220base();
+    try {
+      var bar = document.getElementById("fxBar"); if (!bar || bar.hidden) return;
+      var f = (typeof sel !== "undefined" && sel && sel.t === "fx" && S.fx) ? S.fx[sel.i] : null; if (!f) return;
+      if (!(f.k === "shelf" || f.k === "rod" || f.k === "hanger")) return;
+      if (bar.querySelector("[data-x220]")) return;
+      var host = bar.querySelector(".sbL"); if (!host) return;
+      var b = document.createElement("button"); b.type = "button"; b.setAttribute("data-x220", "1");
+      if (f.k === "shelf"){
+        b.textContent = "棚板 " + (f.n || 3) + "枚";
+        b.onclick = function(){ openPad({title: "可動棚の棚板の数", unit: "枚", value: f.n || 3, done: function(v){ if (v){ pushUndo(); f.n = Math.max(1, Math.round(v)); save(); drawRoom(); } }}); };
+      } else if (f.k === "rod"){
+        b.textContent = "種類：" + (f.rd === "d" ? "ダブル" : "シングル");
+        b.onclick = function(){ pickOne("カーテンレールの種類", [["s", "シングル"], ["d", "ダブル"]], function(v){ pushUndo(); f.rd = v; save(); drawRoom(); toast("カーテンレール：" + (v === "d" ? "ダブル" : "シングル")); }); };
+      } else {
+        var hkn = {spot: "スポット型（天井）", bar: "BAR型（天井）", wall: "壁付け"};
+        b.textContent = "種類：" + (hkn[f.hk || "spot"] || hkn.spot);
+        b.onclick = function(){ pickOne("室内物干しの種類", [["spot", "スポット型（天井付け）"], ["bar", "BAR型（天井付け）"], ["wall", "壁付け"]], function(v){ pushUndo(); f.hk = v; save(); drawRoom(); toast("室内物干し：" + ({spot: "スポット型", bar: "BAR型", wall: "壁付け"})[v]); }); };
+      }
+      host.appendChild(b);
+    } catch(e){}
+  };
+
+  HB.__cad220 = {keys: Object.keys(ADD220)};
 })();
 </script>
 </body>
