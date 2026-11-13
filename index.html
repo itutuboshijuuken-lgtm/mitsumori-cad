@@ -1958,6 +1958,21 @@ function joistRuns(alongX, P0, b0){
 }
 function tatCount(r){ const [nx, ny] = tatGrid(r); return nx * ny / 2; }
 const tatArea = () => (S.tatami || []).reduce((a, r) => a + (r.x1 - r.x0) * (r.y1 - r.y0), 0) / 1e6;
+// CAD-192: 土間・浴室ゾーンの足元は、ゾーン側の工事（土間打ち一式・UB一式）で数えるので、
+// 残りの床（標準の床仕上げ）からは引く。引く量は「ゾーンの足元 − 床の記録と重なっている部分」で、
+// ゾーン同士の重なりも二重に引かない（rectSub で和集合にする）。
+// トイレ・収納・廊下・階段室のゾーンは、床仕上げを残りの床で払うのが正しいので引かない。
+// 階の扱いは tatArea と同じ（今読み込まれている階の S.zones / S.tatami をそのまま使う）。
+const zoneFinCut = () => {
+  const zs = (S.zones || []).filter(z => z && (z.k === "doma" || z.k === "ub") && z.x1 - z.x0 >= 100 && z.y1 - z.y0 >= 100);
+  if (!zs.length) return 0;
+  let pieces = [];
+  zs.forEach(z => { let ps = [z]; pieces.forEach(q => { ps = ps.flatMap(p => rectSub(p, q)); }); pieces = pieces.concat(ps); });
+  const rs = (S.tatami || []).filter(r => r && r.x1 > r.x0 && r.y1 > r.y0);
+  let a = 0;
+  pieces.forEach(p0 => { let ps = [p0]; rs.forEach(r => { ps = ps.flatMap(p => rectSub(p, r)); }); ps.forEach(p => { a += (p.x1 - p.x0) * (p.y1 - p.y0); }); });
+  return a / 1e6;
+};
 const TST = {new: ["新調", "#5A6230"], omote: ["表替え", "#2F6B4F"], keep: ["既存", "#8A8F70"]};
 function tatSheet(i){
   const r = S.tatami[i]; if (!r) return;
@@ -5441,11 +5456,11 @@ function calc00(){
     const scopes = [];
     if (!rmMode){
       const fw0 = S.rfWall, wallN0 = Math.max(0, per * ch / 1e6 - openArea()) + (fw0 === "none" ? 0 : PI.area);
-      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), perOki: per, perHab: per + PI.len * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
+      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), perOki: per, perHab: per + PI.len * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
     } else {
       roomStats(ch).forEach(m => {
         const poly = [[m.bb.x0, m.bb.y0], [m.bb.x1, m.bb.y0], [m.bb.x1, m.bb.y1], [m.bb.x0, m.bb.y1]];
-        scopes.push({label: `${roomLbl(m.r)}　${fmt(m.area, 1)}㎡`, area: m.area, ca: m.ca, wallN: m.wall, ff: m.f, fw: m.w, fc: m.c, ft: m.ft, wm: m.wm || S.rfWallMat, cm: m.cm || S.rfCeilMat, ccur: m.cc || S.rfCeilCur || "board", maw: m.mw ? m.mw === "yes" : !!S.rfMawari, tat: m.tat, perOki: m.per, perHab: m.per, dim: [m.bb.w, m.bb.h], hab: {cut: m.cut, doors: m.doors}, jr: () => joistRuns(m.bb.w >= m.bb.h, poly, m.bb)});
+        scopes.push({label: `${roomLbl(m.r)}　${fmt(m.area, 1)}㎡`, area: m.area, ca: m.ca, wallN: m.wall, ff: m.f, fw: m.w, fc: m.c, ft: m.ft, wm: m.wm || S.rfWallMat, cm: m.cm || S.rfCeilMat, ccur: m.cc || S.rfCeilCur || "board", maw: m.mw ? m.mw === "yes" : !!S.rfMawari, tat: m.tat, zcut: m.zcut || 0, perOki: m.per, perHab: m.per, dim: [m.bb.w, m.bb.h], hab: {cut: m.cut, doors: m.doors}, jr: () => joistRuns(m.bb.w >= m.bb.h, poly, m.bb)});
       });
     }
     const wallN = scopes.reduce((x, sc) => x + sc.wallN, 0);
@@ -5484,7 +5499,7 @@ if (ff === "tat"){ const nn = Math.ceil(a0 / 0.303 / 4 * 1.05); lum("taruki", "�
       if (demo > 0){ work("kaitai", "解体", demo, "㎡", `${fmt(demo, 1)}㎡（${[fl ? "床" : "", wl ? "壁" : "", cl ? "天井" : ""].filter(Boolean).join("・")}）`); if (fl) addS("floor", sc.area); if (wl) addS("wall", sc.wallN); if (cl){ if (sc.ccur === "lami") addG("wood", sc.area * 0.04, sc.area * 10); else addS("ceil", sc.area); } }
       if (sc.ff === "tat"){ const nT = Math.ceil(sc.area / 1.62); work("tatamiTear", "畳 撤去・処分", nT, "枚", `${fmt(sc.area, 1)}㎡ ÷ 1.62㎡ ＝ ${nT}枚`); }
     };
-    const scFloorFin = sc => { const fa = sc.area - sc.tat; if (sc.ff !== "none" && fa > 0.05) floorFin(fa, "", sc.ft); };
+    const scFloorFin = sc => { const fa = sc.area - sc.tat - (sc.zcut || 0); if (sc.ff !== "none" && fa > 0.05) floorFin(fa, "", sc.ft); };   // CAD-192: 土間・浴室ゾーンの足元は仕上げから引く（zo と同じ考え）
     const scHabaki = sc => { if (sc.ff !== "none" || sc.fw !== "none") habakiMikiri(sc.perHab, 1, sc.hab); };
     const scMawari = sc => { if (sc.maw && sc.fc !== "none") work("mawari", "回り縁", sc.perHab / 1000, "m", `天井のまわり ${fmt(sc.perHab / 1000, 1)}m × ${fmt(workP("mawari").p)}円`); };
     const scCloth = sc => {
@@ -5763,7 +5778,7 @@ const clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(per / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * per / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・柱${zi.n}本の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }
   }
-  if (wood) floorFin(Math.max(0, nobe - tatArea()), two ? "1・2階 " : "");
+  if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
   else { work("domaCon", "土間コンクリート", area, "㎡"); if (S.floor === "oki"){ okiRows(area, per); floorFin(Math.max(0, area - tatArea()), "1階 "); } else work("domaFin", "土間仕上げ", area, "㎡"); if (two) floorFin(area, "2階 "); }
   if (window.__floorRows) window.__floorRows(floorFin); if (window.__trimRows) window.__trimRows(work); tatamiRows(); tenkenRows(); window.__sheetFx = sheet; fxRows(work, sheet);
   habakiMikiri((per * (S.floor === "doma" ? F - 1 : F) || 0) + PI1.len * 2, F);
@@ -6615,7 +6630,7 @@ function roomStats(ch){
     });
     const x0 = R.b.x0 + Math.min(...xs) * st, x1 = R.b.x0 + (Math.max(...xs) + 1) * st, y0 = R.b.y0 + Math.min(...ys) * st, y1 = R.b.y0 + (Math.max(...ys) + 1) * st;
     const e = roomFinOf(r) || {};
-    return {r, cid: r.cid, area: r.area, per: pr, bb: {x0, x1, y0, y1, w: x1 - x0, h: y1 - y0}, f: e.f || S.rfFloor, w: e.w || S.rfWall, c: e.c || S.rfCeil, ft: e.t || "", wm: e.wm || "", cm: e.cm || "", cc: e.cc || "", mw: e.mw || "", open: 0, cut: 0, doors: 0, tat: 0, wall: 0};
+    return {r, cid: r.cid, area: r.area, per: pr, bb: {x0, x1, y0, y1, w: x1 - x0, h: y1 - y0}, f: e.f || S.rfFloor, w: e.w || S.rfWall, c: e.c || S.rfCeil, ft: e.t || "", wm: e.wm || "", cm: e.cm || "", cc: e.cc || "", mw: e.mw || "", open: 0, cut: 0, doors: 0, tat: 0, zcut: 0, wall: 0};
   });
   const sa = ms.reduce((a, m) => a + m.area, 0), sp = ms.reduce((a, m) => a + m.per, 0);
   const ka = sa > 0 ? polyA / sa : 1, kp = sp > 0 ? (per0 + 2 * partLen) / sp : 1;
@@ -6639,7 +6654,15 @@ function roomStats(ch){
       m.tat += n * st * st / 1e6 * ka;
     });
   });
-  ms.forEach(m => { m.wall = Math.max(0, m.per * (roomChOf(m.r) || ch) / 1e6 - m.open); m.tat = Math.min(m.tat, m.area); });
+  // CAD-192: 土間・浴室ゾーンの足元のうち床の記録と重なっていない部分を、部屋ごとに数える（畳と同じセル方式）
+  const dzs192 = (S.zones || []).filter(z => z && (z.k === "doma" || z.k === "ub"));
+  if (dzs192.length) ms.forEach(m => {
+    let n = 0;
+    m.r.cells.forEach(c => { const x = R.b.x0 + ((c % R.NX) + 0.5) * st, y = R.b.y0 + (Math.floor(c / R.NX) + 0.5) * st;
+      if (dzs192.some(z => x > z.x0 && x < z.x1 && y > z.y0 && y < z.y1) && !(S.tatami || []).some(t => x > t.x0 && x < t.x1 && y > t.y0 && y < t.y1)) n++; });
+    m.zcut = n * st * st / 1e6 * ka;
+  });
+  ms.forEach(m => { m.wall = Math.max(0, m.per * (roomChOf(m.r) || ch) / 1e6 - m.open); m.tat = Math.min(m.tat, m.area); m.zcut = Math.min(m.zcut || 0, Math.max(0, m.area - m.tat)); });
   return ms;
 }
 /* ---------- 仕様の画面：部屋ごとの設定の一覧 ---------- */
@@ -14237,7 +14260,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       if (typeof S === "undefined" || !S || S.mode !== "zo") return 0;
       var F = 1;
       try { F = (typeof roof === "function" && roof().two) ? 2 : 1; } catch(e){ F = S.floors === 2 ? 2 : 1; }
-      return Math.max(0, areaMM() / 1e6 * F - tatArea());
+      return Math.max(0, areaMM() / 1e6 * F - tatArea() - zoneFinCut());   // CAD-192: 土間・浴室ゾーンの足元も引く（見積の calc00 と一致させる）
     } catch(e){ return 0; }
   }
   function restSheet183(){
