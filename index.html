@@ -8236,10 +8236,34 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     let first = false; try { first = !localStorage.getItem(KEY); } catch(e){}
   const tutCompleted = () => { try { return !!localStorage.getItem("gosei-nbtut-done-v2"); } catch(e){ return false; } };
   const blank = !S.edges && !(S.extras || []).length && !S.genba;
+  /* CAD-195: 開始ダイアログの選択は「新しく作る」。今の現場に中身がある時は引き継がず、
+     新しい現場を作ってそちらで始める（前の現場は現場一覧に残り、中身は消えない）。 */
+  const planArr195 = ["parts2D", "tatami", "zones", "sashes", "fx", "tenken", "lights", "tare", "wallLines", "geya"];
+  function snapHas195(o){
+    if (!o) return false;
+    if (o.edges) return true;
+    if (planArr195.some(k => Array.isArray(o[k]) && o[k].length)) return true;
+    if ((o.extras || []).some(e => e.k !== "shinchiku")) return true;
+    return false;
+  }
+  function projHasContent195(){
+    if (snapHas195(S)) return true;
+    if (S.genba || S.daicho) return true;
+    if (["roomNames", "roomFin", "roomRecs", "roomPt"].some(k => S[k] && Object.keys(S[k]).length)) return true;
+    if ((S.fl || []).some(f => snapHas195(f && f.snap))) return true;
+    return false;
+  }
+  function startFresh195(){
+    if (!projHasContent195()) return false;
+    window.__noKind = true;
+    try { newProject(); } finally { window.__noKind = false; }
+    return true;
+  }
   function startNew(){
+    const made195 = tutCompleted() ? startFresh195() : false;
     S.mode = "zo";
     if (!(S.extras || []).some(e => e.k === "shinchiku")){ const e = {k: "shinchiku"}; EXT.shinchiku.f.forEach(([f, , , v]) => e[f] = v); Object.assign(e, JSON.parse(JSON.stringify(EXT.shinchiku.d))); S.extras = S.extras || []; S.extras.push(e); }
-    save(); go(1); toast(tutCompleted() ? "新築で始めます。上のボタンで「リフォーム」にも変えられます" : "新築で始めます");
+    save(); go(1); toast(made195 ? "新築で始めます。前の現場は、現場一覧に残っています" : tutCompleted() ? "新築で始めます。上のボタンで「リフォーム」にも変えられます" : "新築で始めます");
   }
   function chooseKind(){
     if (document.getElementById("kindBox")) return;
@@ -8250,7 +8274,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     o.innerHTML = `<div style="background:#fff;color:#1b2430;border-radius:16px;max-width:360px;width:100%;padding:18px 16px"><div style="font-size:18px;font-weight:800;text-align:center">${td ? "何をつくりますか？" : "最初は、新築で操作を覚えます"}</div>${bt("kdRf", "🛠", "リフォーム", td ? "内装・部分工事・増築。まず操作を覚えられます" : "最初は新築で覚えます（終えると選べます）", td)}${bt("kdNew", "🏠", "新築", td ? "家を1軒つくる見積です" : "チュートリアルは新築で説明します。新築をタップしてください", !td)}</div>`;
     document.body.appendChild(o);
     if (!td){ const rf0 = document.getElementById("kdRf"); if (rf0) rf0.style.opacity = ".55"; }
-    document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { S.mode = "rf"; save(); go(1); } };
+    document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { const made195 = startFresh195(); S.mode = "rf"; save(); go(1); if (made195) toast("新しい現場で始めます。前の現場は、現場一覧に残っています"); } };
     document.getElementById("kdNew").onclick = () => { o.remove(); startNew(); if (!tutCompleted()) setTimeout(() => { if (window.startNbTut) window.startNbTut(); }, 400); };
   }
   window.chooseKind = chooseKind;
