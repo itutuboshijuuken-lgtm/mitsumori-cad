@@ -1216,6 +1216,8 @@ const WORK = [
   ["madoWaku", "窓枠 取付手間", "円/か所", 0, 8000],
   ["madoWakuTear", "既存の窓枠 撤去・処分", "円/か所", 0, 4000],
   ["pYokuWaku", "浴室樹脂枠", "円/個", 0, 9750],
+  ["pYokuWakuHiki", "浴室樹脂枠（入口枠・引き戸）", "円/個", 0, 9750],
+  ["pYokuWakuHiraki", "浴室樹脂枠（入口枠・開き戸）", "円/個", 0, 9550],
   ["pCushHaba", "クッション巾木（1梱）", "円/梱", 0, 16200],
   ["pCushKado", "クッション巾木 出隅・入隅（1梱）", "円/梱", 0, 3050],
   ["pWashitsuWaku", "和室 追加ドア枠", "円/セット", 0, 8660],
@@ -2505,6 +2507,7 @@ function drawSelBarK(bar){
       if (o && (o.k === "wc" || o.k === "bath")){
         const t = bar.querySelector(".r1 > span"); if (t) t.textContent = TKN[o.k] + "（" + (({n: "上", e: "右", s: "下", w: "左"})[o.dir || "n"]) + "側が壁）";
         const b = document.getElementById("sbKS"); if (b) b.style.visibility = "hidden";
+        if (o.k === "bath" && HB.__doorBtn205){ try { HB.__doorBtn205(o); } catch(e){} }   /* CAD-205：浴槽の選択バーから浴室の入口を設定 */
       }
     } catch(e){}
   }
@@ -3223,6 +3226,7 @@ let txt = "";
     if (!rz) txt += `<text x="${cx}" y="${cy + 5}" text-anchor="middle" class="halo" style="font-size:14px;font-weight:900;fill:${t[2]}">${t[0]}</text>`;
     if (wp >= 52 && hp >= 30) txt += `<text x="${cx}" y="${cy + (rz ? 5 : 20)}" text-anchor="middle" class="halo" style="font-size:10.5px;font-weight:800;fill:${t[2]}">${f5(z.x1 - z.x0)}×${f5(z.y1 - z.y0)}</text>`;
   }
+  if (z.k === "ub" && HB.__doorSvg205){ try { txt += HB.__doorSvg205(z, P, wp, hp); } catch(e){} }   /* CAD-205：浴室の入口マーク（建具の記号とは別の見た目） */
   return `<g pointer-events="none"><rect x="${Math.min(a[0], b[0])}" y="${Math.min(a[1], b[1])}" width="${wp}" height="${hp}" fill="${t[1]}" fill-opacity=".8" stroke="${t[2]}" stroke-width="1.5"/>${txt}</g>`;
 }
 function enclPrevSvg(P){
@@ -3588,6 +3592,7 @@ if (encl.edit && encl.edit.kind === "room"){ enclRoomApply(type); return; }
     const arr = ed.kind === "t" ? S.tatami : S.zones, old = arr.splice(ed.i, 1)[0];
     if (type === "del"){ enclFinish("消去"); return; }
     placeAssign(type, rr, ed.st, ed.kind === "z" && old && old.k === type ? old.id : null);
+    if (ed.kind === "z" && old && old.k === type && type === "ub" && old.door){ const nz205 = S.zones[S.zones.length - 1]; if (nz205 && nz205.id === old.id) nz205.door = old.door; }   /* CAD-205：浴室の入口は寸法の直しでも引き継ぐ */
     enclFinish(`${type === "tatami" ? "畳" : ZT[type][0]} ${sz}`); return;
   }
   let msg = "", nameAfter = null;
@@ -3608,6 +3613,7 @@ if (encl.edit && encl.edit.kind === "room"){ enclRoomApply(type); return; }
     pushUndo(); placeAssign(type, rr); msg = `${ZT[type][0]} ${sz}`;
   }
   enclFinish(msg);
+  if (type === "ub" && HB.__doorOpen205){ try { HB.__doorOpen205((S.zones || []).findIndex(z => z && z.k === "ub" && !z.fid && z.x0 === rr.x0 && z.y0 === rr.y0 && z.x1 === rr.x1 && z.y1 === rr.y1), true); } catch(e){} }   /* CAD-205：UB配置の直後に入口を置く流れへ案内 */
 }
 /* ---------- コントローラーが2つ出たら、いま触っているほうだけ出す ---------- */
 function ctlArbitrate(){
@@ -3636,12 +3642,14 @@ function drawEnclBar0(){
   const types = ed ? (ed.kind === "room" ? [] : ENCL_TYPES.filter(([k]) => k !== "erase" && k !== "cut")) : ENCL_TYPES;
   const tb = types.map(([k, n]) => `<button data-et="${k}" type="button" style="${ZT[k] ? `background:${ZT[k][1]};color:${ZT[k][2]}` : k === "erase" || k === "cut" ? "color:#C62828" : ""}${(ed ? ed.type : (encl && encl.pick)) === k ? ";outline:3px solid #2563B0" : ""}">${n}</button>`).join("");
   const side = ed ? (ed.kind === "t" ? `<button id="ecSt" type="button">畳:${TST[ed.st || "new"][0]}</button>` : "") : `<button id="ecNew" type="button">壁:${enclNew ? "新設" : "既存"}</button>`;
-  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲：" + (((ENCL_TYPES.find(([k]) => k === (encl && encl.pick)) || [])[1]) || "部屋")}</span><span style="display:flex;gap:4px">${side}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">決定</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">決定</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
+  const doorBtn205 = ed && ed.kind === "z" && ed.type === "ub" ? `<button id="ecDoor" type="button">${HB.__doorLabel205 ? HB.__doorLabel205(ed.i) : "入口"}</button>` : "";   /* CAD-205：浴室の入口の設定へ */
+  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲：" + (((ENCL_TYPES.find(([k]) => k === (encl && encl.pick)) || [])[1]) || "部屋")}</span><span style="display:flex;gap:4px">${side}${doorBtn205}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">決定</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">決定</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
     <div class="ecd">${[["w", "幅", r.x1 - r.x0], ["h", "奥行", r.y1 - r.y0], ["x", "左から", r.x0 - b.x0], ["y", "上から", r.y0 - b.y0]].map(([k, n, v]) => `<button data-ed="${k}" type="button"><small>${n}</small><b>${f5(v)}</b></button>`).join("")}</div>
     ${(() => { const ov = enclOverlaps(); return ov.length ? `<div style="color:#C62828;font-size:12.5px;font-weight:800;margin:4px 2px 0">${ov.join("・")}に被っています（決定すると、${ov.join("・")}がその分小さくなります）</div>` : ""; })()}<div class="ecd" style="margin-top:6px">${[["l", "←"], ["u", "↑"], ["d", "↓"], ["r", "→"]].map(([k, a]) => `<button data-ex="${k}" type="button"><small>${enclExLabel(k)}</small><b>${a}</b></button>`).join("")}</div>
 ${enclNoWorkRow()}<div class="${ed ? "ect5" : "ect"}">${tb}</div>
 `;
   $("ecX").onclick = ed ? () => { encl = {r: null}; drawEnclBar(); drawPlan(); } : enclOff;
+  if ($("ecDoor")) $("ecDoor").onclick = () => { const zi205 = ed.i; encl = {r: null}; if (HB.__doorOpen205) HB.__doorOpen205(zi205, false, true); };   /* CAD-205 */
   if ($("ecOk")) $("ecOk").onclick = () => enclApply(ed.type);
   if ($("ecDel")) $("ecDel").onclick = () => enclApply("del");
   if ($("ecNew")) $("ecNew").onclick = () => { enclNew = !enclNew; drawEnclBar(); };
@@ -6076,7 +6084,11 @@ function calc00(){
         work("uKumi", pre + "組立", n2, "台");
         if (e.setsubi) work("uSetsubi", pre + "給排水・給湯接続", n2, "台");
         if (e.denki) work("uDenki", pre + "電気（換気扇・照明）", n2, "台");
-        if (e.waku){ work("uWaku", "浴室入口まわり補修", n2, "か所"); work("pYokuWaku", "浴室樹脂枠（入口枠）", n2, "個"); }   // CAD-201: 風呂まわりの入口枠は樹脂枠で拾う（本人の決定 2026-11-13）
+        if (e.waku){ work("uWaku", "浴室入口まわり補修", n2, "か所");
+          const dz205 = e.zid ? (S.zones || []).find(z => z.id === e.zid) : null, dt205 = dz205 && dz205.door ? (dz205.door.type || "") : "";
+          if (dt205 === "hiki") work("pYokuWakuHiki", "浴室樹脂枠（入口枠・引き戸）", n2, "個");
+          else if (dt205 === "hiraki") work("pYokuWakuHiraki", "浴室樹脂枠（入口枠・開き戸）", n2, "個");
+          else work("pYokuWaku", "浴室樹脂枠（入口枠）", n2, "個"); }   // CAD-201/205: 入口枠は樹脂枠の行だけ（二重取りなし）。CAD-205 で入口の種類によりセット単価キーを分ける（未設定・折れ戸は従来通り）
         if (e.dan) work("uDan", pre + "保温・断熱グレードアップ", n2, "台");
         // CAD-201: メーカー別オプション（そのメーカーに実在する物だけ。裏取り: audit-bath-maker-options-2026-11-13）
         if (e.maker === "toto"){
@@ -17703,5 +17715,222 @@ applyTheme194();
   }, false);
 })();
 </script>
+
+<script>
+/* ================= CAD-205：浴室の入口の位置決め =================
+   本人の決定（2026-11-13）:
+   - ユニットバスを置く時と、置いた浴室を選び直した時に、入口の位置を決められる
+     ようにする。浴室の辺を押して入口を置き、位置はその辺の上でずらして決める。
+     平面図に入口枠として描く（入口の前に収納やドア建具を置いてふさぐ事故防止）。
+   - 入口を決める時にドアの種類も選ぶ（引き戸／折れ戸／開き戸。既定は折れ戸）。
+   - 図面のマークは建具の記号とは別の見た目：浴室色（#1F5F8B）の太い帯＋白芯＋
+     両端の刻み＋「入口（種類）」のラベル。サッシ・建具の物としては扱わない。
+   - 見積の二重取り厳禁：金額は「浴室樹脂枠（入口枠）」の行だけ（見積側で
+     ゾーンの入口の種類により単価キーだけを切り替える）。位置決めでは足さない。
+   データ：浴室ゾーン z.door = {side, pos, type}。side 0=上辺 1=右辺 2=下辺 3=左辺、
+   pos は辺の始点から入口中心までの mm、幅は種類で固定（折れ戸・引き戸 800／
+   開き戸 700＝監査 audit-bath-frame-lengths-2026-11-13 の標準寸）。
+   入口モードの間は #plan の pointer を capture で受け、他の操作に譲らない
+   （囲みのなぞり等と競合させないためのモーダル扱い）。 */
+(function(){
+  "use strict";
+  var TYPES205 = { ore: ["折れ戸", 800], hiki: ["引き戸", 800], hiraki: ["開き戸", 700] };
+  var SIDES205 = ["上辺", "右辺", "下辺", "左辺"];
+  var DM = null;        /* {id, type（未設定時の候補）, step, fromEdit, multi} */
+  var bar205 = null, drag205 = null;
+
+  function zone205(){ if (!DM) return null; var Z = S.zones || []; for (var i = 0; i < Z.length; i++) if (Z[i] && Z[i].id === DM.id) return Z[i]; return null; }
+  function rect205(z){ return { x0: Math.min(z.x0, z.x1), y0: Math.min(z.y0, z.y1), x1: Math.max(z.x0, z.x1), y1: Math.max(z.y0, z.y1) }; }
+  function geom205(z){
+    var d = z.door; if (!d) return null;
+    var r = rect205(z), horiz = d.side === 0 || d.side === 2, len = horiz ? r.x1 - r.x0 : r.y1 - r.y0;
+    var w = Math.min((TYPES205[d.type] || TYPES205.ore)[1], Math.max(300, len));
+    var pos = d.pos == null ? len / 2 : d.pos;
+    pos = Math.max(w / 2, Math.min(len - w / 2, pos));
+    return { side: d.side, pos: pos, w: w, len: len, r: r };
+  }
+  function seg205(z){
+    var g = geom205(z); if (!g) return null;
+    var r = g.r, c = g.pos, hw = g.w / 2, A, B, n;
+    if (g.side === 0){ A = [r.x0 + c - hw, r.y0]; B = [r.x0 + c + hw, r.y0]; n = [0, 1]; }
+    else if (g.side === 2){ A = [r.x0 + c - hw, r.y1]; B = [r.x0 + c + hw, r.y1]; n = [0, -1]; }
+    else if (g.side === 3){ A = [r.x0, r.y0 + c - hw]; B = [r.x0, r.y0 + c + hw]; n = [1, 0]; }
+    else { A = [r.x1, r.y0 + c - hw]; B = [r.x1, r.y0 + c + hw]; n = [-1, 0]; }
+    return { A: A, B: B, n: n, g: g };
+  }
+  function label205(z){ return z && z.door ? (TYPES205[z.door.type] || TYPES205.ore)[0] + "・" + SIDES205[z.door.side] : "未設定"; }
+
+  /* 図面のマーク（zoneSvg から呼ばれる。建具の記号＝細い #3E4A57 の線と弧とは別物） */
+  HB.__doorSvg205 = function(z, P, wp, hp){
+    var out = "";
+    var inDM = !!(DM && DM.id === z.id);
+    if (inDM){
+      var r = rect205(z), a = P([r.x0, r.y0]), b = P([r.x1, r.y1]);
+      out += '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + (b[0] - a[0]) + '" height="' + (b[1] - a[1]) + '" fill="none" stroke="#1F5F8B" stroke-width="2.5" stroke-dasharray="7 4" pointer-events="none"/>';
+    }
+    var s = seg205(z); if (!s) return out;
+    var A = P(s.A), B = P(s.B);
+    var t1 = P([s.A[0] + s.n[0] * 120, s.A[1] + s.n[1] * 120]), t2 = P([s.B[0] + s.n[0] * 120, s.B[1] + s.n[1] * 120]);
+    var mid = P([(s.A[0] + s.B[0]) / 2 + s.n[0] * 300, (s.A[1] + s.B[1]) / 2 + s.n[1] * 300]);
+    out += '<g pointer-events="none">'
+      + '<line' + (inDM ? ' class="doorBlink205"' : '') + ' x1="' + A[0] + '" y1="' + A[1] + '" x2="' + B[0] + '" y2="' + B[1] + '" stroke="#1F5F8B" stroke-width="7" stroke-linecap="butt"/>'
+      + '<line x1="' + A[0] + '" y1="' + A[1] + '" x2="' + B[0] + '" y2="' + B[1] + '" stroke="#fff" stroke-width="2"/>'
+      + '<line x1="' + A[0] + '" y1="' + A[1] + '" x2="' + t1[0] + '" y2="' + t1[1] + '" stroke="#1F5F8B" stroke-width="2.5"/>'
+      + '<line x1="' + B[0] + '" y1="' + B[1] + '" x2="' + t2[0] + '" y2="' + t2[1] + '" stroke="#1F5F8B" stroke-width="2.5"/>';
+    if (wp >= 52 && hp >= 30) out += '<text x="' + mid[0] + '" y="' + (mid[1] + 4) + '" text-anchor="middle" class="halo" style="font-size:10.5px;font-weight:900;fill:#1F5F8B">入口（' + (TYPES205[z.door.type] || TYPES205.ore)[0] + '）</text>';
+    return out + '</g>';
+  };
+  HB.__doorLabel205 = function(zi){ var z = (S.zones || [])[zi]; return "入口：" + label205(z); };
+  HB.__doorState205 = function(){ return DM ? { id: DM.id } : null; };
+
+  function ensureBar205(){
+    if (bar205) return bar205;
+    var st = document.createElement("style");
+    st.textContent = "#doorBar205{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:40;background:#fff;border:2px solid #1F5F8B;border-radius:12px;padding:6px;box-sizing:border-box;touch-action:manipulation}"
+      + "body.gold #doorBar205{background:#15181C;color:#E8ECF1}"
+      + ".doorBlink205{animation:doorBlink205 1s steps(2,start) infinite}@keyframes doorBlink205{50%{opacity:.3}}";
+    document.head.appendChild(st);
+    bar205 = document.createElement("div");
+    bar205.id = "doorBar205"; bar205.hidden = true;
+    var eb = document.getElementById("enclBar");
+    ((eb && eb.parentElement) || document.body).appendChild(bar205);
+    return bar205;
+  }
+  function render205(){
+    if (!DM) return;
+    var z = zone205(); if (!z){ close205(); return; }
+    var bar = ensureBar205(), d = z.door;
+    var cur = d ? label205(z) + "・幅" + Math.round(geom205(z).w) : "未設定（浴室の辺をタップ）";
+    var ty = d ? d.type : DM.type, horiz = !d || d.side === 0 || d.side === 2;
+    bar.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:14px"><b>浴室の入口</b>　<small style="font-weight:700;color:#1F5F8B">' + cur + '</small></span>'
+      + '<button id="d205ok" type="button" style="background:#1F5F8B;color:#fff;border:1.5px solid #1F5F8B;border-radius:8px;min-width:76px;min-height:38px;font-size:15px;font-weight:800">✓ 決定</button></div>'
+      + '<div style="display:flex;gap:4px;margin-top:6px">' + Object.keys(TYPES205).map(function(k){
+          return '<button type="button" data-d205t="' + k + '" aria-pressed="' + (ty === k) + '" style="flex:1;min-height:44px;border-radius:8px;border:1.5px solid #B9C9DC;background:' + (ty === k ? "#1F5F8B" : "#F1F4F8") + ';color:' + (ty === k ? "#fff" : "#223") + ';font-size:14px;font-weight:800">' + TYPES205[k][0] + '</button>';
+        }).join("") + '</div>'
+      + '<div style="display:flex;gap:4px;margin-top:6px">'
+      + '<button id="d205mv1" type="button" style="flex:1;min-height:42px;border-radius:8px;border:1.5px solid #B9C9DC;background:#fff;font-size:15px;font-weight:800">' + (horiz ? "◀" : "▲") + ' ずらす</button>'
+      + '<button id="d205step" type="button" style="min-width:74px;min-height:42px;border-radius:8px;border:1.5px solid #B9C9DC;background:#F1F4F8;font-size:13px;font-weight:800">' + DM.step + 'mm</button>'
+      + '<button id="d205mv2" type="button" style="flex:1;min-height:42px;border-radius:8px;border:1.5px solid #B9C9DC;background:#fff;font-size:15px;font-weight:800">ずらす ' + (horiz ? "▶" : "▼") + '</button>'
+      + (d ? '<button id="d205del" type="button" style="min-height:42px;border-radius:8px;border:1.5px solid #B9C9DC;background:#fff;font-size:13px;font-weight:800;color:#C62828">入口を消す</button>' : "")
+      + '</div>'
+      + '<p style="margin:6px 2px 0;font-size:12px;color:#555">浴室の辺をタップすると入口が付きます。指でなぞると、辺の上でずらせます。</p>';
+    bar.hidden = false;
+    bar.querySelectorAll("[data-d205t]").forEach(function(b){ b.onclick = function(){ setType205(b.dataset.d205t); }; });
+    document.getElementById("d205ok").onclick = function(){ close205(); };
+    document.getElementById("d205step").onclick = function(){ DM.step = DM.step === 50 ? 100 : DM.step === 100 ? 455 : 50; render205(); };
+    document.getElementById("d205mv1").onclick = function(){ nudge205(-1); };
+    document.getElementById("d205mv2").onclick = function(){ nudge205(1); };
+    var del = document.getElementById("d205del");
+    if (del) del.onclick = function(){ var zz = zone205(); if (zz){ delete zz.door; save(); drawPlan(); render205(); } };
+  }
+  function setType205(t){
+    var z = zone205(); if (!z) return;
+    DM.type = t;
+    if (z.door){ z.door.type = t; var g = geom205(z); if (g) z.door.pos = Math.round(g.pos); save(); drawPlan(); }
+    render205();
+  }
+  function nudge205(dir){
+    var z = zone205(); if (!z || !z.door) return;
+    var g = geom205(z); if (!g) return;
+    z.door.pos = Math.round(Math.max(g.w / 2, Math.min(g.len - g.w / 2, g.pos + dir * DM.step)));
+    save(); drawPlan(); render205();
+  }
+  function nearestSide205(z, mm){
+    var r = rect205(z), cand = [];
+    function add(side, dist, proj, len){ if (proj >= -100 && proj <= len + 100) cand.push({ side: side, dist: dist, proj: proj, len: len }); }
+    add(0, Math.abs(mm[1] - r.y0), mm[0] - r.x0, r.x1 - r.x0);
+    add(2, Math.abs(mm[1] - r.y1), mm[0] - r.x0, r.x1 - r.x0);
+    add(3, Math.abs(mm[0] - r.x0), mm[1] - r.y0, r.y1 - r.y0);
+    add(1, Math.abs(mm[0] - r.x1), mm[1] - r.y0, r.y1 - r.y0);
+    cand.sort(function(a, b){ return a.dist - b.dist; });
+    return cand.length && cand[0].dist <= 300 ? cand[0] : null;
+  }
+  function apply205(hit){
+    var z = zone205(); if (!z) return;
+    var ty = (z.door && z.door.type) || DM.type || "ore";
+    var w = Math.min(TYPES205[ty][1], Math.max(300, hit.len));
+    var pos = Math.max(w / 2, Math.min(hit.len - w / 2, hit.proj));
+    z.door = { side: hit.side, pos: Math.round(pos), type: ty };
+    drawPlan(); render205();
+  }
+
+  HB.__doorOpen205 = function(zi, placed, fromEdit){
+    try {
+      var z = (S.zones || [])[zi]; if (!z || z.k !== "ub") return;
+      if (typeof sel !== "undefined" && sel) sel = null;
+      var eb = document.getElementById("enclBar"); if (eb) eb.hidden = true;
+      var sb = document.getElementById("selBar"); if (sb) sb.hidden = true;
+      pushUndo();
+      DM = { id: z.id, type: (z.door && z.door.type) || "ore", step: 100, fromEdit: !!fromEdit, multi: false };
+      drawPlan(); render205();
+      if (placed) toast("浴室を置きました。入口の辺をタップして入口を決めてください（あとでも決められます）");
+    } catch(e){}
+  };
+  /* 浴槽フィクスチャの選択バー：#sbKS の場所に入口ボタンを出す */
+  HB.__doorBtn205 = function(o){
+    var b = document.getElementById("sbKS"); if (!b || !o) return;
+    var z = (S.zones || []).find(function(q){ return q && q.fid && o.fid && q.fid === o.fid && q.k === "ub"; });
+    b.style.visibility = "visible";
+    b.textContent = "入口：" + label205(z);
+    b.onclick = function(){
+      var zz = (S.zones || []).find(function(q){ return q && q.fid && o.fid && q.fid === o.fid && q.k === "ub"; });
+      if (zz) HB.__doorOpen205((S.zones || []).indexOf(zz));
+      else toast("浴室の範囲がまだ決まっていません");
+    };
+  };
+  function close205(){
+    if (!DM) return;
+    var id = DM.id, back = DM.fromEdit;
+    DM = null; drag205 = null;
+    if (bar205) bar205.hidden = true;
+    try { save(); } catch(e){}
+    var zi = (S.zones || []).findIndex(function(z){ return z && z.id === id; });
+    if (back && zi >= 0){
+      enclMode = true;
+      try { document.body.classList.add("enclmode"); } catch(e){}
+      try { drawToolsUI(); } catch(e){}
+      enclStartEdit("z", zi);
+    } else {
+      try { drawEnclBar(); } catch(e){}
+      drawPlan();
+    }
+  }
+  HB.__doorClose205 = close205;
+
+  /* 入口モード中の #plan 操作（capture で受け、他の操作に譲らない） */
+  document.addEventListener("pointerdown", function(e){
+    if (!DM) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("#doorBar205")) return;
+    if (!t || !t.closest || !t.closest("#plan")){ close205(); return; }
+    if (e.isPrimary === false){ DM.multi = true; return; }
+    e.stopPropagation();
+    if (DM.multi) return;
+    try {
+      var hit = nearestSide205(zone205(), toMM(planPt(e)));
+      if (hit){ drag205 = { pid: e.pointerId }; apply205(hit); }
+      else drag205 = { pid: e.pointerId, off: true };
+    } catch(err){}
+  }, true);
+  document.addEventListener("pointermove", function(e){
+    if (!DM || !drag205 || drag205.off || e.pointerId !== drag205.pid) return;
+    e.stopPropagation();
+    if (DM.multi) return;
+    try {
+      var hit = nearestSide205(zone205(), toMM(planPt(e)));
+      if (hit) apply205(hit);
+    } catch(err){}
+  }, true);
+  function up205(e){
+    if (!DM) return;
+    if (drag205 && e.pointerId === drag205.pid){ e.stopPropagation(); drag205 = null; try { save(); } catch(err){} render205(); }
+    if (e.isPrimary !== false && !drag205) DM.multi = false;
+  }
+  document.addEventListener("pointerup", up205, true);
+  document.addEventListener("pointercancel", up205, true);
+})();
+</script>
+
 </body>
 </html>
