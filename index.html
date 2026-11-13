@@ -8321,6 +8321,12 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
   window.__putOff = () => { if (!window.__put) return; clearPut(); try { toast("やめました"); } catch(e){} try { drawToolsUI(); } catch(e){} };
   const origUI = drawToolsUI;
   drawToolsUI = function(){
+    /* CAD-196: 照明（ltTool）を構えたまま他の道具を選び直すと、新しい構え（window.__put）が
+       下のガードで即解除され、平面タップで照明が置かれてしまった（本人の実機報告 2026-11-13）。
+       今の道具の組と新しい構えの組が一致する時は、選び直しが新しい方だと分かるので、
+       ガードの直前で照明の構えを落とす。構えの入口は全部この drawToolsUI を通るため、
+       直しはここ1か所で、建具・窓・玄関・設備の全組に効く。 */
+    if (window.__put && ltTool && toolOpen === window.__put.g){ try { ltTool = null; window.__ltAct = null; } catch(er){} }
     if (window.__put && (toolOpen !== window.__put.g || ltTool || enclMode)) clearPut();
     origUI.apply(this, arguments);
     try {
