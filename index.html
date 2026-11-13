@@ -5500,14 +5500,14 @@ function calc0(...a){
    ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
    ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
 function framePos(){
-  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0};
+  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0, jambN: 0};
   try {
     if (!S.edges || !S.edges.length) return Z;
     const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
     const colP = +S.colP || 1820, pv = pts(), runs = [];
     const addRun = (a, c, kind, isNew) => {
       const L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (!(L > 1)) return null;
-      const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], opsD: [], junc: new Set(), postT: new Set()};
+      const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], opsD: [], junc: new Set(), postT: new Set(), jambs: []};
       runs.push(r); return r;
     };
     const byKey = {};
@@ -5546,9 +5546,10 @@ function framePos(){
       const ts = new Set([0, r.L]);
       r.junc.forEach(t => ts.add(t));
       const base = [...ts];
-      r.ops.forEach(o => { [o[0], o[1]].forEach(f => { if (!base.some(t => Math.abs(t - f) <= 105)) ts.add(f); }); });
+      // CAD-199: 新設間仕切りのドア・建具なし開口・クローゼット開口の両脇は柱ではなく間柱にする（本人の決定）。基礎柱から105mm以内は従来通り柱が兼ねる
+      r.ops.forEach((o, oi) => { const dc = r.opsD[oi] ? r.opsD[oi].cat : ""; const jambOp = r.kind === "p" && r.isNew && (dc === "室内ドア" || dc === "開口" || dc === "クローゼット"); [o[0], o[1]].forEach(f => { if (base.some(t => Math.abs(t - f) <= 105)) return; if (jambOp) r.jambs.push(f); else ts.add(f); }); });
       [...ts].forEach(t => { if (t > 0 && t < r.L && inOp(r, t)) ts.delete(t); });
-      const arr = [...ts].sort((a, b) => a - b);
+      const arr = [...new Set([...ts, ...r.jambs])].sort((a, b) => a - b);   // CAD-199: 埋め処理は jamb の位置も区切りにする（長い間仕切りで開口の遠端に柱が戻らないように）
       for (let i = 0; i + 1 < arr.length; i++){
         let a = arr[i]; const b = arr[i + 1]; let guard = 0;
         while (b - a > colP + 0.5 && guard++ < 60){
@@ -5589,6 +5590,17 @@ function framePos(){
         if (ex){ if (k % 2 === 0) ex.thick = true; }
         else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
       }
+    });
+    // CAD-199: jamb（新設間仕切りのドア・開口・クローゼットの両脇）を太い間柱（45×105）として登録する。柱と同位置なら柱を優先し、グリッド間柱と同位置なら太にまとめて1本に数える
+    runs.forEach(r => {
+      (r.jambs || []).forEach(t => {
+        const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+        if (postMap.has(kk)) return;
+        Z.jambN++;
+        const ex = studMap.get(kk);
+        if (ex) ex.thick = true;
+        else studMap.set(kk, {x, y, thick: true, ux: r.ux, uy: r.uy});
+      });
     });
     // CAD-161: 開口まわり（まぐさ・窓台）の短い間柱（本人の承認 2026-11-10「満点です」。CAD-154 では数えていなかった）
     // 対象は外壁の開口だけ。位置は今の間柱と同じ並び（ラン始点の柱芯から 455 ピッチ＝k*M2）で、開口の幅の中に入る位置。
@@ -5777,7 +5789,7 @@ function calc00(){
     const L = pi.newLen;
     { const F6 = framePos(), nP = F6.partPostN, nTh = F6.partThick, nTn = F6.partThin, nAll = nTh + nTn; const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP();
       if (nP > 0) lum("hashira", "新設間仕切り 柱", 105, 105, Array(nP).fill(ch + 100), `105角・壁の端と交点・壁 ${fmt(L / 1000, 2)}m`, false);
-      if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nTh).fill(ch + 100), `${ta}×${tb}・910の位置（継目）・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, Array(nTn).fill(ch + 100), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
+      if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nTh).fill(ch + 100), `${ta}×${tb}・910の位置（継目）${F6.jambN ? "と開口の両脇" : ""}・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, Array(nTn).fill(ch + 100), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
       else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nAll).fill(ch + 100), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
     lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(L * 2 / 3900)).fill(4000), "45×105", false);
     const w = workP("ninku"), nin = Math.ceil(L / 1000 * 0.4 * 2) / 2;
