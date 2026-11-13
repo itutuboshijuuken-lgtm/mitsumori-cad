@@ -897,6 +897,9 @@ function loadProject(id){
   /* ===== 段階1・周辺一本化：loadProject（旧連鎖 blk17 → 本体 を畳み込み） ===== 本体の文面は無変更で、後段は末尾に置く。 */
   const d = LSg("zochiku-p-" + id) || {};
   S = Object.assign({}, DEF, d); S.sp = Object.assign({}, DEF.sp, S.sp || {}); S.sashes = S.sashes || []; S.extras = S.extras || []; S.geya = S.geya || [];
+  /* CAD-203: DEF の具象配列（parts2D・wallLines・geya・sashes・extras）を参照共有のままにしない。
+     共有したままだと、新規現場で間仕切りを足す push が DEF 自体を汚し、次の新規現場に前の間仕切りが残る（本人の実機指摘）。 */
+  ["parts2D", "wallLines", "geya", "sashes", "extras"].forEach(k203 => { if (Array.isArray(S[k203])) S[k203] = S[k203].slice(); });
   thinParts142();   // 10cmに満たない切れ端の壁は消す（建具の host も付け替える）
   PJ.cur = id; LSs("zochiku-projects-v1", PJ);
   /* --- 後段（旧 blk17）：旧「シートフロア」をフローリング（複合）に読み替える。fixFlSheet は blk17 が window に置く全局関数のため直接呼ぶ。
@@ -1572,7 +1575,7 @@ function newProject(name){
   const keep = {sp: S.sp, margin: S.margin, gbW: S.gbW, gbC: S.gbC, tr: S.tr, precut: S.precut, flType: S.flType, shokei: S.shokei, mode: S.mode};
   const id = "p" + Date.now().toString(36);
   PJ.list.unshift({id, name: name || "新しい現場", upd: Date.now()});
-  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], genba: name || ""}); PJ.cur = id; save(); clearInk();
+  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: [], genba: name || ""}); PJ.cur = id; save(); clearInk();
 }
 /* ---------- 会社名・担当・電話（お客さんに送る文面に入る） ---------- */
 const CO_KEY = "yubi-company-v1";
@@ -8591,7 +8594,7 @@ function custShow(d){
 }
 function custApply(d, sh){
   const keep = {sp: S.sp, margin: S.margin, gbW: S.gbW, gbC: S.gbC, tr: S.tr, precut: S.precut, flType: S.flType};
-  S = Object.assign({}, DEF, keep, {sashes: [], extras: []});
+  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: []});
   if (["zo", "rf", "pt"].includes(d.mode)) S.mode = d.mode;
   if (d.genba) S.genba = String(d.genba);
   if (+d.ch > 1500 && +d.ch < 4000) S.ch = +d.ch;
