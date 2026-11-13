@@ -2336,10 +2336,11 @@ function addEquip(k){
   if (!best) o = {k, w, d, dir: "n", x: Math.round(c[0] / 5) * 5, y: Math.round(c[1] / 5) * 5};
   else {
     const v = best.v, wp = v ? best.a[0] : best.a[1], lo = v ? Math.min(best.a[1], best.e[1]) : Math.min(best.a[0], best.e[0]), hi = v ? Math.max(best.a[1], best.e[1]) : Math.max(best.a[0], best.e[0]);
-    let side = (v ? c[0] : c[1]) >= wp ? 1 : -1, al = v ? c[1] : c[0]; al = (hi - lo < w) ? (lo + hi) / 2 : Math.max(lo + w / 2, Math.min(hi - w / 2, al)); al = Math.round(al / 5) * 5;
+    let side = (v ? c[0] : c[1]) >= wp ? 1 : -1, al = v ? c[1] : c[0]; al = (hi - lo < w) ? (lo + hi) / 2 : Math.max(lo + w / 2, Math.min(hi - w / 2, al)); al = HB.__snap207 ? HB.__snap207.eq(k, al, v) : Math.round(al / 5) * 5;   /* CAD-207：壁に沿った位置の吸着 */
     const mkO = sd => { const dir = v ? (sd > 0 ? "w" : "e") : (sd > 0 ? "n" : "s"); return {k, w, d, dir, x: v ? wp + sd * (tw + d / 2) : al, y: v ? al : wp + sd * (tw + d / 2)}; };
     o = mkO(side); if (!inside([o.x, o.y], pol)) o = mkO(-side);
   }
+  if (HB.__snap207 && !best){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：壁が無い所では床置きと同じ吸着 */
   if (k === "makura") o.h = 1800; if (k === "chudan") o.h = 800;
   pushUndo(); S.tenken = S.tenken || []; S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
   toast(`${TKN[k]} 幅${fmt(o.w)}：近い壁にくっつけました。幅と向きは下のボタンで`);
@@ -2360,6 +2361,7 @@ function addTenken(k){
   const __atR = (function(k){
   if (k === "kitchen" || k === "senmen" || k === "counter" || k === "makura" || k === "chudan" || k === "tearai" || k === "geta" || k === "senpan") return addEquip(k);
   pushUndo(); const c = HB.__putAt || viewCenterMM(), w = k === "wc" ? 400 : k === "bath" ? 1600 : k === "acout" ? 200 : k === "pillar" ? 105 : k === "floor" ? 600 : k === "yukashu" ? 600 : k === "dansa" ? 910 : 450, o = {k, w, x: Math.round(c[0] / 5) * 5, y: Math.round(c[1] / 5) * 5};
+  if (HB.__snap207 && k !== "dansa"){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：配置の吸着（段差はドア中心から決まるので対象外） */
   if (k === "wc" || k === "bath"){ o.d = k === "wc" ? 700 : 800; o.dir = "n"; }
   if (k === "dansa"){ o.dir = "h"; const d = S.sashes.filter(sa => sa.drawn && sa.host && /室内ドア|クローゼット/.test(sa.cat)).map(sa => { const sg = hostSeg(sa.host); if (!sg) return null; const L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L], m = [sg[0][0] + u[0] * (sa.pos + sa.w / 2), sg[0][1] + u[1] * (sa.pos + sa.w / 2)]; return {m, w: sa.w, v: Math.abs(u[1]) > 0.5, d: Math.hypot(m[0] - c[0], m[1] - c[1])}; }).filter(Boolean).sort((a, b2) => a.d - b2.d)[0];
     if (d){ o.x = Math.round(d.m[0] / 5) * 5; o.y = Math.round(d.m[1] / 5) * 5; o.w = d.w; o.dir = d.v ? "v" : "h"; } }
@@ -4041,10 +4043,10 @@ function addStdOpening(ty){
   pushUndo();
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
   const x = (HB.__pickSash && TYPE_CATS[ty](HB.__pickSash)) ? HB.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
-  let pos = Math.max(0, Math.min(nh.L - x.w, Math.round((nh.t * nh.L - x.w / 2) / 5) * 5));
+  let pos = Math.max(0, Math.min(nh.L - x.w, HB.__snap207 ? HB.__snap207.sash(x.cat, nh.t * nh.L - x.w / 2) : Math.round((nh.t * nh.L - x.w / 2) / 5) * 5));   /* CAD-207：壁に沿った位置の吸着 */
   // 同じ壁の建具と重なる時は横にずらす。その壁に空きが無ければ近い別の壁へ
   const spot = r => {
-    const p0 = Math.max(0, Math.min(r.L - x.w, Math.round((r.t * r.L - x.w / 2) / 5) * 5));
+    const p0 = Math.max(0, Math.min(r.L - x.w, HB.__snap207 ? HB.__snap207.sash(x.cat, r.t * r.L - x.w / 2) : Math.round((r.t * r.L - x.w / 2) / 5) * 5));   /* CAD-207 */
     const same = S.sashes.filter(o => o.drawn && o.host && o.host.t === r.h.t && o.host.i === r.h.i);
     const free = v => v >= 0 && v <= r.L - x.w && same.every(o => v + x.w <= o.pos || v >= o.pos + o.w);
     if (free(p0)) return p0;
@@ -8065,7 +8067,8 @@ function ltPlanClick(mm){
   }
   /* 本体（旧 blk02・照明を置く／置いてある照明の状態変更。本文 verbatim） */
   if (ltTool && ltNear(mm) < 0){
-    const x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
+    let x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
+    if (HB.__snap207){ const s207 = HB.__snap207.lt(ltTool, mm); x = s207[0]; y = s207[1]; }   /* CAD-207：配置の吸着（並び＞227.5ピッチ＞5mm） */
     const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました。続けて置けます`); };
     if (HB.__ltAct && HB.__ltAct.k === ltTool){ put(HB.__ltAct.act); return true; }
     if (S.mode === "zo"){ put("new"); return true; } // CAD-164: 新築・増築では状態を聞かない（新設しかない。本人の指示 2026-11-11「DL・CL押したらもう置いたらいい」）
@@ -17938,6 +17941,64 @@ applyTheme194();
   }
   document.addEventListener("pointerup", up205, true);
   document.addEventListener("pointercancel", up205, true);
+})();
+</script>
+
+
+<script>
+/* ================= CAD-207：間取りの配置の吸着（スナップ） =================
+   本人の決定（2026-11-13、理解確認「そう」済み）：
+   間取りの中で物を置く時・間仕切りを描く時の位置を、次の優先順位で吸着させる。
+   目的は、寸法表示に2、3mmのずれが出ない事と、連続配置の並びがそろう事。
+     1. 並び（最優先）：前に置いた同じ種類の物の並び（横の列＝同じY、縦の列＝
+        同じX）と誤差の範囲で近ければ、その並びにぴったり合わせる。直角方向の
+        座標だけをそろえ、並び方向の位置は押した所のまま。
+     2. 227.5ピッチ：モジュールのピッチ線に近ければ吸う（原点は家の外形の
+        最小角＝gSnap と同じ約束。モジュール1000の物件ではピッチ500）。
+     3. 5mm単位：どちらにも近くなければ5mm単位に丸める。
+   しきい値：並び 120mm 以内／ピッチ 60mm 以内。どちらも「ほぼ同じ・ほぼ線上」
+   の範囲だけで、勝手に遠くへは動かさない。
+   効くのは「置く操作の計算点」だけ（照明・床置き・壁付けの壁沿い位置・
+   サッシの壁沿い位置）。読み込んだデータの位置は動かさない。数字入力と
+   コントローラーの移動は今のまま。家の輪郭をなぞる「描く」画面には効かせない。
+   間仕切りの指描きは従来から gSnap（ピッチ）＋壁への接続で端が決まっており、
+   この決定と一致しているため変更していない。 */
+HB.__snap207 = (function(){
+  "use strict";
+  var ALIGN = 120, PTH = 60;
+  function pitch(){ return (typeof S !== "undefined" && S.modul === "1000") ? 500 : 227.5; }
+  function org(axis){ try { var b = bbox(); return axis === "x" ? b.x0 : b.y0; } catch(e){ return 0; } }
+  function one(v, aligns, origin){
+    var best = null, bd = ALIGN + 0.001;
+    for (var i = 0; i < aligns.length; i++){ var d = Math.abs(aligns[i] - v); if (d < bd){ bd = d; best = aligns[i]; } }
+    if (best != null) return best;
+    var p = pitch(), pv = origin + Math.round((v - origin) / p) * p;
+    if (Math.abs(pv - v) <= PTH) return pv;
+    return Math.round(v / 5) * 5;
+  }
+  function pair(list, pt){
+    return [ one(pt[0], list.map(function(o){ return o.x; }), org("x")),
+             one(pt[1], list.map(function(o){ return o.y; }), org("y")) ];
+  }
+  return {
+    /* 照明：同じ種類の照明同士で並びをそろえる */
+    lt: function(kind, mm){ return pair((typeof S !== "undefined" && S.lights || []).filter(function(l){ return l.k === kind; }), mm); },
+    /* 床置き：同じ種類の tenken 同士で並びをそろえる */
+    tk: function(kind, c){ return pair((typeof S !== "undefined" && S.tenken || []).filter(function(o){ return o.k === kind; }), c); },
+    /* 壁付け：壁に沿った位置（al）。並びは同じ種類で、同じ向きの壁に付いた物の沿い座標 */
+    eq: function(kind, al, vert){
+      var list = (typeof S !== "undefined" && S.tenken || []).filter(function(o){
+        if (o.k !== kind) return false;
+        return vert ? (o.dir === "w" || o.dir === "e") : (o.dir === "n" || o.dir === "s");
+      });
+      return one(al, list.map(function(o){ return vert ? o.y : o.x; }), org(vert ? "y" : "x"));
+    },
+    /* サッシ・建具：壁に沿った位置（pos）。並びは同じ cat の pos、ピッチの原点は壁の始点（0） */
+    sash: function(cat, raw){
+      var list = (typeof S !== "undefined" && S.sashes || []).filter(function(s){ return s.drawn && s.cat === cat; });
+      return one(raw, list.map(function(s){ return s.pos; }), 0);
+    }
+  };
 })();
 </script>
 
