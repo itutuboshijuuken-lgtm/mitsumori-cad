@@ -17599,5 +17599,109 @@ function applyTheme194(){ document.body.classList.toggle("gold", themeNow194() =
 function setTheme194(t){ try { localStorage.setItem(THEME_KEY194, t === "gold" ? "gold" : "std"); } catch(e){} applyTheme194(); }
 applyTheme194();
 </script>
+
+<script>
+/* ================= CAD-204：置いたゾーン（土間など）をタップして直す入口 =================
+   本人の実機報告（2026-11-13 動画）：部屋の中に置いた土間ゾーンをタップすると、
+   ゾーン自身の編集ではなく部屋の床シート（CAD-176 の部屋バー）が開き、そこで
+   床を選ぶと部屋全体の床が変わってしまう。ゾーンの寸法（幅・奥行き）を
+   タップから変える手段が無い。
+   原因：タップの候補（pickCands）にゾーンが入っておらず、候補ゼロのタップは
+   CAD-176 が部屋の空タップとして受ける。ゾーンの囲み編集（enclStartEdit "z"）
+   への入口は、囲みモード中の短タップにしか無かった。
+   → CAD-182 と同じ作りで、#plan の pointerup（176・177・182 の後）に
+   ゾーン専用の入口を足す。器具から自動で出来た部屋（fid 付き）は対象外
+   （浴室の自動部屋・工事なし表示＝CAD-192/197 には触らない）。
+   床レコード（182）が先に開いたタップと、物を選んだタップでは譲る。
+   当たったら部屋バーを閉じて囲み編集を開く（寸法は数字で変更、決定で
+   図と見積に連動する既存の仕組みのまま）。 */
+(function(){
+  "use strict";
+  var tap204 = null;   // 直近の実タップ {mm, cx, cy, t, used, pid, maxDev, selB}
+
+  function gates204(selAtDown){
+    try {
+      if (!HB.__pageM) return true;
+      if (HB.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+      if (HB.__armedAny && HB.__armedAny()) return true;
+      if (selAtDown) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (HB.__put) return true;
+      if (HB.__floorArm) return true;
+      if (HB.__delMode || HB.__hgMode || HB.__partDraw) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (typeof toolOpen !== "undefined" && toolOpen === "part") return true;
+      return false;
+    } catch(e){ return true; }
+  }
+  function nearLight204(mm){
+    try { return (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); }
+    catch(e){ return false; }
+  }
+  /* ゾーンの当たり判定（囲みモード中の短タップと同じ、内側だけ・後ろ＝新しい物を先） */
+  function hit204(mm){
+    var Z = S.zones || [];
+    for (var i = Z.length - 1; i >= 0; i--){
+      var z = Z[i];
+      if (!z || z.fid) continue;
+      if (typeof ZT === "undefined" || !ZT[z.k]) continue;
+      if (mm[0] > z.x0 && mm[0] < z.x1 && mm[1] > z.y0 && mm[1] < z.y1) return i;
+    }
+    return -1;
+  }
+  function open204(i){
+    if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(e){} }
+    enclMode = true;
+    try { document.body.classList.add("enclmode"); } catch(e){}
+    try { drawToolsUI(); } catch(e){}
+    enclStartEdit("z", i);
+  }
+
+  /* 実タップの記録（CAD-182 と同じ作り） */
+  document.addEventListener("pointerdown", function(e){
+    try {
+      if (tap204 && !tap204.up && e.pointerId !== tap204.pid){ tap204 = null; return; }
+      if (e.isPrimary === false){ tap204 = null; return; }
+      var t = e.target;
+      if (!t || !t.closest || !t.closest("#plan")){ tap204 = null; return; }
+      var mm = toMM(planPt(e));
+      tap204 = { mm: [mm[0], mm[1]], cx: e.clientX, cy: e.clientY, t: Date.now(), used: false, up: false,
+                 pid: e.pointerId, maxDev: 0,
+                 selB: (typeof sel !== "undefined" && sel) ? 1 : 0 };
+    } catch(err){ tap204 = null; }
+  }, true);
+  document.addEventListener("pointerup", function(e){
+    var d = tap204;
+    if (d && e.pointerId === d.pid) d.up = true;
+  }, true);
+  document.addEventListener("pointercancel", function(){ tap204 = null; }, true);
+  document.addEventListener("pointermove", function(e){
+    var d = tap204;
+    if (!d || e.pointerId !== d.pid) return;
+    var dev = Math.hypot(e.clientX - d.cx, e.clientY - d.cy);
+    if (dev > d.maxDev) d.maxDev = dev;
+  }, true);
+
+  /* 入口: #plan の pointerup（CAD-176・177・182 の処理の後） */
+  var plan204 = document.getElementById("plan");
+  if (plan204) plan204.addEventListener("pointerup", function(e){
+    var d = tap204;
+    if (!d || d.used) return;
+    if (e.pointerId === d.pid) d.up = true;
+    try {
+      if (typeof enclMode !== "undefined" && enclMode) return;   /* 囲み中・182 が開いたタップは持ち場が別 */
+      if (typeof encl !== "undefined" && encl && encl.edit && encl.edit.fl177) return;   /* 177 がこのタップで開いた */
+      if (typeof sel !== "undefined" && sel) return;   /* このタップで物を選んだ場合は譲る */
+      if (gates204(d.selB)) return;
+      if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
+      if (nearLight204(d.mm)) return;
+      var i = hit204(d.mm); if (i < 0) return;
+      d.used = true;
+      open204(i);
+    } catch(err){}
+  }, false);
+})();
+</script>
 </body>
 </html>
