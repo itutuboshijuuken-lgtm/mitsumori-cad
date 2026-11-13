@@ -1213,6 +1213,7 @@ const WORK = [
   ["pTenkenC", "天井点検口", "円/個", 0, 1900],
   ["pMadowakuA", "窓枠A型（小）", "円/本", 0, 3760],
   ["pMadowakuA2", "窓枠A型（大）", "円/本", 0, 5700],
+  ["pMadowaku3900", "窓枠材（定尺3.9m）", "円/本", 0, 5700],
   ["madoWaku", "窓枠 取付手間", "円/か所", 0, 8000],
   ["madoWakuTear", "既存の窓枠 撤去・処分", "円/か所", 0, 4000],
   ["pYokuWaku", "浴室樹脂枠", "円/個", 0, 9750],
@@ -1312,7 +1313,8 @@ const sOptsShown = s => sOptsMode149(s).filter(k => !["waku", "ip", "fusuma", "s
 const ipOK = s => /掃き出し|腰窓|小窓|FIX/.test(s.cat);
 const AVG_IP = {"掃き出し": 110000, "腰窓": 65000, "小窓": 35000, "FIX": 40000};   // インプラス 材工の仮の平均（単価を入れると置き換わる）
 function nextSState(s){ const o = sOptsMode149(s); const ix = o.indexOf(sState(s)); return ix < 0 ? o[0] : o[(ix + 1) % o.length]; }
-// 窓枠：新設の窓は必ず、既存の窓は「窓枠交換」の時に積算する（上枠・下枠・縦枠2本。掃き出しは下枠なし。1950以下は小、超えると大）
+// 窓枠：新設の窓は必ず、既存の窓は「窓枠交換」の時に積算する（上枠・下枠・縦枠2本。掃き出しは下枠なし）
+// CAD-206: 材料は部材ごとの小/大（1950境）をやめ、家全体の合計長さを定尺3.9mで割って本数を出す（本人の決定 2026-11-13「家全体で、合計で」。枠材は約4mの定尺1種類だけの売り方のため）。縦枠は枠厚20mm分を上下に伸ばして見る（1本＝高さ+40mm。伸ばさないと定尺から2本取りできない場合があるため）。材料行は wakuMatRow206 が家全体で1行だけ出す
 // CAD-201: 風呂まわりの窓枠は樹脂枠で拾う（本人の決定 2026-11-13）。サッシの中心点が浴室ゾーンの範囲（壁の線の分として100mm広げる）に入っていれば浴室の窓とみなす
 function sashPt201(s){
   let a, b;
@@ -1326,6 +1328,17 @@ function bathWin201(s){
   const p = sashPt201(s); if (!p) return false;
   return (S.zones || []).some(z => z.k === "ub" && (z.fl == null || s.fl == null || z.fl === s.fl) && p[0] >= Math.min(z.x0, z.x1) - 100 && p[0] <= Math.max(z.x0, z.x1) + 100 && p[1] >= Math.min(z.y0, z.y1) - 100 && p[1] <= Math.max(z.y0, z.y1) + 100);
 }
+function wakuLen206(s){
+  const st = sState(s); if (!ipOK(s) || !(st === "new" || st === "waku")) return 0;
+  if (bathWin201(s)) return 0;   // 浴室の窓は樹脂枠セットで別に拾う（今まで通り）
+  return (s.w + (/掃き出し/.test(s.cat) ? 0 : s.w) + 2 * (s.h + 40)) * (s.n || 1);
+}
+function wakuMatRow206(){
+  let tot = 0; (S.sashes || []).forEach(s => { tot += wakuLen206(s); });
+  if (!(tot > 0)) return null;
+  const cnt = Math.ceil(tot / 3900), p = workP("pMadowaku3900");
+  return {name: "窓枠材（定尺3.9m）", spec: `全窓 合計${fmt(tot / 1000, 1)}m ÷ 定尺3.9m（縦枠は枠厚分 +40mmで計算）・${fmt(p.p)}円/本`, qty: `${cnt}本`, cost: p.p * cnt, avg: p.avg, fix: {kind: "work", key: "pMadowaku3900"}};
+}
 function wakuRows(s, two){
   const st = sState(s); if (!ipOK(s) || !(st === "new" || st === "waku")) return [];
   const where = `${s.w}×${s.h}・${two ? (s.fl || 1) + "階・" : ""}${wallLabel(s.wall).split(" ")[0]}`;
@@ -1336,11 +1349,7 @@ function wakuRows(s, two){
     if (st === "waku"){ const t = workP("madoWakuTear"); out.push({name: "既存の窓枠 撤去・処分", spec: `${s.cat} ${where}・${fmt(t.p)}円/か所`, qty: `${s.n}か所`, cost: t.p * s.n, avg: t.avg, fix: {kind: "work", key: "madoWakuTear"}}); }
     return out;
   }
-  const sides = [s.w, s.h, s.h].concat(/掃き出し/.test(s.cat) ? [] : [s.w]);
-  const big = sides.filter(L => L > 1950).length * s.n, sm = sides.filter(L => L <= 1950).length * s.n, out = [];
-  const pS = workP("pMadowakuA"), pB = workP("pMadowakuA2");
-  if (sm) out.push({name: "窓枠A型（小）", spec: `${s.cat} ${where}${st === "waku" ? "・窓枠交換" : ""}・${fmt(pS.p)}円/本`, qty: `${sm}本`, cost: pS.p * sm, avg: pS.avg, fix: {kind: "work", key: "pMadowakuA"}});
-  if (big) out.push({name: "窓枠A型（大）", spec: `${s.cat} ${where}${st === "waku" ? "・窓枠交換" : ""}・${fmt(pB.p)}円/本`, qty: `${big}本`, cost: pB.p * big, avg: pB.avg, fix: {kind: "work", key: "pMadowakuA2"}});
+  const out = [];
   const w = workP("madoWaku"); out.push({name: "窓枠 取付手間", spec: `${s.cat} ${where}・${fmt(w.p)}円/か所`, qty: `${s.n}か所`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: "madoWaku"}});
   if (st === "waku"){ const t = workP("madoWakuTear"); out.push({name: "既存の窓枠 撤去・処分", spec: `${s.cat} ${where}・${fmt(t.p)}円/か所`, qty: `${s.n}か所`, cost: t.p * s.n, avg: t.avg, fix: {kind: "work", key: "madoWakuTear"}}); }
   return out;
@@ -5338,7 +5347,7 @@ function drawExtras(){
     if (e.k === "eco") h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "base", "据置台（基礎）", "台そのまま") + tg(i, "denki", "電気配線", "配線そのまま");
     if ("noji" in e) h += tg(i, "noji", "野地合板 増し張り", "増し張りなし");
     if ("yaku" in e) h += tg(i, "yaku", "役物（棟・ケラバ・水切り）", "役物なし");
-    if (e.k === "parts"){ const DUPP = ["pTenkenF", "pTenkenC", "pDeSumi16", "pFloorOne", "pMadowakuA", "pMadowakuA2"]; h += `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#FFF4E0;border:1px solid #E8A33D;font-size:12.5px;line-height:1.5">自動で計算済みの物（点検口・出隅・フローリングなど）を、ここで足すと二重になります</div><select data-px="${i}" style="width:100%;margin-top:6px">${WORK.filter(w => /^p[A-Z]/.test(w[0])).map(w => `<option value="${w[0]}" ${e.key === w[0] ? "selected" : ""}>${w[1]}${DUPP.includes(w[0]) ? "（自動計算と重なります）" : ""}（${fmt(PR.work[w[0]] || w[4])}${w[2].replace("円", "円")}）</option>`).join("")}</select>`; }
+    if (e.k === "parts"){ const DUPP = ["pTenkenF", "pTenkenC", "pDeSumi16", "pFloorOne", "pMadowakuA", "pMadowakuA2", "pMadowaku3900"]; h += `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#FFF4E0;border:1px solid #E8A33D;font-size:12.5px;line-height:1.5">自動で計算済みの物（点検口・出隅・フローリングなど）を、ここで足すと二重になります</div><select data-px="${i}" style="width:100%;margin-top:6px">${WORK.filter(w => /^p[A-Z]/.test(w[0])).map(w => `<option value="${w[0]}" ${e.key === w[0] ? "selected" : ""}>${w[1]}${DUPP.includes(w[0]) ? "（自動計算と重なります）" : ""}（${fmt(PR.work[w[0]] || w[4])}${w[2].replace("円", "円")}）</option>`).join("")}</select>`; }
     if (e.k === "senmen") h += `<div class="seg" style="margin-top:6px">${[["750", "W750 三面鏡"], ["600", "W600 二面鏡"]].map(([v, n]) => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${n}</button>`).join("")}</div><div class="sub2">クリナップ ファンシオ</div>` + tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "cf", "床CF張替え", "床そのまま");
     if (e.k === "bousui") h += `<div class="seg" style="margin-top:6px">${[["top", "トップコート塗り替え"], ["frp", "FRPやり直し"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>` + tg(i, "drain", "ドレン改修", "ドレンそのまま");
     if (e.k === "porch") h += `<div class="sub2" style="margin-top:6px">仕上げ</div><div class="seg" style="flex-wrap:wrap">${[["mortar", "モルタル金ゴテ"], ["brush", "刷毛引き"], ["araidashi", "洗い出し"], ["tile", "タイル張り"], ["stone", "石張り"], ["sanwado", "三和土"], ["ptile", "Pタイル"], ["stamp", "スタンプ"], ["color", "カラー"], ["tousui", "透水性"]].map(([v, n]) => `<button data-ti="${i}" data-tk="fin" data-tv="${v}" aria-pressed="${e.fin === v}" type="button">${n}</button>`).join("")}</div><p class="hint" style="margin:6px 2px 0">蹴上は約${e.dan > 0 ? Math.round(e.rise / e.dan) : 0}mm／段。コンクリートは全体の大きさ（㎡）、仕上げは天端と階段（踏み面・蹴上）で計算します。</p>`;
@@ -5816,7 +5825,7 @@ function calc00(){
     }
   }
   function sash(){
-    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
   function floorFin(a, pre, ft){ const ty = ft || S.flType || "floorFin"; work(ty, `${pre}床 ${FTN[ty] || "フロアタイル"}`, a, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(ty).p)}円`); rows[rows.length - 1].cost *= 1.05; }
@@ -6575,7 +6584,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (S.cloth) work("clothNew", "クロス（壁＋天井）", inner1 + inner2 + nobe, "㎡");
   work("ashiba", "足場" + gaiSfx, ashibaA, "㎡");
   if (two) work("kaidan", "階段", 1, "か所");
-  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
   const np1 = workP("ninku");
   rows.push({name: "大工手間", spec: `${fmt(nk.n, 1)}人工 × ${fmt(np1.p)}円${nk.avg ? `（坪${fmt(workP("ninkuT").p, 1)}人工で計算）` : ""}`, qty: "", cost: nk.n * np1.p, avg: nk.avg, fix: {kind: "ninku"}});
