@@ -4671,10 +4671,14 @@ function drawPlan(){
   /* CAD-156: 横画面の間取りでは、寸法表示（外形の外へ最大630mm出る）が viewBox の外へ
      はみ出して消えない様、はみ出し込みの収まりでも s を抑える（寸法と文字は欠かさない）。
      横の上限は全画面でも効かせる。縦の上限は通常表示だけ（全画面は上の
-     (maxH152 - 16) / (b.h + 1260) が縦のはみ出しを見ている）。 */
-  if (HB.__pageM && HB.__landM128){
+     (maxH152 - 16) / (b.h + 1260) が縦のはみ出しを見ている）。
+     CAD-213: 横の上限は縦画面でも効かせる。従来は縦画面にこの上限が無く、幅で
+     決まる家（例：全長3,868mm では s=0.0745 で 630mm=46.9 単位＞余白36単位）では
+     東・西の寸法が viewBox の外へはみ出して消えていた（本人の実機報告
+     2026-11-13 22:19「図面の右側が切れている」）。縦の上限は従来通り横画面だけ。 */
+  if (HB.__pageM){
     s = Math.min(s, (W - 10) / (b.w + 1260));
-    if (!(topSvg152 > 0) && Ht) s = Math.min(s, (Ht - 10) / (b.h + 1260));
+    if (HB.__landM128 && !(topSvg152 > 0) && Ht) s = Math.min(s, (Ht - 10) / (b.h + 1260));
   }
   const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + (maxH152 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
@@ -11105,11 +11109,15 @@ HB.__dskSeg32 = true;
    ・戻る/進む・＋−全体・☰・1階・方位は、図面の上のバー（#planBar）に並べ、図面には重ねない。 */
 (function(){
   const st = document.createElement("style"); st.id = "cad87Sty";
-  st.textContent = "#planBar{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:0 2px;min-height:38px}"
-    + "#planBar .pbG{display:flex;gap:4px;align-items:center}"
-    + "#planBar button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.95);font-size:18px;font-weight:900;color:var(--ai)}"
-    + "#planBar #flBtn{width:auto;padding:0 10px}"
-    + "#planBarCmp{flex:1;display:flex;align-items:center;justify-content:center}"
+  /* CAD-213: 道具の列（#planBar）の中身の合計幅がバーの幅を超え、右端のボタンが
+     見切れていた（390px画面で中身471px＞バー378px。本人の実機報告 2026-11-13
+     22:19）。折り返しを許可し、入りきらない分は次の段に回して全ボタンを画面内に
+     収める。あわせてボタンの横幅と余白を少し詰める（高さ38pxは維持）。 */
+  st.textContent = "#planBar{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:0 2px;min-height:38px;flex-wrap:wrap;row-gap:4px}"
+    + "#planBar .pbG{display:flex;gap:2px;align-items:center;flex-wrap:wrap;row-gap:4px;max-width:100%}"
+    + "#planBar button{width:31px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.95);font-size:18px;font-weight:900;color:var(--ai)}"
+    + "#planBar #flBtn{width:auto;padding:0 5px}"
+    + "#planBarCmp{flex:1;display:flex;align-items:center;justify-content:center;min-width:28px}"
     + "#stM #enclBar{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:7;background:transparent;border:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}";
   document.head.appendChild(st);
 })();
@@ -13073,7 +13081,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 (function(){
   "use strict";
   const st = document.createElement("style");
-  st.textContent = "#planBar #delToolBtn,#planBar #nazoruBtn{width:auto;padding:0 9px;font-size:13px;font-weight:800}"
+  st.textContent = "#planBar #delToolBtn,#planBar #nazoruBtn{width:auto;padding:0 5px;font-size:12.5px;font-weight:800}"
+    + "#planBar #nazoruBtn{font-size:11.5px}"
     + "#planBar #nazoruBtn[aria-pressed=\"true\"]{background:var(--ai);color:#fff;border-color:var(--ai)}"
     + "#toolTabs{grid-template-columns:0.95fr 0.7fr 1.3fr 0.95fr 0.7fr 0.95fr}";
   document.head.appendChild(st);
@@ -13882,7 +13891,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "}",
     /* planBar new buttons */
     "#planBar{gap:4px}",
-    "#planBar #eraToolBtn,#planBar #fsBtn{width:auto;padding:0 7px;font-size:12.5px}",
+    "#planBar #eraToolBtn,#planBar #fsBtn{width:auto;padding:0 5px;font-size:11px}",
     "#planBar #eraToolBtn[aria-pressed=\"true\"]{background:var(--ai);color:#fff;border-color:var(--ai)}",
     /* item 51: drawing-only / full-screen */
     "body.fsDraw{--hdrH:0px}",
