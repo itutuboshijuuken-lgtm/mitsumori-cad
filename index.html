@@ -5416,6 +5416,7 @@ function drawExtras(){
     let h = `<div class="ex"><div class="hd"><span>${d.n}</span><button data-xd="${i}" type="button" aria-label="消す">×</button></div>`;
     if (e.k === "free") h += `<input class="nm" data-xn="${i}" placeholder="項目の名前（例：手すり取付）" value="${esc(e.name || "")}">`;
     h += `<div class="fs">${d.f.map(([f, n, u]) => `<button data-xi="${i}" data-xf="${f}" type="button">${fmt(e[f], 2)}${u}<small>${n}</small></button>`).join("")}</div>`;
+    if (e.k === "setsubi"){ const pp = (S.tenken || []).filter(o => o.k === "senpan").length; if (pp) h += `<p class="hint" style="margin:6px 2px 0">洗濯機パンは図面に${pp}か所あるので、その分は引いて計算します。</p>`; }   /* CAD-224: 図面分と二重にならない事の表示 */
     if ((e.k === "gaiheki" || e.k === "tosou") && S.edges && !unknown()) h += `<select data-xw="${i}" style="width:100%;margin-top:6px"><option value="">図面の壁から幅を入力…</option>${S.edges.map((ed, j) => `<option value="${j}">${wallLabel(j)}</option>`).join("")}</select>`;
     if (e.k === "gaiheki") h += `<div class="seg">${[["siding", "サイディング"], ["yakisugi", "焼杉"], ["nuri", "塗り壁"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>`;
     if ("kaitai" in e) h += tg(i, "kaitai", e.k === "toi" ? "既存樋の撤去（処分込み）" : "既存撤去（処分込み）", "撤去なし");
@@ -5933,7 +5934,10 @@ function calc00(){
     if (f) work("tenkenF", "床下点検口", f, "か所"); if (c) work("tenkenC", "天井点検口", c, "か所");
     const ac = (S.tenken || []).filter(o => o.k === "acout").length; if (ac) work("acOutlet", "エアコン用コンセント（天井付け）", ac, "か所");
     const dn = (S.tenken || []).filter(o => o.k === "dansa").length; if (dn) work("shikiiTear", "敷居撤去・段差調整", dn, "か所");
-    const sp = (S.tenken || []).filter(o => o.k === "senpan").length; if (sp) work("wSensou", "洗濯機パン・水栓 取付", sp, "か所");
+    const sp = (S.tenken || []).filter(o => o.k === "senpan").length;
+    // CAD-224: 仕様側（設備工事の sentaku）にも洗濯機パンがある時は exRows 側で1行に寄せるので、ここでは図面分だけの時だけ出す（二重取り防止）
+    const sqPan = (S.extras || []).reduce((a, e) => a + (e && e.k === "setsubi" ? (+e.sentaku || 0) : 0), 0);
+    if (sp && !sqPan) work("wSensou", "洗濯機パン・水栓 取付", sp, "か所");
     const ys = (S.tenken || []).filter(o => o.k === "yukashu").length; if (ys) work("yukaShuno", "床下収納庫", ys, "か所");
   }
   function tatamiRows(){
@@ -6043,6 +6047,10 @@ function calc00(){
   function exRows(){
     S.extras.forEach(normEx);
     if (S.extras.length) grp("追加の工事");
+    // CAD-224: 洗濯機パンは図面側（tenkenRows）と二重にならないよう、この exRows で1行に寄せる。数量は図面の数と仕様の数の多い方（仕様側の効く分＝多い方−図面分）
+    const panPlan = (S.tenken || []).filter(o => o.k === "senpan").length;
+    const panSpec = S.extras.reduce((a, e) => a + (e && e.k === "setsubi" ? (+e.sentaku || 0) : 0), 0);
+    let panDone = false;
     const tear = (key, name, a, kind) => { work(key, name, a, "㎡"); addS(kind || "gaiheki", a); };
     const ashL = [];
     const ash = e => { if (e.ashiba) ashL.push({n: EXT[e.k].n.replace(/（.*）/, ""), a: ashibaOf(e)}); };
@@ -6192,7 +6200,7 @@ function calc00(){
         if (e.haisui > 0) work("wHaisui", "排水管 引き直し", e.haisui, "m");
         if (e.kyuto > 0) work("wKyuto", "ガス給湯器 取替", e.kyuto, "台");
         if (e.kanki > 0) work("wKanki", "換気扇 取替", e.kanki, "台");
-        if (e.sentaku > 0) work("wSensou", "洗濯機パン・水栓 取付", e.sentaku, "か所");
+        if (!panDone){ panDone = true; if (panSpec > 0) work("wSensou", "洗濯機パン・水栓 取付", Math.max(panPlan, panSpec), "か所"); }   // CAD-224: 図面分と寄せて1行（数量は図面と仕様の多い方）
         if (e.ana > 0) work("wAna", "配管の穴あけ・貫通", e.ana, "か所");
       }
       else if (e.k === "kaidan"){
