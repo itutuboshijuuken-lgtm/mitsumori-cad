@@ -4005,7 +4005,7 @@ function selBlinkSvg(P){
 function candLabel(c){
   if (c.t === "p"){ const q = S.parts2D[c.i]; return q ? `仕切${q.y1 === q.y2 ? "横" : "縦"}${fmt(Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)))}` : null; }
   if (c.t === "o"){ const s = S.sashes[c.i]; if (!s) return null; const k = s.cat === "室内ドア" ? (/引/.test(s.name || "") ? "引戸" : "ドア") : s.cat === "クローゼット" ? "収納" : /玄関|勝手口/.test(s.cat) ? "玄関" : "窓"; return k + s.w; }
-  if (c.t === "k"){ return (S.tenken || [])[c.i] ? (S.tenken[c.i].k === "pillar" ? "独立柱" : S.tenken[c.i].k === "acout" ? "エアコン用コンセント" : "点検口") : null; }
+  if (c.t === "k"){ const o = (S.tenken || [])[c.i]; /* CAD-197: 種類ごとの名前を出す（従来は pillar/acout 以外すべて「点検口」になり、浴槽を選んでも「点検口」と出た） */ return o ? (o.k === "pillar" ? "独立柱" : o.k === "acout" ? "エアコン用コンセント" : o.k === "counter" ? "カウンター" : (TKN[o.k] || "点検口")) : null; }
   return null;
 }
 function candBarAdd(){
@@ -7514,7 +7514,7 @@ function roomLabelsSvg(P, top){
   R.rooms.forEach(r => {
 if (top === "tint"){ if (!roomZoneKind(r) && S.parts2D && S.parts2D.length && R.rooms.length > 1 && roomNonRect(r, R)) h += roomTint(r, R, P); return; }
     const c = rlAvoid(P(r.p), P, !!sr && sr.cid === r.cid), on = !!sr && sr.cid === r.cid;
-    { const f1 = roomFinOf(r); if (f1 && f1.f === "none" && f1.w === "none" && f1.c === "none") h += roomHatch(r, R, P) + `<text x="${c[0]}" y="${c[1] + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#C62828;pointer-events:none">工事なし</text>`; }
+    { const f1 = roomFinOf(r); /* CAD-197: UB の部屋に見積用に自動で付く仕上げなし（auto）は、図に「工事なし」のバッテンを描かない。手で切り替えた工事なしだけ描く */ if (f1 && !f1.auto && f1.f === "none" && f1.w === "none" && f1.c === "none") h += roomHatch(r, R, P) + `<text x="${c[0]}" y="${c[1] + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#C62828;pointer-events:none">工事なし</text>`; }
 { const f2 = roomFinOf(r); if (f2 && f2.t && f2.f !== "none" && !(f2.f === "none" && f2.w === "none" && f2.c === "none")) h += `<text x="${c[0]}" y="${c[1] + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#2F6B5F;pointer-events:none">床 ${FT_LABEL[f2.t] || ""}</text>`; }
 h += `<text x="${c[0]}" y="${c[1]}" text-anchor="middle" class="halo" style="font-size:20px;font-weight:900;fill:${on ? "#C2571A" : "#2563B0"};pointer-events:none">${roomShort(r, R, P)}</text><text x="${c[0]}" y="${c[1] + 16}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:700;fill:#5B6673;pointer-events:none">${fmt(r.area, 1)}㎡</text>`;
   });
