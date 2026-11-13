@@ -1931,8 +1931,11 @@ HB.__cands = cands;
   }
   /* CAD-217：ドア・窓・玄関の配置中（置いた建具が選択中）は、押した瞬間の選択解除をしない。
      解除→再描画で図面の収まりが変わると、続くクリックの位置がずれて次の1つが置けなくなるため。
-     タップの意味（選ぶ／次を置く／外す）はクリック側の ltPlanClick（段5a・段5）が決める。 */
-  if (HB.__pageM && !onItem && sel && PV.z <= 1 && !(HB.__put && sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))){ sel = null; drawPlan(); }
+     タップの意味（選ぶ／次を置く／外す）はクリック側の ltPlanClick（段5a・段5）が決める。
+     CAD-223：照明の配置中（置いた照明が選択中）も同じ。解除→再描画で押した要素が消えて
+     クリックが取り消され、次の1つが1回のタップで置けなくなるため、押した瞬間は解除しない。
+     タップの意味（選び直し／次を置く）はクリック側の ltPlanClick（段4・本体）が決める。 */
+  if (HB.__pageM && !onItem && sel && PV.z <= 1 && !(HB.__put && sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) && !(ltTool && sel.t === "lt")){ sel = null; drawPlan(); }
   if (false && !HB.__pageM && !tool && PV.z > 1 && !onItem){ try { $("plan").setPointerCapture(e.pointerId); } catch(er){} const r = $("plan").getBoundingClientRect(); panning = {p: [e.clientX, e.clientY], c: [PV.cx, PV.cy], k: (PV.W / PV.z) / r.width, dx: 0, dy: 0}; $("plan").style.willChange = "transform"; }
 }, true);
 $("plan").addEventListener("pointermove", e => {
@@ -9826,7 +9829,10 @@ HB.__padStdSeg12 = true;
     /* CAD-217：ドア・窓・玄関の配置中は、壁の近くのタップ（部屋の塗りポリゴン等が最前面でも）を
        「何もない所」と誤判定して選択解除しない。解除すると再描画で図面の収まりが変わり、続くクリックの
        位置がずれて置けなくなる。置けるかどうかはクリック側（ltPlanClick）が壁との距離で決める。 */
-    if (sel && !(HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))){ sel = null; try { drawSelBar(); } catch(er){} }   // 何もない所：選択を外して、そのまま置けるように
+    /* CAD-223：照明の配置中も、ドア・窓と同じく押した瞬間の選択解除をしない。解除すると
+       バーの再構築→図面の再描画で押した要素が消え、クリックが取り消されて次の1つが
+       1回のタップで置けなくなる。置けるかどうかはクリック側（ltPlanClick）が決める。 */
+    if (sel && !(typeof ltTool !== "undefined" && ltTool) && !(HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))){ sel = null; try { drawSelBar(); } catch(er){} }   // 何もない所：選択を外して、そのまま置けるように
   }, true);
   ["click", "pointerup", "mousedown", "touchstart"].forEach(ev => host.addEventListener(ev, e => { if (swallow && Date.now() - swallow < 1500){ e.stopPropagation(); if (ev !== "touchstart") e.preventDefault(); if (ev === "click") swallow = 0; } }, true));
 })();
