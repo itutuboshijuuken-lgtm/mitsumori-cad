@@ -4317,7 +4317,7 @@ $("listBtn").addEventListener("click", () => { drawToolsUI(); $("mbox").innerHTM
 $("zIn2").addEventListener("click", () => zoomAt(1.6)); $("zOut2").addEventListener("click", () => zoomAt(1 / 1.6)); $("zAll2").addEventListener("click", () => { PV.z = 1; PV.cx = PV.W / 2; PV.cy = PV.H / 2; applyPV(); });
 $("slotM").addEventListener("scroll", () => {}, {passive: true});
 /* ---------- 階（1階・2階…）の切り替え。いま開いている階のデータは、これまでと同じ場所に入れ、ほかの階は別に保管する ---------- */
-const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines"];
+const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
 const flClone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 function flEnsure(){ if (!Array.isArray(S.fl) || !S.fl.length){ S.fl = [{name: "1階", snap: null}]; S.fi = 0; } if (typeof S.fi !== "number" || S.fi < 0 || S.fi >= S.fl.length) S.fi = 0; }
 function flSnap(){ const o = {}; FLOOR_KEYS.forEach(k => { if (S[k] !== undefined) o[k] = flClone(S[k]); }); return o; }
@@ -18002,5 +18002,540 @@ HB.__snap207 = (function(){
 })();
 </script>
 
+
+<script>
+/* ============================================================
+   CAD-208: 既存／新設フロー（rf の間取りで「既存＝工事前の状態」を描く）
+   設計: hidden_files/harness/design-genkyo-2026-11-13.md
+   （メモは §4 途中で欠落。欠けた先は本人の確定形で補った：切り替え名「既存／新設」、
+     新規 rf は既存から開始、複製ボタン「新設に進む」、深さは削除時に聞く）
+   仕組み:
+   - S.gk に階ごとの「既存の図面」を持つ。FLOOR_KEYS に "gk" を足したので、
+     階の切替（flUp/flDown）でも gk は階ごとに付いてくる。
+   - 「既存」編集中は gk の中身を S の表示キーへ差し替える（swap）。
+     輪郭（edges/house/ch）・回転・部屋の選択は共有。ゾーンにひも付く extras（zid 付き）は
+     別に gk.extrasZ として差し替える。
+   - 見積・仕様は常に「新設（計画）」側の S で計算する。既存モードは間取り画面の中だけ。
+     go() を包み、画面を離れたら自動で新設に戻す。保存も、既存ビューで保存しても
+     計画側は影（__plan208）で書き直す。
+   - 複製（新設に進む）: gk の図形だけを計画側へコピーし、間仕切り・建具に
+     gid（= gk 側の id）を付ける。置く物・下地・床の記録は v1 ではコピーしない
+     （コピーした物が新規工事として金額に出るのを防ぐ。設計メモ §3 の線引き）。
+     照明は act="keep"（既存）に直してコピーする。
+   - 差分: gk にあって計画に無い間仕切り = 撤去・解体として拾う。
+     深さの3種とも window.hgAreaD に合算（CAD-152 の解体の拾いと同じ物差し。
+     面数は両面で 2、plen は撤去跡の補修用）。
+     計画に残っている壁は差分に出ないので、手付けの state="remove" とは二重にならない。
+   - 既存図: gk があれば gk を描く（bfRender の差し替え）。無ければ従来の逆算のまま。
+   ============================================================ */
+(function(){
+"use strict";
+/* 照明の act="keep"（既存）の表示用。LTA/LTCOL は const の表なので中身だけ足す */
+try { if (typeof LTA !== "undefined") LTA.keep = "既存"; } catch(e){}
+try { if (typeof LTCOL !== "undefined") LTCOL.keep = "#2563B0"; } catch(e){}
+
+/* swap する階キー：輪郭（edges/house/ch）・回転・部屋選択は共有なので除く */
+var FKEYS = FLOOR_KEYS.filter(function(k){ return ["gk", "edges", "house", "ch", "rot", "roomPt"].indexOf(k) < 0; });
+/* コピーする図形キー（v1）：金額に直結する置く物・下地・床はコピーしない */
+var COPYKEYS = ["parts2D", "sashes", "zones", "wallLines", "lights", "roomNames", "roomRecs"];
+
+var G = { mode: "N", sObj: null, fi: null, freshPid: null };
+function clone(o){ return o == null ? o : JSON.parse(JSON.stringify(o)); }
+function nid(){ return "g" + Date.now().toString(36) + Math.random().toString(36).slice(2, 9); }
+function isRf(){ try { return !!(typeof S !== "undefined" && S && S.mode === "rf"); } catch(e){ return false; } }
+function gkObj(){ try { return (typeof S !== "undefined" && S) ? (S.gk || null) : null; } catch(e){ return null; } }
+function $(id){ return document.getElementById(id); }
+window.__gk208 = G; /* テスト用に状態を公開 */
+
+/* ---- 影（計画側の正本）：swap の出し入れと、保存の書き直しに使う ---- */
+function snapPlan(){
+  var s = { f: {}, ez: [] };
+  FKEYS.forEach(function(k){ s.f[k] = clone(S[k]); });
+  try { s.ez = clone((S.extras || []).filter(function(e){ return e.zid; })); } catch(e){}
+  return s;
+}
+function restorePlan(s){
+  if (!s) return;
+  FKEYS.forEach(function(k){ if (s.f && s.f[k] !== undefined) S[k] = clone(s.f[k]); });
+  try {
+    var rest = (S.extras || []).filter(function(e){ return !e.zid; });
+    S.extras = rest.concat(clone(s.ez || []));
+  } catch(e){}
+}
+function absorbToGk(){
+  var g = gkObj(); if (!g) return;
+  FKEYS.forEach(function(k){ g[k] = S[k]; });
+  try { g.extrasZ = clone((S.extras || []).filter(function(e){ return e.zid; })); } catch(e){}
+}
+function clearUndo(){ try { undoStack.length = 0; redoStack.length = 0; undoUi(); } catch(e){} }
+
+/* ---- swap ---- */
+function swapIn(){
+  var g = gkObj(); if (!g || G.mode === "M") return;
+  g.__plan208 = snapPlan();
+  FKEYS.forEach(function(k){
+    if (g[k] !== undefined) S[k] = g[k];
+    else if (ARR208.indexOf(k) >= 0){ g[k] = []; S[k] = g[k]; }
+  });
+  try {
+    var rest = (S.extras || []).filter(function(e){ return !e.zid; });
+    S.extras = rest.concat(clone(g.extrasZ || []));
+  } catch(e){}
+  G.mode = "M"; try { S.__view208 = "M"; } catch(e){}
+  try { sel = null; tool = null; } catch(e){}
+  clearUndo();
+}
+function swapBack(){
+  var g = gkObj(); if (!g || G.mode !== "M") return;
+  absorbToGk();
+  restorePlan(g.__plan208);
+  g.__plan208 = snapPlan();
+  G.mode = "N"; try { S.__view208 = "N"; } catch(e){}
+  try { sel = null; } catch(e){}
+  clearUndo();
+}
+/* 画面遷移などで S.gk が見えなくなった時の、無理のない戻し（g は S.gk を直接見る） */
+function swapBackSoft(){
+  var g = null; try { g = S.gk || null; } catch(e){}
+  if (!g || G.mode !== "M") return;
+  absorbToGk();
+  restorePlan(g.__plan208);
+  g.__plan208 = snapPlan();
+  G.mode = "N"; try { S.__view208 = "N"; } catch(e){}
+  try { sel = null; } catch(e){}
+  clearUndo();
+}
+/* 既存ビューの断片が新設側に漏れていたら直す（undo・階切替の後など） */
+function repairView(){
+  var g = gkObj(); if (!g) return false;
+  absorbToGk();
+  restorePlan(g.__plan208);
+  G.mode = "N"; try { S.__view208 = "N"; } catch(e){}
+  try { sel = null; } catch(e){}
+  clearUndo();
+  return true;
+}
+
+/* ---- gk の初期値（空の既存図面） ---- */
+var ARR208 = ["parts2D", "sashes", "tatami", "zones", "roomFin", "roomRecs", "tenken", "fx", "lights", "wallLines", "roomNames", "geya"];
+function blankGk(){
+  var g = { __tag208: nid(), copied: false, depths: {}, extrasZ: [] };
+  FKEYS.forEach(function(k){
+    var cur = null; try { cur = S[k]; } catch(e){}
+    if (ARR208.indexOf(k) >= 0 || Array.isArray(cur)) g[k] = [];
+    else if (k === "noWall") g[k] = -1;
+    else if (cur && typeof cur === "object") g[k] = {};
+    else g[k] = (typeof DEF !== "undefined" && DEF[k] !== undefined) ? clone(DEF[k]) : clone(cur);
+  });
+  return g;
+}
+
+/* ---- id 付け（対応付けの本筋） ---- */
+function ensureIds(){
+  try {
+    (S.parts2D || []).forEach(function(q){ if (!q.id) q.id = nid(); });
+    (S.sashes || []).forEach(function(s){ if (!s.id) s.id = nid(); });
+    var g = gkObj();
+    if (g){
+      (g.parts2D || []).forEach(function(q){ if (!q.id) q.id = nid(); });
+      (g.sashes || []).forEach(function(s){ if (!s.id) s.id = nid(); });
+    }
+  } catch(e){}
+}
+
+/* ---- 差分 ---- */
+function diff(){
+  var out = { remParts: [] };
+  var g = gkObj(); if (!g || !g.copied) return out;
+  var inPlan = {};
+  (S.parts2D || []).forEach(function(q){ if (q.gid) inPlan[q.gid] = q; });
+  (g.parts2D || []).forEach(function(q){
+    if (!q.id) return;
+    if (inPlan[q.id]) return; /* 計画に残っている＝差分ではない（手付けの撤去とも二重にならない） */
+    out.remParts.push({ q: q, depth: q.dp || "rem" });
+  });
+  return out;
+}
+window.__gkDiff208 = diff;
+
+/* ---- 複製（既存 → 新設） ---- */
+function copyToPlan(){
+  var g = gkObj(); if (!g || G.mode !== "M") return false;
+  absorbToGk(); /* 表示側（S）の最新を gk に取り込んでから複製する */
+  var np = { f: {}, ez: [] };
+  COPYKEYS.forEach(function(k){ np.f[k] = clone(g[k]); });
+  (np.f.parts2D || []).forEach(function(q){ if (q.id) q.gid = q.id; });
+  (np.f.sashes || []).forEach(function(s){ if (s.id) s.gid = s.id; });
+  (np.f.zones || []).forEach(function(z){ delete z.zid; });
+  (np.f.lights || []).forEach(function(l){ l.act = "keep"; });
+  g.copied = true;
+  g.__plan208 = np;
+  swapBack();
+  try { save(); drawPlan(); } catch(e){}
+  try { toast("既存を計画にコピーしました。ここからは新設側を直してください"); } catch(e){}
+  return true;
+}
+
+/* ---- 見積への接続 ----
+   深さの3種とも window.hgAreaD に合算する（CAD-152 の解体の拾いと同じ物差し。
+   面数は両面で 2、開口は既存の建具分を引く）。
+   ※ 当初は rem を partInfo（間仕切り撤去・長さ）へ合算する案だったが、partInfo は
+     blk の IIFE 局所で外から届かないため、全局の hgAreaD に統一した（報告に明記）。 */
+try {
+  if (window.hgAreaD){
+    var __hgAD208 = window.hgAreaD;
+    window.hgAreaD = function(){
+      var D = __hgAD208();
+      try {
+        var DF = diff(), g = gkObj(), H = S.ch || 2400;
+        DF.remParts.forEach(function(e){
+          var q = e.q, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), idx = (g.parts2D || []).indexOf(q);
+          var op = (g.sashes || []).filter(function(sa){ return sa.host && sa.host.t === "p" && sa.host.i === idx; })
+            .reduce(function(x, sa){ return x + sa.w * sa.h * (sa.n || 1); }, 0);
+          var bk = D[e.depth]; if (!bk) return;
+          bk.a += Math.max(0, (L * H - op) * 2) / 1e6; bk.n += 2; bk.plen += L / 1000;
+        });
+      } catch(er){}
+      return D;
+    };
+  }
+  if (window.hgArea){
+    var __hgA208 = window.hgArea;
+    window.hgArea = function(){
+      var D = __hgA208();
+      try {
+        var DF = diff(), g = gkObj(), H = S.ch || 2400;
+        DF.remParts.forEach(function(e){
+          var q = e.q, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), idx = (g.parts2D || []).indexOf(q);
+          var op = (g.sashes || []).filter(function(sa){ return sa.host && sa.host.t === "p" && sa.host.i === idx; })
+            .reduce(function(x, sa){ return x + sa.w * sa.h * (sa.n || 1); }, 0);
+          D.a += Math.max(0, (L * H - op) * 2) / 1e6; D.n += 2;
+        });
+      } catch(er){}
+      return D;
+    };
+  }
+} catch(e){}
+
+/* ---- 削除の深さを聞く（delPart が唯一の入口：選ぶバー・一覧・消す道具すべて） ---- */
+try {
+  var __delPart208 = delPart, __delOk208 = false;
+  delPart = function(i){
+    var q = null; try { q = (S.parts2D || [])[i]; } catch(e){}
+    if (G.mode === "N" && q && q.gid && !__delOk208 && gkObj()){
+      askDepth208(i, q);
+      return;
+    }
+    __delOk208 = false;
+    __delPart208(i);
+  };
+} catch(e){}
+function askDepth208(i, q){
+  var g = gkObj(); if (!g) return;
+  var gq = null;
+  (g.parts2D || []).forEach(function(x){ if (x.id === q.gid) gq = x; });
+  var cur = (gq && gq.dp) || "rem";
+  var L = Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1));
+  var nm = function(d){ return d === "rem" ? "撤去" : d === "sub" ? "下地から解体" : "仕上げ材のみ解体"; };
+  var mb = $("mbox"); if (!mb) { __delOk208 = true; try { delPart(i); } catch(e){} return; }
+  mb.innerHTML = "<h3>この壁は「既存」にあります</h3>"
+    + "<p class=\"hint\">長さ " + fmt(L) + "mm。消すと、工事では解体・撤去として見積に出ます。深さを選んでください（今は「" + nm(cur) + "」です）。</p>"
+    + "<div style=\"display:grid;gap:8px\">"
+    + ["rem", "sub", "fin"].map(function(d){
+        return "<button type=\"button\" data-gd=\"" + d + "\" style=\"min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;text-align:left;padding:8px 12px\">"
+          + nm(d) + (d === cur ? "（今の深さ）" : "") + "</button>";
+      }).join("")
+    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">やめる</button></div>";
+  $("modal").hidden = false;
+  mb.querySelectorAll("[data-gd]").forEach(function(b){
+    b.onclick = function(){
+      var d = b.dataset.gd;
+      if (gq) gq.dp = d;
+      $("modal").hidden = true;
+      try { pushUndo(); } catch(e){}
+      __delOk208 = true;
+      try { delPart(i); } catch(e){}
+      try { sel = null; save(); drawPlan(); } catch(e){}
+      try { toast("壁を消しました（" + nm(d) + "）。既存図には残ります"); } catch(e){}
+    };
+  });
+  $("gdCan").onclick = function(){ $("modal").hidden = true; };
+}
+
+/* ---- ゴースト（計画で消した既存の壁）の描画とタップ ---- */
+function drawGhosts208(){
+  try {
+    if (G.mode !== "N" || !isRf()) return;
+    var D = diff(); if (!D.remParts.length) return;
+    var svg = $("plan"); if (!svg || !window.__planT) return;
+    var old = $("gkGhost208"); if (old) old.remove();
+    var T = window.__planT;
+    var P = function(p){ return [p[0] * T.s + T.ox, p[1] * T.s + T.oy]; };
+    var NS = "http://www.w3.org/2000/svg";
+    var gEl = document.createElementNS(NS, "g");
+    gEl.setAttribute("id", "gkGhost208"); gEl.setAttribute("pointer-events", "none");
+    D.remParts.forEach(function(e){
+      var a = P([e.q.x1, e.q.y1]), b = P([e.q.x2, e.q.y2]);
+      var ln = document.createElementNS(NS, "line");
+      ln.setAttribute("x1", a[0]); ln.setAttribute("y1", a[1]);
+      ln.setAttribute("x2", b[0]); ln.setAttribute("y2", b[1]);
+      ln.setAttribute("stroke", "#C62828"); ln.setAttribute("stroke-width", "3");
+      ln.setAttribute("stroke-dasharray", "7 5"); ln.setAttribute("opacity", ".85");
+      var tx = document.createElementNS(NS, "text");
+      tx.setAttribute("x", (a[0] + b[0]) / 2); tx.setAttribute("y", (a[1] + b[1]) / 2 - 6);
+      tx.setAttribute("text-anchor", "middle"); tx.setAttribute("class", "halo");
+      tx.setAttribute("style", "font-size:11px;font-weight:900;fill:#C62828");
+      tx.textContent = e.depth === "rem" ? "撤去" : e.depth === "sub" ? "下地から解体" : "仕上げ材のみ解体";
+      gEl.appendChild(ln); gEl.appendChild(tx);
+    });
+    svg.appendChild(gEl);
+  } catch(e){}
+}
+window.__gkTap208 = function(mm){
+  try {
+    if (G.mode !== "N" || !isRf()) return false;
+    if (!HB.__hgMode) return false; /* 解体道具の時だけ */
+    if ($("modal") && !$("modal").hidden) return false;
+    var D = diff(); if (!D.remParts.length) return false;
+    var best = null, bd = 300;
+    D.remParts.forEach(function(e){
+      var r = segDist(mm, [e.q.x1, e.q.y1], [e.q.x2, e.q.y2]);
+      if (r.d < bd){ bd = r.d; best = e; }
+    });
+    if (!best) return false;
+    ghostSheet208(best);
+    return true;
+  } catch(e){ return false; }
+};
+function ghostSheet208(e){
+  var g = gkObj(); if (!g) return;
+  var nm = function(d){ return d === "rem" ? "撤去" : d === "sub" ? "下地から解体" : "仕上げ材のみ解体"; };
+  var L = Math.round(Math.hypot(e.q.x2 - e.q.x1, e.q.y2 - e.q.y1));
+  var mb = $("mbox"); if (!mb) return;
+  mb.innerHTML = "<h3>既存の壁（計画で消した壁）</h3>"
+    + "<p class=\"hint\">長さ " + fmt(L) + "mm。この壁の解体の深さを選んでください（今は「" + nm(e.depth) + "」です）。</p>"
+    + "<div style=\"display:grid;gap:8px\">"
+    + ["rem", "sub", "fin"].map(function(d){
+        return "<button type=\"button\" data-gd=\"" + d + "\" style=\"min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;text-align:left;padding:8px 12px\">"
+          + nm(d) + (d === e.depth ? "（今の深さ）" : "") + "</button>";
+      }).join("")
+    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">やめる</button></div>";
+  $("modal").hidden = false;
+  mb.querySelectorAll("[data-gd]").forEach(function(b){
+    b.onclick = function(){
+      e.q.dp = b.dataset.gd;
+      $("modal").hidden = true;
+      try { save(); drawPlan(); } catch(er){}
+      try { toast("深さを「" + nm(e.q.dp) + "」に変えました"); } catch(er){}
+    };
+  });
+  $("gdCan").onclick = function(){ $("modal").hidden = true; };
+}
+/* ゴーストのタップ：解体道具のハンドラ（#slotM の pointerdown）より先に capture で受ける */
+try {
+  var __slot208 = document.getElementById("slotM");
+  if (__slot208) __slot208.addEventListener("pointerdown", function(e){
+    try {
+      if (!HB.__hgMode || !HB.__pageM) return;
+      if (G.mode !== "N" || !isRf()) return;
+      if (e.target && e.target.closest && e.target.closest("button")) return;
+      var mm = toMM(planPt(e));
+      if (window.__gkTap208(mm)){ e.preventDefault(); e.stopPropagation(); }
+    } catch(er){}
+  }, true);
+} catch(e){}
+
+/* ---- drawPlan の包み：ゴースト＋切替バーの更新 ---- */
+try {
+  var __drawPlan208 = drawPlan;
+  drawPlan = function(){ __drawPlan208(); try { drawGhosts208(); } catch(e){} try { drawGkBar208(); } catch(e){} };
+} catch(e){}
+
+/* ---- 切替バー（間取り画面） ---- */
+function ensureBar208(){
+  var bar = $("gkBar208"); if (bar) return bar;
+  var pb = $("planBar"); if (!pb || !pb.parentNode) return null;
+  bar = document.createElement("div");
+  bar.id = "gkBar208";
+  bar.style.cssText = "display:none;gap:6px;align-items:center;padding:6px 8px;background:#F2F6FB;border-bottom:1.5px solid #B9C9DC";
+  bar.innerHTML = "<div class=\"seg\" style=\"flex:1;margin:0\">"
+    + "<button id=\"gkM208\" type=\"button\">既存</button>"
+    + "<button id=\"gkN208\" type=\"button\">新設</button></div>"
+    + "<button id=\"gkCopy208\" class=\"btn pri\" type=\"button\" style=\"display:none;white-space:nowrap\">新設に進む</button>"
+    + "<span id=\"gkInfo208\" style=\"font-size:11px;color:var(--sub);line-height:1.2\"></span>";
+  pb.parentNode.insertBefore(bar, pb);
+  $("gkM208").onclick = function(){
+    if (!isRf()) return;
+    if (!gkObj()){ try { S.gk = blankGk(); } catch(e){ return; } }
+    if (G.mode !== "M"){ swapIn(); try { save(); drawPlan(); } catch(e){} try { toast("既存の図面を描いています。ここに置いた物は見積に出ません"); } catch(e){} }
+  };
+  $("gkN208").onclick = function(){
+    if (G.mode === "M"){ swapBack(); try { save(); drawPlan(); } catch(e){} }
+  };
+  $("gkCopy208").onclick = function(){ copyToPlan(); };
+  return bar;
+}
+function drawGkBar208(){
+  try {
+    var bar = ensureBar208(); if (!bar) return;
+    var show = false;
+    try { show = isRf() && !!HB.__pageM; } catch(e){}
+    bar.style.display = show ? "flex" : "none";
+    if (!show) return;
+    var g = gkObj();
+    var m = $("gkM208"), n = $("gkN208"), c = $("gkCopy208"), info = $("gkInfo208");
+    if (m) m.setAttribute("aria-pressed", G.mode === "M" ? "true" : "false");
+    if (n) n.setAttribute("aria-pressed", G.mode === "N" ? "true" : "false");
+    if (c) c.style.display = (G.mode === "M" && g && !g.copied) ? "" : "none";
+    if (info) info.textContent = G.mode === "M"
+      ? (g && g.copied ? "既存を直しています（差分は見積に自動で出ます）" : "既存を描いています（見積には出ません）")
+      : (g ? "既存の図面があります（「既存」で直せます）" : "");
+  } catch(e){}
+}
+
+/* ---- 既存図：gk があれば gk を描く（元の bfRender を一時差し替えで使う） ----
+   元の bfRender は blk129 の IIFE 局所で、HB.__bf129.render に実体が公開されている。
+   違う描き方をしたら、gkSync208 が検知して描き直す。 */
+window.__bfOrigRender208 = null;
+try { if (typeof HB !== "undefined" && HB.__bf129 && HB.__bf129.render) window.__bfOrigRender208 = HB.__bf129.render; } catch(e){}
+var __gkBfLast208 = null;
+window.__gkBfRender208 = function(){
+  var g = null;
+  try { g = (typeof S !== "undefined" && S && S.mode === "rf") ? S.gk : null; } catch(e){}
+  var has = !!(g && (((g.parts2D || []).length) || ((g.sashes || []).length) || ((g.zones || []).length)));
+  if (!has || !window.__bfOrigRender208) return false;
+  var KEYS = ["parts2D", "sashes", "zones", "roomFin", "wallLines"];
+  var keep = {};
+  KEYS.forEach(function(k){ keep[k] = S[k]; });
+  KEYS.forEach(function(k){
+    S[k] = (g[k] || []).map(function(o){
+      var c = JSON.parse(JSON.stringify(o));
+      if (k === "parts2D"){ delete c.state; c.isNew = false; delete c.hg; delete c.hgD; }
+      if (k === "sashes"){ delete c.st; }
+      return c;
+    });
+  });
+  try { window.__bfOrigRender208(); } finally { KEYS.forEach(function(k){ S[k] = keep[k]; }); }
+  var lg = $("pvLegend");
+  if (lg) lg.textContent = "既存図（工事前）：間取りの「既存」で描いた図面です。計画で消した壁も、ここには残ります。";
+  var svg = $("pvSvg");
+  __gkBfLast208 = svg ? svg.innerHTML : null;
+  return true;
+};
+
+/* ---- 描く画面のモーダル：既存モードでは「今ある壁」に固定 ---- */
+try {
+  var __mo208 = null;
+  var __fixSheet208 = function(){
+    try {
+      if (G.mode !== "M") return;
+      var mb = $("mbox"); if (!mb || !$("modal") || $("modal").hidden) return;
+      var nw = mb.querySelectorAll("[data-nw]");
+      if (!nw.length) return;
+      var pressed1 = mb.querySelector('[data-nw="1"][aria-pressed="true"]') || mb.querySelector('[data-nw="2"][aria-pressed="true"]');
+      if (pressed1){
+        var b0 = mb.querySelector('[data-nw="0"]');
+        if (b0) b0.click();
+      }
+      var seg = mb.querySelector("[data-nw]");
+      if (seg && seg.parentNode && seg.parentNode.style) seg.parentNode.style.display = "none";
+    } catch(e){}
+  };
+  if (window.MutationObserver){
+    __mo208 = new MutationObserver(function(){ __fixSheet208(); });
+    var __mb208 = $("mbox");
+    if (__mb208) __mo208.observe(__mb208, { childList: true, subtree: true, attributes: true });
+  }
+} catch(e){}
+
+/* ---- go / save / newProject の包み ---- */
+try {
+  var __go208 = go;
+  go = function(n){
+    if (G.mode === "M" && n !== "M"){ swapBack(); try { save(); } catch(e){} }
+    __go208(n);
+    if (n === "M"){ try { drawGkBar208(); } catch(e){} }
+  };
+} catch(e){}
+try {
+  var __save208 = save;
+  save = function(){
+    __save208();
+    try {
+      if ((G.mode === "M" || (typeof S !== "undefined" && S && S.__view208 === "M")) && typeof PJ !== "undefined" && PJ.cur){
+        var raw = localStorage.getItem("zochiku-p-" + PJ.cur); if (!raw) return;
+        var d = JSON.parse(raw), g = d.gk;
+        if (g && g.__plan208){
+          FKEYS.forEach(function(k){ if (g.__plan208.f && g.__plan208.f[k] !== undefined) d[k] = g.__plan208.f[k]; });
+          var rest = (d.extras || []).filter(function(e2){ return !e2.zid; });
+          d.extras = rest.concat(clone(g.__plan208.ez || []));
+          d.__view208 = "N";
+          localStorage.setItem("zochiku-p-" + PJ.cur, JSON.stringify(d));
+        }
+      }
+    } catch(e){}
+  };
+} catch(e){}
+try {
+  var __np208 = newProject;
+  newProject = function(n){ __np208(n); try { G.freshPid = PJ.cur; } catch(e){} };
+} catch(e){}
+/* 階の切替（flSwitch）：既存編集中は、いったん新設に戻してから階を切り替え、
+   新しい階で既存に入り直す（既存ビューのまま階スナップへ書くと計画側に既存が混ざるため） */
+try {
+  var __flSwitch208 = flSwitch;
+  flSwitch = function(i){
+    var wasM = (G.mode === "M");
+    if (wasM) swapBack();
+    __flSwitch208(i);
+    if (wasM && isRf() && gkObj()){
+      try { S.__view208 = "N"; } catch(e){}
+      swapIn();
+    }
+  };
+} catch(e){}
+
+/* ---- 定期同期：新規 rf の初期化・画面外れ・修復・id 付け ---- */
+function gkSync208(){
+  try {
+    if (typeof S === "undefined" || !S) return;
+    if (G.sObj !== S){ G.sObj = S; if (G.mode === "M") G.mode = "N"; G.fi = S.fi; }
+    if (!isRf()){
+      if (G.mode === "M") swapBackSoft();
+      drawGkBar208();
+      return;
+    }
+    if (G.mode === "N" && S.__view208 === "M") repairView();
+    /* 既存図を開いている間：元の描き方で描かれたら、gk の描き方に直す */
+    try {
+      if (window.__bfOrigRender208 && typeof HB !== "undefined" && HB.__bf129 && HB.__bf129.on()){
+        var svg = $("pvSvg");
+        if (svg && svg.innerHTML !== __gkBfLast208) window.__gkBfRender208();
+      }
+    } catch(e){}
+    if (G.freshPid && typeof PJ !== "undefined" && PJ.cur === G.freshPid && !$("kindBox")){
+      G.freshPid = null;
+      if (!S.gk){
+        S.gk = blankGk();
+        if (G.mode !== "M") swapIn();
+        try { save(); } catch(e){}
+      }
+    }
+    /* 新規 rf のもう一つの入口：まだ何も描いていない rf 現場（初回ダイアログ経由など）は
+       「既存」から始める（本人の決定）。中身のある従来データには触らない */
+    if (isRf() && !S.gk && G.mode !== "M" && !S.edges
+      && !(S.parts2D || []).length && !(S.sashes || []).length && !(S.zones || []).length){
+      S.gk = blankGk();
+      swapIn();
+      try { save(); } catch(e){}
+    }
+    ensureIds();
+    drawGkBar208();
+  } catch(e){}
+}
+setInterval(gkSync208, 600);
+})();
+
+</script>
 </body>
 </html>
