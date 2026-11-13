@@ -579,7 +579,10 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
 <h2>床</h2>
       <div class="seg v" id="rfFloor"><button data-rff="none" type="button">工事なし</button><button data-rff="fin" type="button">増し貼り（仕上げのみ）</button><button data-rff="base" type="button">増し貼り（下地合板12mm＋仕上げ）</button><button data-rff="frame" type="button">床組から改修（1階向け）</button><button data-rff="joist" type="button">根太からやり替え（2階など）</button><button data-rff="strip" type="button">床をはがして張替え</button><button data-rff="tat" type="button">畳から床へ</button><button data-rff="new" type="button">土間に床を新設</button><button data-rff="oki" type="button">置き床</button></div>
       <h2>壁の仕上げ材</h2>
-<div class="seg v" id="rfWallMat"><button data-rfwm="cloth" type="button">クロス</button><button data-rfwm="paint" type="button">塗装</button><button data-rfwm="diato" type="button">珪藻土</button></div>
+<div class="seg v" id="rfWallMat"><button data-rfwm="cloth" type="button">クロス</button><button data-rfwm="paint" type="button">塗装</button><button data-rfwm="diato" type="button">珪藻土</button><button data-rfwm="shikkui" type="button">漆喰</button><button data-rfwm="juraku" type="button">聚楽</button></div>
+<p class="hint" style="margin:4px 0 0">左官仕上げ（漆喰・珪藻土・聚楽）の単価は、ボード下地に塗る前提の金額です。</p>
+      <h2>左官の下地調整</h2>
+<div class="seg" id="rfSakanBase"><button data-rfsb="1" type="button">下地調整を付ける</button><button data-rfsb="0" type="button">付けない</button></div>
       <h2>壁</h2>
       <div id="rfWall"><div id="rfWallTop"></div><div id="rfWallDeep"></div></div>
       <h2>天井の仕上げ材</h2>
@@ -1062,6 +1065,7 @@ const WORK = [
   ["ubKaitai", "ユニットバス解体", "円/か所", 0, 50000],
   ["tQR", "トイレ 組み合わせ便器（ピュアレストQR 便器＋タンク）", "円/台", 0, 55000],
   ["tSB", "トイレ 温水洗浄便座（ウォシュレットSB）", "円/台", 0, 35000],
+  ["tWash", "トイレ ウォシュレット（便座だけ取替）", "円/台", 0, 48000],
   ["tIttai", "トイレ 一体型（TOTO GGA3・床排水200）", "円/台", 0, 120000],
   ["tTankless", "トイレ タンクレス（ネオレストクラス）", "円/台", 0, 180000],
   ["tWork", "トイレ 取替手間", "円/台", 0, 20000],
@@ -1074,7 +1078,10 @@ const WORK = [
   ["tConsent", "コンセント増設（電気工事）", "円/か所", 0, 15000],
   ["clothNew", "クロス 新規（新しいボードに貼る）", "円/㎡", 0, 1680],
   ["wallPaint", "壁 塗装（下地処理込み）", "円/㎡", 0, 1500],
-  ["wallDiato", "壁 珪藻土（塗り）", "円/㎡", 0, 6500],
+  ["wallDiato", "壁 珪藻土（塗り・材工）", "円/㎡", 0, 5000],
+  ["wallShikkui", "壁 漆喰（塗り・材工）", "円/㎡", 0, 6500],
+  ["wallJuraku", "壁 聚楽（塗り・材工）", "円/㎡", 0, 5000],
+  ["wallShitaji", "壁 左官 下地調整（ボード下地）", "円/㎡", 0, 2500],
   ["ceilPaint", "天井 塗装（下地処理込み）", "円/㎡", 0, 1400],
 ["tfrDoor", "ドア枠（固定枠・取付）", "円/か所", 0, 15000],
 ["tfrDoorC", "ドア枠（ケーシング枠・取付）（仮）", "円/か所", 0, 15000],
@@ -1084,6 +1091,8 @@ const WORK = [
   ["acOutlet", "エアコン用コンセント（天井付け・専用回路）", "円/か所", 0, 18000],
   ["jibanSurvey", "地盤調査（スウェーデン式サウンディング）", "円/回", 0, 55000],
   ["jibanKairyo", "地盤改良（表層改良）", "円/㎡", 0, 3500],
+  ["v24First", "新築 24時間換気 第1種（熱交換型）", "円/式", 0, 280000],
+  ["v24Third", "新築 24時間換気 第3種", "円/式", 0, 90000],
   ["kakuninShinsei", "確認申請・中間検査・完了検査", "円/件", 0, 250000],
   ["kasetsuAll", "仮設工事（電気・水道・トイレ・仮囲い）", "円/式", 0, 150000],
   ["hikomi", "水道・排水の引込工事", "円/式", 0, 300000],
@@ -1109,6 +1118,8 @@ const WORK = [
   ["eTekkyo", "電気 撤去工事", "円/式", 0, 30000],
   ["ePanel", "電気 分電盤取替（ブレーカー込み）", "円/式", 0, 70000],
   ["eEco", "電気 エコキュート配線", "円/式", 0, 15000],
+  ["eAircon", "電気 エアコン本体（標準取付込み）", "円/台", 0, 110000],
+  ["eAirconTear", "電気 エアコン 既存撤去・処分", "円/台", 0, 8000],
   ["ecoTank", "エコキュート 貯湯ユニット（日立 BHP-TAD37XD）", "円/台", 0, 147500],
   ["ecoHP", "エコキュート ヒートポンプ（BHP-HAD45X）", "円/台", 0, 133700],
   ["ecoLeg", "エコキュート 脚部カバー", "円/台", 0, 9400],
@@ -1236,6 +1247,8 @@ const WORK = [
   ["kSetsubi", "キッチン 給排水・ガス接続", "円/台", 0, 40000],
   ["kIH", "IH 電気工事", "円/か所", 0, 30000],
   ["kDuct", "ダクト工事", "円/か所", 0, 15000],
+  ["kDish", "キッチン 食洗機（ビルトイン）", "円/台", 0, 120000],
+  ["kHood", "キッチン レンジフード本体", "円/台", 0, 85000],
   ["kPanel", "キッチンパネル（壁）", "円/㎡", 0, 9000], ["paraVent", "パラペット 通気金物（笠木側）", "円/m", 0, 2500], ["kasagi", "笠木（板金・材料＋工事）", "円/m", 0, 4500], ["ventIn", "屋根の通気金物（軒・入口）", "円/m", 0, 2000], ["kPanelM", "キッチンパネル（壁）中級", "円/㎡", 0, 12000], ["kPanelH", "キッチンパネル（壁）高級", "円/㎡", 0, 16000], ["fxUnderW", "壁の下地補強（Mクロス取付）", "円/か所", 0, 1200],
   ["kBase", "吊戸・パネル用 壁下地補強", "円/か所", 0, 8000],
   ["uHon1216", "ユニットバス 1216（標準グレード）", "円/台", 0, 400000],
@@ -1264,6 +1277,7 @@ const WORK = [
   ["uTaWash", "オートウォッシュ（タカラ）", "円/台", 0, 120000],
   ["uTaKan1", "浴室暖房乾燥機 100V（タカラ）", "円/台", 0, 50000],
   ["uTaKan2", "浴室暖房乾燥機 200V（タカラ）", "円/台", 0, 60000],
+  ["uKan", "ユニットバス 浴室換気暖房乾燥機", "円/台", 0, 100000],
   ["uTaMirL", "ラグジュアリーミラー（タカラ）", "円/台", 0, 117000],
   ["uTaMirW", "ワイドクリアミラー（タカラ）", "円/台", 0, 22000],
   ["uTaGrip", "浴槽ハンドグリップ（タカラ）", "円/台", 0, 10000],
@@ -2908,11 +2922,17 @@ function drawToolsUICore(){
   $("partCh").innerHTML = "";
   $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"], ["genD", "勝手口ドア"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
   $("toolCh").classList.toggle("winmode", toolOpen === "win" || toolOpen === "gen");
-  $("toolCh2").innerHTML = `<button type="button" data-tk="wc">便器</button><button type="button" data-tk="bath">浴槽</button><button type="button" data-tk="tearai">手洗い</button><button type="button" data-tk="senpan">洗濯機パン</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="yukashu">床下収納</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="acout">エアコン</button><button type="button" data-tk="kitchen">キッチン</button><button type="button" data-tk="senmen">洗面台</button><button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button><button type="button" data-tk="geta">下駄箱</button>`;
+  /* CAD-221: 「設備・その他」を3つに分割（2026-11-12 本人承認）。水まわり＝toolOpen "mizu"／造作・その他＝"etc"。
+     電気（ダウンライト・シーリング・エアコン）は照明の葉 "light"（#toolCh3）へ寄せた。置く操作そのものは不変。 */
+  $("toolCh2").innerHTML = toolOpen === "mizu"
+    ? `<button type="button" data-tk="wc">便器</button><button type="button" data-tk="tearai">手洗い</button><button type="button" data-tk="bath">浴槽</button><button type="button" data-tk="senmen">洗面台</button><button type="button" data-tk="senpan">洗濯機パン</button><button type="button" data-tk="kitchen">キッチン</button>`
+    : `<button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="yukashu">床下収納</button><button type="button" data-tk="geta">下駄箱</button>`;
   $("toolCh2").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => addTenken(b.dataset.tk));
-  $("toolCh3").innerHTML = Object.keys(LTN).map(k => `<button type="button" data-lt="${k}" aria-pressed="${ltTool === k}">${LTN[k]}</button>`).join("") + (ltTool && HB.__ltAct && HB.__ltAct.k === ltTool ? `<button type="button" data-ltact="1" class="armBlink" style="grid-column:1/-1;background:#FFF8DC;border:2px solid #FFC400;font-size:13px;line-height:1.3">いま：${LTA[HB.__ltAct.act]}<br><small>（変える）</small></button>` : "");
+  $("toolCh3").innerHTML = Object.keys(LTN).map(k => `<button type="button" data-lt="${k}" aria-pressed="${ltTool === k}">${LTN[k]}</button>`).join("") + `<button type="button" data-tk="acout" aria-pressed="${!!(HB.__put && HB.__put.g === "light" && HB.__put.label === "エアコン")}">エアコン</button>` + (ltTool && HB.__ltAct && HB.__ltAct.k === ltTool ? `<button type="button" data-ltact="1" class="armBlink" style="grid-column:1/-1;background:#FFF8DC;border:2px solid #FFC400;font-size:13px;line-height:1.3">いま：${LTA[HB.__ltAct.act]}<br><small>（変える）</small></button>` : "");
   $("toolCh3").querySelectorAll("[data-ltact]").forEach(b => b.onclick = () => { HB.__ltAct = null; toast("次に置くときに、選びます"); drawToolsUI(); });
-  $("toolCh3").querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { HB.__ltAct = null; ltTool = ltTool === b.dataset.lt ? null : b.dataset.lt; sel = null; if (ltTool) toolOpen = "light"; toast(ltTool ? `${LTN[ltTool]}：置く所をタップ` : "照明をやめました"); drawToolsUI(); drawPlan(); });
+  $("toolCh3").querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { HB.__ltAct = null; ltTool = ltTool === b.dataset.lt ? null : b.dataset.lt; sel = null; if (ltTool){ toolOpen = "light"; HB.__put = null; HB.__sashAct = null; } toast(ltTool ? `${LTN[ltTool]}：置く所をタップ` : "照明をやめました"); drawToolsUI(); drawPlan(); });
+  /* CAD-221: エアコン（室内機の位置＝コンセント・専用回路）は電気の葉から tenken として置く。構えは g="light" で持ち、照明の構え（ltTool）とは排他にする */
+  $("toolCh3").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => { if (HB.__put && HB.__put.g === "light" && HB.__put.label === "エアコン"){ HB.__putOff(); return; } ltTool = null; HB.__ltAct = null; sel = null; toolOpen = "light"; HB.__put = {g: "light", label: "エアコン", fn: () => addTenken("acout")}; toast("エアコン：置く所をタップ（続けて置けます）"); drawToolsUI(); });
   $("toolCh").querySelectorAll("[data-tool]").forEach(b => b.onclick = () => addStdOpening(b.dataset.tool));
   $("undoBtn").disabled = !undoStack.length; if ($("redoBtn")) $("redoBtn").disabled = !redoStack.length;
   // 描いた物の一覧
@@ -2935,7 +2955,7 @@ function drawToolsUICore(){
   if (HB.__dtSeg06){ try {
       const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ HB.__putOff(); return; } sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
-      mk("#toolCh2 [data-tk]", "tk", "etc", v => addTenken(v));
+      mk("#toolCh2 [data-tk]", "tk", toolOpen === "mizu" ? "mizu" : "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
       /* CAD-172：サッシ系は label が「チップ名 大きさ名」になる（CAD-24 の arm）ため、完全一致が無い時は「チップ名＋空白」の前方一致でも点滅させる */
       const btns172 = [...document.querySelectorAll("#toolCh button, #toolCh2 button")].filter(b => !b.hasAttribute("data-putdir"));
@@ -3882,7 +3902,7 @@ function drawToolTabs(){
      状態は window.grp136 (null/"wall"/"put") と window.putLeaf136 に持ち、
      毎回 toolOpen から整合させる (他のモジュールが toolOpen を変えても追従)。 */
   if (window.grp136 === undefined){ window.grp136 = null; window.putLeaf136 = "door"; }
-  var LEAVES136 = ["door", "win", "gen", "etc", "light"];
+  var LEAVES136 = ["door", "win", "gen", "mizu", "etc", "light"];
   if (HB.__floorTab) window.grp136 = null;
   else if (toolOpen === "part") window.grp136 = "wall";
   else if (LEAVES136.indexOf(toolOpen) >= 0){ window.grp136 = "put"; window.putLeaf136 = toolOpen; }
@@ -3913,7 +3933,7 @@ function drawToolTabs(){
   if (window.grp136 === "put"){
     sub.hidden = false;
     sub.innerHTML = "";
-    [["door", "建具"], ["win", "窓"], ["gen", "玄関"], ["etc", "設備・その他"], ["light", "照明" + (ltTool ? "·" + LTN[ltTool] : "")]].forEach(([k, n]) => {
+    [["door", "建具"], ["win", "窓"], ["gen", "玄関"], ["mizu", "水まわり"], ["light", "電気" + (ltTool ? "·" + LTN[ltTool] : "")], ["etc", "造作・その他"]].forEach(([k, n]) => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
       b.setAttribute("aria-pressed", (k === "light" ? toolOpen === "light" || !!ltTool : toolOpen === k) ? "true" : "false");
       b.onclick = () => {
@@ -3926,7 +3946,7 @@ function drawToolTabs(){
   } else sub.hidden = true;
   $("partCh").hidden = toolOpen !== "part";
   $("toolCh").hidden = !(toolOpen === "door" || toolOpen === "win" || toolOpen === "gen");
-  $("toolCh2").hidden = toolOpen !== "etc";
+  $("toolCh2").hidden = !(toolOpen === "etc" || toolOpen === "mizu");
   $("toolCh3").hidden = toolOpen !== "light";
   drawEnclBar();
   /* 段階1統合：旧 blk50 後段（床タブを閉じて floorPanelSync）は HB.__dttPost50 経由で最後に呼ぶ。 */
@@ -4367,7 +4387,7 @@ $("listBtn").addEventListener("click", () => { drawToolsUI(); $("mbox").innerHTM
 /* CAD-216: ②間取りの ＋・－・全体 ボタンは廃止（拡大はピンチだけ）。ボタンの配線も撤去 */
 $("slotM").addEventListener("scroll", () => {}, {passive: true});
 /* ---------- 階（1階・2階…）の切り替え。いま開いている階のデータは、これまでと同じ場所に入れ、ほかの階は別に保管する ---------- */
-const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
+const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfSakanBase", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
 const flClone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 function flEnsure(){ if (!Array.isArray(S.fl) || !S.fl.length){ S.fl = [{name: "1階", snap: null}]; S.fi = 0; } if (typeof S.fi !== "number" || S.fi < 0 || S.fi >= S.fl.length) S.fi = 0; }
 function flSnap(){ const o = {}; FLOOR_KEYS.forEach(k => { if (S[k] !== undefined) o[k] = flClone(S[k]); }); return o; }
@@ -5062,7 +5082,7 @@ function sujiAuto(){
 }
 /* ---------- 仕様：壁・天井の工事は「枝分かれ」で選ぶ（選んだ道だけが育つ） ---------- */
 const rfTreeUI = {w: false, wm: false, c: false, cm: false};
-function rfVerbW(){ const m = S.rfWallMat || "cloth"; return m === "paint" ? "塗装の塗り替え" : m === "diato" ? "珪藻土の塗り替え" : "クロス張替え"; }
+function rfVerbW(){ const m = S.rfWallMat || "cloth"; return m === "paint" ? "塗装の塗り替え" : m === "diato" ? "珪藻土の塗り替え" : m === "shikkui" ? "漆喰の塗り替え" : m === "juraku" ? "聚楽の塗り替え" : "クロス張替え"; }
 function rfVerbC(){ const m = S.rfCeilMat || "cloth"; return m === "paint" ? "塗装の塗り替え" : m === "lami" ? "ラミテン張替え" : "クロス張替え"; }
 function rfTBtn(on, label, act, full){ return `<button type="button" data-tree="${act}" aria-pressed="${!!on}"${full ? ' style="grid-column:1/-1"' : ""}>${label}</button>`; }
 function rfTRow(){ return `<div class="seg v">${[...arguments].join("")}</div>`; }
@@ -5126,6 +5146,7 @@ segBind("[data-rfcur]", "rfCur", v => v, drawSpec);
 segBind("[data-rfcm]", "rfCeilMat", v => v, drawSpec);
 segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
 { const mw = document.querySelectorAll("[data-rfmw]"); mw.forEach(b => { b.setAttribute("aria-pressed", String(!!S.rfMawari === (b.dataset.rfmw === "1"))); b.onclick = () => { S.rfMawari = b.dataset.rfmw === "1"; save(); drawSpec(); }; }); }
+{ const sb = document.querySelectorAll("[data-rfsb]"); sb.forEach(b => { b.setAttribute("aria-pressed", String((S.rfSakanBase !== false) === (b.dataset.rfsb === "1"))); b.onclick = () => { S.rfSakanBase = b.dataset.rfsb === "1"; save(); drawSpec(); }; }); }   /* CAD-221: 左官の下地調整の付け外し（未設定＝付ける） */
   segBind("[data-kn]", "kisoNew", v => v === "1", drawSpec);
   const KH = [300, 400, 450, 500, 600];
   $("kisoCh").innerHTML = KH.map(v => `<button data-v="${v}" aria-pressed="${S.kiso === v}" type="button">${v}</button>`).join("") + `<button data-v="o" type="button">${KH.includes(S.kiso) ? "ほか" : fmt(S.kiso)}</button>`;
@@ -5272,7 +5293,7 @@ function drawTradeBox(){
     return;
   }
   if (tr === "cross"){
-    const MT = {cloth: "クロス", paint: "塗装", diato: "珪藻土"}, R = roomsCalc();
+    const MT = {cloth: "クロス", paint: "塗装", diato: "珪藻土", shikkui: "漆喰", juraku: "聚楽"}, R = roomsCalc();
     const rows = R.rooms.map(r => ({r, x: crossOf(r)})).filter(o => o.x.wall || o.x.ceil).map(({r, x}) => `<div>・${esc(roomLbl(r))}（${fmt(r.area, 1)}㎡）：壁 ${x.wall ? "クロス" : (x.w === "none" ? "なし" : MT[x.wm] || "クロス以外")}／天井 ${x.ceil ? "クロス" : (x.c === "none" ? "なし" : MT[x.cm] || "クロス以外")}</div>`).join("");
     const ac = (S.fx || []).filter(f => f.k === "accent").length, ni = (S.fx || []).filter(f => f.k === "niche").length, tr2 = (S.tare || []), ta = tr2.reduce((a, q) => a + Math.hypot(q.x2 - q.x1, q.y2 - q.y1) / 1000 * (q.h || 400) / 1000, 0), pb = (S.tenken || []).filter(o => o.k === "pillar" && (o.fin || "keep") === "board").length;
     b.innerHTML = `<div class="card" style="border:2px solid #FFD400;background:#FFFBE6"><b style="font-size:16px">🧱 クロスの工事（あなたの担当）</b><div style="font-size:14px;margin-top:6px;line-height:1.6">${rows || "<div>クロスを張る部屋は、まだありません（下の「壁」「天井」で、仕上げをクロスにすると出ます）。</div>"}${ac ? `<div>・アクセントクロス：${ac}面</div>` : ""}${ni ? `<div>・ニッチ（クロス巻き）：${ni}か所</div>` : ""}${tr2.length ? `<div>・垂れ壁：${tr2.length}本（${fmt(ta, 2)}㎡・両面）</div>` : ""}${pb ? `<div>・独立柱 ボード巻き：${pb}本</div>` : ""}</div></div>`;
@@ -5327,9 +5348,10 @@ const EXT = {
   gaiheki: {n: "外壁張替え（一面・部分）", f: [["w", "幅", "m", 3.64], ["h", "高さ", "m", 2.7], ["minus", "窓など引く", "㎡", 0]], d: {type: "siding", kaitai: true, sheet: true, mizu: false, ashiba: true}},
   tosou: {n: "外壁塗装", f: [["w", "幅", "m", 10], ["h", "高さ", "m", 3], ["minus", "窓など引く", "㎡", 0], ["nA", "軒天の面積", "㎡", 0], ["fM", "破風・鼻隠し・雨樋", "m", 0], ["yA", "屋根塗装の面積", "㎡", 0]], d: {senjo: true, yojo: true, ashiba: true}},
   shikkui: {n: "漆喰塗り（内壁）", f: [["a", "塗る面積", "㎡", 25]], d: {yojo: true, gbTear: false}},
-  shinchiku: {n: "新築の費用（地盤・申請・仮設・引込・防蟻）", f: [["jiban", "地盤調査", "回", 1], ["jbk", "地盤改良（表層）の面積", "㎡", 0], ["kakunin", "確認申請・検査", "件", 1], ["kasetsu", "仮設（電気・水道・トイレ・仮囲い）", "式", 1], ["hikomi", "水道・排水の引込", "式", 1], ["boui", "防蟻・防腐（0＝1階の床面積）", "㎡", 0]], d: {}},
+  shinchiku: {n: "新築の費用（地盤・申請・仮設・引込・防蟻）", f: [["jiban", "地盤調査", "回", 1], ["jbk", "地盤改良（表層）の面積", "㎡", 0], ["kakunin", "確認申請・検査", "件", 1], ["kasetsu", "仮設（電気・水道・トイレ・仮囲い）", "式", 1], ["hikomi", "水道・排水の引込", "式", 1], ["boui", "防蟻・防腐（0＝1階の床面積）", "㎡", 0]], d: {v24: ""}},
   gaiko: {n: "外構工事（土間コン・フェンス・門まわり）", f: [["dt", "土間 縦", "m", 0], ["dy", "土間 横", "m", 0], ["doma", "土間（直接入力・縦×横が優先）", "㎡", 0], ["fence", "フェンス", "m", 0], ["fh", "フェンスの高さ", "m", 1.2], ["car", "カーポート", "台", 0], ["mon", "門まわり", "式", 0]], d: {}},
   denki: {n: "電気工事", f: [["kae", "コンセント・スイッチ取替", "か所", 0], ["hik", "天井引掛取替", "か所", 0], ["zou", "コンセント増設", "か所", 0], ["iso", "コンセント移設", "か所", 0], ["light", "照明取付", "か所", 0]], d: {panel: false, tekkyo: false}},
+  aircon: {n: "エアコン本体 取付・取替", f: [["n", "台数", "台", 1]], d: {tear: true}},
   eco: {n: "エコキュート取替（日立 370L）", f: [["n", "台数", "台", 1]], d: {tear: true, base: true, denki: true}},
   yane: {n: "屋根", f: [["a", "屋根の面積", "㎡", 20], ["H", "軒の高さ", "m", 3]], d: {kaitai: true, noji: true, yaku: true, ashiba: true}},
   nokiten: {n: "軒天", f: [["len", "長さ", "m", 5], ["d", "出幅", "m", 0.45], ["H", "軒の高さ", "m", 3]], d: {kaitai: true, ashiba: true}},
@@ -5340,7 +5362,9 @@ const EXT = {
   doma: {n: "土間打ち", f: [["L", "縦", "m", 1.82], ["W", "横", "m", 1.82], ["dt", "厚み", "mm", 120]], d: {method: "auto", saiseki: true, mesh: true}},
   porch: {n: "玄関ポーチ", f: [["rise", "高低差", "mm", 450], ["dan", "段数", "段", 2], ["w", "全体の幅", "m", 1.82], ["d", "全体の奥行き", "m", 0.91], ["tread", "階段の踏み面", "mm", 300]], d: {fin: "mortar"}},
   toilet: {n: "トイレ取替え", f: [["n", "台数", "台", 1], ["fa", "トイレの床の広さ", "㎡", 1.66]], d: {type: "qr", tearai: false, remodel: false, cf: true, cross: true, acc: true, tesuri: false, consent: false}},
-  kitchen: {n: "キッチン取替え", f: [["w", "間口", "mm", 2550], ["n", "台数", "台", 1]], d: {tear: true, setsubi: true, ih: false, duct: true, panel: true, kbase: true, floor: false}},
+  washlet: {n: "ウォシュレット取替（便座だけ）", f: [["n", "台数", "台", 1]], d: {}},
+  kitchen: {n: "キッチン取替え", f: [["w", "間口", "mm", 2550], ["n", "台数", "台", 1]], d: {tear: true, setsubi: true, ih: false, duct: true, panel: true, kbase: true, floor: false, dish: false}},
+  hood: {n: "レンジフード本体 取替", f: [["n", "台数", "台", 1]], d: {}},
   ub: {n: "ユニットバス取替え", f: [["n", "台数", "台", 1]], d: {size: "1616", from: "ub", tear: true, setsubi: true, denki: true, waku: true, dan: false, maker: "", kan: "", osoji: false, wipe: false, light: false, bar: false, jet: false, pack: false, tub: "keep", onsen: "", mir: "", grip: false, floorheat: false}},
   hisashi: {n: "庇工事", f: [["w", "幅", "m", 1.8], ["d", "出幅", "m", 0.6], ["n", "か所", "か所", 1], ["H", "取付の高さ", "m", 2.4]], d: {type: "alu", kaitai: false, ashiba: false}},
   wayo: {n: "和室→洋室", f: [["a", "床の広さ", "㎡", 9.72], ["tt", "畳の枚数", "枚", 6], ["up", "床上げの高さ", "mm", 45], ["wa", "大壁にする壁の面積", "㎡", 0], ["ca", "天井上張りの面積", "㎡", 0], ["os", "押入→クローゼット", "か所", 1], ["sk", "敷居撤去・段差調整", "か所", 1]], d: {}},
@@ -5399,6 +5423,8 @@ function drawExtras(){
     if ("gbTear" in e) h += tg(i, "gbTear", "既存ボード解体（ラスボード貼り）", "今の壁に塗る");
     if (e.k === "kaidan") h += `<div class="seg">${[["ue", "上張り"], ["kake", "架け替え"], ["none", "手すりだけ"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>` + tg(i, "non", "滑り止め", "滑り止めなし");
     if (e.k === "denki") h += tg(i, "panel", "分電盤取替", "分電盤そのまま") + tg(i, "tekkyo", "撤去工事", "撤去なし");
+    if (e.k === "aircon") h += tg(i, "tear", "既存エアコン撤去", "撤去なし");
+    if (e.k === "shinchiku") h += `<div class="sub2" style="margin-top:6px">24時間換気の方式</div><div class="seg">${[["", "なし（今まで通り）"], ["third", "第3種（自然給気・機械排気）"], ["first", "第1種（機械給排気・熱交換）"]].map(([v, n]) => `<button data-ti="${i}" data-tk="v24" data-tv="${v}" aria-pressed="${(e.v24 || "") === v}" type="button">${n}</button>`).join("")}</div>`;
     if (e.k === "eco") h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "base", "据置台（基礎）", "台そのまま") + tg(i, "denki", "電気配線", "配線そのまま");
     if ("noji" in e) h += tg(i, "noji", "野地合板 増し張り", "増し張りなし");
     if ("yaku" in e) h += tg(i, "yaku", "役物（棟・ケラバ・水切り）", "役物なし");
@@ -5411,7 +5437,7 @@ function drawExtras(){
     if (e.k === "wayo") h += `<p class="hint" style="margin:6px 2px 0">床は「仕様」の「床の範囲」で計算します。押入の扉（折れ戸）は、間取りの画面で置いてください。</p>`;
     if (e.k === "kitchen"){
       h += `<div class="sub2" style="margin-top:6px">基準：I型・標準グレード（シエラS・ミッテ・ラクエラ クラス）</div>`;
-      h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "setsubi", "給排水・ガス接続", "なし") + tg(i, "duct", "レンジフード ダクト接続", "なし") + tg(i, "panel", "キッチンパネル（壁）", "パネルなし") + tg(i, "kbase", "壁下地補強", "補強なし") + tg(i, "ih", "IH用 200V回路", "ガスのまま") + tg(i, "floor", "キッチンの床張替え", "床そのまま");
+      h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "setsubi", "給排水・ガス接続", "なし") + tg(i, "duct", "レンジフード ダクト接続", "なし") + tg(i, "panel", "キッチンパネル（壁）", "パネルなし") + tg(i, "kbase", "壁下地補強", "補強なし") + tg(i, "ih", "IH用 200V回路", "ガスのまま") + tg(i, "floor", "キッチンの床張替え", "床そのまま") + tg(i, "dish", "食洗機（ビルトイン）", "食洗機なし");
     }
     if (e.k === "ub"){
       const mkName201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード（メーカー未選択）";
@@ -5421,6 +5447,7 @@ function drawExtras(){
       if (e.from === "zairai") h += `<p class="hint" style="margin:6px 2px 0">在来浴室のはつり・土間打ちは「浴室解体」を一緒に追加してください。</p>`;
       else h += tg(i, "tear", "既存ユニットバス解体", "解体なし");
       h += tg(i, "setsubi", "給排水・給湯接続", "なし") + tg(i, "denki", "電気（換気扇・照明）", "なし") + tg(i, "waku", "入口まわり補修", "補修なし") + tg(i, "dan", "保温・断熱グレードアップ", "標準のまま");
+      if (!e.maker) h += `<div class="sub2" style="margin-top:6px">浴室換気暖房乾燥機</div><div class="seg">${[["", "なし"], ["gen", "付ける"]].map(([v, n]) => `<button data-ti="${i}" data-tk="kan" data-tv="${v}" aria-pressed="${(e.kan || "") === v}" type="button">${n}</button>`).join("")}</div>`;   /* CAD-221: メーカー未選択でも換気暖房乾燥機を選べるように */
       // CAD-201: メーカーに実在するオプションだけを出す（裏取り: audit-bath-maker-options-2026-11-13）
       if (e.maker === "toto"){
         h += `<div class="sub2" style="margin-top:6px">三乾王（換気暖房乾燥機）</div><div class="seg">${[["", "なし"], ["1", "1室換気"], ["2", "2室換気"], ["3", "3室換気"]].map(([v, n]) => `<button data-ti="${i}" data-tk="kan" data-tv="${v}" aria-pressed="${(e.kan || "") === v}" type="button">${n}</button>`).join("")}</div>`;
@@ -5500,8 +5527,8 @@ const STOCK = [3000, 4000], STOCK_T = [3000, 4000, 6000];
 function stocks(needs, allow6){ const m = {}, ST = allow6 ? STOCK_T : STOCK; needs.forEach(n => { const s = ST.find(x => n <= x); if (s) m[s] = (m[s] || 0) + 1; else { const k = Math.floor(n / 4000), r = n - k * 4000; m[4000] = (m[4000] || 0) + k; if (r > 0.5){ const s2 = ST.find(x => x <= 4000 && r <= x) || 4000; m[s2] = (m[s2] || 0) + 1; } } }); return m; }
 const stockTxt = m => Object.keys(m).sort((a, b) => b - a).map(k => `${k / 1000}m×${m[k]}`).join("、");
 function openArea(){ return S.sashes.reduce((a, s) => a + s.w * s.h * s.n, 0) / 1e6; }
-const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
-["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar"].forEach(k => EQ_KEYS.add(k));
+const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
+["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
 // 「外周が同じを2階建て」の計算で、③階の図面の中身（窓・ドア・設備・間仕切りなど）も足して数える
 function mergeUpperFloor(b){
@@ -6139,6 +6166,7 @@ function calc00(){
         if (e.kbase) work("kBase", "吊戸・パネル用 壁下地補強", n2, "か所");
         if (e.panel){ const pa = e.w / 1000 * 0.9 * n2 * 1.1; const pk = S.kPanelG === "high" ? "kPanelH" : S.kPanelG === "mid" ? "kPanelM" : "kPanel"; work(pk, "キッチンパネル（壁）", pa, "㎡", `間口${fmt(e.w)}×高さ900＋10% ＝ ${fmt(pa, 1)}㎡ × ${fmt(workP(pk).p)}円・グレード${S.kPanelG === "high" ? "高級" : S.kPanelG === "mid" ? "中級" : "標準"}`); }
         if (e.ih) work("kIH", "IH用 200V専用回路", n2, "か所");
+        if (e.dish) work("kDish", pre + "食洗機（ビルトイン）", n2, "台");
         if (e.floor){ const fa = e.w / 1000 * 1.8 * n2; floorFin(fa, "キッチン "); }
       }
       else if (e.k === "ub"){
@@ -6183,7 +6211,7 @@ function calc00(){
           else if (e.mir === "wide") work("uTaMirW", pre + "ワイドクリアミラー", n2, "台");
           if (e.grip) work("uTaGrip", pre + "浴槽ハンドグリップ", n2, "台");
           if (e.floorheat) work("uTaFloor", pre + "ガス温水式床暖房", n2, "台");
-        }
+        } else if (e.kan === "gen"){ work("uKan", pre + "浴室換気暖房乾燥機", n2, "台"); }   /* CAD-221: メーカー未選択時の一般分 */
       }
       else if (e.k === "hisashi"){
         const n2 = Math.max(1, Math.round(e.n)), a = e.w * e.d * n2;
@@ -6221,6 +6249,8 @@ function calc00(){
         if (e.kasetsu > 0) work("kasetsuAll", "仮設工事（電気・水道・トイレ・仮囲い）", e.kasetsu, "式");
         if (e.hikomi > 0) work("hikomi", "水道・排水の引込工事", e.hikomi, "式");
         { const A1 = (() => { const pp2 = pts(); let a = 0; pp2.forEach((q, i) => { const r = pp2[(i + 1) % pp2.length]; a += q[0] * r[1] - r[0] * q[1]; }); return Math.abs(a) / 2 / 1e6; })(), ba = e.boui > 0 ? e.boui : A1; if (ba > 0) work("bouiBouyou", "防蟻・防腐処理（床下・土台まわり）", ba, "㎡"); }
+        if (e.v24 === "first") work("v24First", "24時間換気（第1種・熱交換型）", 1, "式");
+        else if (e.v24 === "third") work("v24Third", "24時間換気（第3種）", 1, "式");
       }
       else if (e.k === "gaiko"){
         const da = (e.dt > 0 && e.dy > 0) ? e.dt * e.dy : (e.doma || 0);
@@ -6229,6 +6259,9 @@ function calc00(){
         if (e.car > 0) work("gaikoCar", "外構 カーポート（材工）", e.car, "台");
         if (e.mon > 0) work("gaikoMon", "外構 門まわり（門柱・ポスト・表札）", e.mon, "式");
       }
+      else if (e.k === "aircon"){ const n2 = Math.max(1, Math.round(e.n)); work("eAircon", "エアコン本体（標準取付込み）", n2, "台"); if (e.tear) work("eAirconTear", "エアコン 既存撤去", n2, "台"); }
+      else if (e.k === "hood"){ const n2 = Math.max(1, Math.round(e.n)); work("kHood", "レンジフード本体 取替", n2, "台"); }
+      else if (e.k === "washlet"){ const n2 = Math.max(1, Math.round(e.n)); work("tWash", "ウォシュレット 取替（便座だけ）", n2, "台"); }
       else if (e.k === "free") rows.push({name: e.name || "自由項目", spec: `${fmt(e.q, 2)}${e.unit || "式"} × ${fmt(e.p)}円`, qty: "", cost: e.q * e.p, miss: !e.p});
     });
     if (ashL.length){
@@ -6334,9 +6367,10 @@ if (ff === "tat"){ const nn = Math.ceil(a0 / 0.303 / 4 * 1.05); lum("taruki", "�
     const scHabaki = sc => { if (sc.ff !== "none" || sc.fw !== "none") habakiMikiri(sc.perHab, 1, sc.hab); };
     const scMawari = sc => { if (sc.maw && sc.fc !== "none") work("mawari", "回り縁", sc.perHab / 1000, "m", `天井のまわり ${fmt(sc.perHab / 1000, 1)}m × ${fmt(workP("mawari").p)}円`); };
     const scCloth = sc => {
-const wm = sc.wm === "paint" || sc.wm === "diato" ? sc.wm : "", cm = sc.cm === "paint" ? "paint" : sc.cm === "lami" ? "lami" : "";
+const WM221 = {paint: ["wallPaint", "壁 塗装"], diato: ["wallDiato", "壁 珪藻土（塗り）"], shikkui: ["wallShikkui", "壁 漆喰（塗り）"], juraku: ["wallJuraku", "壁 聚楽（塗り）"]};   /* CAD-221: 左官3種を壁の仕上げ材に追加（工事区分は従来の壁仕上げと同じ） */
+const wm = WM221[sc.wm] ? sc.wm : "", cm = sc.cm === "paint" ? "paint" : sc.cm === "lami" ? "lami" : "";
 const wA = sc.fw !== "none" ? sc.wallN : 0, cA = sc.fc !== "none" ? (sc.ca || sc.area) : 0;
-if (wm && wA > 0) work(wm === "diato" ? "wallDiato" : "wallPaint", wm === "diato" ? "壁 珪藻土（塗り）" : "壁 塗装", wA, "㎡");
+if (wm && wA > 0){ work(WM221[wm][0], WM221[wm][1], wA, "㎡"); if ((wm === "diato" || wm === "shikkui" || wm === "juraku") && S.rfSakanBase !== false) work("wallShitaji", "壁 左官 下地調整", wA, "㎡"); }   /* CAD-221: 左官は下地調整（ボード下地前提）を付け外しできる */
 if (cm === "paint" && cA > 0) work("ceilPaint", "天井 塗装", cA, "㎡");
 const cl = (wm ? 0 : wA) + (cm ? 0 : cA);
 let clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm ? sc.wallN : 0) + ((sc.fc === "board" || sc.fc === "frame" || sc.fc === "base" || sc.fc === "fin") && !cm ? (sc.ca || sc.area) : 0), clOld = cl - clNew;
@@ -6951,7 +6985,7 @@ const PH_RATE = {
   kisoBase: ["kiso", 0.1], domaCon: ["kiso", 0.5], namakon: ["kiso", 0.5], cement: ["kiso", 6],
   tWork: ["setsubi", 2], kWork: ["setsubi", 0.7], uKumi: ["setsubi", 0.5], ecoWork: ["setsubi", 1], sWork: ["setsubi", 2], tearaiWork: ["setsubi", 1], umWork: ["setsubi", 6],
   eKae: ["denki", 30], tConsent: ["denki", 6], eIsetsu: ["denki", 6], eLight: ["denki", 10], ePanel: ["denki", 1], eEco: ["denki", 2], kIH: ["denki", 3], uDenki: ["denki", 2], kDuct: ["denki", 2],
-  cloth: ["naiso", 40], clothNew: ["naiso", 40], wallPaint: ["naiso", 50], wallDiato: ["naiso", 12], ceilPaint: ["naiso", 45], cfShiki: ["naiso", 2], floorFin: ["naiso", 25], flSheet: ["naiso", 20], flComp: ["naiso", 20], flMuku: ["naiso", 12], flMuku30: ["naiso", 12], flCF: ["naiso", 30], sDown: ["naiso", 20], sUp: ["naiso", 20],
+  cloth: ["naiso", 40], clothNew: ["naiso", 40], wallPaint: ["naiso", 50], wallDiato: ["naiso", 12], wallShikkui: ["naiso", 12], wallJuraku: ["naiso", 12], wallShitaji: ["naiso", 12], ceilPaint: ["naiso", 45], cfShiki: ["naiso", 2], floorFin: ["naiso", 25], flSheet: ["naiso", 20], flComp: ["naiso", 20], flMuku: ["naiso", 12], flMuku30: ["naiso", 12], flCF: ["naiso", 30], sDown: ["naiso", 20], sUp: ["naiso", 20],
   siding: ["gaibu", 15], yakisugi: ["gaibu", 12], nuri: ["gaibu", 10], roofFin: ["gaibu", 30], roofKawara: ["gaibu", 40], nokiten: ["gaibu", 10], toi: ["gaibu", 20], tosou: ["gaibu", 25], tYane: ["gaibu", 50], hAluWork: ["gaibu", 2], hBankin: ["gaibu", 3], bTop: ["gaibu", 15], bFrp: ["gaibu", 8], deckW: ["gaibu", 8], fenceW: ["gaibu", 10]
 };
 function drawKoutei(C){
@@ -7450,7 +7484,7 @@ const RF_OPT = {
   c: [["", "全体と同じ"], ["none", "工事なし"], ["cloth", "クロス張替え"], ["fin", "増し貼り"], ["base", "増し貼り（下地）"], ["board", "ボード張替え"], ["frame", "下地から"]],
 t: [["", "全体と同じ"], ["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "CF"], ["flMuku", "無垢板15mm"], ["flMuku30", "無垢板30mm"]],
 cur: [["", "全体と同じ"], ["wood", "フローリング"], ["tatami", "畳"], ["cf", "CF・タイル"], ["dobuki", "土間"]],
-wm: [["", "全体と同じ"], ["cloth", "クロス"], ["paint", "塗装"], ["diato", "珪藻土"]],
+wm: [["", "全体と同じ"], ["cloth", "クロス"], ["paint", "塗装"], ["diato", "珪藻土"], ["shikkui", "漆喰"], ["juraku", "聚楽"]],
 cm: [["", "全体と同じ"], ["cloth", "クロス"], ["paint", "塗装"], ["lami", "ラミテン"]],
 cc: [["", "全体と同じ"], ["board", "ボード・クロス"], ["lami", "ラミテン"]],
 mw: [["", "全体と同じ"], ["no", "回さない"], ["yes", "回す"]]
@@ -7574,7 +7608,7 @@ function roomFinSheet(r){
     const g = get(), glob = {cur: S.rfCur || "wood", f: S.rfFloor, w: S.rfWall, c: S.rfCeil, cc: S.rfCeilCur || "board", t: S.flType || "floorFin", wm: S.rfWallMat || "cloth", cm: S.rfCeilMat || "cloth"};
     const nm = k => (RF_OPT[k].find(o => o[0] === glob[k]) || [0, ""])[1];
     const row = (k, title) => `<h3 style="font-size:14px;margin:10px 0 4px">${title}</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${RF_OPT[k].map(([v, n]) => `<button type="button" class="btn sub" data-fk="${k}" data-fv="${v}" aria-pressed="${(g[k] || "") === v}" style="min-height:42px;font-size:14px;padding:0 4px;${(g[k] || "") === v ? "background:var(--ai);color:#fff" : ""}">${n}${v === "" ? `<br><small style="font-weight:600">（${nm(k)}）</small>` : ""}</button>`).join("")}</div>`;
-    $("mbox").innerHTML = `<h3>${roomLbl(r)}の仕上げ　${fmt(r.area, 1)}㎡</h3><div class="row" style="margin:6px 0 4px"><button class="btn sub" id="rfNone" type="button" style="width:100%;min-height:46px;color:#C62828;border-color:#C62828">${g.f === "none" && g.w === "none" && g.c === "none" ? "工事ありに戻す" : "✕ この部屋は工事なし（図に赤いバッテン）"}</button></div>${(() => { const std = !g.ch, on = c => c ? "background:var(--ai);color:#fff" : "", chip = (v, n) => `<button type="button" class="btn sub" data-chv="${v}" aria-pressed="${(g.ch || 0) === v}" style="min-height:42px;font-size:14px;padding:0 4px;${on((g.ch || 0) === v)}">${n}</button>`; return `<h3 style="font-size:14px;margin:10px 0 2px">天井の高さ（吹き抜けなど）</h3><p class="hint" style="margin:0 0 4px">吹き抜けの部屋だけ高くすると、この部屋の室内図とクロスの面積だけが変わります。</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><button type="button" class="btn sub" data-chv="0" aria-pressed="${std}" style="min-height:42px;font-size:14px;padding:0 4px;${on(std)}">全体と同じ<br><small style="font-weight:600">（${fmt(S.ch)}）</small></button>${chip(3600, "3,600")}${chip(4200, "4,200")}${chip(4800, "4,800")}${chip(5400, "5,400")}<button type="button" class="btn sub" data-chv="pad" aria-pressed="${g.ch && ![3600, 4200, 4800, 5400].includes(g.ch) ? "true" : "false"}" style="min-height:42px;font-size:14px;padding:0 4px;${on(g.ch && ![3600, 4200, 4800, 5400].includes(g.ch))}">${g.ch && ![3600, 4200, 4800, 5400].includes(g.ch) ? fmt(g.ch) : "ほか…"}</button></div>`; })()}${slopeHtml(g, r)}${row("cur", "既存の床（いま張ってある床）")}${row("f", "床")}${(() => { const cu = g.cur || glob.cur || "wood", rc = {tatami: "tat", dobuki: "new", cf: "strip", wood: "fin"}[cu], nm = (RF_OPT.f.find(o => o[0] === rc) || [0, ""])[1], cn = (RF_OPT.cur.find(o => o[0] === cu) || [0, ""])[1]; return `<p class="hint" style="margin:2px 0 6px">いまの床が「${cn}」なので、おすすめは「${nm}」です。</p>`; })()}${row("t", "床の仕上げ材")}${row("w", "壁")}${row("wm", "壁の仕上げ材")}${row("c", "天井")}${row("cc", "今の天井")}${row("cm", "天井の仕上げ材")}${row("mw", "回り縁は新規に回しますか")}${(() => { const os = roomsCalc().rooms.filter(o => o.cid !== r.cid); return os.length ? `<h3 style="font-size:14px;margin:10px 0 4px">他の部屋と同じにする</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${os.map(o => `<button type="button" class="btn sub" data-cp="${o.cid}" style="min-height:40px;font-size:13px;padding:0 2px">${roomLbl(o)}</button>`).join("")}</div>` : ""; })()}<div class="row" style="margin-top:12px"><button class="btn pri" id="rfOk" type="button">閉じる</button></div>`;
+    $("mbox").innerHTML = `<h3>${roomLbl(r)}の仕上げ　${fmt(r.area, 1)}㎡</h3><div class="row" style="margin:6px 0 4px"><button class="btn sub" id="rfNone" type="button" style="width:100%;min-height:46px;color:#C62828;border-color:#C62828">${g.f === "none" && g.w === "none" && g.c === "none" ? "工事ありに戻す" : "✕ この部屋は工事なし（図に赤いバッテン）"}</button></div>${(() => { const std = !g.ch, on = c => c ? "background:var(--ai);color:#fff" : "", chip = (v, n) => `<button type="button" class="btn sub" data-chv="${v}" aria-pressed="${(g.ch || 0) === v}" style="min-height:42px;font-size:14px;padding:0 4px;${on((g.ch || 0) === v)}">${n}</button>`; return `<h3 style="font-size:14px;margin:10px 0 2px">天井の高さ（吹き抜けなど）</h3><p class="hint" style="margin:0 0 4px">吹き抜けの部屋だけ高くすると、この部屋の室内図とクロスの面積だけが変わります。</p><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px"><button type="button" class="btn sub" data-chv="0" aria-pressed="${std}" style="min-height:42px;font-size:14px;padding:0 4px;${on(std)}">全体と同じ<br><small style="font-weight:600">（${fmt(S.ch)}）</small></button>${chip(3600, "3,600")}${chip(4200, "4,200")}${chip(4800, "4,800")}${chip(5400, "5,400")}<button type="button" class="btn sub" data-chv="pad" aria-pressed="${g.ch && ![3600, 4200, 4800, 5400].includes(g.ch) ? "true" : "false"}" style="min-height:42px;font-size:14px;padding:0 4px;${on(g.ch && ![3600, 4200, 4800, 5400].includes(g.ch))}">${g.ch && ![3600, 4200, 4800, 5400].includes(g.ch) ? fmt(g.ch) : "ほか…"}</button></div>`; })()}${slopeHtml(g, r)}${row("cur", "既存の床（いま張ってある床）")}${row("f", "床")}${(() => { const cu = g.cur || glob.cur || "wood", rc = {tatami: "tat", dobuki: "new", cf: "strip", wood: "fin"}[cu], nm = (RF_OPT.f.find(o => o[0] === rc) || [0, ""])[1], cn = (RF_OPT.cur.find(o => o[0] === cu) || [0, ""])[1]; return `<p class="hint" style="margin:2px 0 6px">いまの床が「${cn}」なので、おすすめは「${nm}」です。</p>`; })()}${row("t", "床の仕上げ材")}${row("w", "壁")}${row("wm", "壁の仕上げ材")}${["diato", "shikkui", "juraku"].includes(g.wm || glob.wm) ? `<p class="hint" style="margin:2px 0 0">左官仕上げ（漆喰・珪藻土・聚楽）の単価は、ボード下地に塗る前提です。下地調整は「仕様」で付け外しできます。</p>` : ""}${row("c", "天井")}${row("cc", "今の天井")}${row("cm", "天井の仕上げ材")}${row("mw", "回り縁は新規に回しますか")}${(() => { const os = roomsCalc().rooms.filter(o => o.cid !== r.cid); return os.length ? `<h3 style="font-size:14px;margin:10px 0 4px">他の部屋と同じにする</h3><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">${os.map(o => `<button type="button" class="btn sub" data-cp="${o.cid}" style="min-height:40px;font-size:13px;padding:0 2px">${roomLbl(o)}</button>`).join("")}</div>` : ""; })()}<div class="row" style="margin-top:12px"><button class="btn pri" id="rfOk" type="button">閉じる</button></div>`;
     $("mbox").querySelectorAll("[data-fk]").forEach(b => b.onclick = () => set(b.dataset.fk, b.dataset.fv));
     $("mbox").querySelectorAll("[data-chv]").forEach(b => b.onclick = () => { const v = b.dataset.chv; if (v === "pad"){ $("modal").hidden = true; openPad({title: `${roomLbl(r)}の天井高`, sub: "吹き抜けなどの高さ（床から天井まで）", unit: "mm", value: g.ch || "", done: x => { if (x) set("ch", Math.max(1800, Math.min(9000, x))); }}); const tm = setInterval(() => { if ($("pad").hidden){ clearInterval(tm); $("modal").hidden = false; paint(); } }, 150); } else set("ch", +v || ""); });
     try { slopeBind(g, r, set, paint); } catch(er){}
@@ -11071,7 +11105,7 @@ HB.__dskSeg32 = true;
       }
       prevOpen = toolOpen;
       const box = document.getElementById("toolCh2");
-      if (box && HB.__put && HB.__put.g === "etc" && /便器|浴槽/.test(HB.__put.label || "") && !box.querySelector("[data-putdir]")){
+      if (box && HB.__put && (HB.__put.g === "etc" || HB.__put.g === "mizu") && /便器|浴槽/.test(HB.__put.label || "") && !box.querySelector("[data-putdir]")){
         const dirs = [[null, "自動（近い壁）"], ["n", "上の壁"], ["e", "右の壁"], ["s", "下の壁"], ["w", "左の壁"]];
         let cur = dirs.findIndex(d => d[0] === (HB.__putDir || null)); if (cur < 0) cur = 0;
         const b = document.createElement("button");
@@ -16023,7 +16057,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       if (HB.__partDraw) return "描く・選ぶ";
       if (typeof enclMode !== "undefined" && enclMode) return "なぞる";
       if (typeof toolOpen !== "undefined" && toolOpen){
-        return {part: "描く・選ぶ", door: "建具", win: "窓", gen: "玄関", etc: "設備・その他", light: "照明"}[toolOpen] || "道具";
+        return {part: "描く・選ぶ", door: "建具", win: "窓", gen: "玄関", mizu: "水まわり", etc: "造作・その他", light: "電気"}[toolOpen] || "道具";
       }
       if (HB.__floorTab) return "床の仕様";
       if (window.grp136 === "put") return "置く";
