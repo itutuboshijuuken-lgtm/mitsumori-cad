@@ -472,10 +472,10 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     </div>
     <h2 class="shp">または、指で外形を描く</h2>
     <div class="card"><svg id="draw" viewBox="0 0 360 418" aria-label="指で形を描く所">
-      <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9F0" stroke-width="1"/></pattern></defs>
-      <rect width="360" height="418" fill="url(#grid)"/>
-      <g id="inkG" fill="none" stroke="#2563B0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>
-      <text id="drawHint" x="180" y="180" text-anchor="middle" style="font-size:16px;font-weight:700;fill:#8A96A3">指で外形をなぞってください</text>
+      <defs><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#2A2F36" stroke-width="1"/></pattern></defs>
+      <rect width="360" height="418" fill="#15181C"/><rect width="360" height="418" fill="url(#grid)"/>
+      <g id="inkG" fill="none" stroke="#E3C777" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 3px rgba(227,199,119,.8))"></g>
+      <text id="drawHint" x="180" y="180" text-anchor="middle" style="font-size:16px;font-weight:700;fill:#B9B4A6">指で外形をなぞってください</text>
     </svg></div>
     <p class="hint">指で<b>おおよその外形</b>を一周なぞると、<b>自動で直線に整います</b>。何回かに分けて描いた時は「整える」を押してください。</p>
     <div class="row"><button class="btn sub" id="clearInk" type="button">クリア</button><button class="btn pri" id="fixInk" type="button">整える</button></div>
@@ -17035,5 +17035,30 @@ fxHitItem = function(q){
 
 </script>
 
+
+<style id="gold193">
+/* CAD-193 試し: 「描く」画面（#st1）だけ金×黒。色は Claude 動画の実物（Claudeから-動画の金×黒の色-1113.md） */
+#st1{margin:-12px -12px 0;padding:14px 12px 20px;background:radial-gradient(130% 55% at 50% 0%,#2A2418 0%,#14161A 55%,#0B0D10 100%);border-radius:0 0 18px 18px;color:#FFFFFF}
+#st1 h2{color:#FFFFFF}
+#st1 .hint{color:#B9B4A6}
+#st1 .hint b{color:#F5E3A6}
+#st1 .card{background:#15181C;border-color:#3A3D44;color:#FFFFFF}
+#st1 .seg{background:#1F2328;border-bottom:2px solid #B08A3E}
+#st1 .seg button{color:#B9B4A6}
+#st1 .seg button[aria-pressed="true"]{background:#0B0D10;color:#E3C777;box-shadow:inset 0 -2px 0 #B08A3E}
+#st1 .btn{background:#1F2328;border-color:#B08A3E;color:#F5E3A6}
+#st1 .btn.pri{background:#B08A3E;border-color:#B08A3E;color:#14161A}
+#st1 .btn.sub{background:#1F2328;border-color:#3A3D44;color:#B9B4A6}
+#st1 .set{border-bottom-color:#3A3D44;color:#FFFFFF}
+#st1 .set span small{color:#B9B4A6}
+#st1 .set b{color:#F5E3A6;background:#1F2328}
+#st1 .tsopts button{background:#1F2328;border-color:#3A3D44;color:#FFFFFF}
+#st1 .tsopts small{color:#B9B4A6}
+#st1 .tsopts rect{fill:rgba(227,199,119,.14);stroke:#E3C777}
+#st1 #draw{background:#15181C}
+#st1 #compassBox circle{fill:#1F2328;stroke:#3A3D44}
+#st1 #compassBox path{stroke:#8D9099}
+#st1 #compassBox text{fill:#B9B4A6}
+</style>
 </body>
 </html>
