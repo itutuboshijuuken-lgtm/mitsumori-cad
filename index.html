@@ -1240,6 +1240,28 @@ const WORK = [
   ["uDenki", "ユニットバス 電気（換気扇・照明）", "円/台", 0, 25000],
   ["uWaku", "浴室入口まわり補修（枠・ボード・クロス）", "円/か所", 0, 30000],
   ["uDan", "浴槽保温・床壁断熱（グレードアップ）", "円/台", 0, 30000],
+  ["uToKan1", "三乾王 1室換気（TOTO）", "円/台", 0, 120000],
+  ["uToKan2", "三乾王 2室換気（TOTO）", "円/台", 0, 140000],
+  ["uToKan3", "三乾王 3室換気（TOTO）", "円/台", 0, 160000],
+  ["uToOsoji", "おそうじ浴槽（TOTO）", "円/台", 0, 100000],
+  ["uToWipe", "床ワイパー洗浄（TOTO）", "円/台", 0, 50000],
+  ["uToLight", "浴室 ダウンライト（LED）（TOTO）", "円/台", 0, 35000],
+  ["uToBar", "浴室 手すり インテリア・バー（TOTO）", "円/台", 0, 15000],
+  ["uLiKan", "換気乾燥暖房機（LIXIL）", "円/台", 0, 100000],
+  ["uLiKanP", "プラズマクラスター換気乾燥暖房機（LIXIL）", "円/台", 0, 130000],
+  ["uLiJet", "アクアジェット（LIXIL）", "円/台", 0, 100000],
+  ["uLiOsoji", "おそうじ浴槽（LIXIL）", "円/台", 0, 100000],
+  ["uLiPack", "サポートパック（手すり）（LIXIL）", "円/台", 0, 20000],
+  ["uTaKata", "肩包み湯（タカラ）", "円/台", 0, 130000],
+  ["uTaJet", "ヘルシージェット（タカラ）", "円/台", 0, 116000],
+  ["uTaUru", "うるぽか湯（タカラ）", "円/台", 0, 100000],
+  ["uTaWash", "オートウォッシュ（タカラ）", "円/台", 0, 120000],
+  ["uTaKan1", "浴室暖房乾燥機 100V（タカラ）", "円/台", 0, 50000],
+  ["uTaKan2", "浴室暖房乾燥機 200V（タカラ）", "円/台", 0, 60000],
+  ["uTaMirL", "ラグジュアリーミラー（タカラ）", "円/台", 0, 117000],
+  ["uTaMirW", "ワイドクリアミラー（タカラ）", "円/台", 0, 22000],
+  ["uTaGrip", "浴槽ハンドグリップ（タカラ）", "円/台", 0, 10000],
+  ["uTaFloor", "ガス温水式床暖房（タカラ）", "円/台", 0, 150000],
   ["hAlu", "アルミ庇（既製品）", "円/m", 0, 18000],
   ["hAluWork", "アルミ庇 取付手間", "円/か所", 0, 15000],
   ["hBankin", "木製庇 板金仕上げ", "円/㎡", 0, 12000],
@@ -1284,9 +1306,29 @@ const ipOK = s => /掃き出し|腰窓|小窓|FIX/.test(s.cat);
 const AVG_IP = {"掃き出し": 110000, "腰窓": 65000, "小窓": 35000, "FIX": 40000};   // インプラス 材工の仮の平均（単価を入れると置き換わる）
 function nextSState(s){ const o = sOptsMode149(s); const ix = o.indexOf(sState(s)); return ix < 0 ? o[0] : o[(ix + 1) % o.length]; }
 // 窓枠：新設の窓は必ず、既存の窓は「窓枠交換」の時に積算する（上枠・下枠・縦枠2本。掃き出しは下枠なし。1950以下は小、超えると大）
+// CAD-201: 風呂まわりの窓枠は樹脂枠で拾う（本人の決定 2026-11-13）。サッシの中心点が浴室ゾーンの範囲（壁の線の分として100mm広げる）に入っていれば浴室の窓とみなす
+function sashPt201(s){
+  let a, b;
+  if (s.host && s.host.t === "p"){ const q = (S.parts2D || [])[s.host.i]; if (!q) return null; a = [q.x1, q.y1]; b = [q.x2, q.y2]; }
+  else { const wi = s.host ? s.host.i : s.wall; if (wi == null) return null; const pv = pts(); a = pv[wi]; b = pv[(wi + 1) % pv.length]; if (!a || !b) return null; }
+  const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(L > 1)) return null;
+  const w = +s.w || 0, o0 = Math.max(0, Math.min(+s.pos || 0, Math.max(0, L - w))), t = (o0 + w / 2) / L;
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
+function bathWin201(s){
+  const p = sashPt201(s); if (!p) return false;
+  return (S.zones || []).some(z => z.k === "ub" && (z.fl == null || s.fl == null || z.fl === s.fl) && p[0] >= Math.min(z.x0, z.x1) - 100 && p[0] <= Math.max(z.x0, z.x1) + 100 && p[1] >= Math.min(z.y0, z.y1) - 100 && p[1] <= Math.max(z.y0, z.y1) + 100);
+}
 function wakuRows(s, two){
   const st = sState(s); if (!ipOK(s) || !(st === "new" || st === "waku")) return [];
   const where = `${s.w}×${s.h}・${two ? (s.fl || 1) + "階・" : ""}${wallLabel(s.wall).split(" ")[0]}`;
+  if (bathWin201(s)){
+    const out = [], j = workP("pYokuWaku");
+    out.push({name: "浴室樹脂枠（窓枠）", spec: `${s.cat} ${where}${st === "waku" ? "・窓枠交換" : ""}・${fmt(j.p)}円/個`, qty: `${s.n}個`, cost: j.p * s.n, avg: j.avg, fix: {kind: "work", key: "pYokuWaku"}});
+    const w = workP("madoWaku"); out.push({name: "窓枠 取付手間", spec: `${s.cat} ${where}・${fmt(w.p)}円/か所`, qty: `${s.n}か所`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: "madoWaku"}});
+    if (st === "waku"){ const t = workP("madoWakuTear"); out.push({name: "既存の窓枠 撤去・処分", spec: `${s.cat} ${where}・${fmt(t.p)}円/か所`, qty: `${s.n}か所`, cost: t.p * s.n, avg: t.avg, fix: {kind: "work", key: "madoWakuTear"}}); }
+    return out;
+  }
   const sides = [s.w, s.h, s.h].concat(/掃き出し/.test(s.cat) ? [] : [s.w]);
   const big = sides.filter(L => L > 1950).length * s.n, sm = sides.filter(L => L <= 1950).length * s.n, out = [];
   const pS = workP("pMadowakuA"), pB = workP("pMadowakuA2");
@@ -5206,7 +5248,7 @@ const EXT = {
   porch: {n: "玄関ポーチ", f: [["rise", "高低差", "mm", 450], ["dan", "段数", "段", 2], ["w", "全体の幅", "m", 1.82], ["d", "全体の奥行き", "m", 0.91], ["tread", "階段の踏み面", "mm", 300]], d: {fin: "mortar"}},
   toilet: {n: "トイレ取替え", f: [["n", "台数", "台", 1], ["fa", "トイレの床の広さ", "㎡", 1.66]], d: {type: "qr", tearai: false, remodel: false, cf: true, cross: true, acc: true, tesuri: false, consent: false}},
   kitchen: {n: "キッチン取替え", f: [["w", "間口", "mm", 2550], ["n", "台数", "台", 1]], d: {tear: true, setsubi: true, ih: false, duct: true, panel: true, kbase: true, floor: false}},
-  ub: {n: "ユニットバス取替え", f: [["n", "台数", "台", 1]], d: {size: "1616", from: "ub", tear: true, setsubi: true, denki: true, waku: true, dan: false}},
+  ub: {n: "ユニットバス取替え", f: [["n", "台数", "台", 1]], d: {size: "1616", from: "ub", tear: true, setsubi: true, denki: true, waku: true, dan: false, maker: "", kan: "", osoji: false, wipe: false, light: false, bar: false, jet: false, pack: false, tub: "keep", onsen: "", mir: "", grip: false, floorheat: false}},
   hisashi: {n: "庇工事", f: [["w", "幅", "m", 1.8], ["d", "出幅", "m", 0.6], ["n", "か所", "か所", 1], ["H", "取付の高さ", "m", 2.4]], d: {type: "alu", kaitai: false, ashiba: false}},
   wayo: {n: "和室→洋室", f: [["a", "床の広さ", "㎡", 9.72], ["tt", "畳の枚数", "枚", 6], ["up", "床上げの高さ", "mm", 45], ["wa", "大壁にする壁の面積", "㎡", 0], ["ca", "天井上張りの面積", "㎡", 0], ["os", "押入→クローゼット", "か所", 1], ["sk", "敷居撤去・段差調整", "か所", 1]], d: {}},
   tearai: {n: "手洗い器 取付", f: [["n", "台数", "台", 1]], d: {}},
@@ -5279,11 +5321,30 @@ function drawExtras(){
       h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "setsubi", "給排水・ガス接続", "なし") + tg(i, "duct", "レンジフード ダクト接続", "なし") + tg(i, "panel", "キッチンパネル（壁）", "パネルなし") + tg(i, "kbase", "壁下地補強", "補強なし") + tg(i, "ih", "IH用 200V回路", "ガスのまま") + tg(i, "floor", "キッチンの床張替え", "床そのまま");
     }
     if (e.k === "ub"){
-      h += `<div class="sub2" style="margin-top:6px">基準：標準グレード（サザナ・リデア クラス）</div><div class="seg">${["1216", "1616", "1620"].map(v => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${v}</button>`).join("")}</div>`;
+      const mkName201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード（メーカー未選択）";
+      h += `<div class="sub2" style="margin-top:6px">メーカー</div><div class="seg">${[["", "未選択"], ["toto", "TOTO"], ["lixil", "LIXIL"], ["takara", "タカラ"]].map(([v, n]) => `<button data-ti="${i}" data-tk="maker" data-tv="${v}" aria-pressed="${(e.maker || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+      h += `<div class="sub2" style="margin-top:6px">基準：${mkName201}</div><div class="seg">${["1216", "1616", "1620"].map(v => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${v}</button>`).join("")}</div>`;
       h += `<div class="seg">${[["ub", "ユニットバスから"], ["zairai", "在来浴室から"]].map(([v, n]) => `<button data-ti="${i}" data-tk="from" data-tv="${v}" aria-pressed="${e.from === v}" type="button">${n}</button>`).join("")}</div>`;
       if (e.from === "zairai") h += `<p class="hint" style="margin:6px 2px 0">在来浴室のはつり・土間打ちは「浴室解体」を一緒に追加してください。</p>`;
       else h += tg(i, "tear", "既存ユニットバス解体", "解体なし");
       h += tg(i, "setsubi", "給排水・給湯接続", "なし") + tg(i, "denki", "電気（換気扇・照明）", "なし") + tg(i, "waku", "入口まわり補修", "補修なし") + tg(i, "dan", "保温・断熱グレードアップ", "標準のまま");
+      // CAD-201: メーカーに実在するオプションだけを出す（裏取り: audit-bath-maker-options-2026-11-13）
+      if (e.maker === "toto"){
+        h += `<div class="sub2" style="margin-top:6px">三乾王（換気暖房乾燥機）</div><div class="seg">${[["", "なし"], ["1", "1室換気"], ["2", "2室換気"], ["3", "3室換気"]].map(([v, n]) => `<button data-ti="${i}" data-tk="kan" data-tv="${v}" aria-pressed="${(e.kan || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+        h += tg(i, "osoji", "おそうじ浴槽", "なし") + tg(i, "wipe", "床ワイパー洗浄", "なし") + tg(i, "light", "ダウンライト（LED）", "標準照明") + tg(i, "bar", "手すり（インテリア・バー）", "手すりなし");
+      }
+      if (e.maker === "lixil"){
+        h += `<div class="sub2" style="margin-top:6px">換気乾燥暖房機</div><div class="seg">${[["", "なし"], ["std", "換気乾燥暖房機"], ["pla", "プラズマクラスター"]].map(([v, n]) => `<button data-ti="${i}" data-tk="kan" data-tv="${v}" aria-pressed="${(e.kan || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+        h += tg(i, "jet", "アクアジェット", "なし") + tg(i, "osoji", "おそうじ浴槽", "なし") + tg(i, "pack", "サポートパック（手すり）", "手すりなし");
+      }
+      if (e.maker === "takara"){
+        h += `<div class="sub2" style="margin-top:6px">浴槽の種類</div><div class="seg">${[["keep", "キープクリーン浴槽"], ["frp", "FRP浴槽"]].map(([v, n]) => `<button data-ti="${i}" data-tk="tub" data-tv="${v}" aria-pressed="${(e.tub || "keep") === v}" type="button">${n}</button>`).join("")}</div>`;
+        if (e.tub !== "frp") h += `<div class="sub2" style="margin-top:6px">温浴（どれか1つ）</div><div class="seg" style="flex-wrap:wrap">${[["", "なし"], ["kata", "肩包み湯"], ["jet", "ヘルシージェット"], ["uru", "うるぽか湯"], ["wash", "オートウォッシュ"]].map(([v, n]) => `<button data-ti="${i}" data-tk="onsen" data-tv="${v}" aria-pressed="${(e.onsen || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+        else h += `<p class="hint" style="margin:6px 2px 0">FRP浴槽では温浴オプションは選べません。</p>`;
+        h += `<div class="sub2" style="margin-top:6px">浴室暖房乾燥機</div><div class="seg">${[["", "なし"], ["100", "100V"], ["200", "200V"]].map(([v, n]) => `<button data-ti="${i}" data-tk="kan" data-tv="${v}" aria-pressed="${(e.kan || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+        h += `<div class="sub2" style="margin-top:6px">ミラー</div><div class="seg">${[["", "標準"], ["lux", "ラグジュアリーミラー"], ["wide", "ワイドクリアミラー"]].map(([v, n]) => `<button data-ti="${i}" data-tk="mir" data-tv="${v}" aria-pressed="${(e.mir || "") === v}" type="button">${n}</button>`).join("")}</div>`;
+        h += tg(i, "grip", "浴槽ハンドグリップ", "なし") + tg(i, "floorheat", "ガス温水式床暖房", "なし");
+      }
     }
     if (e.k === "hisashi"){
       h += `<div class="seg" style="margin-top:6px">${[["alu", "アルミ庇（既製品）"], ["wood", "木製庇（板金）"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>`;
@@ -5346,7 +5407,7 @@ const STOCK = [3000, 4000], STOCK_T = [3000, 4000, 6000];
 function stocks(needs, allow6){ const m = {}, ST = allow6 ? STOCK_T : STOCK; needs.forEach(n => { const s = ST.find(x => n <= x); if (s) m[s] = (m[s] || 0) + 1; else { const k = Math.floor(n / 4000), r = n - k * 4000; m[4000] = (m[4000] || 0) + k; if (r > 0.5){ const s2 = ST.find(x => x <= 4000 && r <= x) || 4000; m[s2] = (m[s2] || 0) + 1; } } }); return m; }
 const stockTxt = m => Object.keys(m).sort((a, b) => b - a).map(k => `${k / 1000}m×${m[k]}`).join("、");
 function openArea(){ return S.sashes.reduce((a, s) => a + s.w * s.h * s.n, 0) / 1e6; }
-const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
+const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
 ["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
 // 「外周が同じを2階建て」の計算で、③階の図面の中身（窓・ドア・設備・間仕切りなど）も足して数える
@@ -5986,13 +6047,43 @@ function calc00(){
       }
       else if (e.k === "ub"){
         const n2 = Math.max(1, Math.round(e.n)), pre = (e.auto || e.zid) ? "ユニットバス（図から） " : "ユニットバス ";
-        work("uHon" + e.size, `${pre}${e.size}（標準グレード）`, n2, "台");
+        const ubMk201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード";
+        work("uHon" + e.size, `${pre}${e.size}（${ubMk201}）`, n2, "台");
         if (e.from === "ub" && e.tear){ work("ubKaitai", pre + "既存解体", n2, "台"); addG("pla", 1.2 * n2, 200 * n2); }
         work("uKumi", pre + "組立", n2, "台");
         if (e.setsubi) work("uSetsubi", pre + "給排水・給湯接続", n2, "台");
         if (e.denki) work("uDenki", pre + "電気（換気扇・照明）", n2, "台");
-        if (e.waku) work("uWaku", "浴室入口まわり補修", n2, "か所");
+        if (e.waku){ work("uWaku", "浴室入口まわり補修", n2, "か所"); work("pYokuWaku", "浴室樹脂枠（入口枠）", n2, "個"); }   // CAD-201: 風呂まわりの入口枠は樹脂枠で拾う（本人の決定 2026-11-13）
         if (e.dan) work("uDan", pre + "保温・断熱グレードアップ", n2, "台");
+        // CAD-201: メーカー別オプション（そのメーカーに実在する物だけ。裏取り: audit-bath-maker-options-2026-11-13）
+        if (e.maker === "toto"){
+          if (e.kan === "1") work("uToKan1", pre + "三乾王（1室換気）", n2, "台");
+          else if (e.kan === "2") work("uToKan2", pre + "三乾王（2室換気）", n2, "台");
+          else if (e.kan === "3") work("uToKan3", pre + "三乾王（3室換気）", n2, "台");
+          if (e.osoji) work("uToOsoji", pre + "おそうじ浴槽", n2, "台");
+          if (e.wipe) work("uToWipe", pre + "床ワイパー洗浄", n2, "台");
+          if (e.light) work("uToLight", pre + "ダウンライト（LED）", n2, "台");
+          if (e.bar) work("uToBar", pre + "手すり（インテリア・バー）", n2, "台");
+        } else if (e.maker === "lixil"){
+          if (e.kan === "std") work("uLiKan", pre + "換気乾燥暖房機", n2, "台");
+          else if (e.kan === "pla") work("uLiKanP", pre + "プラズマクラスター換気乾燥暖房機", n2, "台");
+          if (e.jet) work("uLiJet", pre + "アクアジェット", n2, "台");
+          if (e.osoji) work("uLiOsoji", pre + "おそうじ浴槽", n2, "台");
+          if (e.pack) work("uLiPack", pre + "サポートパック（手すり）", n2, "台");
+        } else if (e.maker === "takara"){
+          if (e.tub !== "frp"){
+            if (e.onsen === "kata") work("uTaKata", pre + "肩包み湯", n2, "台");
+            else if (e.onsen === "jet") work("uTaJet", pre + "ヘルシージェット", n2, "台");
+            else if (e.onsen === "uru") work("uTaUru", pre + "うるぽか湯", n2, "台");
+            else if (e.onsen === "wash") work("uTaWash", pre + "オートウォッシュ", n2, "台");
+          }
+          if (e.kan === "100") work("uTaKan1", pre + "浴室暖房乾燥機（100V）", n2, "台");
+          else if (e.kan === "200") work("uTaKan2", pre + "浴室暖房乾燥機（200V）", n2, "台");
+          if (e.mir === "lux") work("uTaMirL", pre + "ラグジュアリーミラー", n2, "台");
+          else if (e.mir === "wide") work("uTaMirW", pre + "ワイドクリアミラー", n2, "台");
+          if (e.grip) work("uTaGrip", pre + "浴槽ハンドグリップ", n2, "台");
+          if (e.floorheat) work("uTaFloor", pre + "ガス温水式床暖房", n2, "台");
+        }
       }
       else if (e.k === "hisashi"){
         const n2 = Math.max(1, Math.round(e.n)), a = e.w * e.d * n2;
