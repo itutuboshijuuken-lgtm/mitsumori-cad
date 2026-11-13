@@ -509,10 +509,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
     <div id="slot2"><div id="planWrap">
-    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zKagen" onclick="openKakigen()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き減らす</button><button class="btn sub" id="zHen" onclick="toggleHenDel120()" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">辺を消す</button><button class="btn sub" id="zSen" onclick="openSode()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 線だけ増やす</button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
-      <button id="zOut" type="button" style="width:48px;height:42px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:900;color:var(--ai)">−</button>
-      <button id="zIn" type="button" style="width:48px;height:42px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:22px;font-weight:900;color:var(--ai)">＋</button>
-      <button id="zAll" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全体</button><button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
+    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
+      <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
     <p class="hint" id="dimHint"></p>
@@ -1890,12 +1888,10 @@ function applyPV(){
     sv.setAttribute("viewBox", `0 0 ${PV.W} ${PV.H}`); sv.style.width = (PV.z * 100) + "%"; sv.style.height = "auto"; sv.style.touchAction = "pan-x pan-y";
     c.scrollLeft = PV.cx / PV.W * sv.clientWidth - c.clientWidth / 2; c.scrollTop = PV.cy / PV.H * sv.clientHeight - c.clientHeight / 2;
   }
-  if ($("zInfo")) $("zInfo").textContent = PV.z > 1.01 ? `${fmt(PV.z, 1)}倍　指でずらすと移動` : "＋で拡大";
+  if ($("zInfo")) $("zInfo").textContent = PV.z > 1.01 ? `${fmt(PV.z, 1)}倍　指でずらすと移動` : "";
 }
 function zoomAt(f, x, y){ if (x == null && (HB.__pageM || PV.z > 1.01)){ const vc = mViewCenterSvg(); PV.cx = vc[0]; PV.cy = vc[1]; } const z0 = PV.z; PV.z = Math.max(1, Math.min(8, PV.z * f)); if (x != null){ PV.cx = x + (PV.cx - x) * z0 / PV.z; PV.cy = y + (PV.cy - y) * z0 / PV.z; } applyPV(); }
-$("zIn").addEventListener("click", () => zoomAt(1.6));
-$("zOut").addEventListener("click", () => zoomAt(1 / 1.6));
-$("zAll").addEventListener("click", () => { PV.z = 1; PV.cx = PV.W / 2; PV.cy = PV.H / 2; applyPV(); });
+/* CAD-215: ②寸法の ＋・－・全体 ボタンは廃止（拡大はピンチだけ）。ボタンの配線も撤去 */
 const touches = new Map(); let pinch = null, panning = null, lastTap = 0, moved = false, tapCancel = false, dragging = null;
 $("plan").addEventListener("pointerdown", e => {
   touches.set(e.pointerId, [e.clientX, e.clientY]);
@@ -18452,6 +18448,143 @@ function gkSync208(){
 setInterval(gkSync208, 600);
 })();
 
+</script>
+
+<script>
+/* CAD-215: ②寸法（家の輪郭）の道具の簡略化（本人の決定 2026-11-13・理解確認済み）
+   残す道具は4つだけ：描き直す・描き足す・消す・消しゴム。
+   廃止した物：描き減らす（zKagen）・辺を消す（zHen）・線だけ増やす（zSen）の
+   ボタンと、この画面の ＋・－・全体（zIn/zOut/zAll。配線は本体側で撤去済み。
+   拡大はピンチだけ）。
+   消す・消しゴムは、②間取りの同じ名前の道具と意味をそろえた：
+   - 消す：持っている間、辺をタップするとその辺の壁が消える（開放＝S.noWall。
+     旧「辺を消す」と全く同じ状態で、仕様画面の「壁のない辺」とも一致する）。
+     もう一度タップで壁が戻る。
+   - 消しゴム：外形にそってなぞると、その部分が外形から消える（本体の
+     eraFromStroke / eraseRect を使用。旧「描き減らす」の切り取りと同じ計算）。
+     消しすぎた所は「描き足す」で描き戻す（描き足すは外に描くと増える）。
+   線だけ増やす（袖壁）の新規作成は廃止。既存データの S.wallLines は従来通り
+   表示・見積される（保存キー・データ構造・見積は不変）。 */
+(function(){
+  "use strict";
+  const $id = id => document.getElementById(id);
+  const inTut = () => { try { return !!HB.__nbtut; } catch(e){ return false; } };
+  const onSt2 = () => { const s2 = $id("st2"); return s2 && !s2.hidden && !HB.__pageM; };
+  function say(m){ if (typeof toast === "function") toast(m); }
+
+  const css = document.createElement("style");
+  css.textContent =
+    "#zDel215[aria-pressed=\"true\"],#zEra215[aria-pressed=\"true\"]{background:#FFC400;border-color:#B8860B}" +
+    "body.nbtutRun #zDel215,body.nbtutRun #zEra215{display:none!important}" +
+    "body.zera215 #slot2 .card{box-shadow:inset 0 0 0 3px #C62828}" +
+    "body.zera215 #slot2 svg{touch-action:none!important}";
+  document.head.appendChild(css);
+
+  let delOn = false, eraOn = false, ink = null, lastEraEnd = 0;
+  HB.__zTools215 = { get del(){ return delOn; }, get era(){ return eraOn; } };
+  function paint(){
+    const d = $id("zDel215"), e = $id("zEra215");
+    if (d) d.setAttribute("aria-pressed", delOn ? "true" : "false");
+    if (e) e.setAttribute("aria-pressed", eraOn ? "true" : "false");
+    document.body.classList.toggle("zera215", eraOn);
+  }
+  function dropInk(){ if (ink){ try { ink.el.remove(); } catch(e){} ink = null; } }
+  function setEra(on){
+    eraOn = !!on && !inTut();
+    if (!eraOn) dropInk();
+    paint();
+    if (eraOn) say("消しゴム：消したい所を、外形にそってなぞってください");
+  }
+  function setDel(on){
+    delOn = !!on && !inTut();
+    if (delOn) setEra(false);
+    paint();
+    if (delOn) say("消す：壁を消したい辺をタップしてください（もう一度タップで壁が戻ります）");
+  }
+  const db = $id("zDel215"), eb = $id("zEra215");
+  if (db) db.addEventListener("click", () => setDel(!delOn));
+  if (eb) eb.addEventListener("click", () => { if (eraOn) setEra(false); else { setDel(false); setEra(true); } });
+
+  /* 描き足すを開く時は、消す・消しゴムを外す */
+  if (typeof window.openKakitasu === "function"){
+    const ok0 = window.openKakitasu;
+    window.openKakitasu = function(){ setDel(false); setEra(false); return ok0.apply(this, arguments); };
+  }
+  /* 画面を移動したら道具を落とす */
+  document.addEventListener("click", e => {
+    const t = e.target;
+    if (t && t.closest && t.closest("[data-go]")){ setDel(false); setEra(false); }
+  }, true);
+
+  /* ===== 消す：辺をタップ → その辺の壁を消す（開放）／もう一度で戻す ===== */
+  document.addEventListener("click", e => {
+    if (!delOn || !onSt2() || inTut()) return;
+    const t = e.target;
+    const g = t && t.closest ? t.closest("[data-edge]") : null;
+    const svg = $id("plan");
+    if (!g || !svg || !svg.contains(g)) return;
+    e.preventDefault(); e.stopPropagation();
+    const i = +g.dataset.edge;
+    if (!(i >= 0) || typeof S === "undefined" || !S.edges || !S.edges[i]) return;
+    pushUndo();
+    S.noWall = (S.noWall === i) ? -1 : i;
+    save(); drawPlan();
+    say(S.noWall >= 0 ? `辺${i + 1}の壁を消しました（開放）` : "壁を戻しました");
+  }, true);
+
+  /* ===== 消しゴム：なぞった部分を外形から消す ===== */
+  const slot = $id("slot2");
+  if (slot){
+    slot.addEventListener("pointerdown", e => {
+      if (!eraOn || !onSt2() || inTut()) return;
+      const svg = $id("plan");
+      if (!svg || !svg.contains(e.target)) return;
+      if (ink){ dropInk(); return; }   /* 2本目の指が触れたら、なぞりは中止 */
+      e.preventDefault(); e.stopPropagation();
+      try { slot.setPointerCapture(e.pointerId); } catch(err){}
+      const p = planPt(e);
+      ink = { id: e.pointerId, sv: [p], mm: [toMM(p)] };
+      const pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      pl.id = "eraInk215";
+      pl.setAttribute("fill", "rgba(198,40,40,.12)"); pl.setAttribute("stroke", "#C62828");
+      pl.setAttribute("stroke-width", "10"); pl.setAttribute("stroke-opacity", ".45");
+      pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(pl); ink.el = pl;
+    }, true);
+    slot.addEventListener("pointermove", e => {
+      if (!ink || e.pointerId !== ink.id) return;
+      e.preventDefault(); e.stopPropagation();
+      const p = planPt(e), l = ink.sv[ink.sv.length - 1];
+      if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
+      ink.sv.push(p); ink.mm.push(toMM(p));
+      ink.el.setAttribute("points", ink.sv.map(q => q.join(",")).join(" "));
+    }, true);
+    const fin = e => {
+      if (!ink || e.pointerId !== ink.id) return;
+      e.stopPropagation();
+      const mm = ink.mm; dropInk(); lastEraEnd = Date.now();
+      if (mm.length < 6){ say("消したい所を、指でなぞってください"); return; }
+      const r = eraFromStroke(mm);
+      if (!r){ say("もう少し大きくなぞってください"); return; }
+      const b0 = bbox(), w = Math.min(r.x1, b0.x1) - Math.max(r.x0, b0.x0), h = Math.min(r.y1, b0.y1) - Math.max(r.y0, b0.y0);
+      const res = eraseRect(r);
+      if (typeof res === "string"){ say(res); return; }
+      drawPlan();
+      say(`${fmt(w)}×${fmt(h)} を消しました。違ったら戻すボタンで戻せます${res.dropped ? `（消えた壁の窓・ドア ${res.dropped}個は外しました）` : ""}`);
+    };
+    slot.addEventListener("pointerup", fin, true);
+    slot.addEventListener("pointercancel", fin, true);
+  }
+  /* 消しゴムのなぞり終わりのタップで、辺の数字パッドが開かないようにする */
+  document.addEventListener("click", e => {
+    if (!lastEraEnd || Date.now() - lastEraEnd > 500) return;
+    if (!onSt2()) return;
+    const t = e.target;
+    const g = t && t.closest ? t.closest("[data-edge]") : null;
+    const svg = $id("plan");
+    if (g && svg && svg.contains(g)){ e.preventDefault(); e.stopPropagation(); }
+  }, true);
+})();
 </script>
 </body>
 </html>
