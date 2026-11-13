@@ -2074,8 +2074,11 @@ const tatArea = () => (S.tatami || []).reduce((a, r) => a + (r.x1 - r.x0) * (r.y
 // ゾーン同士の重なりも二重に引かない（rectSub で和集合にする）。
 // トイレ・収納・廊下・階段室のゾーンは、床仕上げを残りの床で払うのが正しいので引かない。
 // 階の扱いは tatArea と同じ（今読み込まれている階の S.zones / S.tatami をそのまま使う）。
+// CAD-198: rf で「床CF張替え」が付いたトイレゾーンは、足元の床を CF 側（一式）で払うので、
+// 標準仕上げからも引く（cf が付いていないトイレは従来どおり引かない。zo は cf が付かないので不変）。
+const zoneCutQ198 = z => !!z && (z.k === "doma" || z.k === "ub" || (S.mode === "rf" && z.k === "toilet" && (S.extras || []).some(e => e && e.k === "toilet" && e.zid === z.id && e.cf)));
 const zoneFinCut = () => {
-  const zs = (S.zones || []).filter(z => z && (z.k === "doma" || z.k === "ub") && z.x1 - z.x0 >= 100 && z.y1 - z.y0 >= 100);
+  const zs = (S.zones || []).filter(z => zoneCutQ198(z) && z.x1 - z.x0 >= 100 && z.y1 - z.y0 >= 100);
   if (!zs.length) return 0;
   let pieces = [];
   zs.forEach(z => { let ps = [z]; pieces.forEach(q => { ps = ps.flatMap(p => rectSub(p, q)); }); pieces = pieces.concat(ps); });
@@ -2084,6 +2087,47 @@ const zoneFinCut = () => {
   pieces.forEach(p0 => { let ps = [p0]; rs.forEach(r => { ps = ps.flatMap(p => rectSub(p, r)); }); ps.forEach(p => { a += (p.x1 - p.x0) * (p.y1 - p.y0); }); });
   return a / 1e6;
 };
+// CAD-198: トイレゾーンの4辺のうち、家全体のクロスの壁に実際に入っている面の面積（㎡）。
+// 輪郭の壁・間仕切りと重なる辺だけが家全体側に数えられている（ゾーンの合成壁は家全体側に無い）。
+// その辺にかかる開口は家全体側で既に引かれているので、開口ぶんは差し引く。
+function toiletWallOverlap198(z, ch){
+  const P = pts(); if (!P || !P.length) return 0;
+  const segs = [];
+  for (let i = 0; i < P.length; i++){ const a = P[i], c = P[(i + 1) % P.length]; segs.push({x1: a[0], y1: a[1], x2: c[0], y2: c[1], t: "e", i}); }
+  (S.parts2D || []).forEach((q, j) => { if (pState(q) !== "remove") segs.push({x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, t: "p", i: j}); });
+  const sashSpan = sa => {
+    if (!sa.host) return null;
+    const sg = segs.find(s => s.t === sa.host.t && s.i === sa.host.i); if (!sg) return null;
+    const L = Math.hypot(sg.x2 - sg.x1, sg.y2 - sg.y1); if (!(L > 0)) return null;
+    const ux = (sg.x2 - sg.x1) / L, uy = (sg.y2 - sg.y1) / L, p0 = sa.pos || 0;
+    const ax = sg.x1 + ux * p0, ay = sg.y1 + uy * p0, bx = sg.x1 + ux * (p0 + (sa.w || 0)), by = sg.y1 + uy * (p0 + (sa.w || 0));
+    return Math.abs(sg.x2 - sg.x1) >= Math.abs(sg.y2 - sg.y1) ? [Math.min(ax, bx), Math.max(ax, bx)] : [Math.min(ay, by), Math.max(ay, by)];
+  };
+  let area = 0;
+  [[true, z.y0, z.x0, z.x1], [true, z.y1, z.x0, z.x1], [false, z.x0, z.y0, z.y1], [false, z.x1, z.y0, z.y1]].forEach(([hz, fc, lo, hi]) => {
+    const hit = [];
+    segs.forEach(sg => {
+      if (hz ? (Math.abs(sg.y1 - sg.y2) < 1 && Math.abs(sg.y1 - fc) < 2) : (Math.abs(sg.x1 - sg.x2) < 1 && Math.abs(sg.x1 - fc) < 2)){
+        const a = hz ? Math.max(lo, Math.min(sg.x1, sg.x2)) : Math.max(lo, Math.min(sg.y1, sg.y2)), b = hz ? Math.min(hi, Math.max(sg.x1, sg.x2)) : Math.min(hi, Math.max(sg.y1, sg.y2));
+        if (b > a) hit.push({sg, a, b});
+      }
+    });
+    if (!hit.length) return;
+    const ivs = hit.map(h => [h.a, h.b]).sort((p, q) => p[0] - q[0]); let cov = 0, ca = null, cb = null;
+    ivs.forEach(([a, b]) => { if (ca === null){ ca = a; cb = b; } else if (a <= cb) cb = Math.max(cb, b); else { cov += cb - ca; ca = a; cb = b; } });
+    if (ca !== null) cov += cb - ca;
+    area += cov * ch / 1e6;
+    hit.forEach(h => {
+      (S.sashes || []).forEach(sa => {
+        if (!sa.host || sa.host.t !== h.sg.t || sa.host.i !== h.sg.i) return;
+        const sp = sashSpan(sa); if (!sp) return;
+        const ov = Math.min(hi, sp[1]) - Math.max(lo, sp[0]);
+        if (ov > 0) area -= ov * (sa.h || 0) * (sa.n || 1) / 1e6;
+      });
+    });
+  });
+  return Math.max(0, area);
+}
 const TST = {new: ["新調", "#5A6230"], omote: ["表替え", "#2F6B4F"], keep: ["既存", "#8A8F70"]};
 function tatSheet(i){
   /* ===== 段階1・周辺一本化：tatSheet（旧連鎖 blk66 → blk50 → 本体 を畳み込み） =====
@@ -5425,6 +5469,8 @@ const C = calc0(); if (extra){ Object.assign(C, extra.fields); C.rows = extra.ro
   return C;
 }
 // 図に置いた浴室・トイレから、設備（ユニットバス・トイレ）を見積に自動で入れる（増築・新築。手で足した分は引く）
+// CAD-198: 洗面台の立つ床が「床の範囲」の記録で仕上げを指定済みかどうか（その床は記録側で払う）
+function floorRecAt198(o){ return (S.tatami || []).some(r => r && r.fk && o.x > r.x0 && o.x < r.x1 && o.y > r.y0 && o.y < r.y1); }
 function calc0(...a){
   const added = [];
   try {
@@ -5439,7 +5485,7 @@ function calc0(...a){
       const nw = S.mode === "zo", man = k => (S.extras || []).filter(e => e.k === k && !e.auto).reduce((s, e) => s + Math.max(1, Math.round(e.n || 1)), 0);
       (S.tenken || []).filter(o => o.k === "kitchen").slice(man("kitchen")).forEach(o => mkE("kitchen", {n: 1, w: o.w, tear: !nw, floor: false}));
       (S.tenken || []).filter(o => o.k === "tearai").slice(man("tearai")).forEach(o => mkE("tearai", {n: 1}));
-      (S.tenken || []).filter(o => o.k === "senmen").slice(man("senmen")).forEach(o => mkE("senmen", {n: 1, size: o.w < 700 ? "600" : "750", tear: !nw, cf: !nw}));
+      (S.tenken || []).filter(o => o.k === "senmen").slice(man("senmen")).forEach(o => mkE("senmen", {n: 1, size: o.w < 700 ? "600" : "750", tear: !nw, cf: !nw && !floorRecAt198(o), tx: o.x, ty: o.y}));   // CAD-198: 床が記録で指定済みの部屋では床CF張替えの既定を付けない（記録側で払うため。tx/ty は見積側で部屋を特定するため）
     })();
     return calc00(...a);
   } finally { added.forEach(e => { const i = S.extras.indexOf(e); if (i >= 0) S.extras.splice(i, 1); }); }
@@ -5992,13 +6038,50 @@ function calc00(){
     const ch = S.ch, PI = partInfo(ch), rmMode = hasRoomFin();
     // 仕上げの単位（scope）：部屋ごとに分けない時は家全体で1つ、分ける時は部屋ごとに1つ
     const scopes = [];
+    // CAD-198: rf の二重取り3件。付随物（トイレ・洗面）側で払う床・クロスと重なる分を、標準側から引く量として先に数える。
+    // 床（ecu）: 手動トイレの fa（家全体スコープのみ）と、洗面台の部屋の標準仕上げぶん（記録で払う部屋は除く）。
+    //   ゾーンのトイレの足元は zoneFinCut／roomStats の zcut 側で引く。
+    // クロス（ccW/ccC）: cross が付いたトイレごとに重なる壁・天井ぶん。ゾーンは実在の面だけ（toiletWallOverlap198）、手動は想定式。
+    const wallA2of198 = fa => { const wd = 0.91, ln = (fa || 0) / wd; return Math.max(0, 2 * (wd + ln) * 2.4 - 0.78 * 2.03); };
+    const cuts198 = {houseFloor: 0, houseW: 0, houseC: 0, roomFloor: {}, roomW: {}, roomC: {}};
+    try {
+      (S.extras || []).forEach(normEx);
+      const toilets198 = (S.extras || []).filter(e => e && e.k === "toilet");
+      toilets198.forEach(e => {
+        const n2 = Math.max(1, Math.round(e.n || 1)), z = e.zid ? (S.zones || []).find(q => q.id === e.zid) : null;
+        if (e.cf && !z) cuts198.houseFloor += (e.fa || 0) * n2;
+        if (e.cross){
+          if (z){ cuts198.houseW += toiletWallOverlap198(z, ch) * n2; cuts198.houseC += Math.min(e.fa || 0, (z.x1 - z.x0) * (z.y1 - z.y0) / 1e6) * n2; }
+          else { cuts198.houseW += wallA2of198(e.fa) * n2; cuts198.houseC += (e.fa || 0) * n2; }
+        }
+      });
+      const msAll198 = roomStats(ch);
+      const senRooms198 = new Set();
+      (S.extras || []).filter(e => e && e.k === "senmen" && e.cf && e.tx != null).forEach(e => {
+        const r = roomAt(e.tx, e.ty); if (!r || senRooms198.has(r.cid)) return; senRooms198.add(r.cid);
+        const m = msAll198.find(q => q.cid === r.cid); if (!m) return;
+        if (m.tat >= m.area * 0.999) return;   // 床が記録で払われている部屋（cf の既定は mkE 側で付けない形にしてある）
+        const amt = Math.max(0, m.area - m.tat - (m.zcut || 0));
+        cuts198.houseFloor += amt; cuts198.roomFloor[r.cid] = amt;
+      });
+      if (rmMode) toilets198.forEach(e => {
+        if (!e.cross || !e.zid) return;
+        const z = (S.zones || []).find(q => q.id === e.zid); if (!z) return;
+        const cx = (z.x0 + z.x1) / 2, cy = (z.y0 + z.y1) / 2;
+        let m = msAll198.find(q => cx >= q.bb.x0 && cx <= q.bb.x1 && cy >= q.bb.y0 && cy <= q.bb.y1);
+        if (!m){ let bo = 0; msAll198.forEach(q => { const ov = Math.max(0, Math.min(z.x1, q.bb.x1) - Math.max(z.x0, q.bb.x0)) * Math.max(0, Math.min(z.y1, q.bb.y1) - Math.max(z.y0, q.bb.y0)); if (ov > bo){ bo = ov; m = q; } }); }
+        if (!m) return;
+        cuts198.roomW[m.cid] = (cuts198.roomW[m.cid] || 0) + wallA2of198(e.fa);
+        cuts198.roomC[m.cid] = (cuts198.roomC[m.cid] || 0) + (e.fa || 0);
+      });
+    } catch (e198) { /* 引く量が取れない時は従来どおり引かない */ }
     if (!rmMode){
       const fw0 = S.rfWall, wallN0 = Math.max(0, per * ch / 1e6 - openArea()) + (fw0 === "none" ? 0 : PI.area);
-      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), perOki: per, perHab: per + PI.len * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
+      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), ecu: cuts198.houseFloor, ccW: cuts198.houseW, ccC: cuts198.houseC, perOki: per, perHab: per + PI.len * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
     } else {
       roomStats(ch).forEach(m => {
         const poly = [[m.bb.x0, m.bb.y0], [m.bb.x1, m.bb.y0], [m.bb.x1, m.bb.y1], [m.bb.x0, m.bb.y1]];
-        scopes.push({label: `${roomLbl(m.r)}　${fmt(m.area, 1)}㎡`, area: m.area, ca: m.ca, wallN: m.wall, ff: m.f, fw: m.w, fc: m.c, ft: m.ft, wm: m.wm || S.rfWallMat, cm: m.cm || S.rfCeilMat, ccur: m.cc || S.rfCeilCur || "board", maw: m.mw ? m.mw === "yes" : !!S.rfMawari, tat: m.tat, zcut: m.zcut || 0, perOki: m.per, perHab: m.per, dim: [m.bb.w, m.bb.h], hab: {cut: m.cut, doors: m.doors}, jr: () => joistRuns(m.bb.w >= m.bb.h, poly, m.bb)});
+        scopes.push({label: `${roomLbl(m.r)}　${fmt(m.area, 1)}㎡`, area: m.area, ca: m.ca, wallN: m.wall, ff: m.f, fw: m.w, fc: m.c, ft: m.ft, wm: m.wm || S.rfWallMat, cm: m.cm || S.rfCeilMat, ccur: m.cc || S.rfCeilCur || "board", maw: m.mw ? m.mw === "yes" : !!S.rfMawari, tat: m.tat, zcut: m.zcut || 0, ecu: cuts198.roomFloor[m.cid] || 0, ccW: cuts198.roomW[m.cid] || 0, ccC: cuts198.roomC[m.cid] || 0, perOki: m.per, perHab: m.per, dim: [m.bb.w, m.bb.h], hab: {cut: m.cut, doors: m.doors}, jr: () => joistRuns(m.bb.w >= m.bb.h, poly, m.bb)});
       });
     }
     const wallN = scopes.reduce((x, sc) => x + sc.wallN, 0);
@@ -6037,7 +6120,7 @@ if (ff === "tat"){ const nn = Math.ceil(a0 / 0.303 / 4 * 1.05); lum("taruki", "�
       if (demo > 0){ work("kaitai", "解体", demo, "㎡", `${fmt(demo, 1)}㎡（${[fl ? "床" : "", wl ? "壁" : "", cl ? "天井" : ""].filter(Boolean).join("・")}）`); if (fl) addS("floor", sc.area); if (wl) addS("wall", sc.wallN); if (cl){ if (sc.ccur === "lami") addG("wood", sc.area * 0.04, sc.area * 10); else addS("ceil", sc.area); } }
       if (sc.ff === "tat"){ const nT = Math.ceil(sc.area / 1.62); work("tatamiTear", "畳 撤去・処分", nT, "枚", `${fmt(sc.area, 1)}㎡ ÷ 1.62㎡ ＝ ${nT}枚`); }
     };
-    const scFloorFin = sc => { const fa = sc.area - sc.tat - (sc.zcut || 0); if (sc.ff !== "none" && fa > 0.05) floorFin(fa, "", sc.ft); };   // CAD-192: 土間・浴室ゾーンの足元は仕上げから引く（zo と同じ考え）
+    const scFloorFin = sc => { const fa = Math.max(0, sc.area - sc.tat - (sc.zcut || 0) - (sc.ecu || 0)); if (sc.ff !== "none" && fa > 0.05) floorFin(fa, "", sc.ft); };   // CAD-192: 土間・浴室ゾーンの足元は仕上げから引く（zo と同じ考え）。CAD-198: 付随物側で払う床（ecu）も引く
     const scHabaki = sc => { if (sc.ff !== "none" || sc.fw !== "none") habakiMikiri(sc.perHab, 1, sc.hab); };
     const scMawari = sc => { if (sc.maw && sc.fc !== "none") work("mawari", "回り縁", sc.perHab / 1000, "m", `天井のまわり ${fmt(sc.perHab / 1000, 1)}m × ${fmt(workP("mawari").p)}円`); };
     const scCloth = sc => {
@@ -6046,7 +6129,10 @@ const wA = sc.fw !== "none" ? sc.wallN : 0, cA = sc.fc !== "none" ? (sc.ca || sc
 if (wm && wA > 0) work(wm === "diato" ? "wallDiato" : "wallPaint", wm === "diato" ? "壁 珪藻土（塗り）" : "壁 塗装", wA, "㎡");
 if (cm === "paint" && cA > 0) work("ceilPaint", "天井 塗装", cA, "㎡");
 const cl = (wm ? 0 : wA) + (cm ? 0 : cA);
-const clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm ? sc.wallN : 0) + ((sc.fc === "board" || sc.fc === "frame" || sc.fc === "base" || sc.fc === "fin") && !cm ? (sc.ca || sc.area) : 0), clOld = cl - clNew;
+let clNew = ((sc.fw === "board" || sc.fw === "base" || sc.fw === "fin") && !wm ? sc.wallN : 0) + ((sc.fc === "board" || sc.fc === "frame" || sc.fc === "base" || sc.fc === "fin") && !cm ? (sc.ca || sc.area) : 0), clOld = cl - clNew;
+// CAD-198: トイレの「壁・天井クロス張替え」と重なる分を、こちらのクロスから引く（張替え側から先に引く）
+const cut198 = Math.min((wm ? 0 : (sc.ccW || 0)) + (cm ? 0 : (sc.ccC || 0)), cl);
+if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = Math.max(0, clNew - (cut198 - fo198)); }
       if (clNew > 0) work("clothNew", "クロス 新規（新しいボード）", clNew, "㎡");
       if (clOld > 0) work("cloth", "クロス 張替え（剥がし込み）", clOld, "㎡");
     };
@@ -7215,7 +7301,8 @@ function roomStats(ch){
     });
   });
   // CAD-192: 土間・浴室ゾーンの足元のうち床の記録と重なっていない部分を、部屋ごとに数える（畳と同じセル方式）
-  const dzs192 = (S.zones || []).filter(z => z && (z.k === "doma" || z.k === "ub"));
+  // CAD-198: rf で床CF張替えが付いたトイレゾーンも同じ対象（zoneCutQ198）
+  const dzs192 = (S.zones || []).filter(z => zoneCutQ198(z));
   if (dzs192.length) ms.forEach(m => {
     let n = 0;
     m.r.cells.forEach(c => { const x = R.b.x0 + ((c % R.NX) + 0.5) * st, y = R.b.y0 + (Math.floor(c / R.NX) + 0.5) * st;
