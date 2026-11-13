@@ -5680,10 +5680,17 @@ function calc00(){
     if (cnt <= 0) return;
     rows.push({name, spec, qty: `${cnt}枚`, ...ap(sheetPrice(cat, tk, w, l), cnt), fix: {kind: "sheet", cat, t: tk, w, len: l, name}});
   }
+  const TSUBO200 = new Set(["flComp", "flCompO", "floorFin", "flMuku", "flMuku12", "flMuku30", "flCF", "flCFD", "flCFS", "flCFP", "flCFC", "flCarpet", "flOki", "flOkiS", "flOkiSS", "flOkiK", "flOkiD", "yakisugi"]);   // CAD-200: 坪で注文する材料（床の仕上げ材と焼杉）のキー
   function work(key, name, qty, unit, spec){
   if (key === "flSheet") key = "flComp";
     const w = workP(key);
-    rows.push({name, spec: spec || `${fmt(qty, 1)}${unit} × ${fmt(w.p)}円`, qty: "", cost: w.p * qty, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: qty});
+    let spc = spec || `${fmt(qty, 1)}${unit} × ${fmt(w.p)}円`;
+    // CAD-200: 坪で注文する材料は、数量の㎡の横に坪も出す（本人の指示 2026-11-13。例「19.9㎡（6.0坪）」）。表示だけの変更で金額は不変。spec に数量表記が無い行（袖壁など）は末尾に足す
+    if (unit === "㎡" && qty > 0 && TSUBO200.has(key)){
+      const mq = `${fmt(qty, 1)}㎡`, tp = `（${(qty / 3.305785).toFixed(1)}坪）`, ix = spc.indexOf(mq);
+      spc = ix >= 0 ? spc.slice(0, ix + mq.length) + tp + spc.slice(ix + mq.length) : spc + ` ${mq}${tp}`;
+    }
+    rows.push({name, spec: spc, qty: "", cost: w.p * qty, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: qty});
   }
   function tenkenRows(){
     const f = (S.tenken || []).filter(o => o.k === "floor").length, c = (S.tenken || []).filter(o => o.k === "ceil").length;
