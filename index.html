@@ -2063,6 +2063,7 @@ function dimOverlay(P, sc){
   const p = pts(), pol = p, out = [];
   const tx = (x, y, t, col, rot) => `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" ${rot ? `transform="rotate(-90 ${x} ${y})"` : ""} class="halo" style="font-size:10px;font-weight:800;fill:${col}">${t}</text>`;
   const parts = (S.parts2D || []).filter(q => pState(q) !== "remove");
+  const chainVals = new Set();   /* CAD-210: 外周チェーンに実際に描いた区間寸法の値（選択間仕切りの距離ピルの二重描き防止に使う） */
   // 外周の各辺：間仕切りが当たる所で区切って寸法を出す
   p.forEach((a, i) => {
     const c = p[(i + 1) % p.length], e = S.edges[i], L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (L < 1) return;
@@ -2080,21 +2081,31 @@ function dimOverlay(P, sc){
       const ex = (d * sc < String(fmt(Math.round(d))).length * 6.6 + 6 && k % 2) ? 14 / sc : 0;
       const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 130 + ex), a[1] + u[1] * mid + n[1] * (off + 130 + ex)]);
       out.push(tx(q0[0], q0[1], fmt(Math.round(d)), ts.length > 2 ? "#C2571A" : col, vert));
+      chainVals.add(Math.round(d));
     }
     if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 330), m[1] + n[1] * (off + 330)]); out.push(tx(q0[0], q0[1], `全長 ${fmt(Math.round(L))}${e.set ? "" : "（自動）"}`, col, vert)); }
   });
   // 選んだ間仕切り：両側の壁までの距離
+  // CAD-210: 当たった壁が外周に接していて、その距離が外周の寸法チェーンに既に出ている方向は
+  //   線もピルも描かない（同じ寸法が二重に出て、間仕切りのラベルに重なって読めなくなるため。
+  //   位置は下のコントローラーにも「左から○○」と出ている）。チェーンに出ていない距離は従来通り描く。
   if (sel && sel.t === "p" && S.parts2D[sel.i]){
     const q = S.parts2D[sel.i], horiz = q.y1 === q.y2, b = bbox(), mid = [(q.x1 + q.x2) / 2, (q.y1 + q.y2) / 2];
-    const segs = p.map((a, i) => [a, p[(i + 1) % p.length]]).concat(parts.filter(z => z !== q).map(z => [[z.x1, z.y1], [z.x2, z.y2]]));
+    const segs = p.map((a, i) => ({ s: [a, p[(i + 1) % p.length]], edge: true })).concat(parts.filter(z => z !== q).map(z => ({ s: [[z.x1, z.y1], [z.x2, z.y2]], edge: false })));
+    const onPerim = pt => p.some((a, i) => segDist(pt, a, p[(i + 1) % p.length]).d < 3);
     [-1, 1].forEach(dir => {
-      let best = null;
-      segs.forEach(([a, c]) => {
-        if (horiz && Math.abs(a[1] - c[1]) < 1 && mid[0] >= Math.min(a[0], c[0]) - 1 && mid[0] <= Math.max(a[0], c[0]) + 1){ const d = (a[1] - mid[1]) * dir; if (d > 1 && (best == null || d < best)) best = d; }
-        if (!horiz && Math.abs(a[0] - c[0]) < 1 && mid[1] >= Math.min(a[1], c[1]) - 1 && mid[1] <= Math.max(a[1], c[1]) + 1){ const d = (a[0] - mid[0]) * dir; if (d > 1 && (best == null || d < best)) best = d; }
+      let best = null, bestSeg = null;
+      segs.forEach(sg => {
+        const [a, c] = sg.s;
+        if (horiz && Math.abs(a[1] - c[1]) < 1 && mid[0] >= Math.min(a[0], c[0]) - 1 && mid[0] <= Math.max(a[0], c[0]) + 1){ const d = (a[1] - mid[1]) * dir; if (d > 1 && (best == null || d < best)){ best = d; bestSeg = sg; } }
+        if (!horiz && Math.abs(a[0] - c[0]) < 1 && mid[1] >= Math.min(a[1], c[1]) - 1 && mid[1] <= Math.max(a[1], c[1]) + 1){ const d = (a[0] - mid[0]) * dir; if (d > 1 && (best == null || d < best)){ best = d; bestSeg = sg; } }
       });
       if (best == null) return;
+      if (bestSeg && (bestSeg.edge || bestSeg.s.some(pt => onPerim(pt))) && chainVals.has(Math.round(best))) return;
       const e2 = horiz ? [mid[0], mid[1] + best * dir] : [mid[0] + best * dir, mid[1]], A1 = P(mid), B1 = P(e2), cm = [(A1[0] + B1[0]) / 2, (A1[1] + B1[1]) / 2];
+      /* CAD-210: ピルは測線の中点だと、間仕切り自身の長さラベル（中点の右上に出る）と重なる事がある
+         （距離が短い時）。ラベルは常に中点の右上なので、ピルだけ測線と直交方向へ少し逃がす。 */
+      if (horiz) cm[0] -= 14; else cm[1] += 14;
       out.push(`<line x1="${A1[0]}" y1="${A1[1]}" x2="${B1[0]}" y2="${B1[1]}" stroke="#E8742C" stroke-width="1.2" stroke-dasharray="4 3"/><circle cx="${B1[0]}" cy="${B1[1]}" r="2.5" fill="#E8742C"/>`);
       out.push(`<rect x="${cm[0] - 22}" y="${cm[1] - 8}" width="44" height="16" rx="4" fill="#E8742C"/><text x="${cm[0]}" y="${cm[1] + 4}" text-anchor="middle" style="font-size:10px;font-weight:900;fill:#fff">${fmt(Math.round(best))}</text>`);
     });
