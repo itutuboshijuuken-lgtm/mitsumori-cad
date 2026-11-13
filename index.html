@@ -531,7 +531,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="zIn2" type="button">＋</button><button id="zOut2" type="button">−</button><button id="zAll2" type="button" style="font-size:11px">全体</button><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：間仕切りの線をなぞると、その部分が消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：間仕切りの線をなぞると、その部分が消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -2898,8 +2898,11 @@ function drawToolsUICore(){
   if (HB.__dtSeg06 && HB.__put && (toolOpen !== HB.__put.g || ltTool || enclMode)){ HB.__put = null; HB.__sashAct = null; }
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawNotchRow();
-  $("partCh").innerHTML = [455, 910, 1820, 2730].map(v => `<button class="p" data-pl="${v}" type="button">${fmt(v)}</button>`).join("") + `<button class="p" data-pl="pad" type="button">長さ…</button><button class="p" data-pl="tare" type="button" style="color:#8A5A2B">垂れ壁</button><button class="p" data-pl="waist" type="button" style="color:#8A5A2B">腰壁</button>`;
-  $("partCh").querySelectorAll("[data-pl]").forEach(b => b.onclick = () => { if (b.dataset.pl === "waist"){ fxStartPlace("waist"); return; } if (b.dataset.pl === "tare") openPad({title: "垂れ壁の長さ", value: "", done: v => { if (v) addStdTare(v); }}); else if (b.dataset.pl === "pad") openPad({title: "間仕切りの長さ", value: "", done: v => { if (v) addStdPart(v); }}); else addStdPart(+b.dataset.pl); });
+  /* CAD-216: 長さチップ（455・910・1,820・2,730・長さ…）と垂れ壁・腰壁の専用ボタンは廃止。
+     壁は指でなぞって描くだけにし、壁の種類（通常・垂れ壁・腰壁）は壁をタップした時の
+     「高さ寸法」の中で変える形に寄せた。#partCh の行自体は残す（解体ボタンが
+     blk14 後段から append される器のため）。 */
+  $("partCh").innerHTML = "";
   $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"], ["genD", "勝手口ドア"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
   $("toolCh").classList.toggle("winmode", toolOpen === "win" || toolOpen === "gen");
   $("toolCh2").innerHTML = `<button type="button" data-tk="wc">便器</button><button type="button" data-tk="bath">浴槽</button><button type="button" data-tk="tearai">手洗い</button><button type="button" data-tk="senpan">洗濯機パン</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="yukashu">床下収納</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="acout">エアコン</button><button type="button" data-tk="kitchen">キッチン</button><button type="button" data-tk="senmen">洗面台</button><button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button><button type="button" data-tk="geta">下駄箱</button>`;
@@ -3883,7 +3886,7 @@ function drawToolTabs(){
   else if (toolOpen === null && window.grp136 === "wall") window.grp136 = null;
   const tabs = $("toolTabs");
   tabs.innerHTML = "";
-  [["part", "👆 壁を描く"], ["put", "選んで置く"]].forEach(([k, n]) => {
+  [["part", "👆 描く・選ぶ"], ["put", "置く"]].forEach(([k, n]) => {
     const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
     const on = k === "part" ? toolOpen === "part" : window.grp136 === "put";
     b.setAttribute("aria-pressed", on ? "true" : "false");
@@ -4323,7 +4326,7 @@ if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText
       movePart(q, 0, 0); try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
     $("sbLen").onclick = () => openPad({title: "間仕切りの長さ", value: Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), extra: [455, 910, 1820, 2730, 3640].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); setLen(q, v); save(); drawPlan(); }})), done: v => { if (v){ pushUndo(); setLen(q, v); save(); drawPlan(); } }});
     $("sbFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
-    if ($("sbTop")) $("sbTop").onclick = () => openPad({title: "間仕切りの高さ", sub: "数字は床からの高さ。垂れ壁は天井から下がります", unit: "mm", std: false, value: q.top || "", extra: [{label: "天井まで", fn: () => { closePad(); pushUndo(); delete q.top; save(); drawPlan(); }}, {label: "垂れ壁（天井から）", fn: () => { closePad(); pushUndo(); const ix = S.parts2D.indexOf(q); if (ix >= 0) S.parts2D.splice(ix, 1); sel = null; S.tare = S.tare || []; const tt = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(tt); save(); drawPlan(); tareAsk(tt); }}].concat([1800, 2000, 2100].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); q.top = v; save(); drawPlan(); }}))), done: v => { if (v){ pushUndo(); q.top = Math.min(v, S.ch); save(); drawPlan(); } }});
+    if ($("sbTop")) $("sbTop").onclick = () => openPad({title: "間仕切りの高さ", sub: "数字は床からの高さ。垂れ壁は天井から下がります", unit: "mm", std: false, value: q.top || "", extra: [{label: "天井まで", fn: () => { closePad(); pushUndo(); delete q.top; save(); drawPlan(); }}, {label: "垂れ壁（天井から）", fn: () => { closePad(); pushUndo(); const ix = S.parts2D.indexOf(q); if (ix >= 0) S.parts2D.splice(ix, 1); sel = null; S.tare = S.tare || []; const tt = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(tt); save(); drawPlan(); tareAsk(tt); }}, {label: "腰壁（床から900）", fn: () => { closePad(); pushUndo(); q.top = 900; save(); drawPlan(); }}].concat([1800, 2000, 2100].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); q.top = v; save(); drawPlan(); }}))), done: v => { if (v){ pushUndo(); q.top = Math.min(v, S.ch); save(); drawPlan(); } }});
     $("sbNew").onclick = () => { pushUndo(); setPState(q, (S.mode === "zo" ? {keep: "new", new: "keep", remove: "keep"} : {keep: "new", new: "remove", remove: "keep"})[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
     if ($("sbBeam")) $("sbBeam").onclick = () => beamAsk(q);
   } else {
@@ -4357,7 +4360,7 @@ function setLen(q, L){
 
 function delPart(i){ S.sashes = S.sashes.filter(sa => !(sa.host && sa.host.t === "p" && sa.host.i === i)).map(sa => { if (sa.host && sa.host.t === "p" && sa.host.i > i) sa.host.i--; return sa; }); S.parts2D.splice(i, 1); save(); }
 $("listBtn").addEventListener("click", () => { drawToolsUI(); $("mbox").innerHTML = ""; $("mbox").appendChild($("drawnList")); $("drawnList").hidden = false; $("modal").hidden = false; const close = () => { $("modal").hidden = true; $("drawnList").hidden = true; $("stM").appendChild($("drawnList")); }; $("dlClose").onclick = close; $("drawnList").querySelectorAll("button").forEach(b => { if (b.id !== "dlClose"){ const f = b.onclick; b.onclick = () => { close(); f && f(); }; } }); });
-$("zIn2").addEventListener("click", () => zoomAt(1.6)); $("zOut2").addEventListener("click", () => zoomAt(1 / 1.6)); $("zAll2").addEventListener("click", () => { PV.z = 1; PV.cx = PV.W / 2; PV.cy = PV.H / 2; applyPV(); });
+/* CAD-216: ②間取りの ＋・－・全体 ボタンは廃止（拡大はピンチだけ）。ボタンの配線も撤去 */
 $("slotM").addEventListener("scroll", () => {}, {passive: true});
 /* ---------- 階（1階・2階…）の切り替え。いま開いている階のデータは、これまでと同じ場所に入れ、ほかの階は別に保管する ---------- */
 const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
@@ -9646,7 +9649,7 @@ HB.__padStdSeg12 = true;
     if (c.dataset.k === key) return; c.dataset.k = key;
     const seg = (k, opts) => `<div class="seg" style="margin-top:4px">${opts.map(([v, n]) => `<button type="button" data-hk="${k}" data-hv="${v}" aria-pressed="${(S[k] || opts[0][0]) === v}">${n}</button>`).join("")}</div>`;
     const dl152 = [["fin", "仕上げ材のみ"], ["sub", "下地から"], ["rem", "撤去"]].filter(([k]) => D152[k].n > 0).map(([k, n]) => `${n} ${D152[k].n}面・約${fmt(D152[k].a, 1)}㎡`).join("／");
-    c.innerHTML = `<h2 style="margin:0 0 4px">🧱 解体（${h.n}面・約${fmt(h.a, 1)}㎡）</h2><p class="hint" style="margin:0 0 6px">壁と深さは「間取り」→「壁を描く」→「解体」で選びます。${dl152}</p>
+    c.innerHTML = `<h2 style="margin:0 0 4px">🧱 解体（${h.n}面・約${fmt(h.a, 1)}㎡）</h2><p class="hint" style="margin:0 0 6px">壁と深さは「間取り」→「描く・選ぶ」→「解体」で選びます。${dl152}</p>
       ${D152.fin.n + D152.sub.n > 0 ? `<b>解体した所に断熱材を入れる？</b>${seg("hgDan", [["in", "入れる"], ["out", "入れない"]])}` : ""}
       ${D152.fin.n > 0 ? `<b style="display:block;margin-top:8px">下地・間柱・柱の交換（仕上げ材のみの面）</b>${seg("hgShita", [["no", "なし"], ["yes", "あり（予備で見る）"]])}<p class="hint" style="margin:2px 0 0">「下地から解体」の面は、下地の交換を初めから含みます。</p>` : ""}
       ${D152.fin.n + D152.sub.n > 0 ? `<b style="display:block;margin-top:8px">白蟻の被害</b>${seg("hgAri", [["no", "なさそう"], ["maybe", "ありそう（防蟻・補修を見る）"]])}` : ""}`;
@@ -13379,6 +13382,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   "use strict";
   HB.__partDraw = false;
   var pdInk = null;
+  var pdTap = null;   /* CAD-216: 描く・選ぶ中のタップ選択の記録 {id, cx, cy, t, pk, zi, dev} */
 
   function pdOff(silent){
     if (!HB.__partDraw) return;
@@ -13388,7 +13392,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
   HB.__partDrawOff = pdOff;
   /* CAD-153: ピンチ確定時に進行中の指描きを取り消すためのフック（ゲートから呼ばれる） */
-  HB.__pdCancel153 = function(){ if (pdInk){ try { pdInk.el.remove(); } catch(e){} pdInk = null; } };
+  HB.__pdCancel153 = function(){ pdTap = null; if (pdInk){ try { pdInk.el.remove(); } catch(e){} pdInk = null; } };
 
   function pdOn(){
     if (HB.__delMode && HB.__delSet) HB.__delSet(false);
@@ -13671,6 +13675,29 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     toast("間仕切り " + fmt(Math.round(L)) + "mm を入れました");
   }
 
+  /* CAD-216: 描く・選ぶ中のタップ選択の行き先。本体のタップ選択（#plan の
+     pointerdown）と行き先をそろえる：建具・間仕切り・設備は選択バー、
+     垂れ壁は垂れ壁の編集、ゾーンは囲み編集（CAD-204 と同じく描く状態を
+     落としてから開く）。 */
+  function pdSelect216(tp){
+    if (tp.pk){
+      var pk = tp.pk;
+      if (pk.t === "r"){ try { tareEdit(pk.i); } catch(er){} return; }
+      sel = {t: pk.t, i: pk.i};
+      try { drawPlan(); } catch(er){}
+      try { drawSelBar(); } catch(er){}
+      return;
+    }
+    if (tp.zi >= 0){
+      pdOff(true);
+      if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(er){} }
+      enclMode = true;
+      try { document.body.classList.add("enclmode"); } catch(er){}
+      try { drawToolsUI(); } catch(er){}
+      enclStartEdit("z", tp.zi);
+    }
+  }
+
   var slot = document.getElementById("slotM");
   if (!slot) return;
   slot.addEventListener("pointerdown", function(e){
@@ -13690,9 +13717,25 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round"); pl.setAttribute("stroke-dasharray", "8 5");
     document.getElementById("plan").appendChild(pl);
     pdInk.el = pl;
+    /* CAD-216: 押した場所の候補を記録する。動かさずに離した時だけ選択に回し、
+       なぞれば従来通り壁になる（始点が物の上でも、描画に化ける事はない）。 */
+    var mmD = toMM(p), pkD = null, ziD = -1;
+    try { var csD = pickCands(mmD); if (csD && csD.length) pkD = csD[0]; } catch(er){}
+    if (!pkD){
+      try {
+        var ZD = S.zones || [];
+        for (var zi = ZD.length - 1; zi >= 0; zi--){
+          var z = ZD[zi];
+          if (!z || z.fid || typeof ZT === "undefined" || !ZT[z.k]) continue;
+          if (mmD[0] > z.x0 && mmD[0] < z.x1 && mmD[1] > z.y0 && mmD[1] < z.y1){ ziD = zi; break; }
+        }
+      } catch(er){}
+    }
+    pdTap = {id: e.pointerId, cx: e.clientX, cy: e.clientY, t: Date.now(), pk: pkD, zi: ziD, dev: 0};
   }, true);
   slot.addEventListener("pointermove", function(e){
     if (!pdInk || e.pointerId !== pdInk.id) return;
+    if (pdTap && e.pointerId === pdTap.id){ var dv = Math.hypot(e.clientX - pdTap.cx, e.clientY - pdTap.cy); if (dv > pdTap.dev) pdTap.dev = dv; }
     e.preventDefault(); e.stopPropagation();
     var p = planPt(e), l = pdInk.sv[pdInk.sv.length - 1];
     if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
@@ -13705,6 +13748,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var mm = pdInk.mm;
     if (pdInk.el) pdInk.el.remove();
     pdInk = null;
+    /* CAD-216: 動かさないタップで物の上なら、壁を作らず選択に回す */
+    var tp = (pdTap && pdTap.id === e.pointerId) ? pdTap : null; pdTap = null;
+    if (tp && tp.dev <= 14 && Date.now() - tp.t <= 900 && (tp.pk || tp.zi >= 0)){ pdSelect216(tp); return; }
     pdFinish(mm);
   };
   slot.addEventListener("pointerup", end, true);
@@ -15109,16 +15155,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var cur = S.flType || "floorFin"; if (cur === "flSheet") cur = "flComp";
       var nm = {flComp: "フローリング", floorFin: "フロアタイル", flCF: "CF", flMuku: "無垢板15mm", flMuku30: "無垢板30mm"}[cur] || "フロアタイル";
       var ra = restArea183();
-      rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+      rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
     }
     entries.forEach(function(idxs){
       if (idxs.length > 1){
         var r0 = list[idxs[0]], sm = recSummary138(r0);
         var totA = idxs.reduce(function(a, i){ return a + area138(list[i]); }, 0);
-        rows += "<div class='sprow'><div>" + recTitle138(r0) + (sm ? "<small>" + sm + "</small>" : "") + "<small>" + fmt(totA, 1) + "㎡（" + idxs.length + "か所ぶん）</small></div><div><button class='btn' data-specgrp='" + idxs.join(",") + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+        rows += "<div class='sprow'><div>" + recTitle138(r0) + (sm ? "<small>" + sm + "</small>" : "") + "<small>" + fmt(totA, 1) + "㎡（" + idxs.length + "か所ぶん）</small></div><div><button class='btn' data-specgrp='" + idxs.join(",") + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
       } else {
         var i = idxs[0], r = list[i], sm2 = recSummary138(r);
-        rows += "<div class='sprow'><div>" + recTitle138(r) + (sm2 ? "<small>" + sm2 + "</small>" : "") + "<small>" + fmt(r.x1 - r.x0) + "×" + fmt(r.y1 - r.y0) + "・" + fmt(area138(r), 1) + "㎡</small></div><div><button class='btn' data-specfl='" + i + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>決め直す</button></div></div>";
+        rows += "<div class='sprow'><div>" + recTitle138(r) + (sm2 ? "<small>" + sm2 + "</small>" : "") + "<small>" + fmt(r.x1 - r.x0) + "×" + fmt(r.y1 - r.y0) + "・" + fmt(area138(r), 1) + "㎡</small></div><div><button class='btn' data-specfl='" + i + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
       }
     });
     box.innerHTML = "<h2>床の範囲</h2>" + rows;
@@ -15938,13 +15984,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       if (HB.__put && HB.__put.label) return HB.__put.label;
       if (typeof ltTool !== "undefined" && ltTool) return (typeof LTN !== "undefined" && LTN[ltTool]) || "照明";
       if (HB.__floorArm) return (HB.__FLN && HB.__FLN[HB.__floorArm]) || "床";
-      if (HB.__partDraw) return "壁を描く";
+      if (HB.__partDraw) return "描く・選ぶ";
       if (typeof enclMode !== "undefined" && enclMode) return "なぞる";
       if (typeof toolOpen !== "undefined" && toolOpen){
-        return {part: "壁を描く", door: "建具", win: "窓", gen: "玄関", etc: "設備・その他", light: "照明"}[toolOpen] || "道具";
+        return {part: "描く・選ぶ", door: "建具", win: "窓", gen: "玄関", etc: "設備・その他", light: "照明"}[toolOpen] || "道具";
       }
       if (HB.__floorTab) return "床の仕様";
-      if (window.grp136 === "put") return "選んで置く";
+      if (window.grp136 === "put") return "置く";
     } catch(e){}
     return "道具";
   }
