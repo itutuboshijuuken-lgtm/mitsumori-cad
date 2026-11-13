@@ -3661,14 +3661,17 @@ function drawEnclBar0(){
   }
   const r = encl.r, b = bbox(), ed = encl.edit;
   const nm = ed ? (ed.kind === "t" ? "畳" : ed.kind === "room" ? "部屋" : ZT[ed.type][0]) : "";
-  const types = ed ? (ed.kind === "room" ? [] : ENCL_TYPES.filter(([k]) => k !== "erase" && k !== "cut")) : ENCL_TYPES;
-  const tb = types.map(([k, n]) => `<button data-et="${k}" type="button" style="${ZT[k] ? `background:${ZT[k][1]};color:${ZT[k][2]}` : k === "erase" || k === "cut" ? "color:#C62828" : ""}${(ed ? ed.type : (encl && encl.pick)) === k ? ";outline:3px solid #2563B0" : ""}">${n}</button>`).join("");
+  /* CAD-211: 種類チップ（畳・土間・収納・廊下・階段・部屋）は廃止（本人の決定 2026-11-13）。
+     種類と床仕様は、なぞる前に道具側で選んだ内容でそのまま決まる形にし、このパネルは
+     大きさ・位置を直すだけにする。新規なぞりの「消す操作」（外周消・配置消）だけは
+     専用ボタンの行として残す（編集時は従来通り #ecDel が担う）。 */
+  const delRow = ed ? "" : `<div class="ect"><button id="ecErase" type="button" style="color:#C62828">外周消</button><button id="ecCut" type="button" style="color:#C62828">配置消</button></div>`;
   const side = ed ? (ed.kind === "t" ? `<button id="ecSt" type="button">畳:${TST[ed.st || "new"][0]}</button>` : "") : `<button id="ecNew" type="button">壁:${enclNew ? "新設" : "既存"}</button>`;
   const doorBtn205 = ed && ed.kind === "z" && ed.type === "ub" ? `<button id="ecDoor" type="button">${HB.__doorLabel205 ? HB.__doorLabel205(ed.i) : "入口"}</button>` : "";   /* CAD-205：浴室の入口の設定へ */
-  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲：" + (((ENCL_TYPES.find(([k]) => k === (encl && encl.pick)) || [])[1]) || "部屋")}</span><span style="display:flex;gap:4px">${side}${doorBtn205}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">決定</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">決定</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲"}</span><span style="display:flex;gap:4px">${side}${doorBtn205}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">決定</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">決定</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
     <div class="ecd">${[["w", "幅", r.x1 - r.x0], ["h", "奥行", r.y1 - r.y0], ["x", "左から", r.x0 - b.x0], ["y", "上から", r.y0 - b.y0]].map(([k, n, v]) => `<button data-ed="${k}" type="button"><small>${n}</small><b>${f5(v)}</b></button>`).join("")}</div>
     ${(() => { const ov = enclOverlaps(); return ov.length ? `<div style="color:#C62828;font-size:12.5px;font-weight:800;margin:4px 2px 0">${ov.join("・")}に被っています（決定すると、${ov.join("・")}がその分小さくなります）</div>` : ""; })()}<div class="ecd" style="margin-top:6px">${[["l", "←"], ["u", "↑"], ["d", "↓"], ["r", "→"]].map(([k, a]) => `<button data-ex="${k}" type="button"><small>${enclExLabel(k)}</small><b>${a}</b></button>`).join("")}</div>
-${enclNoWorkRow()}<div class="${ed ? "ect5" : "ect"}">${tb}</div>
+${enclNoWorkRow()}${delRow}
 `;
   $("ecX").onclick = ed ? () => { encl = {r: null}; drawEnclBar(); drawPlan(); } : enclOff;
   if ($("ecDoor")) $("ecDoor").onclick = () => { const zi205 = ed.i; encl = {r: null}; if (HB.__doorOpen205) HB.__doorOpen205(zi205, false, true); };   /* CAD-205 */
@@ -3682,8 +3685,9 @@ $("ecStep").onclick = () => { ENC_STEP = ENC_STEPS[(ENC_STEPS.indexOf(ENC_STEP) 
     const k = bt.dataset.ed, cur = k === "w" ? r.x1 - r.x0 : k === "h" ? r.y1 - r.y0 : k === "x" ? r.x0 - b.x0 : r.y0 - b.y0;
     openPad({title: {w: "幅", h: "奥行", x: "左から", y: "上から"}[k], value: cur > 0 ? cur : "", extra: k === "x" || k === "y" ? [{label: "0（壁ぎわ）", fn: () => { closePad(); enclEdit(k, 0); drawEnclBar(); drawPlan(); }}] : [], done: v => { if (v != null) enclEdit(k, v); drawEnclBar(); drawPlan(); }});
   });
-  bar.querySelectorAll("[data-et]").forEach(bt => bt.onclick = () => { if (ed) enclApply(bt.dataset.et); else { encl.pick = bt.dataset.et; drawEnclBar(); drawPlan(); } });
-if ($("ecOkN")) $("ecOkN").onclick = () => { if (!encl.pick){ toast("上の種類を選んでください"); return; } enclApply(encl.pick); };
+  if ($("ecErase")) $("ecErase").onclick = () => enclApply("erase");
+  if ($("ecCut")) $("ecCut").onclick = () => enclApply("cut");
+if ($("ecOkN")) $("ecOkN").onclick = () => { enclApply(encl.pick || "room"); };
 bar.querySelectorAll("[data-ex]").forEach(bt => bt.onclick = () => enclExtend(bt.dataset.ex));
 }
 function zoneSheet(i){
@@ -3700,7 +3704,7 @@ function zoneSheet(i){
 }
 function drawEnclRow(){
   const el = $("toolCh4"); if (!el) return;
-  el.innerHTML = `<button type="button" disabled style="color:var(--sub);background:transparent;border:0;font-size:11px">範囲</button><button type="button" id="enBtn" aria-pressed="${enclMode}" style="grid-column:span 3">範囲を決めて置く・消す（畳・土間・収納・廊下・階段・部屋）</button>`;
+  el.innerHTML = `<button type="button" disabled style="color:var(--sub);background:transparent;border:0;font-size:11px">範囲</button><button type="button" id="enBtn" aria-pressed="${enclMode}" style="grid-column:span 3">範囲を決めて部屋を作る・消す</button>`;
   $("enBtn").onclick = () => {
     if (enclMode){ enclOff(); return; }
     enclMode = true; encl = {r: null}; tatMode = false; eraMode = false; ltTool = null; sel = null; enclNew = S.mode === "zo";
@@ -4184,7 +4188,9 @@ function drawEnclBar(){
      使う。登録・印が無い段は飛ばすため、読み込み途中の呼び出しでも元の連鎖の段階と一致する。 */
   drawEnclBar0(); try { enclBarLock(); } catch(e){} try { ctlArbitrate(); } catch(e){}
   /* --- 後段（内側→外側の巻き戻し順） --- */
-  if (HB.__debPost50) HB.__debPost50();   /* 旧 blk50 後段：囲みバーに床仕様の行を足す */
+  /* CAD-211: 旧 blk50 後段（囲みバーに床仕様の行を足す）は呼ばない。本人の決定で
+     「床仕様にする」チップをパネルから廃止したため（床は道具側で先に選んだ内容が
+     pendEncl173 経由でそのまま決まる。HB.__debPost50 の登録自体は旧位置に残置）。 */
   if (HB.__debPost66) HB.__debPost66();   /* 旧 blk66 後段：チップのまとめ＋枝分かれバーの置き場＋選びの印 */
   /* （この位置の次が元の連鎖での blk72 の結線。上の判断の通り、統合体では blk72 が最外段として包む） */
   if (HB.__debSeg77){   /* 旧 blk77 後段：床レコード編集時の見た目（原文 verbatim・字下げのみ調整） */
