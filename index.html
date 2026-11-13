@@ -18668,5 +18668,161 @@ setInterval(gkSync208, 600);
   }, true);
 })();
 </script>
+
+<script>
+/* ================= CAD-218：横画面は「見るだけ専用」 =================
+   本人の決定（2026-11-13）: 横画面は大体バグるので、機能は付けない。
+   横向きにしたら、今見ている図面だけが全画面で出る。道具・ボタン・バーは
+   一切出さず、編集もできない。見るためのピンチ拡大と移動だけできる。
+   縦に戻せば、元の作業画面と状態（選択・道具）にそのまま戻る。
+   仕組み: 図面のある画面（①描く・②寸法・②間取り・③屋根・完成図/室内図）で
+   横向きの間だけ、表示中の図面SVGの「写し」を最前面の受け皿に載せる。
+   元の図面と状態には一切触らない。写しへの操作は全部この受け皿で止める。
+   仕様・見積などの一覧画面では出さない（従来通り）。 */
+(function(){
+  "use strict";
+  var ov = null, stage = null, shown = false;
+  var sc = 1, tx = 0, ty = 0;              /* 写しの拡大と移動 */
+  var ptrs = {}, pinch = null, pan = null, tapT = 0;
+
+  function isLand(){ return window.innerWidth > window.innerHeight; }
+  function stepNow(){ try { return (typeof step !== "undefined") ? String(step) : ""; } catch(e){ return ""; } }
+  function sectionFor(){
+    var s = stepNow(), id = null;
+    if (s === "1") id = "st1";
+    else if (s === "2") id = "st2";
+    else if (s === "M") id = "stM";
+    else if (s === "3") id = "st3";
+    else if (s === "6" || s === "7") id = "st6";
+    if (!id) return null;
+    if (document.body && document.body.classList.contains("nbtutRun")) return null;  /* チュートリアル中は出さない */
+    var el = document.getElementById(id);
+    return (el && !el.hidden) ? el : null;
+  }
+  function drawingSvgs(sec){
+    var out = [], list = sec.querySelectorAll("svg");
+    for (var i = 0; i < list.length; i++){
+      var el = list[i], r = el.getBoundingClientRect();
+      if (r.width < 150 || r.height < 80) continue;   /* 本体の図面だけ（方位マーク等の小さいSVGは除く） */
+      var p = el, ok = true;
+      while (p && p !== sec){
+        if (p.hidden || (p.style && p.style.display === "none")){ ok = false; break; }
+        p = p.parentNode;
+      }
+      if (ok) out.push(el);
+    }
+    return out;
+  }
+  function applyT(){ if (stage) stage.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + sc + ")"; }
+  function resetView(){ sc = 1; tx = 0; ty = 0; applyT(); }
+  function clampT(){
+    var w = window.innerWidth, h = window.innerHeight;
+    var minX = -(sc * w) + 80, maxX = w - 80, minY = -(sc * h) + 80, maxY = h - 80;
+    if (tx < minX) tx = minX; if (tx > maxX) tx = maxX;
+    if (ty < minY) ty = minY; if (ty > maxY) ty = maxY;
+  }
+  function pts2(){ var a = []; for (var k in ptrs) a.push(ptrs[k]); return a; }
+  function build(){
+    if (ov) return;
+    ov = document.createElement("div");
+    ov.id = "landView218";
+    ov.style.cssText = "position:fixed;inset:0;z-index:999999;background:#fff;display:none;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent";
+    stage = document.createElement("div");
+    stage.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:flex;flex-direction:column;transform-origin:0 0";
+    ov.appendChild(stage);
+    document.body.appendChild(ov);
+    /* 写しへの操作はここで全部止めて、下の画面（編集）に届かせない */
+    ["touchstart", "touchmove", "touchend", "touchcancel", "click", "dblclick", "wheel", "contextmenu"].forEach(function(ev){
+      ov.addEventListener(ev, function(e){ e.preventDefault(); e.stopPropagation(); }, { capture: true, passive: false });
+    });
+    ov.addEventListener("pointerdown", onDown, true);
+    ov.addEventListener("pointermove", onMove, true);
+    ov.addEventListener("pointerup", onUp, true);
+    ov.addEventListener("pointercancel", onUp, true);
+  }
+  function onDown(e){
+    e.preventDefault(); e.stopPropagation();
+    try { ov.setPointerCapture(e.pointerId); } catch(er){}
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var a = pts2();
+    if (a.length === 2){
+      pinch = { d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y), sc: sc, tx: tx, ty: ty, mx: (a[0].x + a[1].x) / 2, my: (a[0].y + a[1].y) / 2 };
+      pan = null; tapT = 0;   /* 2本目が着いた瞬間にピンチと判定する */
+    } else if (a.length === 1){
+      pan = { x: e.clientX, y: e.clientY, tx: tx, ty: ty };
+    }
+  }
+  function onMove(e){
+    if (!ptrs[e.pointerId]) return;
+    e.preventDefault(); e.stopPropagation();
+    ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var a = pts2();
+    if (pinch && a.length === 2){
+      var d = Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y);
+      if (d > 0 && pinch.d > 0){
+        var ns = Math.min(8, Math.max(1, pinch.sc * d / pinch.d));
+        var mx = (a[0].x + a[1].x) / 2, my = (a[0].y + a[1].y) / 2;
+        var px = (pinch.mx - pinch.tx) / pinch.sc, py = (pinch.my - pinch.ty) / pinch.sc;
+        sc = ns; tx = mx - sc * px; ty = my - sc * py;
+        if (sc <= 1){ tx = 0; ty = 0; } else clampT();
+        applyT();
+      }
+    } else if (pan && a.length === 1 && sc > 1){
+      tx = pan.tx + (e.clientX - pan.x); ty = pan.ty + (e.clientY - pan.y);
+      clampT(); applyT();
+    }
+  }
+  function onUp(e){
+    e.preventDefault(); e.stopPropagation();
+    var wasPinch = !!pinch;
+    if (ptrs[e.pointerId]) delete ptrs[e.pointerId];
+    var a = pts2();
+    if (a.length < 2) pinch = null;
+    if (a.length === 1) pan = { x: a[0].x, y: a[0].y, tx: tx, ty: ty };
+    if (a.length === 0){
+      pan = null;
+      if (sc <= 1){ if (tx || ty){ tx = 0; ty = 0; applyT(); } }
+      else if (!wasPinch){
+        var now = Date.now();
+        if (now - tapT < 350){ resetView(); tapT = 0; } else tapT = now;  /* 拡大中のダブルタップで元の大きさへ */
+      }
+    }
+  }
+  function show(){
+    var sec = sectionFor(); if (!sec) return;
+    var svgs = drawingSvgs(sec); if (!svgs.length) return;
+    build();
+    stage.innerHTML = "";
+    svgs.forEach(function(el){
+      var w = document.createElement("div");
+      w.style.cssText = "flex:1 1 0;min-height:0;width:100%;display:flex;align-items:center;justify-content:center";
+      var c = el.cloneNode(true);
+      c.style.cssText = "width:100%;height:100%;display:block";
+      w.appendChild(c); stage.appendChild(w);
+    });
+    resetView();
+    ov.style.display = "block";
+    shown = true;
+  }
+  function hide(){
+    if (ov){ ov.style.display = "none"; stage.innerHTML = ""; }
+    shown = false;
+    ptrs = {}; pinch = null; pan = null;
+  }
+  function sync218(){
+    if (isLand() && sectionFor()){ if (!shown) show(); }
+    else if (shown) hide();
+  }
+  window.addEventListener("resize", sync218);
+  window.addEventListener("orientationchange", sync218);
+  try {
+    var mq = window.matchMedia && window.matchMedia("(orientation: landscape)");
+    if (mq){ if (mq.addEventListener) mq.addEventListener("change", sync218); else if (mq.addListener) mq.addListener(sync218); }
+  } catch(e){}
+  setInterval(sync218, 700);   /* 取りこぼしの保険（画面遷移・回転の直後） */
+  sync218();
+  window.__landView218 = { shown: function(){ return shown; }, sync: sync218 };
+})();
+</script>
 </body>
 </html>
