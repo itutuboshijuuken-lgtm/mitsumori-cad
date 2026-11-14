@@ -431,7 +431,7 @@ body.pt .steps{grid-template-columns:repeat(2,1fr)!important}
 <script>/* CAD-194: 画面デザイン（黒×金）の先行適用。描画前に保存済みの見た目を付ける */
 try{ if (localStorage.getItem("gosei-theme-v1") === "gold") document.body.classList.add("gold"); }catch(e){}</script>
 <header class="top">
-  <div class="bar"><h1>見積即答CAD</h1><div style="display:flex;gap:6px"><button id="saveBtn" type="button" style="background:#fff;color:var(--ai);border-color:#fff">保存</button><details class="mo"><summary>⋯</summary><div class="mm"><button id="photoBtn" type="button">写真</button><button id="shoruiBtn" type="button">書類</button><button id="priceBtn" type="button">単価表</button><button id="newBtn" type="button">現場一覧</button></div></details><script>
+  <div class="bar"><h1>見積即答CAD</h1><div style="display:flex;gap:6px"><button id="themeBtn227" type="button">◐ 色</button><button id="saveBtn" type="button" style="background:#fff;color:var(--ai);border-color:#fff">保存</button><details class="mo"><summary>⋯</summary><div class="mm"><button id="photoBtn" type="button">写真</button><button id="shoruiBtn" type="button">書類</button><button id="priceBtn" type="button">単価表</button><button id="newBtn" type="button">現場一覧</button></div></details><script>
 /* 段階1：受け渡し口の集約（HB）
    目的：ブロック間で受け渡してきた window.__名前（95種）の実体を、この HB 1か所に集める。
    （当初94種。__cleanZones187 は CAD-187 由来で、段階2・手順0で追加した。）
@@ -19423,6 +19423,33 @@ setInterval(gkSync208, 600);
     fxPlaceArea = function(a, b){ var n0 = (S.fx || []).length; var r = fxPlaceArea222base(a, b); stripSd222(n0); return r; };
     HB.__cad222 = {kuri: true, fxKuriPrice: 18000};
   } catch(e){}
+})();
+</script>
+<script>
+/* ================= CAD-227：色の切り替えを上のバーにも出す =================
+   本人の実機指摘（2026-11-14）：色の切り替え（標準／黒×金）が「…」メニューの
+   シートの中の下の方（現場一覧の下、「画面デザイン」の段）にしか無く、
+   分かりにくい。
+   → 見積帳と同じ作法で、上のバー（header.top）に「◐ 色」ボタンを常時出す。
+   押すたびに 標準 ⇄ 黒×金 を切り替える（保存・適用は既存の setTheme194／
+   themeNow194 の経路をそのまま使う。保存キーは gosei-theme-v1 のまま）。
+   「…」メニュー側の従来の切り替え（themeSeg の [data-th]）も残し、こちらで
+   変えた時はそちらの aria-pressed も今のテーマに合わせる。シートを開き直した
+   時は themeNow194() で描き直されるので、両方は常に同じ状態を示す。 */
+(function(){
+  "use strict";
+  var btn = document.getElementById("themeBtn227");
+  if (!btn) return;
+  btn.addEventListener("click", function(){
+    try {
+      setTheme194(themeNow194() === "gold" ? "std" : "gold");
+      var now = themeNow194();
+      document.querySelectorAll("[data-th]").forEach(function(x){
+        x.setAttribute("aria-pressed", String(x.dataset.th === now));
+      });
+    } catch(e){}
+  });
+  HB.__cad227 = {themeBtn: true};
 })();
 </script>
 </body>
