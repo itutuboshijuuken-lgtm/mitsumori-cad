@@ -19832,6 +19832,18 @@ body.mfull .toast,.toast{top:auto!important;bottom:calc(64px + env(safe-area-ins
 #st4 .ux-n{margin:8px 0 4px}
 #st4 .ux-n button{width:100%;min-height:44px;border:0;border-radius:10px;background:#2b5fb4;color:#fff;font-weight:800;font-size:15px}
 </style>
+<style id="ux237goldcss">
+/* CAD-237: 黒×金では仕様の見出しも黒×金にそろえる（本人の決定 2026-11-14）。
+   閉じた見出し＝他のカードと同じ暗い背景＋細い金の縁＋生成りの文字、要約と矢印は金。
+   開いた見出し＝テーマの「押した状態」と同じ金のグラデーション＋濃い文字。
+   「次へ」ボタンも金のグラデーションにそろえる。body.gold の時だけ効く。 */
+body.gold #st4 h2.ux-h{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.38);color:#F4EEDD;-webkit-text-fill-color:#F4EEDD;-webkit-background-clip:border-box;background-clip:border-box}
+body.gold #st4 h2.ux-h::before{color:#E3C777;-webkit-text-fill-color:#E3C777}
+body.gold #st4 h2.ux-h .ux-s{color:#E3C777;-webkit-text-fill-color:#E3C777}
+body.gold #st4 h2.ux-h.ux-o{background:var(--gold);border-color:#F1D98A;color:#1B1405;-webkit-text-fill-color:#1B1405;box-shadow:0 2px 12px rgba(227,199,119,.30),inset 0 1px 0 rgba(255,255,255,.55)}
+body.gold #st4 h2.ux-h.ux-o::before{color:#1B1405;-webkit-text-fill-color:#1B1405}
+body.gold #st4 .ux-n button{background:var(--gold);color:#1B1405;border:1px solid #F1D98A;box-shadow:0 2px 12px rgba(227,199,119,.30),inset 0 1px 0 rgba(255,255,255,.55)}
+</style>
 <script>
 /* CAD-235 仕様を1項目ずつ開く（内装・新築増築・部分工事で同じ操作）。機能・数値は変えない */
 (function(){
