@@ -21601,4 +21601,115 @@ body.nbtutRun #zUndoBtn,body.nbtutRun #zRedoBtn{display:none!important}
   try{ new MutationObserver(function(){ apply(); }).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]}); }catch(e){}
 })();
 </script>
+<style id="exp259css">
+#st4 .hid259{display:none!important}
+#st4 #exp259{margin:8px 0 2px}
+#st4 #exp259 button{min-height:42px;font-weight:800}
+#st4 #exp259 + .exp259note{font-size:12px;opacity:.7;margin:2px 4px 0}
+</style>
+<script id="exp259js">
+/* ===== CAD-259：「シンプル」と「本職こだわり」の切り替え（仕様の画面）。シンプルでは、細かい項目を隠して標準で計算する ===== */
+(function(){ "use strict";
+  var HIDE=["床の見切り","回り縁","左官の下地調整","塗り壁の下地は","耐力壁","モジュール","足場","構造材の積算","部材ごとの樹種","建具枠"];
+  var PLASTER={"#rfWallMat":["diato","shikkui","juraku"],"#zoWM258":["diato","shikkui","juraku"]};
+  function get(){ try{ return localStorage.getItem("exp259")==="1"; }catch(e){ return false; } }
+  function set(v){ try{ localStorage.setItem("exp259",v?"1":"0"); }catch(e){} }
+  var expert=get();
+  function key(h){ return (h.getAttribute("data-uxk")||(h.firstChild?h.firstChild.textContent:h.textContent)).trim(); }
+  function ensure(st){
+    var bar=document.getElementById("exp259"); if(bar) return bar;
+    var tabs=st.querySelector(":scope > .tabs254"); if(!tabs) return null;
+    bar=document.createElement("div"); bar.className="seg"; bar.id="exp259";
+    bar.innerHTML='<button type="button" data-e="0">シンプル</button><button type="button" data-e="1">本職こだわり</button>';
+    bar.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; expert=b.dataset.e==="1"; set(expert); apply(); });
+    st.insertBefore(bar,tabs); return bar;
+  }
+  function apply(){
+    try{
+      var st=document.getElementById("st4"); if(!st||!st.getClientRects().length) return;
+      var bar=ensure(st); if(!bar) return;
+      [].forEach.call(bar.querySelectorAll("button"),function(b){ b.setAttribute("aria-pressed",String((b.dataset.e==="1")===expert)); });
+      var simple=!expert;
+      [].forEach.call(st.querySelectorAll("h2"),function(h){
+        if(h.closest("details")) return; var k=key(h), hit=HIDE.some(function(p){return k.indexOf(p)===0;});
+        var els=[h], el=h.nextElementSibling;
+        while(el&&el.tagName!=="H2"&&el.tagName!=="DETAILS"&&!el.classList.contains("ux-n")&&!el.classList.contains("tabs254")){ els.push(el); el=el.nextElementSibling; }
+        els.forEach(function(e){ e.classList.toggle("hid259",simple&&hit); });
+      });
+      [].forEach.call(st.querySelectorAll("details"),function(d){
+        if(d.parentElement&&d.parentElement.closest("details")) return;
+        var s=d.querySelector("summary"); d.classList.toggle("hid259",simple&&!!s&&/こだわる人向け/.test(s.textContent));
+      });
+      Object.keys(PLASTER).forEach(function(sel){ var seg=st.querySelector(sel)||document.querySelector(sel); if(!seg) return;
+        [].forEach.call(seg.querySelectorAll("button"),function(b){ var v=b.getAttribute("data-v")||b.getAttribute("data-rfwm");
+          b.classList.toggle("hid259",simple&&PLASTER[sel].indexOf(v)>=0&&b.getAttribute("aria-pressed")!=="true"); }); });
+    }catch(e){}
+  }
+  setInterval(apply,400);
+  try{ new MutationObserver(function(){ apply(); }).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]}); }catch(e){}
+})();
+</script>
+<style id="sheet260css">
+/* ===== CAD-260：置く物の一覧は、どの種類（建具・窓・玄関・水まわり・電気・造作）でも、同じ「下のシート」に同じ大きさで出す ===== */
+#toolCh2,#toolCh3{position:fixed!important;left:0;right:0;z-index:44;background:#fff;margin:0!important;padding:8px 10px!important}
+#toolCh2:not([hidden]):not([style*="display: none"]):not([style*="display:none"]),#toolCh3:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:grid!important}
+#toolCh2,#toolCh3{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-flow:row;grid-auto-columns:auto;gap:8px;max-height:36vh;overflow-y:auto;box-shadow:none;align-items:stretch}
+#toolCh2 button,#toolCh3 button{min-height:48px;white-space:normal;font-size:14px;font-weight:700;border-radius:12px;width:auto;margin:0;grid-column:auto!important;grid-row:auto!important}
+body.ux-sheet-off #toolCh2:not([hidden]):not([style*="display: none"]):not([style*="display:none"]),body.ux-sheet-off #toolCh3:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:none!important}
+</style>
+<script id="sheet260js">
+(function(){
+  function vis(e){ return e && e.getClientRects().length > 0; }
+  function tick(){ try{
+    var tt=document.getElementById("toolTabs"), gs=document.getElementById("grpSub"); if(!tt||!vis(tt)) return;
+    var bh=tt.offsetHeight, h=0;
+    ["toolCh","toolCh2","toolCh3"].forEach(function(id){ var c=document.getElementById(id);
+      if(c&&vis(c)){ c.style.setProperty("bottom",bh+"px","important"); h=Math.max(h,c.offsetHeight); } });
+    if(gs&&vis(gs)) gs.style.setProperty("bottom",(bh+h)+"px","important");
+  }catch(e){} }
+  document.addEventListener("click",function(e){ var b=e.target.closest&&e.target.closest("button"); if(!b) return;
+    if(b.closest("#toolCh2")||b.closest("#toolCh3")) setTimeout(function(){ document.body.classList.add("ux-sheet-off"); },60); },true);
+  setInterval(tick,150);
+})();
+</script>
+<style id="bar261css">
+/* ===== CAD-261：「いま何を置いているか」の帯は、図面の下ではなく、上の空いている所（操作の行のすぐ下）に1本だけ出す。図面に重ねない ===== */
+#tcStrip254,#putBand253{display:none!important}
+body.tc254 .toast{bottom:calc(var(--ux-bot,76px) + 12px)!important}
+body.b261 .toast{bottom:auto!important;top:var(--t261,150px)!important}
+#putBar261{position:fixed;left:8px;right:8px;top:8px;z-index:46;display:none;align-items:center;gap:8px;min-height:48px;padding:4px 6px 4px 14px;box-sizing:border-box;background:#1b2430;color:#fff;border-radius:14px;font-size:15px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+#putBar261.on261{display:flex}
+#putBar261 .pb261l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#putBar261 button{flex:0 0 auto;min-height:38px;padding:0 16px;border-radius:999px;border:0;background:#2563B0;color:#fff;font:inherit;font-weight:800}
+#putBar261 button.pb261e{background:#fff;color:#1b2430}
+body.gold #putBar261{background:#14171C;color:#F4EEDD;border:1.5px solid #E3C777}
+body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
+</style>
+<script id="bar261js">
+(function(){ "use strict";
+  var bar=null;
+  function label(){ try{ return HB.__put ? HB.__put.label : ((typeof ltTool!=="undefined"&&ltTool&&typeof LTN!=="undefined")?LTN[ltTool]:""); }catch(e){ return ""; } }
+  function vis(e){ return e&&e.getClientRects().length>0; }
+  function ensure(){
+    if(bar) return;
+    bar=document.createElement("div"); bar.id="putBar261";
+    bar.innerHTML='<span class="pb261l"></span><button type="button" class="pb261c">変える</button><button type="button" class="pb261e">終了</button>';
+    bar.querySelector(".pb261c").onclick=function(){ document.body.classList.remove("ux-sheet-off"); };
+    bar.querySelector(".pb261e").onclick=function(){ var b=document.querySelector("#putBand253 button"); if(b) b.click(); else { try{ HB.__put=null; HB.__sashAct=null; HB.__ltAct=null; ltTool=null; drawToolsUI(); drawPlan(); }catch(e){} } };
+    document.body.appendChild(bar);
+  }
+  setInterval(function(){ try{
+    ensure();
+    var lbl=label(), off=document.body.classList.contains("ux-sheet-off"), tabs=vis(document.getElementById("toolTabs")), fs=document.body.classList.contains("fsDraw");
+    var show=!!lbl&&((off&&tabs)||fs);
+    bar.classList.toggle("on261",show); document.body.classList.toggle("b261",show);
+    if(!show) return;
+    bar.querySelector(".pb261l").textContent="置く：「"+lbl+"」";
+    /* 位置：操作の行（戻す・進める…）のすぐ下。無ければ画面の上 */
+    var pb=document.getElementById("planBar"), top=8;
+    if(vis(pb)){ var r=pb.getBoundingClientRect(); top=Math.max(8,Math.round(r.bottom+6)); }
+    bar.style.top=top+"px"; document.body.style.setProperty("--t261",(top+56)+"px");
+  }catch(e){} },200);
+})();
+</script>
 </html>
