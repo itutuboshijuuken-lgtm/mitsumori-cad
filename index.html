@@ -533,7 +533,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：間仕切りの線をなぞると、その部分が消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -949,7 +949,7 @@ function save(){
       const ov = keep.some(g => g.k === "demo" && g.w === f.w && (g.sd || 0) === (f.sd || 0) && f.u < g.u + g.len && g.u < f.u + f.len && (f.z || 0) < (g.z || 0) + g.hgt && (g.z || 0) < (f.z || 0) + f.hgt);
       if (!ov) keep.unshift(f);
     }
-    if (keep.length !== F.length){ S.fx = keep; try { toast("同じ所に重なっていたので、前の分を置き換えました"); } catch(e){} }
+    if (keep.length !== F.length){ S.fx = keep; try { toast("重なっていたので置き換えました"); } catch(e){} }
   } catch(e){}
   /* --- 前段：旧 blk02 内ラッパー（別名 sv）--- */
   snap5All();
@@ -1680,12 +1680,12 @@ async function bkExport(){
   const text = JSON.stringify({app: "gosei-backup", v: 1, at: Date.now(), keys});
   let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch(e){}
   if (dl){
-    try { await dl.save({filename: name, data: new Blob([text], {type: "application/json"})}); toast(`書き出しました（${n}項目。写真は含まれません）`); return; }
+    try { await dl.save({filename: name, data: new Blob([text], {type: "application/json"})}); toast(`書き出しました（${n}項目）`); return; }
     catch(e){ if (e && e.code === "declined") return; }
   }
-  try { const bf = new File([text], name, {type: "application/json"}); if (navigator.canShare && navigator.canShare({files: [bf]})){ await navigator.share({files: [bf]}); toast(`書き出しました（${n}項目。写真は含まれません）`); return; } } catch(e){ if (e && e.name === "AbortError") return; }
-  try { const bu = URL.createObjectURL(new Blob([text], {type: "application/json"})); const ba = document.createElement("a"); ba.href = bu; ba.download = name; document.body.appendChild(ba); ba.click(); ba.remove(); setTimeout(() => { try { URL.revokeObjectURL(bu); } catch(e){} }, 4000); toast(`書き出しました（${n}項目。写真は含まれません）`); return; } catch(e){}
-  try { await navigator.clipboard.writeText(text); toast("ファイルにできないため、データをコピーしました。メモなどに貼り付けて保管してください"); }
+  try { const bf = new File([text], name, {type: "application/json"}); if (navigator.canShare && navigator.canShare({files: [bf]})){ await navigator.share({files: [bf]}); toast(`書き出しました（${n}項目）`); return; } } catch(e){ if (e && e.name === "AbortError") return; }
+  try { const bu = URL.createObjectURL(new Blob([text], {type: "application/json"})); const ba = document.createElement("a"); ba.href = bu; ba.download = name; document.body.appendChild(ba); ba.click(); ba.remove(); setTimeout(() => { try { URL.revokeObjectURL(bu); } catch(e){} }, 4000); toast(`書き出しました（${n}項目）`); return; } catch(e){}
+  try { await navigator.clipboard.writeText(text); toast("データをコピーしました"); }
   catch(e){ toast("ここでは書き出せませんでした"); }
 }
 function bkImport(){
@@ -1729,7 +1729,7 @@ function bkImport(){
         // 全部元に戻す：新しく増えたキーを先に消し、元の値を戻す
         Object.keys(apply142).forEach(k => { if (prev142[k] == null){ try { localStorage.removeItem(k); } catch(e){} } });
         Object.keys(apply142).forEach(k => { if (prev142[k] != null){ try { localStorage.setItem(k, prev142[k]); } catch(e){} } });
-        toast("読み込めませんでした。元の状態に戻しました");
+        toast("読み込めませんでした");
         return;
       }
       try { LSs("zochiku-cloud-v1", {at: 0, upd: {}}); } catch(e){}
@@ -2096,8 +2096,10 @@ function setPState(q, st){ q.state = st; q.isNew = st === "new"; }
 function dimOverlay(P, sc){
   if (!HB.__pageM || !S.edges) return "";
   const p = pts(), pol = p, out = [];
-  const tx = (x, y, t, col, rot) => `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" ${rot ? `transform="rotate(-90 ${x} ${y})"` : ""} class="halo" style="font-size:10px;font-weight:800;fill:${col}">${t}</text>`;
+  const tx = (x, y, t, col, rot, cls) => `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" ${rot ? `transform="rotate(-90 ${x} ${y})"` : ""} class="halo${cls ? " " + cls : ""}" style="font-size:10px;font-weight:800;fill:${col}">${t}</text>`;   /* CAD-252：cls で「拡大時だけ出す」文字を指定できる */
   const parts = (S.parts2D || []).filter(q => pState(q) !== "remove");
+  const swings252 = [];   /* CAD-252：外側へ開くドア（flip の内外反転）の弧が届く範囲。弧と重なる寸法文字を全体表示で隠す判定に使う */
+  (S.sashes || []).forEach(sa => { if (!sa.drawn || !sa.host || sa.host.t !== "e" || !(sa.flip & 1) || sState(sa) === "remove" || typeof typeOf !== "function" || typeOf(sa) !== "door") return; const pos = sa.pos || 0, w = sa.w; if (/親子/.test(sa.name || "")){ const wp = Math.round(w * 0.7 / 5) * 5, fl = !!(sa.flip & 2); swings252.push({e: sa.host.i, t: fl ? pos + w : pos, r: wp}); swings252.push({e: sa.host.i, t: fl ? pos : pos + w, r: w - wp}); } else swings252.push({e: sa.host.i, t: (sa.flip & 2) ? pos + w : pos, r: w}); });
   const chainVals = new Set();   /* CAD-210: 外周チェーンに実際に描いた区間寸法の値（選択間仕切りの距離ピルの二重描き防止に使う） */
   // 外周の各辺：間仕切りが当たる所で区切って寸法を出す
   p.forEach((a, i) => {
@@ -2115,7 +2117,8 @@ function dimOverlay(P, sc){
       const d = ts[k + 1] - ts[k]; if (d * sc < 18) continue;
       const ex = (d * sc < String(fmt(Math.round(d))).length * 6.6 + 6 && k % 2) ? 14 / sc : 0;
       const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 130 + ex), a[1] + u[1] * mid + n[1] * (off + 130 + ex)]);
-      out.push(tx(q0[0], q0[1], fmt(Math.round(d)), ts.length > 2 ? "#C2571A" : col, vert));
+      const tw252 = String(fmt(Math.round(d))).length * 6.6 / sc, crossed252 = swings252.some(sw => sw.e === i && Math.hypot(Math.max(0, Math.abs(mid - sw.t) - tw252 / 2), off + 130 + ex) < sw.r);   /* CAD-252：ドアの開く線と重なる寸法文字は全体表示で隠し、拡大で出す */
+      out.push(tx(q0[0], q0[1], fmt(Math.round(d)), ts.length > 2 ? "#C2571A" : col, vert, crossed252 ? "zx252" : ""));
       chainVals.add(Math.round(d));
     }
     if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 330), m[1] + n[1] * (off + 330)]); out.push(tx(q0[0], q0[1], `全長 ${fmt(Math.round(L))}${e.set ? "" : "（自動）"}`, col, vert)); }
@@ -2355,7 +2358,7 @@ function tatFromStroke(pm){ return floorRectFromStroke(pm); }
     // CAD-141: 重なる既存レコードは丸ごと消さず、重なり分だけ引く（他の床経路と
     // 同じ式に統一。検査1110 指摘6・潜在経路）
     pushUndo(); S.tatami = (S.tatami || []).flatMap(o => rectSub(o, r)); S.tatami.push(r);
-    save(); tatMode = false; document.body.classList.remove("tatmode"); drawPlan(); toast(`畳 ${fmt(tatCount(r), 1)}帖（新調）にしました。「畳」を押して畳をタップで表替え・既存に変更`);
+    save(); tatMode = false; document.body.classList.remove("tatmode"); drawPlan(); toast(`畳 ${fmt(tatCount(r), 1)}帖（新調）にしました`);
   };
   slot.addEventListener("pointerup", end, true); slot.addEventListener("pointercancel", end, true);
 })();
@@ -2390,7 +2393,7 @@ function addEquip(k){
   if (HB.__snap207 && !best){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：壁が無い所では床置きと同じ吸着 */
   if (k === "makura") o.h = 1800; if (k === "chudan") o.h = 800;
   pushUndo(); S.tenken = S.tenken || []; S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
-  toast(`${TKN[k]} 幅${fmt(o.w)}：近い壁にくっつけました。幅と向きは下のボタンで`);
+  toast(`${TKN[k]}：壁にくっつけました`);
   })(k);
   if (HB.__aeSeg26){
     if (k === "counter" && (S.tenken || []).length > n0){ const o = S.tenken[S.tenken.length - 1]; o.sh = "I"; o.l2 = 1200; o.e = 1; o.use = "kitchen"; o.h = 850; save(); drawPlan(); }
@@ -2618,7 +2621,7 @@ function fxPlaceArea(wi, u, z, len, hgt){
   const r = (function(wi, u, z, len, hgt){
   const snap = v => Math.round(v / 5) * 5, k = fxPending, L = fxWall(fxProj(), wi).L;
   const f = {k, w: wi, len: snap(Math.min(len, L)), hgt: snap(hgt), u: snap(u), z: snap(z)};
-  fxClamp(f); pushUndo(); S.fx = S.fx || []; S.fx.push(f); save(); sel = {t: "fx", i: S.fx.length - 1}; toast(`${FK[k][0]} をなぞった形で作りました。続けて作れます（もう一度押すとやめます）`); drawRoom();
+  fxClamp(f); pushUndo(); S.fx = S.fx || []; S.fx.push(f); save(); sel = {t: "fx", i: S.fx.length - 1}; toast(`${FK[k][0]} を作りました`); drawRoom();
   })(wi, u, z, len, hgt);
   if (HB.__fx189){
       try {
@@ -2669,7 +2672,7 @@ function fxPlaceArea(wi, u, z, len, hgt){
     { const i = fxHitItem(q); if (i >= 0){ sel = {t: "fx", i}; drawRoom(); return; } }
     if (!fxPending){ sel = null; drawRoom(); return; }
     const hit = fxHit(q.x, q.y);
-    if (!hit){ toast("壁の面をタップしてください（手前の壁には置けません）"); return; }
+    if (!hit){ toast("壁の面をタップしてください"); return; }
     fxPlace(hit);
   });
   $("fxMenu").addEventListener("click", e => {
@@ -2845,7 +2848,14 @@ function alignSvg(P, sc){
       const p0 = pt(r.c, h.s), p1 = pt(r.c, h.e), mid = pt(r.c, h.k === "ext" ? (r.a0 + r.a1) / 2 : (h.s + h.e) / 2);
       out.push(`<line x1="${p0[0]}" y1="${p0[1]}" x2="${p1[0]}" y2="${p1[1]}" stroke="${col}" stroke-width="${h.k === "pen" ? 3 : 1.6}" ${h.k === "pen" ? "" : 'stroke-dasharray="6 3"'} stroke-opacity=".9" pointer-events="none"/>`);
       const f1 = v => { const q = Math.round(v * 2) / 2; return Number.isInteger(q) ? fmt(q) : fmt(q, 1); };
-      const txt = h.k === "pen" ? `突き抜け ${f1(h.d)}` : h.k === "gap" ? `すきま ${f1(h.d)}` : h.k === "ok" ? `✓ ${r.tag}にぴったり` : h.ok ? `✓ ${r.tag}の延長線にそろう` : `${r.tag}の延長線まで ${f1(h.d)}`;
+      const txt = h.k === "pen" ? `突き抜け ${f1(h.d)}` : h.k === "gap" ? `${r.tag === "間仕切" ? "間仕切り" : r.tag}から ${f1(h.d)}` : h.k === "ok" ? `✓ ${r.tag}にぴったり` : h.ok ? `✓ ${r.tag}の延長線にそろう` : `${r.tag}の延長線まで ${f1(h.d)}`;   /* CAD-252：「すきま」ではなく「壁から○○」と分かる形に */
+      if (h.k === "gap"){ /* CAD-252：壁から物の端まで、垂直な両矢印の寸法線を引く */
+        const lo2 = r.v ? ob.x0 : ob.y0, hi2 = r.v ? ob.x1 : ob.y1, m2 = (h.s + h.e) / 2, ec2 = r.c >= hi2 - 3 ? hi2 : lo2;
+        const pA = pt(r.c, m2), pB = pt(ec2, m2), ddx = pB[0] - pA[0], ddy = pB[1] - pA[1], ln2 = Math.hypot(ddx, ddy);
+        if (ln2 > 2){ const ux2 = ddx / ln2, uy2 = ddy / ln2, hs2 = Math.min(4.5, ln2 * 0.45), hw2 = hs2 * 0.38;
+          const tri2 = (tip, sg2) => { const bx = tip[0] + sg2 * ux2 * hs2, by = tip[1] + sg2 * uy2 * hs2; return `<polygon points="${tip[0]},${tip[1]} ${bx - uy2 * hw2},${by + ux2 * hw2} ${bx + uy2 * hw2},${by - ux2 * hw2}" fill="${col}" pointer-events="none"/>`; };
+          out.push(`<line x1="${pA[0]}" y1="${pA[1]}" x2="${pB[0]}" y2="${pB[1]}" stroke="${col}" stroke-width="1.6" pointer-events="none"/>` + tri2(pA, 1) + tri2(pB, -1)); }
+      }
       const key = txt + Math.round(mid[0] / 6) + Math.round(mid[1] / 6); if (seen[key]) return; seen[key] = 1;
       out.push(`<text x="${mid[0] + (r.v ? 4 : 0)}" y="${mid[1] + (r.v ? 0 : -4)}" text-anchor="${r.v ? "start" : "middle"}" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${txt}</text>`);
     });
@@ -2877,7 +2887,7 @@ function planExtras(P, sc){
       h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#E8742C" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#E8742C"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#E8742C"/></g>`;
     }
     h += `<g data-pt="${i}" style="cursor:grab"><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""}/><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
-      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${q.top ? "・パーティション " + fmt(q.top) : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
+      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${q.top ? "・パーティション " + fmt(q.top) : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
     const q = S.parts2D[sel.i], a = P([q.x1, q.y1]), c = P([q.x2, q.y2]);
@@ -2984,7 +2994,7 @@ function drawToolsUICore(){
   $("toolCh3").querySelectorAll("[data-ltact]").forEach(b => b.onclick = () => { HB.__ltAct = null; toast("次に置くときに、選びます"); drawToolsUI(); });
   $("toolCh3").querySelectorAll("[data-lt]").forEach(b => b.onclick = () => { HB.__ltAct = null; ltTool = ltTool === b.dataset.lt ? null : b.dataset.lt; sel = null; if (ltTool){ toolOpen = "light"; HB.__put = null; HB.__sashAct = null; } toast(ltTool ? `${LTN[ltTool]}：置く所をタップ` : "照明をやめました"); drawToolsUI(); drawPlan(); });
   /* CAD-221: エアコン（室内機の位置＝コンセント・専用回路）は電気の葉から tenken として置く。構えは g="light" で持ち、照明の構え（ltTool）とは排他にする */
-  $("toolCh3").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => { if (HB.__put && HB.__put.g === "light" && HB.__put.label === "エアコン"){ HB.__putOff(); return; } ltTool = null; HB.__ltAct = null; sel = null; toolOpen = "light"; HB.__put = {g: "light", label: "エアコン", fn: () => addTenken("acout")}; toast("エアコン：置く所をタップ（続けて置けます）"); drawToolsUI(); });
+  $("toolCh3").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => { if (HB.__put && HB.__put.g === "light" && HB.__put.label === "エアコン"){ HB.__putOff(); return; } ltTool = null; HB.__ltAct = null; sel = null; toolOpen = "light"; HB.__put = {g: "light", label: "エアコン", fn: () => addTenken("acout")}; toast("エアコン：置く所をタップ"); drawToolsUI(); });
   $("toolCh").querySelectorAll("[data-tool]").forEach(b => b.onclick = () => addStdOpening(b.dataset.tool));
   $("undoBtn").disabled = !undoStack.length; if ($("redoBtn")) $("redoBtn").disabled = !redoStack.length;
   // 描いた物の一覧
@@ -3005,7 +3015,7 @@ function drawToolsUICore(){
   drawSelBar();
   /* --- 旧 blk06 後段：置く物のボタンへの結線と、構え中ボタンの点滅 --- */
   if (HB.__dtSeg06){ try {
-      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ（続けて置けます）`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
+      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", toolOpen === "mizu" ? "mizu" : "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
@@ -3282,7 +3292,7 @@ function eraseRect(r, pre){
     const res = eraseRect(r);
     if (typeof res === "string"){ toast(res); return; }
     eraOff(); drawToolsUI(); drawPlan();
-    toast(`${fmt(w)}×${fmt(h)} を消しました。違ったら ↶ で戻せます${res.dropped ? `（消えた壁の窓・ドア ${res.dropped}個は外しました）` : ""}`);
+    toast(`${fmt(w)}×${fmt(h)} を消しました${res.dropped ? `（消えた壁の窓・ドア ${res.dropped}個は外しました）` : ""}`);
   };
   slot.addEventListener("pointerup", end, true); slot.addEventListener("pointercancel", end, true);
 })();
@@ -3547,7 +3557,7 @@ function enclExtend(dir){
     const s = enclStop(dir);
     if (dir === "l"){ r.x0 = s.best; r.ax0 = true; } else if (dir === "r"){ r.x1 = s.best; r.ax1 = true; } else if (dir === "u"){ r.y0 = s.best; r.ay0 = true; } else { r.y1 = s.best; r.ay1 = true; }
     encl.shr = {};
-    if (encl.edit && encl.edit.kind === "room"){ const R = roomsCalc(), hz = dir === "l" || dir === "r", mid = hz ? (r.y0 + r.y1) / 2 : (r.x0 + r.x1) / 2, off = {l: -2, r: 2, u: -2, d: 2}[dir] * R.st, nb = roomRectAt(hz ? s.best + off : mid, hz ? mid : s.best + off); if (nb && !nb.bad && nb.cid !== encl.edit.cid){ const nm = roomLbl(R.byCid[nb.cid]); toast(`${nm}の壁まで伸ばしました。これ以上行くと${nm}に被ります`); } }
+    if (encl.edit && encl.edit.kind === "room"){ const R = roomsCalc(), hz = dir === "l" || dir === "r", mid = hz ? (r.y0 + r.y1) / 2 : (r.x0 + r.x1) / 2, off = {l: -2, r: 2, u: -2, d: 2}[dir] * R.st, nb = roomRectAt(hz ? s.best + off : mid, hz ? mid : s.best + off); if (nb && !nb.bad && nb.cid !== encl.edit.cid){ const nm = roomLbl(R.byCid[nb.cid]); toast(`${nm}の壁まで伸ばしました`); } }
   }
   drawEnclBar(); drawPlan();
 }
@@ -3842,7 +3852,7 @@ function drawEnclRow(){
       const ti = (S.tatami || []).findIndex(r => q[0] > r.x0 && q[0] < r.x1 && q[1] > r.y0 && q[1] < r.y1);
       if (ti >= 0){ enclStartEdit("t", ti); return; }
 const rr0 = roomRectAt(q[0], q[1]);
-if (rr0){ if (rr0.bad){ toast("この部屋は、まわりと壁でつながっていて、四角ではありません。「部屋」で四角くなぞると、直せます"); return; } enclStartRoom(rr0); return; }
+if (rr0){ if (rr0.bad){ toast("「部屋」で四角くなぞると直せます"); return; } enclStartRoom(rr0); return; }
       if (!(typeof encl !== "undefined" && encl && encl.r)) toast("範囲を指でなぞってください"); return; /* CAD-84: 範囲が決まっている時は言わない */
     }
     const r = eraFromStroke(mm); if (!r){ toast("もう少し大きくなぞってください"); return; }
@@ -4068,7 +4078,7 @@ function addStdPart(len){
 }
 // 垂れ壁：近い壁にくっつけて入れる。高さは「天井から何mm下がり」で決める
 function addStdTare(len){
-  const q = attachPartQ(len); if (!q){ toast("置ける所が見つかりません。長さを短くしてみてください"); return; }
+  const q = attachPartQ(len); if (!q){ toast("置けません。長さを短くしてみてください"); return; }
   pushUndo(); S.tare = S.tare || []; const t = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(t); save(); drawPlan();
   tareAsk(t);
 }
@@ -4090,7 +4100,7 @@ function tareEdit(i){
 }
 function tareAsk(t){
   const len = Math.round(Math.hypot(t.x2 - t.x1, t.y2 - t.y1));
-  const fin = v => { t.h = Math.round(v); save(); drawPlan(); try { drawEst(); } catch(e){} toast(`垂れ壁 ${fmt(len)}mm・天井から${t.h}mm下がり`); };
+  const fin = v => { t.h = Math.round(v); save(); drawPlan(); try { drawEst(); } catch(e){} toast(`垂れ壁 ${fmt(len)}mm を入れました`); };
   openPad({title: "天井から何mm下がる？", unit: "mm", std: false, value: t.h || 400, extra: [300, 400, 500, 600].map(v => ({label: String(v), fn: () => { closePad(); fin(v); }})), done: v => { if (v > 0) fin(v); }});
 }
 // 壁との接点の印：緑＝くっついている、オレンジ＝すき間、赤＝壁を突き抜けている
@@ -4649,7 +4659,7 @@ function changeSheet(i){
     $("csNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-cfl]").forEach(b => b.onclick = () => { pushUndo(); sa.flip = (sa.flip || 0) ^ +b.dataset.cfl; save(); drawPlan(); });
     $("mbox").querySelectorAll("[data-elk248]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.elk248) sa.elock = b.dataset.elk248; else delete sa.elock; save(); drawPlan(); render(); });   /* CAD-248：電子錠の選択 */
-    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sashLabel(sa)} ${sa.w}×${sa.h} にしました`); });
+    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sa.w}×${sa.h} にしました`); });
   };
   render();
 }
@@ -7069,7 +7079,7 @@ function pdfSheet(){
         if (dl){ try { await dl.save({filename: nm, data: file}); toast("PDFを保存しました"); return; } catch(er){} }
         const u = URL.createObjectURL(R.blob); $("pdOut").insertAdjacentHTML("beforeend", `<a class="btn pri" href="${u}" download="${esc(nm)}" target="_blank" style="display:block;text-align:center;margin-top:8px;text-decoration:none">PDFを開く（長押しで保存）</a>`);
       };
-    } catch(er){ $("pdGo").disabled = false; $("pdGo").textContent = "PDFを作る"; toast("PDFを作れませんでした。通信を確かめてもう一度お試しください"); }
+    } catch(er){ $("pdGo").disabled = false; $("pdGo").textContent = "PDFを作る"; toast("PDFを作れませんでした"); }
   };
 }
 $("pdfBtn").addEventListener("click", pdfSheet);
@@ -7154,7 +7164,7 @@ function trSendSheet(){
         if (dl){ try { await dl.save({filename: nm, data: file}); toast("PDFを保存しました"); return; } catch(er){} }
         const u = URL.createObjectURL(R.blob); $("tsOut").insertAdjacentHTML("beforeend", `<a class="btn pri" href="${u}" download="${esc(nm)}" target="_blank" style="display:block;text-align:center;margin-top:8px;text-decoration:none">PDFを開く（長押しで保存）</a>`);
       };
-    } catch(er){ console.error(er); $("tsGo").disabled = false; $("tsGo").textContent = "PDFを作る"; toast("PDFを作れませんでした。通信を確かめてもう一度お試しください"); }
+    } catch(er){ console.error(er); $("tsGo").disabled = false; $("tsGo").textContent = "PDFを作る"; toast("PDFを作れませんでした"); }
   };
 }
 $("trSendBtn").addEventListener("click", trSendSheet);
@@ -7265,7 +7275,7 @@ function drawTeian(C){
   $("teian").querySelectorAll("[data-tei]").forEach(b => b.onclick = () => {
     let e = (S.extras || []).find(x => x.k === "repair");
     if (!e){ e = normEx({k: "repair"}); S.extras.push(e); }
-    e[b.dataset.tei] = (e[b.dataset.tei] || 0) + 1; save(); drawEst(); toast("見積に足しました（仕様の部分工事で数を直せます）");
+    e[b.dataset.tei] = (e[b.dataset.tei] || 0) + 1; save(); drawEst(); toast("見積に足しました");
   });
 }
 /* ---------- 近隣挨拶の文 ---------- */
@@ -8146,7 +8156,7 @@ document.addEventListener("click", e => {
   { const i0 = faceHitItem(F, x, z); if (i0 >= 0){ sel = {t: "fx", i: i0}; drawRoom(); return; } }
   if (fxPending){
     const hit = faceWallAt(F, x, z);
-    if (!hit){ toast("壁のない所です。壁の上をタップしてください"); return; }
+    if (!hit){ toast("壁の上をタップしてください"); return; }
     fxPlace(hit); return;
   }
   const i = faceHitItem(F, x, z);
@@ -8212,11 +8222,11 @@ function fxStartPlace(k){
   if (k === "rail" || k === "rod"){
     openPad({title: `${FK[k][0]} の長さ（置く前に選べます）`, unit: "mm", value: fxPendSz.len, extra: [600, 900, 1200, 1820, 2730].map(v => ({label: fmt(v), fn: () => { closePad(); fxPendSz.len = v; fxPending = k; fxUI(); }})), done: v => { if (v){ fxPendSz.len = Math.max(100, v); fxPending = k; fxUI(); } }});
   } else if (k === "board"){
-    fxPendSz = null; fxPending = k; fxUI(); toast("板張り：貼る壁の面をタップ（壁1面ぜんぶ）。一部だけの時は、指でなぞります");
+    fxPendSz = null; fxPending = k; fxUI(); toast("板張り：貼る壁の面をタップ");
   } else if (AREA.includes(k)){
     openPad({title: `${FK[k][0]}の幅（置く前に選べます）`, unit: "mm", value: fxPendSz.len, extra: FKPRE[k].w.map(v => ({label: fmt(v), fn: () => { closePad(); fxPendSz.len = v; askH(); }})), done: v => { if (v){ fxPendSz.len = Math.max(100, v); askH(); } }});
   } else if (k === "accent"){
-    fxPickAccent("", pat => { fxPendSz = {k: "accent", pat}; fxPending = "accent"; fxUI(); toast(`アクセント（${ACC[pat][0]}）を置く壁の面をタップしてください`); });
+    fxPickAccent("", pat => { fxPendSz = {k: "accent", pat}; fxPending = "accent"; fxUI(); toast(`アクセント（${ACC[pat][0]}）：壁の面をタップ`); });
   } else { fxPending = k; fxUI(); }
 }
 // 置いた物がはみ出さないように範囲に収める
@@ -8289,7 +8299,7 @@ function fxPlace(hit){
   else if (FK[k][1] === "seg" || AREA.includes(k)){ const d = Object.assign({}, FKDEF[k], fxPendSz && fxPendSz.k === k ? fxPendSz : {}), len = Math.min(d.len, L); f.len = len; f.u = snap(Math.max(0, Math.min(L - len, hit.u - len / 2))); f.z = d.z; if (d.hgt) f.hgt = k === "demo" ? S.ch : d.hgt; }
   else { if ((S.fx || []).some(o => o.k === "accent" && o.w === hit.w && (!o.sd || !hit.sd || o.sd === hit.sd))){ toast("この壁はもう アクセントクロス です"); return; } f.pat = fxPendSz && fxPendSz.k === "accent" ? fxPendSz.pat : "gray"; }
   if (AREA.includes(k) || FK[k][1] === "seg"){ try { fxClamp(f); } catch(er){} }
-  pushUndo(); S.fx = S.fx || []; S.fx.push(f); save(); toast(`${FK[k][0]} を置きました。下の操作盤で動かせます。続けて置けます（もう一度押すとやめます）`); sel = {t: "fx", i: S.fx.length - 1}; drawRoom();
+  pushUndo(); S.fx = S.fx || []; S.fx.push(f); save(); toast(`${FK[k][0]} を置きました`); sel = {t: "fx", i: S.fx.length - 1}; drawRoom();
   })(hit);
   if (HB.__fxSeg23) HB.__fxSeg23(k23, n23);
   if (HB.__fx189){   /* CAD-189 後段（blk23段より後）：増えた最後の fx がアクセントで rm 無しなら、置いた部屋 selRoom().cid を記録し save（原文 verbatim） */
@@ -8398,8 +8408,8 @@ function ltPlanClick(mm){
       drawPlan();
       if (bath247){
         const z247 = (S.zones || []).find(q => q && q.fid && bath247.fid && q.fid === bath247.fid && q.k === "ub");
-        if (z247){ HB.__doorBlink247 = bath247.fid; try { drawSelBar(); } catch(e){} toast("浴槽を置きました。下の「入口」ボタンから入口を設定できます"); }
-        else toast("浴槽を置きました。入口は、間仕切りで浴室の範囲を決めると設定できます");
+        if (z247){ HB.__doorBlink247 = bath247.fid; try { drawSelBar(); } catch(e){} toast("浴槽を置きました：入口は下のボタンから"); }
+        else toast("入口は間仕切りで浴室を囲むと設定できます");
       }
       if (typeof winWarn250 === "function") winWarn250(nTk247);   /* CAD-250：窓と被る物を置いたら警告（窓を消す／そのまま／やめる） */
       return true;
@@ -8409,7 +8419,7 @@ function ltPlanClick(mm){
   if (ltTool && ltNear(mm) < 0){
     let x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
     if (HB.__snap207){ const s207 = HB.__snap207.lt(ltTool, mm); x = s207[0]; y = s207[1]; }   /* CAD-207：配置の吸着（並び＞227.5ピッチ＞5mm） */
-    const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました。続けて置けます`); };
+    const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = null; save(); drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました`); };
     if (HB.__ltAct && HB.__ltAct.k === ltTool){ put(HB.__ltAct.act); return true; }
     if (S.mode === "zo"){ put("new"); return true; } // CAD-164: 新築・増築では状態を聞かない（新設しかない。本人の指示 2026-11-11「DL・CL押したらもう置いたらいい」）
     pickOne(`${LTN[ltTool]}：どうしますか`, ltOpts147(false), act => { HB.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
@@ -9143,9 +9153,9 @@ async function phSend(){
   let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null; } catch(er){}
   if (dl){
     let ok = 0; for (const f of files){ try { await dl.save({filename: f.name, data: f}); ok++; } catch(er){ break; } }
-    if (ok){ toast(`${ok}枚を保存しました。LINEのトークで写真を選んで送ってください`); done(); return; }
+    if (ok){ toast(`${ok}枚を保存しました`); done(); return; }
   }
-  toast("ここでは直接送れません。写真を開いて長押しで保存し、LINEで送ってください");
+  toast("写真を開いて長押しで保存してください");
 }
 function phShow(id){
   const p = PHT.list.find(x => x.id === id); if (!p) return;
@@ -9182,7 +9192,7 @@ $("mapBtn").addEventListener("click", () => {
   const a = (S.addr || "").trim(); if (!a){ toast("先に現場の住所を入れてください"); $("addr").focus(); return; }
   const url = "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(a);
   const w = window.open(url, "_blank", "noopener");
-  if (!w){ try { navigator.clipboard.writeText(a); toast("住所をコピーしました。地図アプリに貼り付けてください"); } catch(e){ toast("地図を開けませんでした"); } }
+  if (!w){ try { navigator.clipboard.writeText(a); toast("住所をコピーしました"); } catch(e){ toast("地図を開けませんでした"); } }
 });
 /* ---------- 書類（見積書・請求書・領収書）を同じアプリの中で ---------- */
 function dodaiNote(){
@@ -9212,7 +9222,7 @@ HB.__goseiPrices = () => {
 function goseiSyncLedger(w){
   try { if (!w || !w.__goseiImportLedger) return; save();
     const items = PJ.list.map(e => { const s = LSg("zochiku-p-" + e.id) || {}; return {cadId: e.id, name: s.genba || e.name || "", daicho: s.daicho || null}; });
-    const r = w.__goseiImportLedger(items); if (r && r.added) toast(`CADの台帳を${r.added}件、書類アプリに写しました`);
+    const r = w.__goseiImportLedger(items); if (r && r.added) toast(`${r.added}件の台帳を写しました`);
   } catch(e){}
 }
 let shoruiFrame = null;
@@ -9377,7 +9387,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     ];
     S.fx = [{k:"outlet", w:2, u:900, z:300}, {k:"accent", w:0, pat:"gray"}];
     save();
-    if (coach){ go("M"); startCoach(); } else { go(5); toast("サンプルを開きました。自由にさわってOKです"); }
+    if (coach){ go("M"); startCoach(); } else { go(5); toast("サンプルを開きました"); }
   }
   function close(){ const o = document.getElementById("introBox"); if (o) o.remove(); }
   function show(i){
@@ -9603,7 +9613,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     o.innerHTML = `<div style="background:#fff;color:#1b2430;border-radius:16px;max-width:360px;width:100%;padding:18px 16px"><div style="font-size:18px;font-weight:800;text-align:center">${td ? "何をつくりますか？" : "最初は、新築で操作を覚えます"}</div>${bt("kdRf", "🛠", "リフォーム", td ? "内装・部分工事・増築。まず操作を覚えられます" : "最初は新築で覚えます（終えると選べます）", td)}${bt("kdNew", "🏠", "新築", td ? "家を1軒つくる見積です" : "チュートリアルは新築で説明します。新築をタップしてください", !td)}</div>`;
     document.body.appendChild(o);
     if (!td){ const rf0 = document.getElementById("kdRf"); if (rf0) rf0.style.opacity = ".55"; }
-    document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { const made195 = startFresh195(); S.mode = "rf"; save(); go(1); if (made195) toast("新しい現場で始めます。前の現場は、現場一覧に残っています"); } };
+    document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { const made195 = startFresh195(); S.mode = "rf"; save(); go(1); if (made195) toast("新しい現場で始めます"); } };
     document.getElementById("kdNew").onclick = () => { o.remove(); startNew(); if (!td) setTimeout(() => { if (window.startNbTut) window.startNbTut(); }, 400); }; /* CAD-251：開始の条件も td に合わせる */
   }
   window.chooseKind = chooseKind;
@@ -9892,7 +9902,7 @@ HB.__padStdSeg12 = true;
     const bd = br.querySelector("[data-hgdec]"); if (bd) bd.onclick = () => {
       HB.__hgDepth = hgBr.depth; hgBr = null; renderHgBr();
       HB.__hgMode = true; paintBtn(); hgChip();
-      toast(`解体（${hgDName(HB.__hgDepth)}）：壁をタップしてください（外壁の内側・間仕切り）`);
+      toast(`解体（${hgDName(HB.__hgDepth)}）：壁をタップ`);
     };
   }
   function hgChip(){
@@ -9913,17 +9923,17 @@ HB.__padStdSeg12 = true;
     if (!best){ toast("壁の線の近くをタップしてください"); return; }
     // CAD-152: zo では解体は母屋側の壁（母屋側の辺・既存の間仕切り）だけ。新しく作った壁には使えない
     if (S.mode === "zo"){
-      if (best.t === "e" && best.i !== S.house){ toast("解体は母屋側の壁だけに使えます（新しく作った壁には使えません）"); return; }
-      if (best.t === "p" && pState(parts()[best.i]) !== "keep"){ toast("解体は母屋側の壁だけに使えます（新しく作った壁には使えません）"); return; }
+      if (best.t === "e" && best.i !== S.house){ toast("解体は母屋側の壁だけです"); return; }
+      if (best.t === "p" && pState(parts()[best.i]) !== "keep"){ toast("解体は母屋側の壁だけです"); return; }
     }
     try { pushUndo(); } catch(er){}
     const D = HB.__hgDepth || "fin", DN = hgDName(D);
     if (best.t === "e"){ const ed = S.edges[best.i];
-      if (!ed.hg){ ed.hg = true; setHgD(ed, D); toast(`この壁を解体します（${DN}・内側の面）`); }
+      if (!ed.hg){ ed.hg = true; setHgD(ed, D); toast(`この壁を解体します（${DN}）`); }
       else if (hgDepthOf(ed) !== D){ setHgD(ed, D); toast(`深さを変えました（${DN}）`); }
       else { delete ed.hg; delete ed.hgD; toast("解体をやめました"); } }
     else { const z = parts()[best.i];
-      if (!z.hg){ z.hg = 1; setHgD(z, D); toast(`間仕切りを片面解体します（${DN}・もう一度で両面）`); }
+      if (!z.hg){ z.hg = 1; setHgD(z, D); toast(`${DN}：間仕切りを片面解体`); }
       else if (hgDepthOf(z) !== D){ setHgD(z, D); toast(`深さを変えました（${DN}）`); }
       else { z.hg = z.hg === 1 ? 2 : 0; if (!z.hg){ delete z.hg; delete z.hgD; toast("解体をやめました"); } else toast(z.hg === 2 ? "両面解体します（もう一度でやめる）" : "片面解体します"); } }
     save(); drawPlan(); hgChip();
@@ -10201,7 +10211,7 @@ function drawSelBarL(bar){
 /* ---------- タイル・漆喰・カーテンボックス・腰壁：壁1面ぜんぶ置き（腰壁は、置く前に高さを聞く） ---------- */
 (function(){
   const WH = ["tile", "shikkui", "curtbox", "waist"];
-  const hint = k => toast(`${FK[k][0]}：貼る壁の面をタップ（壁1面ぜんぶ）`);
+  const hint = k => toast(`${FK[k][0]}：貼る壁の面をタップ`);
   /* 旧 fxStartPlace ラッパー（別名 sp・前段で WH を振り分け）は画面4・後半で blk02 の統合 fxStartPlace へ
      畳み込み済み（前段として取り込み）。前段はこの IIFE の局所（WH・hint）を使うため、処理したら true を
      返す登録だけを残す（registry の95種には含めない HB 内部専用の口）。 */
@@ -10587,7 +10597,7 @@ function sujiWall(){
       ST.stuck = $("fbStuck").value; ST.want = $("fbWant").value;
       const tx = `【リフォームCAD 試用版の感想】\n役立ちそう：${ST.ok || "—"}\n月の金額：${ST.pay || "—"}\n迷った所：${ST.stuck || "—"}\nほしい機能：${ST.want || "—"}`;
       try { if (navigator.share){ await navigator.share({text: tx}); return; } } catch(e){ if (e && e.name === "AbortError") return; }
-      try { await navigator.clipboard.writeText(tx); toast("コピーしました。LINEなどに貼り付けてください"); } catch(e){ toast("コピーできませんでした。文を長押ししてコピーしてください"); $("mbox").insertAdjacentHTML("beforeend", `<pre style="white-space:pre-wrap;font-size:13px;margin-top:8px">${esc(tx)}</pre>`); }
+      try { await navigator.clipboard.writeText(tx); toast("コピーしました"); } catch(e){ toast("文を長押ししてコピーしてください"); $("mbox").insertAdjacentHTML("beforeend", `<pre style="white-space:pre-wrap;font-size:13px;margin-top:8px">${esc(tx)}</pre>`); }
     };
   }
   document.getElementById("trFb").onclick = fb;
@@ -11326,7 +11336,7 @@ HB.__dskSeg32 = true;
     try {
       if (prevOpen !== undefined && toolOpen !== prevOpen && !HB.__put && !ltTool && !enclMode){
         if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK"), autoArm: true};   /* CAD-247：自動構えの印 */ toast("腰窓：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
-        else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS"), autoArm: true}; toast("玄関シングル：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS"), autoArm: true}; toast("玄関シングル：置く所をタップ"); drawToolsUICore(); }
         else if (toolOpen === "door"){ HB.__put = {g: "door", label: "ドア", fn: () => addStdOpening("door"), autoArm: true}; toast("ドア：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
       }
       prevOpen = toolOpen;
@@ -11787,7 +11797,7 @@ HB.__dskSeg32 = true;
     HB.__pickSash = entry || null;
     HB.__sashAct = null; sel = null;
     HB.__put = {g: key.indexOf("gen") === 0 ? "gen" : "win", label, fn: () => addStdOpening(key)}; // CAD-164: 玄関のキーは g="gen"（toolOpen="gen" と合わせる。"win" 固定だと構えが即解除され置けなかった）
-    toast(label + "：置きたい壁をタップ（続けて置けます）");
+    const tt252 = label + "：置きたい壁をタップ", tt252b = label.indexOf(" ") >= 0 ? label.split(" ").slice(1).join(" ") + "：置きたい壁をタップ" : tt252; toast(tt252.length <= 20 ? tt252 : tt252b.length <= 20 ? tt252b : "置きたい壁をタップ");   /* CAD-252：名前が長い時（例：玄関シングル シングル（片開き））は大きさの名前だけにして20文字に収める */
     drawToolsUI();
   }
   function bindWin(){
@@ -12270,7 +12280,7 @@ document.addEventListener("click", function(e){
     if (!pendOk174){
       enclReset();
       pushUndo(); pushFloor(rect, fk); fixAssign(); save(); drawPlan();
-      toast(`床を${FLN[fk] || fk}にしました（囲んだ範囲） ${fmt((rect.x1 - rect.x0) * (rect.y1 - rect.y0) / 1e6, 1)}㎡`);
+      toast(`床を${FLN[fk] || fk}にしました`);
       return;
     }
     try { drawToolsUI(); } catch(er){}
@@ -13275,7 +13285,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     document.body.classList.remove("tatmode", "eramode");
     HB.__delSet(true);
     drawToolsUI(); drawPlan();
-    toast("消す道具：消したい物をタップ（連続で消せます。↶で戻せます）");
+    toast("消す道具：消したい物をタップ");
   };
 
   /* 置く道具・照明・なぞる等が有効になったら「消す」は自動で外す。なぞるボタンの押下表示も同期 */
@@ -13716,7 +13726,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__partDraw = true;
     document.body.classList.add("partdraw");
     try { drawToolsUI(); } catch(e){}
-    toast("指で線を描くと、間仕切りが入ります（もう一度押すとやめます）");
+    toast("指で線を描くと間仕切りが入ります");
   }
   HB.__partDrawOn = pdOn;
 
@@ -13970,7 +13980,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     }
     if (!qs){
       var q = pdSegment(mm);
-      if (!pdValidSeg(q)){ toast("うまく読み取れませんでした。まっすぐ長く描いてください"); return; }
+      if (!pdValidSeg(q)){ toast("まっすぐ長く描いてください"); return; }
       qs = [q];
     }
     var segs = [];
@@ -14154,7 +14164,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     document.body.classList.add("eratool");
     eraPaint();
     try{ drawToolsUI(); }catch(e){}
-    toast("消しゴム：間仕切りの線をなぞると、その部分が消えます");
+    toast("消しゴム：線をなぞると消えます");
   }
   var eb0 = eraBtn();
   if (eb0) eb0.onclick = function(){ if (HB.__eraTool) eraOff(false); else eraOn(); };
@@ -15194,7 +15204,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__flBlinkChip140 = kind === "za" ? "za" : (kind === "flMuku" && det.t === 30) ? "flMuku30" : kind;
     HB.__zaActive138 = kind === "za";
     closeBar138();
-    toast("この内容で置きます：部屋をタップ／一部は指で囲む（続けて指定できます）");
+    toast("部屋をタップ／一部は指で囲む");
   }
   function pickFloor138(mode, fk){
     if (mode === "encl") pend138 = null;
@@ -18223,7 +18233,7 @@ applyTheme194();
       pushUndo();
       DM = { id: z.id, type: (z.door && z.door.type) || "ore", step: 100, fromEdit: !!fromEdit, multi: false };
       drawPlan(); render205();
-      if (placed) toast("浴室を置きました。入口の辺をタップして入口を決めてください（あとでも決められます）");
+      if (placed) toast("浴室を置きました：入口の辺をタップ");
     } catch(e){}
   };
   /* 浴槽フィクスチャの選択バー：#sbKS の場所に入口ボタンを出す */
@@ -18521,7 +18531,7 @@ function copyToPlan(){
   g.__plan208 = np;
   swapBack();
   try { save(); drawPlan(); } catch(e){}
-  try { toast("既存を計画にコピーしました。ここからは新設側を直してください"); } catch(e){}
+  try { toast("既存を計画にコピーしました"); } catch(e){}
   return true;
 }
 
@@ -18716,7 +18726,7 @@ function ensureBar208(){
   $("gkM208").onclick = function(){
     if (!isRf()) return;
     if (!gkObj()){ try { S.gk = blankGk(); } catch(e){ return; } }
-    if (G.mode !== "M"){ swapIn(); try { save(); drawPlan(); } catch(e){} try { toast("既存の図面を描いています。ここに置いた物は見積に出ません"); } catch(e){} }
+    if (G.mode !== "M"){ swapIn(); try { save(); drawPlan(); } catch(e){} try { toast("既存の図面です。見積には出ません"); } catch(e){} }
   };
   $("gkN208").onclick = function(){
     if (G.mode === "M"){ swapBack(); try { save(); drawPlan(); } catch(e){} }
@@ -19892,7 +19902,7 @@ window.ASH230F = function(rows){
     const msg = `書き出しました（${n}項目・写真${np}枚）`;
     try { const f = new File([blob], name, {type: "application/json"}); if (navigator.canShare && navigator.canShare({files: [f]})){ await navigator.share({files: [f]}); toast(msg); return; } } catch(e){ if (e && e.name === "AbortError") return; }
     try { const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => { try { URL.revokeObjectURL(u); } catch(e){} }, 8000); toast(msg); return; } catch(e){}
-    if (!np){ try { await navigator.clipboard.writeText(await blob.text()); toast("ファイルにできないため、データをコピーしました。メモなどに貼り付けて保管してください"); return; } catch(e){} }
+    if (!np){ try { await navigator.clipboard.writeText(await blob.text()); toast("データをコピーしました"); return; } catch(e){} }
     toast("ここでは書き出せませんでした");
   };
   /* 読み込み：ファイルが選ばれたら、写真があれば戻す。確認ボタン（askOK）は、写真を戻し終えてから進める */
@@ -20402,5 +20412,67 @@ function winWarn250(n0){
     el.querySelector("[data-c]").onclick = () => { const ix = (S.tenken || []).indexOf(o); if (ix >= 0){ pushUndo(); S.tenken.splice(ix, 1); if (sel && sel.t === "k" && sel.i === ix) sel = null; } el.remove(); save(); drawPlan(); };
   } catch(e){ console.warn(e); }
 }
+</script>
+<style>#plan.zlo252 .zx252{display:none}</style>
+<script>
+/* ===== CAD-252：表示まわりの直し（小さい文字は拡大時だけ出す／壁に吸い付く所の予告） ===== */
+(function(){ "use strict";
+  /* 全体表示（1.5倍未満）では .zx252 の文字（間仕切りラベル・ドアの弧と重なる寸法）を隠し、拡大したら出す */
+  try { setInterval(() => { try { const sv = document.getElementById("plan"); if (!sv || typeof PV === "undefined") return; sv.classList.toggle("zlo252", !(PV.z >= 1.5)); } catch(e){} }, 400); } catch(e){}
+  /* ---- 壁に吸い付く所の予告：構えている間だけ、指の位置で「付く予定の壁」を太線で光らせる。
+         予告の計算は配置の実物（nearestHost／25px判定／空きが無い時の fallback／addEquip の壁選び）を
+         そのまま複製した読み取り専用。配置そのものの動きは従来どおり。 ---- */
+  let last = null, lastAt = 0;
+  const onPt = e => { try { const sv = document.getElementById("plan"); if (!sv || !HB.__pageM){ last = null; return; } const r = sv.getBoundingClientRect(); if (e.clientX < r.left - 4 || e.clientX > r.right + 4 || e.clientY < r.top - 4 || e.clientY > r.bottom + 4){ last = null; return; } last = toMM(planPt(e)); lastAt = Date.now(); } catch(err){} };
+  document.addEventListener("pointerdown", onPt, true);
+  document.addEventListener("pointermove", onPt, true);
+  const clearPv = () => { const el = document.getElementById("pv252"); if (el) el.remove(); };
+  document.addEventListener("pointerup", () => setTimeout(clearPv, 60), true);
+  document.addEventListener("pointercancel", () => setTimeout(clearPv, 60), true);
+  const armedBtn = (qs, label) => { const bs = [...document.querySelectorAll(qs)]; return bs.find(b => b.textContent.trim() === label) || bs.find(b => { const t = b.textContent.trim(); return !!t && !!label && label.indexOf(t + " ") === 0; }) || null; };
+  function predict(){
+    try {
+      const put = HB.__put; if (!put || ltTool || toolOpen !== put.g || !HB.__pageM || !last) return null;
+      if (put.g === "door" || put.g === "win" || put.g === "gen"){
+        let ty = null; const b = armedBtn("#toolCh [data-tool]", put.label);
+        if (b) ty = b.dataset.tool; else if (HB.__pickSash) ty = "winK";
+        if (!ty || typeof TYPE_CATS === "undefined" || !TYPE_CATS[ty]) return null;
+        const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
+        const x = (HB.__pickSash && TYPE_CATS[ty](HB.__pickSash)) ? HB.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b2) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
+        if (!x) return null;
+        let nh = nearestHost(last); if (!nh) return null;
+        if (hgRemHost(nh.h)) return null;
+        const px = wallTapPx175(last, nh.h, nh.t); if (px != null && px > 25) return null;
+        const spot = r => { const p0 = Math.max(0, Math.min(r.L - x.w, HB.__snap207 ? HB.__snap207.sash(x.cat, r.t * r.L - x.w / 2) : Math.round((r.t * r.L - x.w / 2) / 5) * 5)); const same = S.sashes.filter(o => o.drawn && o.host && o.host.t === r.h.t && o.host.i === r.h.i); const free = v => v >= 0 && v <= r.L - x.w && same.every(o => v + x.w <= o.pos || v >= o.pos + o.w); if (free(p0)) return p0; const cs = same.flatMap(o => [o.pos + o.w + 50, o.pos - x.w - 50]).map(v => Math.round(v / 5) * 5).filter(free).sort((a, b2) => Math.abs(a - p0) - Math.abs(b2 - p0)); return cs.length ? cs[0] : null; };
+        if (spot(nh) == null){ const p = pts(), hs = p.map((a, i) => (S.edges[i] && S.edges[i].hg && S.edges[i].hgD === "rem") ? null : ({h: {t: "e", i}, ...segDist(last, a, p[(i + 1) % p.length])})).filter(Boolean).concat((S.parts2D || []).map((q, i) => (pState(q) === "remove" || (q.hg && q.hgD === "rem")) ? null : ({h: {t: "p", i}, ...segDist(last, [q.x1, q.y1], [q.x2, q.y2])})).filter(Boolean)).filter(r => r.L >= x.w).sort((a, b2) => a.d - b2.d); for (const r of hs){ if (spot(r) != null){ nh = r; break; } } }
+        return hostSeg(nh.h);
+      }
+      if (put.g === "etc" || put.g === "mizu"){
+        const b = armedBtn("#toolCh2 [data-tk]", put.label); if (!b) return null;
+        const k = b.dataset.tk;
+        if (["kitchen", "senmen", "counter", "makura", "chudan", "tearai", "geta", "senpan", "stair"].indexOf(k) < 0) return null;
+        const pol = pts(), wl = pol.map((a, i) => [a, pol[(i + 1) % pol.length]]), pl = (S.parts2D || []).filter(z => pState(z) !== "remove").map(z => [[z.x1, z.y1], [z.x2, z.y2]]), all = wl.concat(pl);
+        let best = null;
+        all.forEach(pair => { const a = pair[0], e2 = pair[1]; const v = Math.abs(a[0] - e2[0]) < 1, hh = Math.abs(a[1] - e2[1]) < 1; if (!v && !hh) return; const sd = segDist(last, a, e2).d; if (!best || sd < best.sd) best = {sd, a, e: e2}; });
+        return best ? [best.a, best.e] : null;
+      }
+      return null;
+    } catch(e){ return null; }
+  }
+  setInterval(() => {
+    try {
+      const sv = document.getElementById("plan"); if (!sv) return;
+      if (!HB.__put || !last || Date.now() - lastAt > 4000){ clearPv(); return; }
+      const seg = predict(); if (!seg){ clearPv(); return; }
+      const T = HB.__planT; if (!T){ clearPv(); return; }
+      const A = [seg[0][0] * T.s + T.ox, seg[0][1] * T.s + T.oy], B = [seg[1][0] * T.s + T.ox, seg[1][1] * T.s + T.oy];
+      let el = document.getElementById("pv252");
+      if (!el){ el = document.createElementNS("http://www.w3.org/2000/svg", "line"); el.id = "pv252"; el.setAttribute("pointer-events", "none"); }
+      el.setAttribute("x1", A[0]); el.setAttribute("y1", A[1]); el.setAttribute("x2", B[0]); el.setAttribute("y2", B[1]);
+      el.setAttribute("stroke", "#E8742C"); el.setAttribute("stroke-width", "5"); el.setAttribute("stroke-opacity", ".55"); el.setAttribute("stroke-linecap", "round");
+      sv.appendChild(el);
+    } catch(e){}
+  }, 120);
+})();
 </script>
 </html>
