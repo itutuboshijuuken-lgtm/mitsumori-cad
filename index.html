@@ -511,7 +511,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
     <div id="slot2"><div id="planWrap">
-    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
+    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><button class="btn sub" id="zUndoBtn" type="button" title="1つ戻す" disabled>↶<small>戻す</small></button><button class="btn sub" id="zRedoBtn" type="button" title="1つ進める" disabled>↷<small>進める</small></button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
       <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
@@ -533,7 +533,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="一覧">☰</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button><button id="nazoruBtn" data-tt="encl" type="button" aria-pressed="false" title="なぞる：部屋の範囲を指でなぞります">👆なぞる</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -1856,12 +1856,13 @@ function rectFrom(bb){ return [{d:"R", px: bb.x1 - bb.x0}, {d:"D", px: bb.y1 - b
 function resetPV(){ PV.z = 1; PV.cx = null; PV.cy = null; }
 function fixInk(){ resetPV();
   const e = recognize(); if (!e){ toast("もう少し大きく描いてください"); return; }
+  if (S.edges) pushUndo();   /* CAD-259：既存の輪郭を描き直す時は、戻すで戻れるように記録 */
   const mx = Math.max(...e.map(x => x.px));
   S.edges = e.map(x => ({d: x.d, v: Math.max(455, gLen(x.px / mx * 5460)), set: false}));
   if (!HB.__nbtut){ [["R","L"],["D","U"]].forEach(ax => { const ii = S.edges.map((q, j) => j).filter(j => ax.includes(S.edges[j].d)); ii.slice(0, -1).forEach(j => { S.edges[j].set = true; }); }); } /* CAD-82: 本番はなぞった長さをそのまま寸法にする（各軸の最後の辺だけ閉じ合わせ用に残す） */
   S.house = -1; solve(); save(); clearInk(); toast("直線に整えました"); HB.__sy = HB.__sy || {}; HB.__sy[2] = 0; go(2);
 }
-document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { resetPV();
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { resetPV(); if (S.edges) pushUndo();   /* CAD-259 */
   if (b.dataset.preset === "rect") S.edges = [{d:"R",v:3640,set:true},{d:"D",v:2730,set:true},{d:"L",v:3640,set:false},{d:"U",v:2730,set:false}];
   else S.edges = [{d:"R",v:3640,set:true},{d:"D",v:1820,set:true},{d:"L",v:1820,set:true},{d:"D",v:1820,set:true},{d:"L",v:1820,set:false},{d:"U",v:3640,set:false}];
   S.house = -1; solve(); save(); go(2);
@@ -1892,6 +1893,7 @@ function drawTsubo(){
   }).join("") : `<p class="hint">この坪数では、910モジュールのちょうどいい形が見つかりません。</p>`;
   $("tsuboOpts").querySelectorAll("[data-ts]").forEach(b => b.onclick = () => {
     const o = ops[+b.dataset.ts], W = o.b * 910, D = o.a * 910;
+    if (S.edges) pushUndo();   /* CAD-259 */
     S.edges = [{d:"R", v:W, set:true}, {d:"D", v:D, set:true}, {d:"L", v:W, set:false}, {d:"U", v:D, set:false}];
     S.house = -1; solve(); save(); toast(`${ken(o.a)}×${ken(o.b)}で作りました`); go(2);
   });
@@ -2957,7 +2959,7 @@ const TOOLS = [["part", "間仕切り"], ["door", "片開き"], ["hiki", "片引
 const TOOL_HINT0 = "ボタンを押してから、図の上の置きたい所をタップします。置いたあとに大きさ・位置を直せます。";
 const TOOL_HINT = {free: "図をなぞると種類を当てます（線＝間仕切り、弧＝ドア、ギザギザ＝クローゼット）。", part: "置きたい所を<b>タップ</b>。壁から壁まで間仕切りが入ります。あとで縦横・長さ・位置を直せます。", door: "ドアを付けたい<b>壁の上をタップ</b>。", hiki: "引戸を付けたい<b>壁の上をタップ</b>。", chigai: "引違い戸を付けたい<b>壁の上をタップ</b>。", tsuri: "吊り戸（上吊り・床にレールなし）を付けたい<b>壁の上をタップ</b>。", closet: "クローゼットを付けたい<b>壁の上をタップ</b>。", win: "窓を付けたい<b>壁の上をタップ</b>。", genS: "玄関（シングル）を付けたい<b>壁の上をタップ</b>。", genO: "玄関（親子）を付けたい<b>壁の上をタップ</b>。", genK: "玄関（片引き戸）を付けたい<b>壁の上をタップ</b>。", genH: "玄関（引き戸2枚建）を付けたい<b>壁の上をタップ</b>。", genD: "勝手口ドアを付けたい<b>壁の上をタップ</b>。"};
 function undoSnap(){ return JSON.stringify({tr: S.tare || [], p: S.parts2D || [], s: S.sashes, t: S.tatami || [], k: S.tenken || [], f: S.fx || [], e: S.edges, h: S.house, nw: S.noWall == null ? -1 : S.noWall, wl: S.wallLines || [], l: S.lights || [], z: S.zones || [], x: (S.extras || []).filter(e => e.zid)}); }
-function pushUndo(){ undoStack.push(undoSnap()); redoStack.length = 0; if (undoStack.length > 30) undoStack.shift(); }
+function pushUndo(){ undoStack.push(undoSnap()); redoStack.length = 0; if (undoStack.length > 100) undoStack.shift();   /* CAD-259：戻す・進めるは100回まで（本人の決定） */ }
 let sel = null, selStep = 10;
 /* ===== 段階1・心臓部一本化：drawToolsUI（旧連鎖 blk66 → blk61 → blk58 → blk46 → blk36 → blk14 → blk06 → 本体 blk02 を畳み込み） =====
    実行順は元の連鎖通り：内側（blk06 前段 → 本体 → blk06 後段 → blk14 後段）→ blk36 後段 → blk46 後段 → blk58 後段 → blk61 後段 → blk66 後段。
@@ -4838,10 +4840,11 @@ function editEdge(i){
   openPad({
     title: `${i + 1}　${wallLabel(i).split(" ")[0]}（${DIRNAME[e.d]}）の長さ`, sub: e.set ? "芯々の寸法を入れてください" : e.auto ? "今は自動で出ています。入れるとこの辺が優先になります。" : `芯々の寸法を入れてください。なぞった長さは、約${fmt(e.v)}mmです`,
     value: e.set ? (e.v || "") : "",
-    extra: RF() ? [] : [{label: i === S.house ? "母屋側をやめる" : "この辺を母屋側にする", on: i === S.house, fn: () => { S.house = i === S.house ? -1 : i; save(); drawPlan(); closePad(); }}],
+    extra: RF() ? [] : [{label: i === S.house ? "母屋側をやめる" : "この辺を母屋側にする", on: i === S.house, fn: () => { pushUndo(); S.house = i === S.house ? -1 : i; save(); drawPlan(); closePad(); }   /* CAD-259 */}],
     done: v => {
       if (v === null){ if (HB.__nbtut) e.set = false; }
       else {
+        pushUndo();   /* CAD-259：寸法を変える前に記録（描く／寸法でも戻せるように） */
         e.v = v; e.set = true; e.usr = true;
         const ax = (e.d === "R" || e.d === "L") ? ["R","L"] : ["D","U"];
         const pos = ax[0];
@@ -12769,6 +12772,7 @@ function build(){
   svg.addEventListener("pointerup", fin); svg.addEventListener("pointercancel", fin);
   $k("kt-x").onclick = closeK; $k("kt-r").onclick = clearPre;
   $k("kt-ok").onclick = () => { if (!st || !st.res) return;
+    pushUndo();   /* CAD-259：描き減らすと同じく、確定前に記録 */
     const dr98 = remap97(S.edges, st.res);
     S.edges = st.res.edges;
     if (typeof resetPV === "function") resetPV();
@@ -21388,4 +21392,149 @@ body.gold #st4 .sw257[aria-pressed="true"]{background:var(--gold);border-color:#
   setInterval(sync, 400); sync();
 })();
 </script>
+<style>
+/* ===== CAD-259：寸法画面（#zRow）の「戻す／進める」。間取りの #planBar と同じ見た目（矢印＋小さい文字の縦積み） ===== */
+#zUndoBtn,#zRedoBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1;height:42px;min-height:42px;min-width:50px;padding:0 6px;font-size:16px;font-weight:800;white-space:nowrap;flex:none}
+#planBar #listBtn{min-width:62px!important;white-space:nowrap}
+#zUndoBtn small,#zRedoBtn small{font-size:10px;font-weight:800;line-height:1}
+#zUndoBtn:disabled,#zRedoBtn:disabled{opacity:.35}
+body.nbtutRun #zUndoBtn,body.nbtutRun #zRedoBtn{display:none!important}
+</style>
+<script>
+(function(){ "use strict";
+  /* ===== CAD-259 ①：寸法画面の「戻す／進める」は、本体のボタン（間取り #undoBtn/#redoBtn）を click() するだけ。
+     中の処理（undoRestore・保存）は本体のまま。押せる／押せないは本体のボタンに同期する。 ===== */
+  function $(id){ return document.getElementById(id); }
+  function syncZ(){
+    var u = $("undoBtn"), r = $("redoBtn"), zu = $("zUndoBtn"), zr = $("zRedoBtn");
+    if (zu && u) zu.disabled = !!u.disabled;
+    if (zr && r) zr.disabled = !!r.disabled;
+  }
+  var zu = $("zUndoBtn"), zr = $("zRedoBtn");
+  if (zu) zu.addEventListener("click", function(){ var u = $("undoBtn"); if (u && !u.disabled) u.click(); syncZ(); });
+  if (zr) zr.addEventListener("click", function(){ var r = $("redoBtn"); if (r && !r.disabled) r.click(); syncZ(); });
+  if (typeof undoUi === "function"){ var uu0 = undoUi; undoUi = function(){ var x = uu0.apply(this, arguments); try { syncZ(); } catch(e){} return x; }; }
+  setInterval(function(){ try { syncZ(); } catch(e){} }, 500);
+  syncZ();
+})();
+</script>
+<script>
+(function(){ "use strict";
+  /* ===== CAD-259 ②：戻す・進めるの履歴を、現場ごとに IndexedDB（gosei-undo）へ残す。
+     開き直しても、保存の前まで戻れるようにする（本人の決定）。
+     ・現場データ本体（localStorage の zochiku-p-*）の形式は変えない。履歴は別DBに足すだけ。
+     ・中身は undoSnap() の JSON 文字列の配列そのまま。写真のDB（gosei-photos）とは別DBなので干渉しない。
+     ・現場を切り替えたら、その現場の履歴に切り替わる。新しい現場は空から始まる。
+     ・消えた現場の履歴は、現場を開いた時に掃除する。
+     ・IndexedDB が使えない環境では、従来通りメモリ内だけになる（壊れない）。 ===== */
+  var DBN = "gosei-undo", STN = "hist", CAP = 100;
+  var db = null, dbQ = [];
+  function openDb(cb){
+    if (db){ cb(db); return; }
+    dbQ.push(cb);
+    if (dbQ.length > 1) return;
+    var done = function(d){ db = d; var q = dbQ; dbQ = []; q.forEach(function(f){ try { f(d); } catch(e){} }); };
+    try {
+      var rq = indexedDB.open(DBN, 1);
+      rq.onupgradeneeded = function(){ try { rq.result.createObjectStore(STN); } catch(e){} };
+      rq.onsuccess = function(){ done(rq.result); };
+      rq.onerror = function(){ done(null); };
+    } catch(e){ done(null); }
+  }
+  function idbGet(id, cb){
+    openDb(function(d){
+      if (!d){ cb(null); return; }
+      try {
+        var rq = d.transaction(STN, "readonly").objectStore(STN).get(id);
+        rq.onsuccess = function(){ cb(rq.result || null); };
+        rq.onerror = function(){ cb(null); };
+      } catch(e){ cb(null); }
+    });
+  }
+  function idbPut(id, val){
+    openDb(function(d){
+      if (!d) return;
+      try { d.transaction(STN, "readwrite").objectStore(STN).put(val, id); } catch(e){}
+    });
+  }
+  function idbDel(id){
+    openDb(function(d){
+      if (!d) return;
+      try { d.transaction(STN, "readwrite").objectStore(STN).delete(id); } catch(e){}
+    });
+  }
+  function idbKeys(cb){
+    openDb(function(d){
+      if (!d){ cb([]); return; }
+      try {
+        var rq = d.transaction(STN, "readonly").objectStore(STN).getAllKeys();
+        rq.onsuccess = function(){ cb(rq.result || []); };
+        rq.onerror = function(){ cb([]); };
+      } catch(e){ cb([]); }
+    });
+  }
+
+  var curPid = null, restoring = false, timer = 0;
+  function snapStacks(){ try { return { u: undoStack.slice(-CAP), r: redoStack.slice(-CAP) }; } catch(e){ return { u: [], r: [] }; } }
+  function stashNow(pid){ if (pid == null) return; try { idbPut(pid, snapStacks()); } catch(e){} }
+  function persist(){
+    if (curPid == null || restoring) return;
+    clearTimeout(timer);
+    timer = setTimeout(function(){ if (!restoring && curPid != null) stashNow(curPid); }, 400);
+  }
+  function install(id){
+    restoring = true;
+    idbGet(id, function(rec){
+      restoring = false;
+      try {
+        if (curPid !== id || typeof PJ === "undefined" || PJ.cur !== id) return;
+        if (rec && ((rec.u && rec.u.length) || (rec.r && rec.r.length))){
+          if (!undoStack.length && !redoStack.length){
+            (rec.u || []).slice(-CAP).forEach(function(s){ undoStack.push(s); });
+            (rec.r || []).slice(-CAP).forEach(function(s){ redoStack.push(s); });
+          }
+        }
+        if (typeof undoUi === "function") undoUi();
+        idbKeys(function(ks){
+          try { var live = {}; (PJ.list || []).forEach(function(x){ live[x.id] = 1; }); ks.forEach(function(k){ if (!live[k]) idbDel(k); }); } catch(e){}
+        });
+      } catch(e){}
+    });
+  }
+
+  /* 現場を開く：前の現場の履歴を残してから、今まで通り開き、新しい現場の履歴に入れ替える */
+  if (typeof loadProject === "function"){
+    var lp0 = loadProject;
+    loadProject = function(id){
+      try { if (curPid != null && curPid !== id) stashNow(curPid); } catch(e){}
+      try { undoStack.length = 0; redoStack.length = 0; } catch(e){}
+      curPid = id;
+      var r = lp0.apply(this, arguments);
+      install(id);
+      return r;
+    };
+  }
+  /* 新しい現場：前の現場の履歴を残し、空から始める */
+  if (typeof newProject === "function"){
+    var np0 = newProject;
+    newProject = function(){
+      try { if (curPid != null) stashNow(curPid); } catch(e){}
+      var r = np0.apply(this, arguments);
+      try { undoStack.length = 0; redoStack.length = 0; if (typeof undoUi === "function") undoUi(); } catch(e){}
+      try { curPid = PJ.cur; } catch(e){}
+      return r;
+    };
+  }
+  /* 履歴が動くたび・保存のたびに控えを更新する（短時間の連続操作はまとめる） */
+  if (typeof pushUndo === "function"){ var pu0 = pushUndo; pushUndo = function(){ var r = pu0.apply(this, arguments); try { persist(); } catch(e){} return r; }; }
+  if (typeof save === "function"){ var sv0 = save; save = function(){ var r = sv0.apply(this, arguments); try { persist(); } catch(e){} return r; }; }
+  if (typeof clearUndo === "function"){ var cu0 = clearUndo; clearUndo = function(){ var r = cu0.apply(this, arguments); try { persist(); } catch(e){} return r; }; }
+  document.addEventListener("visibilitychange", function(){ if (document.visibilityState === "hidden" && curPid != null && !restoring) stashNow(curPid); });
+  window.addEventListener("pagehide", function(){ if (curPid != null && !restoring) stashNow(curPid); });
+
+  /* 起動時：今開いている現場の履歴を戻す（起動時の loadProject は本体側で終わっているため、ここで入れる） */
+  try { if (typeof PJ !== "undefined" && PJ.cur){ curPid = PJ.cur; install(PJ.cur); } } catch(e){}
+})();
+</script>
+
 </html>
