@@ -9596,7 +9596,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
   }
   function chooseKind(){
     if (document.getElementById("kindBox")) return;
-    const td = tutCompleted();
+    const td = tutCompleted() || window.TUT_AUTO_START === false; /* CAD-251：自動開始を止めている間（TUT_AUTO_START=false）は終えた人と同じ扱い。旗を true に戻せば元の分岐に戻る */
     const o = document.createElement("div"); o.id = "kindBox";
     o.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
     const bt = (id, ic, nm, sub, main) => `<button type="button" id="${id}" style="display:block;width:100%;text-align:left;min-height:76px;margin-top:10px;padding:10px 14px;border-radius:12px;border:${main ? "3px solid #FFC400" : "1px solid #C9D2DC"};background:${main ? "#FFF8DC" : "#fff"};color:#1b2430;font-family:inherit"><span style="font-size:26px;vertical-align:middle">${ic}</span> <b style="font-size:19px;vertical-align:middle">${nm}</b>${""}<br><small style="color:#5B6775;font-size:13px">${sub}</small></button>`;
@@ -9604,7 +9604,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     document.body.appendChild(o);
     if (!td){ const rf0 = document.getElementById("kdRf"); if (rf0) rf0.style.opacity = ".55"; }
     document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { const made195 = startFresh195(); S.mode = "rf"; save(); go(1); if (made195) toast("新しい現場で始めます。前の現場は、現場一覧に残っています"); } };
-    document.getElementById("kdNew").onclick = () => { o.remove(); startNew(); if (!tutCompleted()) setTimeout(() => { if (window.startNbTut) window.startNbTut(); }, 400); };
+    document.getElementById("kdNew").onclick = () => { o.remove(); startNew(); if (!td) setTimeout(() => { if (window.startNbTut) window.startNbTut(); }, 400); }; /* CAD-251：開始の条件も td に合わせる */
   }
   window.chooseKind = chooseKind;
   if (!S.edges){ try { localStorage.setItem(KEY, "1"); } catch(e){} if (tutCompleted()) setTimeout(chooseKind, 150); }
