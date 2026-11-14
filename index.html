@@ -19800,4 +19800,82 @@ window.ASH230F = function(rows){
   };
 })();
 </script>
+<style id="ux234css">
+#tradeRow button{min-height:36px}
+#undoBtn,#redoBtn,#listBtn,#flBtn{min-width:40px}
+#gkM208,#gkN208{min-width:48px;white-space:nowrap}
+.ux234lab{font-size:12px;font-weight:700;color:#456;margin:6px 4px 2px}
+body.mfull .toast,.toast{top:auto!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
+</style>
+<script>
+/* CAD-234 UX: トースト・バックアップ帯・「仮」注記・ボタン拡大（機能は変えない）。指の案内は入れていない（後で作り直す） */
+(function(){
+  function vis(e){return e&&e.getClientRects().length>0}
+  function tick(){try{
+    var bb=document.getElementById('bkBan');
+    if(bb){var on=false;document.querySelectorAll('button').forEach(function(x){if(/お客様へ送る/.test(x.textContent)&&x.getClientRects().length)on=true});bb.style.display=on?'flex':'none';document.body.style.paddingBottom=on?'64px':''}else document.body.style.paddingBottom='';
+    document.querySelectorAll('div').forEach(function(x){if(x.children.length===0&&/^※「仮」の付いた金額/.test(x.textContent)){x.style.color='rgba(255,255,255,.95)';x.style.fontSize='12.5px';x.style.fontWeight='600'}});
+    var m=document.getElementById('gkM208'),n=document.getElementById('gkN208');
+    if(m)m.title='今ある物を描く';if(n)n.title='新しく作る物を描く';
+    document.querySelectorAll('#undoBtn').forEach(function(x){x.title='ひとつ戻る'});document.querySelectorAll('#redoBtn').forEach(function(x){x.title='やり直す'});
+  }catch(e){}}
+  setInterval(tick,400);
+})();
+</script>
+<style id="ux235css">
+.ux-c{display:none!important}
+#st4 h2.ux-h{cursor:pointer;display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #d5dde8;border-radius:12px;padding:10px 12px;margin:8px 0 0;min-height:44px}
+#st4 h2.ux-h::before{content:"▸";color:#2b5fb4;font-size:14px}
+#st4 h2.ux-h.ux-o::before{content:"▾"}
+#st4 h2.ux-h.ux-o{background:#eef4ff;border-color:#2b5fb4}
+#st4 h2.ux-h .ux-s{margin-left:auto;font-size:12px;font-weight:600;color:#2b5fb4;max-width:48%;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#st4 .ux-n{margin:8px 0 4px}
+#st4 .ux-n button{width:100%;min-height:44px;border:0;border-radius:10px;background:#2b5fb4;color:#fff;font-weight:800;font-size:15px}
+</style>
+<script>
+/* CAD-235 仕様を1項目ずつ開く（内装・新築増築・部分工事で同じ操作）。機能・数値は変えない */
+(function(){
+  var cur=null,lastMode=null;
+  function vis(e){return e.getClientRects().length>0}
+  function key(h){var k=h.getAttribute('data-uxk');if(!k){k=h.firstChild?h.firstChild.textContent.trim():h.textContent.trim();h.setAttribute('data-uxk',k)}return k}
+  function collect(){var st=document.getElementById('st4');if(!st||!vis(st))return[];
+    var hs=[].slice.call(st.querySelectorAll('h2')).filter(function(h){return !h.closest('details')&&getComputedStyle(h).display!=='none'&&vis(h)});
+    return hs.map(function(h){var items=[],el=h.nextElementSibling;
+      while(el&&el.tagName!=='H2'&&!el.classList.contains('ux-n')&&!el.querySelector('h2')){items.push(el);el=el.nextElementSibling}
+      return{h:h,items:items}})}
+  function summ(g){var t=[];
+    g.items.forEach(function(el){
+      el.querySelectorAll&&el.querySelectorAll('button[aria-pressed="true"]').forEach(function(b){var s=b.textContent.trim().replace(/\s+/g,' ');
+        if(el.classList.contains('sprow')){var lab=el.textContent.trim().slice(0,2);s=lab+':'+s}t.push(s)});
+      if(el.tagName==='BUTTON'&&el.getAttribute('aria-pressed')==='true')t.push(el.textContent.trim());
+      el.querySelectorAll&&el.querySelectorAll('select').forEach(function(s){if(s.id!=='exAdd'&&s.selectedIndex>0&&s.selectedOptions[0])t.push(s.selectedOptions[0].textContent.trim())});
+      el.querySelectorAll&&el.querySelectorAll('input[type=number],input[type=text]').forEach(function(i){if(i.value)t.push(i.value)})});
+    return t.join(' / ')}
+  function go(h){window.scrollTo({top:h.getBoundingClientRect().top+window.scrollY-175,behavior:'smooth'})}
+  function tick(){try{
+    var gs=collect();if(!gs.length)return;
+    var md=(typeof S!=='undefined'&&S)?S.mode:'';if(md!==lastMode){lastMode=md;cur=null}
+    var keep=[];
+    var keys=gs.map(function(g){return key(g.h)});
+    if(cur===null||(cur!==''&&keys.indexOf(cur)<0))cur=keys[0];
+    gs.forEach(function(g,i){var h=g.h,k=keys[i];h.classList.add('ux-h');
+      var isO=(k===cur);h.classList.toggle('ux-o',isO);
+      var sp=h.querySelector('.ux-s');if(!sp){sp=document.createElement('span');sp.className='ux-s';h.appendChild(sp)}
+      var sm=isO?'':summ(g);if(sp.textContent!==sm)sp.textContent=sm;
+      g.items.forEach(function(el){el.classList.toggle('ux-c',!isO)});
+      var last=g.items.length?g.items[g.items.length-1]:h;var nx=last.nextElementSibling;var has=nx&&nx.classList.contains('ux-n');
+      if(isO&&!has){var nxt=gs[i+1];var d=document.createElement('div');d.className='ux-n';
+        d.innerHTML='<button type="button">'+(nxt?'次へ：'+keys[i+1]:'これで決まり')+'</button>';
+        d.firstChild.onclick=function(){cur=nxt?keys[i+1]:'';tick();go(nxt?nxt.h:h)};
+        last.parentElement.insertBefore(d,last.nextSibling)}
+      if(!isO&&has)nx.remove();
+      if(isO){var cn=last.nextElementSibling;if(cn&&cn.classList.contains('ux-n'))keep.push(cn)}
+      if(isO&&has){var b=nx.firstChild,nt=nxt0(gs,i,keys);if(b.textContent!==nt)b.textContent=nt}
+    });
+    document.querySelectorAll('#st4 .ux-n').forEach(function(n){if(keep.indexOf(n)<0)n.remove()})}catch(e){}}
+  function nxt0(gs,i,keys){return gs[i+1]?'次へ：'+keys[i+1]:'これで決まり'}
+  document.addEventListener('click',function(e){var h=e.target.closest&&e.target.closest('#st4 h2.ux-h');if(!h)return;var k=key(h);cur=(cur===k)?'':k;tick();if(cur)go(h)},true);
+  setInterval(tick,500);
+})();
+</script>
 </html>
