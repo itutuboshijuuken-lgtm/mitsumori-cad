@@ -643,8 +643,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="chips" id="kPanelG"></div>
     <div class="sub2">天井下地の野縁（材）</div>
     <div class="chips" id="tenjoSec"></div>
-    <div class="sub2">天井下地の型（野縁の流し方）</div>
-    <div class="chips" id="ceilKata"></div>
+    <div class="sub2">天井と壁の順番（天井下地の長さに効きます）</div>
+    <div class="chips" id="ceilFirst"></div>
     <div class="sub2">天井下地の種類</div>
     <div class="chips" id="ceilFrame"></div></details>
     <div class="zo"><div class="sub2">仕上げ</div>
@@ -799,7 +799,7 @@ const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, k
   rfCeilMat: undefined, rfCur: undefined, rfWallMat: undefined, roofW: undefined,
   roomFin: undefined, roomNames: undefined, roomPt: undefined, roomRecs: undefined, roomView: undefined,
   tare: undefined, tatami: undefined, tenken: undefined, tfr: undefined, trSend: undefined, tsuboWant: undefined, zones: undefined,
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", mabaSec: "45x105", mabaKata: "all", joistSec: "45", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -5221,7 +5221,7 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   const chipsN = (el, list, key, def) => { if (!el) return; el.innerHTML = list.map(v => `<button data-v="${v}" aria-pressed="${(S[key] == null ? def : S[key]) === v}" type="button">${v}mm</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = +b.dataset.v; save(); drawSpec(); }); };
   chipsN($("flBaseT"), [9, 12, 15], "rfFloorBaseT", 12); chipsN($("lamiT"), [2, 3.2, 5.5], "lamiT", 5.5);
   { const el = $("tenjoSec"); if (el){ el.innerHTML = [[36, "36×45（標準）"], [30, "30×45"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.tenjoSec === 30 ? 30 : 36) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.tenjoSec = +b.dataset.v; save(); drawSpec(); }); } }
-  { const el = $("ceilKata"); if (el){ el.innerHTML = [["tante", "野縁は短手に流す"], ["chote", "野縁は長手に流す"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilKata === "chote" ? "chote" : "tante") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilKata = b.dataset.v; try { localStorage.setItem("gosei-ceilkata-v1", b.dataset.v); } catch(e){} save(); drawSpec(); }); } }
+  { const el = $("ceilFirst"); if (el){ el.innerHTML = [["ceil", "天井先行"], ["wall", "壁先行"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilFirst === "wall" ? "wall" : "ceil") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilFirst = b.dataset.v; save(); drawSpec(); }); } }
   { const el = $("ceilFrame"); if (el){ el.innerHTML = [["wood", "木下地（野縁）"], ["lgs", "LGS（軽鉄）"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilFrame === "lgs" ? "lgs" : "wood") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilFrame = b.dataset.v; save(); drawSpec(); }); } }
   const chipsKV = (id, opts, key, def) => { const el = $(id); if (!el) return; el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S[key] || def) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = b.dataset.v; save(); drawSpec(); }); };
   { const el = $("noWall"); if (el){ const opts = [[-1, "なし（全部の辺に壁）"]].concat((S.edges || []).map((e, i) => [i, `辺${i + 1}（${fmt(e.v)}mm）${i === S.house ? "・母屋側" : ""}`])); el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.noWall == null ? -1 : S.noWall) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.noWall = +b.dataset.v; save(); drawSpec(); }); } }
@@ -6008,22 +6008,29 @@ function calc00(){
   function tenjo(a, pre, w, h){
     if (a <= 0) return;
     if (S.ceilFrame === "lgs"){ work("lgsCeil", `${pre}天井 LGS下地（軽鉄・材工）`, a, "㎡", `${fmt(a, 1)}㎡ × ${fmt(workP("lgsCeil").p)}円`); return; }
-    const sec = S.tenjoSec === 30 ? 30 : 36, hl = Math.max(300, S.fuko + 150), nH = Math.ceil(a / 0.8281);
+    const sec = S.tenjoSec === 30 ? 30 : 36;
+    // CAD-244: 天井下地の計算ルール（2026-11-14・翔伍が確認済みのルール）。部屋ごとに縁・野縁・野縁受け・吊木を「寸法×本数」で出す。
+    // 柱面＝芯芯−柱の太さ105mm。壁先行の時は壁ボード厚×2も引く。野縁は短手に流し303ピッチ（端は縁が受けるので数えない）、
+    // 野縁受けは910ピッチ、吊木は野縁受けの上に910ピッチで長さ250mm固定。縁は壁ぎわを一周（長辺＝柱面いっぱい、短辺＝柱面−90）。
     if (w > 0 && h > 0){
-      const kata = S.ceilKata === "chote" ? "chote" : "tante";
-      const sh = Math.min(w, h), lo = Math.max(w, h);
-      const nLen = kata === "tante" ? sh : lo, nSpan = kata === "tante" ? lo : sh;
-      const nSp = Math.max(1, Math.ceil(nSpan / 455)), nN = nSp + 1;
-      const uSp = Math.max(1, Math.ceil(nLen / 910)), nU = uSp + 1;
-      lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(nN).fill(nLen), `${sec}×45・${kata === "tante" ? "短手" : "長手"}に流す・${nN}本×${fmt(nLen)}mm（ピッチ${fmt(nSpan / nSp)}）`, false);
-      lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(nU).fill(nSpan), `${sec}×45・${nU}本×${fmt(nSpan)}mm（ピッチ${fmt(nLen / uSp)}）`, false);
-      lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(nH).fill(hl), `${sec}×45・${nH}本（長さ${fmt(hl)}）`, false);
-    } else {
-      const lN = a / 0.455, lU = a / 0.91, per4 = Math.max(1, Math.floor(4000 / hl));
-      lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(Math.ceil(lN / 3.9)).fill(4000), `${sec}×45・野縁@455 ${fmt(lN, 1)}m`, false);
-      lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(Math.ceil(lU / 3.9)).fill(4000), `${sec}×45・野縁受け@910 ${fmt(lU, 1)}m`, false);
-      lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(Math.ceil(nH / per4)).fill(4000), `${sec}×45・吊木${nH}本（長さ${fmt(hl)}）`, false);
+      const wf = S.ceilFirst === "wall", bt = wf ? (gbParse(S.gbW)[1] || 12.5) * 2 : 0;
+      const Lf = Math.max(w, h) - 105 - bt, Sf = Math.min(w, h) - 105 - bt;
+      if (Sf > 90){
+        lum("tenjo", `${pre}天井 縁`, sec, 45, [Lf, Lf, Sf - 90, Sf - 90], `${sec}×45・壁ぎわ一周 長辺2本×${fmt(Lf)}mm・短辺2本×${fmt(Sf - 90)}mm（${wf ? "壁先行" : "天井先行"}）`, false);
+        const nN = Math.ceil(Lf / 303) - 1;
+        if (nN > 0) lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(nN).fill(Sf - 90), `${sec}×45・短手に流す・${nN}本×${fmt(Sf - 90)}mm（303ピッチ）`, false);
+        const nU = Math.ceil(Sf / 910) - 1, uLen = Lf - 90;
+        if (nU > 0) lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(nU).fill(uLen), `${sec}×45・${nU}本×${fmt(uLen)}mm（910ピッチ）`, false);
+        const nH = nU > 0 ? nU * (Math.ceil(uLen / 910) - 1) : 0;
+        if (nH > 0) lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(nH).fill(250), `${sec}×45・${nH}本×250mm（野縁受けの上に910ピッチ）`, false);
+        return;
+      }
     }
+    // 寸法が無い時（部分工事で面積だけの時）は面積から出す。まわりの長さが分からないので縁は出さない
+    const lN = a / 0.303, lU = a / 0.91, nH = Math.ceil(a / 0.8281);
+    lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(Math.ceil(lN / 3.9)).fill(4000), `${sec}×45・野縁@303 ${fmt(lN, 1)}m`, false);
+    lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(Math.ceil(lU / 3.9)).fill(4000), `${sec}×45・野縁受け@910 ${fmt(lU, 1)}m`, false);
+    if (nH > 0) lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(nH).fill(250), `${sec}×45・吊木${nH}本×250mm`, false);
   }
   function sash(){
     S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
