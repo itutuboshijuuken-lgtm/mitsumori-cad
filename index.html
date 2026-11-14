@@ -20232,4 +20232,93 @@ body{--ux-bot:76px}
   setInterval(build,600); build();
 })();
 </script>
+<style id="tg246css">
+#tg246Path{animation:tg246march 1.1s linear infinite}
+@keyframes tg246march{to{stroke-dashoffset:-26}}
+</style>
+<script>
+/* ---------- CAD-246：なぞる案内（描く画面が空の時だけ ☝️ が四角をなぞる。本番専用・チュートリアルとは別物） ---------- */
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var g = null, pathEl = null, finEl = null, rafId = 0, startT = 0, shown = false, pdDone = false, t0 = Date.now();
+  function $(id){ return document.getElementById(id); }
+  function tutOn(){ try { if (typeof HB !== "undefined" && HB.__nbtut) return true; } catch(e){} return !!(document.body && document.body.classList.contains("nbtutRun")); }
+  function build(){
+    var svg = $("draw"); if (!svg) return false; if (g) return true;
+    g = document.createElementNS(NS, "g"); g.id = "tg246"; g.setAttribute("pointer-events", "none"); g.style.display = "none";
+    var p = document.createElementNS(NS, "path");
+    p.id = "tg246Path";
+    p.setAttribute("d", "M88 108 H272 A16 16 0 0 1 288 124 V284 A16 16 0 0 1 272 300 H88 A16 16 0 0 1 72 284 V124 A16 16 0 0 1 88 108 Z");
+    p.setAttribute("fill", "none"); p.setAttribute("stroke", "#2563B0"); p.setAttribute("stroke-width", "3.5");
+    p.setAttribute("stroke-dasharray", "8 5"); p.setAttribute("stroke-linecap", "round"); p.setAttribute("opacity", "0.65");
+    var t = document.createElementNS(NS, "text");
+    t.setAttribute("x", "180"); t.setAttribute("y", "66"); t.setAttribute("text-anchor", "middle");
+    t.setAttribute("style", "font-size:15.5px;font-weight:700;fill:#44586E");
+    t.textContent = "指でなぞって、家の形を描きます";
+    var f = document.createElementNS(NS, "text");
+    f.id = "tg246Fin";
+    f.setAttribute("text-anchor", "middle");
+    f.setAttribute("style", "font-size:40px;paint-order:stroke;stroke:rgba(255,255,255,.85);stroke-width:5px");
+    f.textContent = "☝️";
+    g.appendChild(p); g.appendChild(t); g.appendChild(f);
+    svg.appendChild(g);
+    pathEl = p; finEl = f;
+    return true;
+  }
+  function strokesEmpty(){ try { return typeof strokes === "undefined" || !strokes || strokes.length === 0; } catch(e){ return true; } }
+  function want(){
+    if (tutOn()) return false;
+    if (typeof S === "undefined" || !S) return false;
+    if (S.mode === "pt") return false;
+    if (S.tg246) return false;
+    if (S.edges && S.edges.length) return false;
+    if (!strokesEmpty()) return false;
+    var st1 = $("st1"); if (!st1 || st1.hidden) return false;
+    var mo = $("modal"); if (mo && !mo.hidden) return false;
+    if ($("demoInk") || $("demoCover")) return false;
+    return true;
+  }
+  function frame(ts){
+    if (!shown){ rafId = 0; return; }
+    if (!startT) startT = ts;
+    var L = 0; try { L = pathEl.getTotalLength(); } catch(e){}
+    if (L > 0){
+      var MOVE = 4600, DWELL = 550, T = MOVE + DWELL, tt = (ts - startT) % T;
+      var d = tt >= MOVE ? 0 : (tt / MOVE) * L;
+      var pt = pathEl.getPointAtLength(d);
+      finEl.setAttribute("transform", "translate(" + pt.x + " " + (pt.y + 10) + ")");
+    }
+    rafId = requestAnimationFrame(frame);
+  }
+  function show(){
+    if (!build()) return;
+    g.style.display = ""; shown = true;
+    if (!rafId){ startT = 0; rafId = requestAnimationFrame(frame); }
+  }
+  function hide(){
+    shown = false;
+    if (g) g.style.display = "none";
+    if (rafId){ cancelAnimationFrame(rafId); rafId = 0; }
+  }
+  function mark(){
+    try {
+      if (typeof S === "undefined" || !S || S.tg246) return;
+      S.tg246 = 1;
+      setTimeout(function(){ try { if (typeof save === "function") save(); } catch(e){} }, 50);
+    } catch(e){}
+  }
+  function tick(){
+    try {
+      var svg = $("draw");
+      if (svg && !pdDone){ pdDone = true; svg.addEventListener("pointerdown", function(){ mark(); hide(); }, true); }
+      if (Date.now() - t0 > 1000 && typeof S !== "undefined" && S && S.edges && S.edges.length && !S.tg246) mark();
+      if (want()) show(); else hide();
+    } catch(e){}
+  }
+  setInterval(tick, 350);
+  setTimeout(tick, 60);
+  tick();
+})();
+</script>
 </html>
