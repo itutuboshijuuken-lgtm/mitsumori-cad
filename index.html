@@ -611,6 +611,9 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     </div>
     <div class="nopt">
     <div id="specFl138"></div>
+    <h2>床の見切り</h2>
+    <div class="seg" id="mikiriSeg253"><button data-mk253="ari" type="button" aria-pressed="true">あり</button><button data-mk253="nashi" type="button" aria-pressed="false">なし</button></div>
+    <p class="hint" style="margin-top:4px">記録のための項目です。見積の見切り材は、今までどおり自動で数えます。</p>
     <h2>完了清掃（美装）</h2>
     <div class="seg"><button data-bs="1" type="button">入れる</button><button data-bs="0" type="button">なし</button></div>
     <p class="hint" style="margin-top:4px">工事した床の広さ×㎡単価で計算します（最低料金あり）。</p>
@@ -756,7 +759,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <button data-k="7" type="button">7</button><button data-k="8" type="button">8</button><button data-k="9" type="button">9</button><button data-k="bs" class="op" type="button" aria-label="1文字消す">⌫</button>
       <button data-k="4" type="button">4</button><button data-k="5" type="button">5</button><button data-k="6" type="button">6</button><button data-k="+" class="op" type="button">＋</button>
       <button data-k="1" type="button">1</button><button data-k="2" type="button">2</button><button data-k="3" type="button">3</button><button data-k="-" class="op" type="button">−</button>
-      <button data-k="0" type="button">0</button><button data-k="00" type="button">00</button><button data-k="." type="button">.</button><button data-k="ok" class="ok" type="button">決定</button>
+      <button data-k="0" type="button">0</button><button data-k="00" type="button">00</button><button data-k="." type="button">.</button><button data-k="ok" class="ok" type="button">OK</button>
     </div>
   </div>
 </div>
@@ -1639,7 +1642,7 @@ function projectSheet(){
   $("mbox").innerHTML = `<h3>現場一覧</h3>
     <div class="row" style="margin-top:0"><input id="pjName" class="name" placeholder="新しい現場の名前（例：田中様邸 和室）" style="flex:2"><button class="btn pri" id="pjNew" type="button" style="flex:1">＋ 作る</button></div>
     <button class="btn pri" id="phCur" type="button" style="width:100%;margin-top:8px">📷 この現場の写真（${esc(S.genba || "現場")}）</button>
-    <div style="margin-top:10px">${list.map(e => `<div class="sprow"><div style="min-width:0"><b style="${e.id === PJ.cur ? "color:var(--ai)" : ""}">${e.id === PJ.cur ? "● " : ""}${esc(e.name)}</b><small>${MN[e.mode] || ""}　${dt(e.upd)} 更新</small></div><div style="display:flex;gap:4px"><button class="btn" data-po="${e.id}" type="button" style="min-height:40px;padding:0 10px;font-size:14px">開く</button><button class="btn sub" data-pc2="${e.id}" type="button" style="min-height:40px;padding:0 8px;font-size:14px">複製</button><button class="btn sub" data-pd="${e.id}" type="button" style="min-height:40px;padding:0 8px;font-size:14px;color:var(--ng)">削除</button></div></div>`).join("")}</div>
+    <div style="margin-top:10px">${list.map(e => `<div class="sprow"><div style="min-width:0"><b style="${e.id === PJ.cur ? "color:var(--ai)" : ""}">${e.id === PJ.cur ? "● " : ""}${esc(e.name)}</b><small>${MN[e.mode] || ""}　${dt(e.upd)} 更新</small></div><div style="display:flex;gap:4px"><button class="btn" data-po="${e.id}" type="button" style="min-height:40px;padding:0 10px;font-size:14px">開く</button><button class="btn sub" data-pc2="${e.id}" type="button" style="min-height:40px;padding:0 8px;font-size:14px">複製</button><button class="btn sub" data-pd="${e.id}" type="button" style="min-height:40px;padding:0 8px;font-size:14px;color:var(--ng)">消す</button></div></div>`).join("")}</div>
     <p class="hint">入力した内容は、変えるたびにこのスマホへ自動で保存されます。${CL ? `クラウドにも自動で控えを取っています（最後：${clLast.at ? new Date(clLast.at).toLocaleString("ja-JP", {month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit"}) : "まだ"}）。機種変更や消えた時は「クラウドから戻す」を押してください。` : ""}</p>
     ${CL ? `<button class="btn" id="clRestore" type="button" style="width:100%">☁ クラウドから戻す</button>` : ""}
     <div class="row"><button class="btn" id="coBtn" type="button" style="flex:1">🏢 会社名・電話を設定</button></div>
@@ -2073,7 +2076,7 @@ function beamAsk(q){
         <div class="sub2" style="margin-top:10px">③ 梁の幅</div>
         <div class="chips">${[105, 120].map(v => chip("bw", v, v, b.W === v)).join("")}</div>
         ${total() > 6000 ? `<p class="hint" style="color:#B3261E">6mを超えます。長尺材か、継ぎ手の位置を現場で決めてください。</p>` : ""}` : `<p class="hint" style="color:#B3261E;margin-top:8px">補強なしで柱を抜くと、上の重さを支えられなくなることがあります。入れない場合は、構造を確認してから決めてください。</p>`}
-      <div class="row"><button class="btn pri" id="bkOk" type="button">決定</button><button class="btn sub" id="bkNo" type="button">やめる</button></div>`;
+      <div class="row"><button class="btn pri" id="bkOk" type="button">OK</button><button class="btn sub" id="bkNo" type="button">×</button></div>`;
     $("modal").hidden = false;
     const mb = $("mbox");
     mb.querySelectorAll("[data-bon]").forEach(x => x.onclick = () => { b.on = x.dataset.bon === "1"; render(); });
@@ -2250,7 +2253,7 @@ function tatSheet(i){
   $("mbox").innerHTML = `<h3>畳 ${fmt(tatCount(r), 1)}帖</h3><p class="hint" style="margin-top:0">${fmt(r.x1 - r.x0)}×${fmt(r.y1 - r.y0)}　見積への入れ方を選んでください</p>
     <div class="seg">${Object.keys(TST).map(k => `<button type="button" data-tst="${k}" aria-pressed="${(r.st || "new") === k}">${TST[k][0]}</button>`).join("")}</div>
     <p class="hint">新調・表替えは「畳 新調／表替え」として帖数で見積に入ります。既存は入りません。どれでも、畳の所はフローリングの床から外します。</p>
-    <div class="row"><button class="btn sub" id="tsDel" type="button" style="color:var(--ng)">この畳を消す</button><button class="btn pri" id="tsOk" type="button">決定</button></div>`;
+    <div class="row"><button class="btn sub" id="tsDel" type="button" style="color:var(--ng)">この畳を消す</button><button class="btn pri" id="tsOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-tst]").forEach(b => b.onclick = () => { pushUndo(); r.st = b.dataset.tst; save(); drawPlan(); tatSheet(i); });
   $("tsOk").onclick = () => { $("modal").hidden = true; };
@@ -2558,7 +2561,7 @@ function drawSelBarK(bar){
   const o = S.tenken[sel.i], title = o.k === "dansa" ? `段差解消 ${fmt(o.w)}（${o.dir === "v" ? "縦" : "横"}）` : isShelf(o) ? `${TKN[o.k]} ${fmt(o.w)}×${fmt(o.d)}（高さ ${fmt(o.h || 0)}）` : o.k === "stair" ? `階段（${STN[o.st || "s"]}）${fmt(o.w)}×${fmt(o.d)}　向きは下のボタン` : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? `${TKN[o.k]} 幅${fmt(o.w)}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : o.k === "acout" ? TKN[o.k] : `${TKN[o.k]}（${o.w}角）`;
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
-  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw">${o.k === "dansa"
       ? `<div class="sbL"><button id="sbStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button><button id="sbLen" type="button">長さ</button><button id="sbFit" type="button">壁まで</button></div>`
       : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : o.k === "stair" ? STN[o.st || "s"] + " ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmt(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" ? "<span></span>" : o.k === "stair" ? `<button id="sbKH" type="button">階高 ${fmt(o.kh || ((S.ch || 2400) + (S.dosa || 240)))}${o.kh ? "" : "（自動）"} ▸</button>` : isKS(o) ? "<span></span>" : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
@@ -2949,7 +2952,7 @@ function planExtras(P, sc){
 function planPt(e){ const svg = $("plan"), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY; const q = pt.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; }
 const toMM = q => { const T = HB.__planT; return [(q[0] - T.ox) / T.s, (q[1] - T.oy) / T.s]; };
 let tool = null, undoStack = [], redoStack = [];
-const TOOLS = [["part", "間仕切り"], ["door", "ドア"], ["hiki", "引戸（床）"], ["chigai", "引違い"], ["tsuri", "吊り戸"], ["closet", "収納"], ["win", "窓・玄関"]];
+const TOOLS = [["part", "間仕切り"], ["door", "片開き"], ["hiki", "片引き"], ["chigai", "引違い"], ["tsuri", "上吊り"], ["closet", "クローゼット"], ["win", "窓・玄関"]];   /* CAD-253：ボタン名の統一に合わせてラベルも新しい名前に */
 const TOOL_HINT0 = "ボタンを押してから、図の上の置きたい所をタップします。置いたあとに大きさ・位置を直せます。";
 const TOOL_HINT = {free: "図をなぞると種類を当てます（線＝間仕切り、弧＝ドア、ギザギザ＝クローゼット）。", part: "置きたい所を<b>タップ</b>。壁から壁まで間仕切りが入ります。あとで縦横・長さ・位置を直せます。", door: "ドアを付けたい<b>壁の上をタップ</b>。", hiki: "引戸を付けたい<b>壁の上をタップ</b>。", chigai: "引違い戸を付けたい<b>壁の上をタップ</b>。", tsuri: "吊り戸（上吊り・床にレールなし）を付けたい<b>壁の上をタップ</b>。", closet: "クローゼットを付けたい<b>壁の上をタップ</b>。", win: "窓を付けたい<b>壁の上をタップ</b>。", genS: "玄関（シングル）を付けたい<b>壁の上をタップ</b>。", genO: "玄関（親子）を付けたい<b>壁の上をタップ</b>。", genK: "玄関（片引き戸）を付けたい<b>壁の上をタップ</b>。", genH: "玄関（引き戸2枚建）を付けたい<b>壁の上をタップ</b>。", genD: "勝手口ドアを付けたい<b>壁の上をタップ</b>。"};
 function undoSnap(){ return JSON.stringify({tr: S.tare || [], p: S.parts2D || [], s: S.sashes, t: S.tatami || [], k: S.tenken || [], f: S.fx || [], e: S.edges, h: S.house, nw: S.noWall == null ? -1 : S.noWall, wl: S.wallLines || [], l: S.lights || [], z: S.zones || [], x: (S.extras || []).filter(e => e.zid)}); }
@@ -2982,7 +2985,7 @@ function drawToolsUICore(){
      「高さ寸法」の中で変える形に寄せた。#partCh の行自体は残す（解体ボタンが
      blk14 後段から append される器のため）。 */
   $("partCh").innerHTML = "";
-  $("toolCh").innerHTML = (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"], ["genD", "勝手口ドア"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");
+  $("toolCh").innerHTML = toolOpen === "door" ? `<span class="grp253">開き戸</span><button data-tool="door" type="button">片開き</button><span class="grp253">引き戸</span><button data-tool="hiki" type="button">片引き</button><button data-tool="chigai" type="button">引違い</button><button data-tool="tsuri" type="button">上吊り</button><span class="grp253">折れ戸</span><button data-tool="closet" type="button">折れ戸</button><span class="grp253">クローゼット</span><button data-tool="closet" type="button">クローゼット</button>` : (toolOpen === "win" ? [["winK", "腰窓"], ["winS", "小窓"], ["winH", "掃き出し"], ["winF", "FIX"]] : toolOpen === "gen" ? [["genS", "玄関シングル"], ["genO", "玄関親子"], ["genK", "玄関片引き"], ["genH", "玄関2枚建"], ["genD", "勝手口ドア"]] : TOOLS.filter(([k]) => k !== "part" && k !== "win")).map(([k, n]) => `<button data-tool="${k}" type="button">${n}</button>`).join("");   /* CAD-253：扉は5グループ（開き戸／引き戸／折れ戸／玄関／クローゼット）。玄関は玄関の葉が担う。アプリの折れ戸はクローゼット用だけなので、折れ戸とクローゼットの両方の名前で同じ道具（closet）を出す。種類キー・単価は不変 */
   $("toolCh").classList.toggle("winmode", toolOpen === "win" || toolOpen === "gen");
   /* CAD-221: 「設備・その他」を3つに分割（2026-11-12 本人承認）。水まわり＝toolOpen "mizu"／造作・その他＝"etc"。
      電気（ダウンライト・シーリング・エアコン）は照明の葉 "light"（#toolCh3）へ寄せた。置く操作そのものは不変。 */
@@ -3782,7 +3785,7 @@ function drawEnclBar0(){
   const delRow = ed ? "" : `<div class="ect"><button id="ecErase" type="button" style="color:#C62828">外周消</button><button id="ecCut" type="button" style="color:#C62828">配置消</button></div>`;
   const side = ed ? (ed.kind === "t" ? `<button id="ecSt" type="button">畳:${TST[ed.st || "new"][0]}</button>` : "") : `<button id="ecNew" type="button">壁:${enclNew ? "新設" : "既存"}</button>`;
   const doorBtn205 = ed && ed.kind === "z" && ed.type === "ub" ? `<button id="ecDoor" type="button">${HB.__doorLabel205 ? HB.__doorLabel205(ed.i) : "入口"}</button>` : "";   /* CAD-205：浴室の入口の設定へ */
-  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲"}</span><span style="display:flex;gap:4px">${side}${doorBtn205}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">決定</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">決定</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${ed ? nm : "なぞった範囲"}</span><span style="display:flex;gap:4px">${side}${doorBtn205}<button id="ecStep" type="button">縮み${ENC_STEP}mm</button>${ed ? `<button id="ecOk" class="ok" type="button">OK</button><button id="ecDel" class="del" type="button">消す</button>` : `<button id="ecOkN" class="ok" type="button">OK</button>`}<button id="ecX" type="button">${ed ? "戻る" : "終了"}</button></span></div>
     <div class="ecd">${[["w", "幅", r.x1 - r.x0], ["h", "奥行", r.y1 - r.y0], ["x", "左から", r.x0 - b.x0], ["y", "上から", r.y0 - b.y0]].map(([k, n, v]) => `<button data-ed="${k}" type="button"><small>${n}</small><b>${f5(v)}</b></button>`).join("")}</div>
     ${(() => { const ov = enclOverlaps(); return ov.length ? `<div style="color:#C62828;font-size:12.5px;font-weight:800;margin:4px 2px 0">${ov.join("・")}に被っています（決定すると、${ov.join("・")}がその分小さくなります）</div>` : ""; })()}<div class="ecd" style="margin-top:6px">${[["l", "←"], ["u", "↑"], ["d", "↓"], ["r", "→"]].map(([k, a]) => `<button data-ex="${k}" type="button"><small>${enclExLabel(k)}</small><b>${a}</b></button>`).join("")}</div>
 ${enclNoWorkRow()}${delRow}
@@ -3810,7 +3813,7 @@ function zoneSheet(i){
   $("mbox").innerHTML = `<h3>${t[0]}　${f5(z.x1 - z.x0)}×${f5(z.y1 - z.y0)}（${fmt(ar, 2)}㎡）</h3>
     <p class="hint" style="margin-top:0">${t[3] ? `見積：${EXT[t[3]].n}` : "見積なし"}</p>
     <div class="seg">${Object.keys(ZT).map(k => `<button type="button" data-zk="${k}" aria-pressed="${z.k === k}">${ZT[k][0]}</button>`).join("")}</div>
-    <div class="row"><button class="btn sub" id="zsDel" type="button" style="color:var(--ng)">これを消す</button><button class="btn pri" id="zsOk" type="button">決定</button></div>`;
+    <div class="row"><button class="btn sub" id="zsDel" type="button" style="color:var(--ng)">これを消す</button><button class="btn pri" id="zsOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-zk]").forEach(b => b.onclick = () => { pushUndo(); z.k = b.dataset.zk; syncZoneExtras(); save(); drawPlan(); zoneSheet(i); });
   $("zsOk").onclick = () => { $("modal").hidden = true; };
@@ -4028,7 +4031,7 @@ function notchSheet(){
     <div class="chips"><button data-no="0" aria-pressed="${nt.off === 0}" type="button">角に作る</button><button data-no="pad" type="button">数字で</button></div>
     ${dim("nw", "幅（壁に沿って）", nt.w)}${dim("nh", "奥行（内側へ）", nt.h)}
     <p class="hint" style="margin-top:8px;color:${err ? "var(--ng)" : "var(--sub)"}">${err || "この内容で、外周の形を変えます（↶で戻せます）。"}</p>
-    <div class="row"><button class="btn sub" id="ntNo" type="button">やめる</button><button class="btn pri" id="ntOk" type="button" ${err ? "disabled" : ""}>へこみを入れる</button></div>`;
+    <div class="row"><button class="btn sub" id="ntNo" type="button">×</button><button class="btn pri" id="ntOk" type="button" ${err ? "disabled" : ""}>へこみを入れる</button></div>`;
   $("modal").hidden = false;
   const pad = (title, key) => { $("modal").hidden = true; openPad({title, value: nt[key], done: v => { if (v != null) nt[key] = v; notchSheet(); }}); };
   $("mbox").querySelectorAll("[data-nf]").forEach(b => b.onclick = () => { nt.from = b.dataset.nf; notchSheet(); });
@@ -4090,7 +4093,7 @@ function tareEdit(i){
     <p class="hint" style="margin-top:0">天井から <b>${q.h || 400}</b>mm 下がりです。下がりを選んでください。</p>
     <div class="seg">${TARE_H.map(h => `<button type="button" data-tz="${h}" aria-pressed="${(q.h || 400) === h}">${h}</button>`).join("")}</div>
     <div class="row" style="margin-top:8px"><button class="btn sub" id="tzNum" type="button">数字で直す</button><button class="btn sub" id="tzBack" type="button">間仕切りに戻す</button></div>
-    <div class="row"><button class="btn sub" id="tzDel" type="button" style="color:#C62828">削除</button><button class="btn pri" id="tzOk" type="button">閉じる</button></div>`;
+    <div class="row"><button class="btn sub" id="tzDel" type="button" style="color:#C62828">消す</button><button class="btn pri" id="tzOk" type="button">閉じる</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-tz]").forEach(b => b.onclick = () => { pushUndo(); q.h = +b.dataset.tz; upd(); tareEdit(i); });
   $("tzNum").onclick = () => { $("modal").hidden = true; openPad({title: "天井からの下がり", unit: "mm", std: false, value: q.h || 400, done: v => { if (v > 0){ pushUndo(); q.h = Math.round(v); upd(); } tareEdit(i); }}); };
@@ -4378,7 +4381,7 @@ function drawSelBar0(){
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   // 左：あまり使わない操作　真ん中：十字キー（真ん中で回転）　右：戻す・消す
-  const okTxt217 = (!isP && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了" : "✓ 決定";   /* CAD-217：ドア・窓の配置の流れの中では終わるボタンは「終了」 */
+  const okTxt217 = (!isP && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了" : "OK";   /* CAD-217：ドア・窓の配置の流れの中では終わるボタンは「終了」 */
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">${okTxt217}</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${isP ? "" : " o"}">${isP
       ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button>` : `<button id="sbTop" type="button">高さ寸法</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
@@ -4489,7 +4492,7 @@ function flSheet(){
   flEnsure();
   $("mbox").innerHTML = `<h3>階の切り替え</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0">${S.fl.map((f, i) => `<button type="button" class="btn sub" data-fi="${i}" aria-pressed="${i === S.fi}" style="min-height:46px;font-size:16px">${f.name}</button>`).join("")}</div>
   <button class="btn sub" id="flAddBtn" type="button" style="width:100%;margin-top:6px">＋ 階を足す（外周と階段を、この階からコピー）</button>
-  ${S.fl.length > 1 ? `<button class="btn sub" id="flDelBtn" type="button" style="width:100%;margin-top:6px;color:#C62828">この階（${S.fl[S.fi].name}）を削除</button>` : ""}
+  ${S.fl.length > 1 ? `<button class="btn sub" id="flDelBtn" type="button" style="width:100%;margin-top:6px;color:#C62828">この階（${S.fl[S.fi].name}）を消す</button>` : ""}
   <p class="hint" style="margin-top:8px">階ごとに、図面・部屋・仕様が別になります。見積は、すべての階を合算して出ます（階ごとの小計も出ます）。</p>
   <div class="row" style="margin-top:10px"><button class="btn pri" id="flOk" type="button">閉じる</button></div>`;
   $("mbox").querySelectorAll("[data-fi]").forEach(b => b.onclick = () => { $("modal").hidden = true; flSwitch(+b.dataset.fi); });
@@ -4633,7 +4636,7 @@ function drawSheet(c){
   const render = () => {
     $("mbox").innerHTML = `<h3>何を描きましたか？</h3>` + pickerHtml(p, true) +
       (p.kind === "part" ? `<p class="hint">まっすぐに直して、近くの壁にくっつけます。あとからタップで位置や「新設」を変えられます。</p><div class="seg"><button data-nw="0" aria-pressed="${!nw && !tare}" type="button">今ある壁</button><button data-nw="1" aria-pressed="${nw && !tare}" type="button">新しく作る壁</button><button data-nw="2" aria-pressed="${tare}" type="button">垂れ壁</button></div>` : "") +
-      `<div class="row">${p.kind === "part" ? `<button class="btn pri" id="dsOk" type="button">間仕切りを入れる</button>` : ""}<button class="btn sub" id="dsNo" type="button">やめる</button></div>`;
+      `<div class="row">${p.kind === "part" ? `<button class="btn pri" id="dsOk" type="button">間仕切りを入れる</button>` : ""}<button class="btn sub" id="dsNo" type="button">×</button></div>`;
     $("modal").hidden = false;
     $("dsNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-nw]").forEach(b => b.onclick = () => { nw = b.dataset.nw === "1"; tare = b.dataset.nw === "2"; render(); });
@@ -4675,7 +4678,7 @@ function openSheet(i){
     <div class="chips"><button data-mv="-100" type="button">◀ 100</button><button data-mv="-10" type="button">◀ 10</button><button data-mv="10" type="button">10 ▶</button><button data-mv="100" type="button">100 ▶</button><button data-mv="pad" type="button">数字で</button></div>
     <div class="chips"><button data-fl="1" type="button">${ty === "door" ? "開く向きを反対に" : "内外を反対に"}</button>${ty === "door" ? `<button data-fl="2" type="button">吊元を左右反対に</button>` : ""}</div>
     <button class="btn sub" id="osChg" type="button" style="width:100%;margin-top:8px">種類・大きさ・枠を変える ▸</button>
-    <div class="row"><button class="btn sub" id="osDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="osOk" type="button">決定</button></div>`;
+    <div class="row"><button class="btn sub" id="osDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="osOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   const upd = () => { sa.pos = Math.max(0, Math.min(Math.round(sa.pos), Math.max(0, L - sa.w))); $("osPos").textContent = fmt(sa.pos); save(); drawPlan(); };
   $("mbox").querySelectorAll("[data-mv]").forEach(b => b.onclick = () => { if (b.dataset.mv === "pad"){ $("modal").hidden = true; openPad({title: "壁の端からの距離", value: sa.pos, done: v => { if (v != null){ sa.pos = v; upd(); } openSheet(i); }}); return; } sa.pos += +b.dataset.mv; upd(); });
@@ -4694,7 +4697,7 @@ function partSheet(i){
     <div class="seg" style="margin-top:6px"><button data-or="h" aria-pressed="${horiz}" type="button">横向き</button><button data-or="v" aria-pressed="${!horiz}" type="button">縦向き</button></div>
     ${row("po", horiz ? "上の壁からの位置" : "左の壁からの位置", off)}${row("ps", horiz ? "始まり（左の壁から）" : "始まり（上の壁から）", st)}${row("pl", "長さ", L)}
     <div class="row"><button class="btn sub" id="psFit" type="button">壁から壁まで伸ばす</button></div>
-    <div class="row"><button class="btn sub" id="psDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="psOk" type="button">決定</button></div>`;
+    <div class="row"><button class="btn sub" id="psDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="psOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   const apply = (o, s0, len) => { len = Math.max(100, len); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (horiz){ q.y1 = q.y2 = b.y0 + o; q.x1 = b.x0 + s0; q.x2 = q.x1 + len; } else { q.x1 = q.x2 = b.x0 + o; q.y1 = b.y0 + s0; q.y2 = q.y1 + len; } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); };
   const bind = (id, fn, title, cur) => $("mbox").querySelectorAll(`[data-${id}]`).forEach(x => x.onclick = () => { pushUndo(); const v = x.dataset[id]; if (v === "pad"){ $("modal").hidden = true; openPad({title, value: cur, done: nv => { if (nv != null) fn(nv); else partSheet(i); }}); } else fn(cur + +v); });
@@ -5283,7 +5286,7 @@ function tareSvg(P){
 }
 function drawTare(){
   const b = $("tareList"); if (!b) return; S.tare = S.tare || [];
-  b.innerHTML = S.tare.length ? S.tare.map((q, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">垂れ壁　長さ ${fmt(Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)))}mm</b><button type="button" data-trd="${i}" style="min-height:42px;color:#C62828">削除</button></div><button type="button" data-trp="${i}" style="width:100%;margin-top:6px;min-height:46px;font-size:15px;font-weight:800">天井から ${q.h || 400}mm 下がり　（タップして数字で直す）</button><div class="seg" style="margin-top:6px">${TARE_H.map(h => `<button type="button" data-trh="${i}" data-v="${h}" aria-pressed="${(q.h || 400) === h}">${h}</button>`).join("")}</div></div>`).join("") : `<div class="hint">垂れ壁は、まだありません。間取りの画面の「間仕切」→「垂れ壁」で入れます。</div>`;
+  b.innerHTML = S.tare.length ? S.tare.map((q, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">垂れ壁　長さ ${fmt(Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)))}mm</b><button type="button" data-trd="${i}" style="min-height:42px;color:#C62828">消す</button></div><button type="button" data-trp="${i}" style="width:100%;margin-top:6px;min-height:46px;font-size:15px;font-weight:800">天井から ${q.h || 400}mm 下がり　（タップして数字で直す）</button><div class="seg" style="margin-top:6px">${TARE_H.map(h => `<button type="button" data-trh="${i}" data-v="${h}" aria-pressed="${(q.h || 400) === h}">${h}</button>`).join("")}</div></div>`).join("") : `<div class="hint">垂れ壁は、まだありません。間取りの画面の「間仕切」→「垂れ壁」で入れます。</div>`;
   b.querySelectorAll("[data-trh]").forEach(x => x.onclick = () => { S.tare[+x.dataset.trh].h = +x.dataset.v; save(); drawTare(); drawPlanSafe(); try { drawEst(); } catch(e){} });
   b.querySelectorAll("[data-trp]").forEach(x => x.onclick = () => { const q = S.tare[+x.dataset.trp]; openPad({title: "天井からの下がり", unit: "mm", value: q.h || 400, done: v => { if (v > 0){ q.h = Math.round(v); save(); drawTare(); drawPlanSafe(); try { drawEst(); } catch(e){} } }}); });
   b.querySelectorAll("[data-trd]").forEach(x => x.onclick = () => { S.tare.splice(+x.dataset.trd, 1); save(); drawTare(); drawPlanSafe(); try { drawEst(); } catch(e){} });
@@ -5299,7 +5302,7 @@ function sashSplit(){
 }
 function drawTfr(){
   const b = $("tfrList"); if (!b) return; S.tfr = S.tfr || [];
-  b.innerHTML = S.tfr.map((f, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">${TFR[f.k] ? TFR[f.k][0] : f.k}</b><button type="button" data-tfn="${i}" style="min-height:42px">${f.n}か所</button><button type="button" data-tfd="${i}" style="min-height:42px;color:#C62828">削除</button></div><div class="seg" style="margin-top:6px">${[["fixed", "固定枠"], ["casing", "ケーシング枠"]].map(([v, n]) => `<button type="button" data-tft="${i}" data-tfv="${v}" aria-pressed="${(f.t || "fixed") === v}">${n}</button>`).join("")}</div></div>`).join("") + `<div class="hint">扉は付けずに枠だけの箇所です（間取りで入れた分だけが出ます）。枠だけの工事を足す時は、下の「部分工事」で入れてください。</div>`;
+  b.innerHTML = S.tfr.map((f, i) => `<div class="sash"><div class="top2" style="display:flex;gap:8px;align-items:center"><b style="flex:1">${TFR[f.k] ? TFR[f.k][0] : f.k}</b><button type="button" data-tfn="${i}" style="min-height:42px">${f.n}か所</button><button type="button" data-tfd="${i}" style="min-height:42px;color:#C62828">消す</button></div><div class="seg" style="margin-top:6px">${[["fixed", "固定枠"], ["casing", "ケーシング枠"]].map(([v, n]) => `<button type="button" data-tft="${i}" data-tfv="${v}" aria-pressed="${(f.t || "fixed") === v}">${n}</button>`).join("")}</div></div>`).join("") + `<div class="hint">扉は付けずに枠だけの箇所です（間取りで入れた分だけが出ます）。枠だけの工事を足す時は、下の「部分工事」で入れてください。</div>`;
   b.querySelectorAll("[data-tfn]").forEach(x => x.onclick = () => { const f = S.tfr[+x.dataset.tfn]; openPad({title: f ? TFR[f.k][0] + "の数" : "数", unit: "か所", value: f ? f.n : 1, done: v => { if (f && v){ f.n = Math.round(v); save(); drawTfr(); try { drawEst(); } catch(e){} } }}); });
   b.querySelectorAll("[data-tfd]").forEach(x => x.onclick = () => { S.tfr.splice(+x.dataset.tfd, 1); save(); drawTfr(); try { drawEst(); } catch(e){} });
   b.querySelectorAll("[data-tft]").forEach(x => x.onclick = () => { const f = S.tfr[+x.dataset.tft]; if (f){ f.t = x.dataset.tfv; save(); drawTfr(); try { drawEst(); } catch(e){} } });
@@ -7687,7 +7690,7 @@ function roomNameSheet(r){
   $("mbox").innerHTML = `<h3>部屋の名前　${r.label}（${fmt(r.area, 1)}㎡）</h3>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0;max-height:46vh;overflow:auto">${RM_NAMES.map(n => `<button type="button" class="btn sub" data-rn="${n}" style="min-height:44px;font-size:15px">${n}</button>`).join("")}</div>
     <input id="rnIn" type="text" value="${esc(roomNm(r) || "")}" placeholder="自分で入力（例：母の部屋）" style="width:100%;box-sizing:border-box;min-height:44px;font-size:16px;border:2px solid var(--line);border-radius:10px;padding:0 10px;margin-bottom:8px">
-    <div class="row"><button class="btn sub" id="rnLater" type="button">あとで</button><button class="btn pri" id="rnOk" type="button">決定</button></div>`;
+    <div class="row"><button class="btn sub" id="rnLater" type="button">あとで</button><button class="btn pri" id="rnOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-rn]").forEach(b => b.onclick = () => setName(uniq(b.dataset.rn)));
   $("rnOk").onclick = () => setName($("rnIn").value.trim());
@@ -8208,7 +8211,7 @@ function fxUI(){
 function fxPickAccent(cur, cb){
   $("mbox").innerHTML = `<h3>アクセントクロス</h3><p class="hint" style="margin-top:0">壁1面を選んだ柄にします。ほかの壁は白のクロスのままです。</p>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${Object.keys(ACC).map(k => `<button type="button" data-acc="${k}" aria-pressed="${cur === k}" style="min-height:52px;border:1.5px solid ${cur === k ? "var(--ai)" : "var(--line)"};border-radius:8px;background:#fff;font-weight:800;display:flex;align-items:center;gap:8px;justify-content:flex-start;padding:0 10px"><span style="width:26px;height:26px;border-radius:5px;flex:none;background:${ACC[k][2]};border:1px solid #CFC6B4"></span>${ACC[k][0]}</button>`).join("")}</div>
-    <div class="row"><button class="btn sub" id="accCan" type="button">やめる</button></div>`;
+    <div class="row"><button class="btn sub" id="accCan" type="button">×</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-acc]").forEach(b => b.onclick = () => { $("modal").hidden = true; cb(b.dataset.acc); });
   $("accCan").onclick = () => { $("modal").hidden = true; };
@@ -8263,7 +8266,7 @@ function drawFxBar(){
   const mid = isUnder ? `<button id="fxLen" type="button">幅 ${fmt(f.len)}</button><button id="fxHgt" type="button">高さ ${fmt(f.hgt)}</button><button id="fxZ" type="button" style="grid-column:1/-1">位置 ${fmt(f.z)}</button>${f.k === "niche" ? `<button id="fxNb" type="button" style="grid-column:1/-1">下面：${f.nb === "waku" ? "窓枠" : "クロス巻き"}</button>` : ""}`
     : isSeg ? `<button id="fxLen" type="button">長さ</button><button id="fxFit" type="button">壁まで</button><button id="fxZ" type="button" style="grid-column:1/-1">高さ ${fmt(f.z)}</button>`
     : `<button id="fxZ" type="button" style="grid-column:1/-1">高さ ${fmt(f.z)}</button>`;
-  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="fxOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="fxDel" class="del" type="button">消す</button><button id="fxClose" type="button" aria-label="選択をやめる">✕</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="fxOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="fxDel" class="del" type="button">消す</button><button id="fxClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${kind === "pt" ? " o" : ""}"><button id="fxStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button>${mid}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${rot}</div>
     <div class="sbR"><span></span><button id="fxUndo" type="button">↶<small>戻す</small></button></div></div>`;
@@ -8332,14 +8335,14 @@ function ltSvg(P, sc){
 function askOK(msg, okText, onOK, onCancel){
   let ov = document.getElementById("askOv");
   if (!ov){ ov = document.createElement("div"); ov.id = "askOv"; ov.style.cssText = "position:fixed;inset:0;z-index:200;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:20px"; document.body.appendChild(ov); }
-  ov.innerHTML = `<div style="background:#fff;border-radius:14px;padding:18px 16px;max-width:360px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25)"><p style="margin:0 0 14px;font-size:16px;font-weight:700;line-height:1.5;color:#18202A;white-space:pre-line">${esc(msg)}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" id="askNo" style="min-height:48px;border:1.5px solid #D5DCE6;background:#fff;border-radius:10px;font:inherit;font-weight:800;color:#5B6673">やめる</button><button type="button" id="askYes" style="min-height:48px;border:0;background:#C62828;color:#fff;border-radius:10px;font:inherit;font-weight:900">${esc(okText || "OK")}</button></div></div>`;
+  ov.innerHTML = `<div style="background:#fff;border-radius:14px;padding:18px 16px;max-width:360px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,.25)"><p style="margin:0 0 14px;font-size:16px;font-weight:700;line-height:1.5;color:#18202A;white-space:pre-line">${esc(msg)}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" id="askNo" style="min-height:48px;border:1.5px solid #D5DCE6;background:#fff;border-radius:10px;font:inherit;font-weight:800;color:#5B6673">×</button><button type="button" id="askYes" style="min-height:48px;border:0;background:#C62828;color:#fff;border-radius:10px;font:inherit;font-weight:900">${esc(okText || "OK")}</button></div></div>`;
   ov.hidden = false; ov.style.display = "flex";
   const close = () => { ov.style.display = "none"; };
   ov.querySelector("#askNo").onclick = () => { close(); onCancel && onCancel(); };
   ov.querySelector("#askYes").onclick = () => { close(); onOK && onOK(); };
 }
 function pickOne(title, opts, cb){
-  $("mbox").innerHTML = `<h3>${title}</h3><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${opts.map(([v, t, c]) => `<button type="button" data-po="${v}" style="min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;color:${c || "var(--ai)"}">${t}</button>`).join("")}</div><div class="row"><button class="btn sub" id="poCan" type="button">やめる</button></div>`;
+  $("mbox").innerHTML = `<h3>${title}</h3><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${opts.map(([v, t, c]) => `<button type="button" data-po="${v}" style="min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;color:${c || "var(--ai)"}">${t}</button>`).join("")}</div><div class="row"><button class="btn sub" id="poCan" type="button">×</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-po]").forEach(b => b.onclick = () => { $("modal").hidden = true; cb(b.dataset.po); });
   $("poCan").onclick = () => { $("modal").hidden = true; };
@@ -8807,7 +8810,7 @@ function editItem(i, preset, after){
     <div class="g2"><div><label>厚さ（mm）</label><input id="fT" inputmode="decimal" value="${it.t || ""}"></div><div><label>幅（mm）</label><input id="fW" inputmode="decimal" value="${it.w || ""}"></div><div><label>長さ（mm）</label><input id="fL" inputmode="decimal" value="${it.len || ""}"></div></div>
     <div class="g2"><div style="grid-column:1/3"><label>値段（円・1単位あたり）</label><input id="fP" inputmode="decimal" value="${it.price ?? ""}"></div><div><label>1単位の本数</label><input id="fQ" inputmode="decimal" value="${it.qty || 1}"></div></div>
     <p class="hint" style="font-size:12px">束で買う物は「1単位の本数」に入り数を（例：24枚束→24）。釘は1箱の本数を入れると箱数で出ます。</p>
-    <div class="row">${i >= 0 ? `<button class="btn sub" id="fDel" type="button" style="color:var(--ng)">消す</button>` : `<button class="btn sub" id="fCancel" type="button">やめる</button>`}<button class="btn pri" id="fOk" type="button">保存</button></div>`;
+    <div class="row">${i >= 0 ? `<button class="btn sub" id="fDel" type="button" style="color:var(--ng)">消す</button>` : `<button class="btn sub" id="fCancel" type="button">×</button>`}<button class="btn pri" id="fOk" type="button">保存</button></div>`;
   $("modal").hidden = false;
   const close = () => { $("modal").hidden = true; };
   if ($("fCancel")) $("fCancel").onclick = close;
@@ -9101,7 +9104,7 @@ function phBar(){
   const n = PHT.sel.size;
   if (!PHT.pick || !n) phMv184 = false;
   if (PHT.pick && phMv184){
-    $("phBarIn").innerHTML = `<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;font-weight:700">移す先を選んでください（${n}枚）</div><div style="display:flex;gap:6px">${PH_CATS.map(([k, nm]) => k === PHT.cat ? `<button type="button" disabled style="opacity:.45">${nm}（今）</button>` : `<button type="button" data-mv="${k}">${nm}</button>`).join("")}<button type="button" id="phMvCancel">やめる</button></div></div>`;
+    $("phBarIn").innerHTML = `<div style="flex:1;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;font-weight:700">移す先を選んでください（${n}枚）</div><div style="display:flex;gap:6px">${PH_CATS.map(([k, nm]) => k === PHT.cat ? `<button type="button" disabled style="opacity:.45">${nm}（今）</button>` : `<button type="button" data-mv="${k}">${nm}</button>`).join("")}<button type="button" id="phMvCancel">×</button></div></div>`;
     $("phBarIn").querySelectorAll("[data-mv]").forEach(b => b.onclick = () => phMoveSel184(b.dataset.mv));
     $("phMvCancel").onclick = () => { phMv184 = false; phBar(); };
     return;
@@ -9881,18 +9884,18 @@ HB.__padStdSeg12 = true;
     const D = hgBr.depth;
     let h = `<div style="font-weight:700;font-size:14px">🧱 解体 <small style="font-weight:400;color:#555">深さ：${hgDName(D)}</small></div>`;
     if (hgBr.stage < 0){
-      h += `<p class="hint" style="margin:6px 0 4px">標準（仕上げ材のみ解体）でよければ「✓ 決定」。深さを選びたい時は「さらにこだわる」。</p>
+      h += `<p class="hint" style="margin:6px 0 4px">標準（仕上げ材のみ解体）でよければ「OK」。深さを選びたい時は「さらにこだわる」。</p>
         <div style="display:flex;gap:6px;margin-top:8px">
-        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">✓ 決定（標準で選ぶ）</button>
+        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">OK（標準で選ぶ）</button>
         <button type="button" data-hgmore="1" class="btn" style="flex:1">さらにこだわる</button>
-        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">やめる</button></div>`;
+        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">×</button></div>`;
     } else {
       h += `<p class="hint" style="margin:6px 0 4px">解体の深さは？（深さで見積の拾いが変わります）</p>
         <div style="display:flex;flex-wrap:wrap;gap:6px">${HG_D152.map(([v, n]) => `<button type="button" data-hgd="${v}" aria-pressed="${D === v}" style="flex:1 1 30%;min-height:44px">${n}${v === "rem" ? "（壁そのもの）" : ""}</button>`).join("")}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
         <button type="button" data-hgback="1" class="btn sub" style="flex:0 0 auto">← もどる</button>
-        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">✓ 決定（この深さで選ぶ）</button>
-        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">やめる</button></div>`;
+        <button type="button" data-hgdec="1" class="btn pri" style="flex:1">OK（この深さで選ぶ）</button>
+        <button type="button" data-hgcan="1" class="btn sub" style="flex:0 0 auto">×</button></div>`;
     }
     br.innerHTML = h; br.style.display = "block";
     br.querySelectorAll("[data-hgd]").forEach(x => x.onclick = () => { hgBr.depth = x.dataset.hgd; renderHgBr(); });
@@ -10171,7 +10174,7 @@ function drawSelBarL(bar){
   const l = S.lights[sel.i], title = `${LTN[l.k]}（${LTA[l.act || "new"]}）`;
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
-  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbLS" type="button">${LTA[l.act || "new"]} ▸</button><button id="sbLK" type="button">${l.k === "down" ? "CLに変える" : "DLに変える"}</button></div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button></div>
     <div class="sbR"><span></span><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
@@ -10441,7 +10444,7 @@ function drawSelBarC(bar, o){
   const title = `カウンター ${fmt(o.w)}×${fmt(o.d)}（${o.sh === "L" ? "L字" : "ストレート"}・${o.use === "wall" ? "壁付け" : "キッチン"}）`;
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
-  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
+  bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbCS" type="button">寸法 ▸</button>${o.sh === "L" ? `<button id="sbCV" type="button" aria-label="反転（脚を反対の端に）">反転</button>` : "<span></span>"}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button><button id="sbCK" class="rot" type="button">⟳<small>向き</small></button></div>
     <div class="sbR"><button id="sbCF" type="button" style="font-size:12px;line-height:1.15;padding:0 2px;display:flex;flex-direction:column;align-items:center;justify-content:center">${o.sh === "L" ? "ストレート" : "L字"}<small style="font-size:11px">にする</small></button><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
@@ -11033,7 +11036,7 @@ HB.__dskSeg32 = true;
         if (Array.isArray(S.sashes)){ const bad = S.sashes.filter(x => x.host && x.host.t === "e" && /窓|掃き出し/.test(x.cat || "") && x.host.i !== 0 && x.host.i !== 2); if (bad.length){ S.sashes = S.sashes.filter(x => bad.indexOf(x) < 0); try { drawPlan(); } catch(e){} } }
         if (PH === 1 && !B.wszOpen && HB.__put){ B.wszOpen = 1; HB.__put = null;
           try { const es = SASH.filter(q => TYPE_CATS.winK(q)); B.wszIdx = es.findIndex(q => q.name === "16509");
-            $("mbox").innerHTML = "<h3>腰窓：大きさを選んでください</h3><p class=\"hint\" style=\"margin-top:0\">選んだ大きさで、続けて置けます</p>" + es.map((e, i) => '<button type="button" data-wsz="' + i + '" style="display:block;width:100%;text-align:left;margin:6px 0;min-height:44px">' + e.name + "（幅" + e.w + "・高さ" + e.h + "）</button>").join("") + '<button type="button" id="wszNo" style="display:block;width:100%;margin:6px 0;min-height:44px">やめる</button>';
+            $("mbox").innerHTML = "<h3>腰窓：大きさを選んでください</h3><p class=\"hint\" style=\"margin-top:0\">選んだ大きさで、続けて置けます</p>" + es.map((e, i) => '<button type="button" data-wsz="' + i + '" style="display:block;width:100%;text-align:left;margin:6px 0;min-height:44px">' + e.name + "（幅" + e.w + "・高さ" + e.h + "）</button>").join("") + '<button type="button" id="wszNo" style="display:block;width:100%;margin:6px 0;min-height:44px">×</button>';
             $("modal").hidden = false;
             $("mbox").querySelectorAll("[data-wsz]").forEach(x => x.onclick = () => { const e = es[+x.dataset.wsz]; $("modal").hidden = true; armWinK(e); });
             $("wszNo").onclick = () => { $("modal").hidden = true; };
@@ -11337,7 +11340,7 @@ HB.__dskSeg32 = true;
       if (prevOpen !== undefined && toolOpen !== prevOpen && !HB.__put && !ltTool && !enclMode){
         if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK"), autoArm: true};   /* CAD-247：自動構えの印 */ toast("腰窓：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
         else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS"), autoArm: true}; toast("玄関シングル：置く所をタップ"); drawToolsUICore(); }
-        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "ドア", fn: () => addStdOpening("door"), autoArm: true}; toast("ドア：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "片開き", fn: () => addStdOpening("door"), autoArm: true}; toast("片開き：置く所をタップ（続けて置けます）"); drawToolsUICore(); }   /* CAD-253：自動構えのラベルをボタンの新しい文字「片開き」に合わせた */
       }
       prevOpen = toolOpen;
       const box = document.getElementById("toolCh2");
@@ -11808,7 +11811,7 @@ HB.__dskSeg32 = true;
       const chip = b.textContent.trim();
       b.onclick = () => {
         if (entries.length === 1){ arm(key, entries[0], chip + " " + entries[0].name); return; }
-        $("mbox").innerHTML = `<h3>${chip}：大きさを選んでください</h3><p class="hint" style="margin-top:0">選んだ大きさで、続けて置けます。あとから1つずつ直す手間がありません。</p><div class="seg v">${entries.map((e, i) => `<button type="button" data-wsz="${i}" style="min-height:50px;text-align:left;padding:6px 12px"><b>${e.name}</b>　<small style="color:var(--sub)">${fmt(e.w)} × ${fmt(e.h)}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="wszNo" type="button">やめる</button></div>`;
+        $("mbox").innerHTML = `<h3>${chip}：大きさを選んでください</h3><p class="hint" style="margin-top:0">選んだ大きさで、続けて置けます。あとから1つずつ直す手間がありません。</p><div class="seg v">${entries.map((e, i) => `<button type="button" data-wsz="${i}" style="min-height:50px;text-align:left;padding:6px 12px"><b>${e.name}</b>　<small style="color:var(--sub)">${fmt(e.w)} × ${fmt(e.h)}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="wszNo" type="button">×</button></div>`;
         $("modal").hidden = false;
         $("mbox").querySelectorAll("[data-wsz]").forEach(x => x.onclick = () => { const e = entries[+x.dataset.wsz]; $("modal").hidden = true; arm(key, e, chip + " " + e.name); });
         $("wszNo").onclick = () => { $("modal").hidden = true; };
@@ -11859,7 +11862,7 @@ HB.__dskSeg32 = true;
       L.push("寸法・幅のボタン：大きさを切り替えます。");
       L.push("⟳向き：向きを変えます。");
     } else return null;
-    L.push((sel.t === "o" && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了：置くのを終わりにします。消す：この物を消します。↶戻す：直前の操作を1つ戻します。" : "✓決定：終わりです。消す：この物を消します。↶戻す：直前の操作を1つ戻します。");   /* CAD-217：配置の流れでは「終了」 */
+    L.push((sel.t === "o" && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了：置くのを終わりにします。消す：この物を消します。↶戻す：直前の操作を1つ戻します。" : "OK：終わりです。消す：この物を消します。↶戻す：直前の操作を1つ戻します。");   /* CAD-217：配置の流れでは「終了」 */
     return L.join("<br>");
   }
   let helpOpen = true;
@@ -12306,7 +12309,7 @@ document.addEventListener("click", function(e){
       panel.id = "floorPanel";
       panel.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;margin:6px 0";
       panel.innerHTML = FLKS.map(fk => `<button type="button" data-flk="${fk}" style="flex:1 1 30%;min-height:44px">${FLN[fk]}</button>`).join("")
-        + `<button type="button" data-flk="" style="flex:1 1 30%;min-height:44px">やめる</button>`
+        + `<button type="button" data-flk="" style="flex:1 1 30%;min-height:44px">×</button>`
         + `<div style="flex:1 1 100%;font-size:12px;color:#555">部屋をタップすると、その部屋全部がその床になります。一部だけの時は、決めた後に、そのまま指でぐるっと囲んでください（囲んだ形がそのまま範囲になります）。</div>`;
       const anchor = document.getElementById("toolCh3") || tabs;
       anchor.insertAdjacentElement("afterend", panel);
@@ -12374,7 +12377,7 @@ document.addEventListener("click", function(e){
     if (!r || !r.fk) return false;
     $("mbox").innerHTML = `<h3>${r.fk === "flAge" ? HB.__ageLabel(r) : "床 " + FLN[r.fk]}　${fmt((r.x1 - r.x0) * (r.y1 - r.y0) / 1e6, 1)}㎡</h3><p class="hint" style="margin-top:0">${fmt(r.x1 - r.x0)}×${fmt(r.y1 - r.y0)}　仕上げを変えられます</p>`
       + `<div class="seg" style="flex-wrap:wrap">${FLKS.map(fk => `<button type="button" data-ffk="${fk}" aria-pressed="${r.fk === fk}">${FLN[fk]}</button>`).join("")}</div>`
-      + (r.fk === "flAge" ? ageHtml(r) : "") + `<div class="row"><button class="btn sub" id="fsDel" type="button" style="color:var(--ng)">この床を消す</button><button class="btn pri" id="fsOk" type="button">決定</button></div>`;
+      + (r.fk === "flAge" ? ageHtml(r) : "") + `<div class="row"><button class="btn sub" id="fsDel" type="button" style="color:var(--ng)">この床を消す</button><button class="btn pri" id="fsOk" type="button">OK</button></div>`;
     $("modal").hidden = false;
     $("mbox").querySelectorAll("[data-ffk]").forEach(b => b.onclick = () => {
       pushUndo();
@@ -12726,7 +12729,7 @@ function build(){
   ov.innerHTML = '<div class="kt-top"><b>描き足す</b>　外に描くと増える・中に描くと切り取る<br>コの字は3辺でOK</div><div id="kt-lab"></div>' +
     '<svg id="kt-svg" xmlns="http://www.w3.org/2000/svg"><g id="kt-base"></g><g id="kt-pre"></g>' +
     '<polyline id="kt-ink" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
-    '<div class="kt-bar"><button id="kt-x">やめる</button><button id="kt-r" disabled>描き直す</button><button id="kt-ok" class="kt-ok" disabled>決める</button></div>';
+    '<div class="kt-bar"><button id="kt-x">×</button><button id="kt-r" disabled>描き直す</button><button id="kt-ok" class="kt-ok" disabled>OK</button></div>';
   document.body.appendChild(ov);
   const svg = $k("kt-svg");
   const pt = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; };
@@ -13463,7 +13466,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     kgOv.innerHTML = '<div class="ov-top"><b>描き減らす</b>　切り取る所を囲んでください<br>壁にくっつけて囲むと凹み・角に囲むと切り取りになります</div><div class="ov-lab" id="kg-lab"></div>' +
       '<svg id="kg-svg" xmlns="http://www.w3.org/2000/svg"><g id="kg-base"></g><g id="kg-pre"></g>' +
       '<polyline id="kg-ink" fill="none" stroke="#c0392b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
-      '<div class="ov-bar"><button id="kg-x">やめる</button><button id="kg-r" disabled>描き直す</button><button id="kg-ok" class="ov-ok" disabled>決める</button></div>';
+      '<div class="ov-bar"><button id="kg-x">×</button><button id="kg-r" disabled>描き直す</button><button id="kg-ok" class="ov-ok" disabled>OK</button></div>';
     document.body.appendChild(kgOv);
     const svg = $id("kg-svg");
     const pt = e => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); return [q.x, q.y]; };
@@ -13544,7 +13547,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       '<svg id="wl-svg" xmlns="http://www.w3.org/2000/svg"><g id="wl-base"></g><g id="wl-pre"></g>' +
       '<polyline id="wl-ink" fill="none" stroke="#1565c0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>' +
       '<div class="ov-hrow" id="wl-hrow"><span>高さ</span></div>' +
-      '<div class="ov-bar"><button id="wl-x">やめる</button><button id="wl-del">線を消す</button><button id="wl-r" disabled>描き直す</button><button id="wl-ok" class="ov-ok" disabled>決める</button></div>';
+      '<div class="ov-bar"><button id="wl-x">×</button><button id="wl-del">線を消す</button><button id="wl-r" disabled>描き直す</button><button id="wl-ok" class="ov-ok" disabled>OK</button></div>';
     document.body.appendChild(wlOv);
     const hrow = $id("wl-hrow");
     [["", "天井まで"], ["2400", "2400"], ["2100", "2100"], ["1800", "1800"], ["1500", "1500"], ["1200", "1200"], ["900", "900"]].forEach(([v, t]) => {
@@ -15164,7 +15167,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       + "</div>"
       + "<p class='hint' style='margin:6px 0 0'>高さなどは、あとから「仕様」の画面で決め直せます。</p>"
       + "<div style='display:flex;gap:6px;margin-top:8px'>"
-      + "<button type='button' data-zcan='1' class='btn sub' style='flex:0 0 auto'>やめる</button></div>";
+      + "<button type='button' data-zcan='1' class='btn sub' style='flex:0 0 auto'>×</button></div>";
     host.innerHTML = h;
     host.style.display = "block";
     host.querySelectorAll("[data-zm]").forEach(function(b){
@@ -15306,7 +15309,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
               var chip173 = bar.querySelector('[data-eflk="' + pendEncl173.chipFk + '"]');
               if (chip173) chip173.style.outline = "3px solid #2563B0";
               var ok173 = bar.querySelector("#ecOkN") || bar.querySelector("#ecOk");
-              if (ok173) ok173.textContent = "決定（床：" + kindName138(pendEncl173.kind, pendEncl173.det) + "）";
+              if (ok173) ok173.textContent = "OK（床：" + kindName138(pendEncl173.kind, pendEncl173.det) + "）";
             } else if (pendEncl173 && (typeof encl === "undefined" || pendEncl173.forEncl !== encl)){
               pendEncl173 = null;
             }
@@ -15383,7 +15386,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var h = "<h3>残りの床" + (ra > 0.05 ? "　" + fmt(ra, 1) + "㎡" : "") + "</h3>"
       + "<p class='hint' style='margin-top:0'>間取りで指定していない分の床の仕上げです（見積に反映します）</p>"
       + "<div class='seg' style='flex-wrap:wrap'>" + FT.map(function(x){ return "<button type='button' data-rfk='" + x[0] + "' aria-pressed='" + (cur === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>"
-      + "<div class='row'><button class='btn pri' id='rsOk' type='button'>決定</button></div>";
+      + "<div class='row'><button class='btn pri' id='rsOk' type='button'>OK</button></div>";
     $("mbox").innerHTML = h;
     $("modal").hidden = false;
     $("mbox").querySelectorAll("[data-rfk]").forEach(function(b){
@@ -15415,7 +15418,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       h += "<div class='seg' style='flex-wrap:wrap'>" + FLKS.map(function(fk){ return "<button type='button' data-gfk='" + fk + "' aria-pressed='" + (r0.fk === fk || (!r0.fk && fk === "tatami")) + "'>" + ((HB.__FLN || {})[fk] || fk) + "</button>"; }).join("") + "</div>";
       if (r0.fk === "flAge") h += "<p class='hint' style='margin:10px 0 4px'>高さ</p><div class='seg' style='flex-wrap:wrap'>" + [150, 200, 250, 300, 350, 400, 450].map(function(v){ return "<button type='button' data-gageh='" + v + "' aria-pressed='" + ((r0.h || 300) === v) + "'>FL+" + v + "</button>"; }).join("") + "</div>";
     }
-    h += "<div class='row'><button class='btn sub' id='gsDel' type='button' style='color:var(--ng)'>この床を全部消す</button><button class='btn pri' id='gsOk' type='button'>決定</button></div>";
+    h += "<div class='row'><button class='btn sub' id='gsDel' type='button' style='color:var(--ng)'>この床を全部消す</button><button class='btn pri' id='gsOk' type='button'>OK</button></div>";
     $("mbox").innerHTML = h;
     $("modal").hidden = false;
     var cur = function(){ return idxs.map(function(i){ return S.tatami[i]; }).filter(Boolean); };
@@ -15523,7 +15526,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       h += "<p class='hint' style='margin:10px 0 4px'>状態</p><div class='seg' style='flex-wrap:wrap'>"
         + [["new", "新調"], ["omote", "表替え"], ["keep", "既存"]].map(function(x){ return "<button type='button' data-sst191='" + x[0] + "' aria-pressed='" + ((r.st || "new") === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>";
     }
-    h += "<div class='row'><button class='btn sub' id='dsDel' type='button' style='color:var(--ng)'>この床を消す</button><button class='btn pri' id='dsOk' type='button'>決定</button></div>";
+    h += "<div class='row'><button class='btn sub' id='dsDel' type='button' style='color:var(--ng)'>この床を消す</button><button class='btn pri' id='dsOk' type='button'>OK</button></div>";
     $("mbox").innerHTML = h;
     $("modal").hidden = false;
     $("mbox").querySelectorAll("[data-sq]").forEach(function(b){
@@ -18172,7 +18175,7 @@ applyTheme194();
     var ty = d ? d.type : DM.type, horiz = !d || d.side === 0 || d.side === 2;
     bar.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:6px"><span style="font-size:14px"><b>浴室の入口</b>　<small style="font-weight:700;color:#1F5F8B">' + cur + '</small></span>'
-      + '<button id="d205ok" type="button" style="background:#1F5F8B;color:#fff;border:1.5px solid #1F5F8B;border-radius:8px;min-width:76px;min-height:38px;font-size:15px;font-weight:800">✓ 決定</button></div>'
+      + '<button id="d205ok" type="button" style="background:#1F5F8B;color:#fff;border:1.5px solid #1F5F8B;border-radius:8px;min-width:76px;min-height:38px;font-size:15px;font-weight:800">OK</button></div>'
       + '<div style="display:flex;gap:4px;margin-top:6px">' + Object.keys(TYPES205).map(function(k){
           return '<button type="button" data-d205t="' + k + '" aria-pressed="' + (ty === k) + '" style="flex:1;min-height:44px;border-radius:8px;border:1.5px solid #B9C9DC;background:' + (ty === k ? "#1F5F8B" : "#F1F4F8") + ';color:' + (ty === k ? "#fff" : "#223") + ';font-size:14px;font-weight:800">' + TYPES205[k][0] + '</button>';
         }).join("") + '</div>'
@@ -18604,7 +18607,7 @@ function askDepth208(i, q){
         return "<button type=\"button\" data-gd=\"" + d + "\" style=\"min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;text-align:left;padding:8px 12px\">"
           + nm(d) + (d === cur ? "（今の深さ）" : "") + "</button>";
       }).join("")
-    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">やめる</button></div>";
+    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">×</button></div>";
   $("modal").hidden = false;
   mb.querySelectorAll("[data-gd]").forEach(function(b){
     b.onclick = function(){
@@ -18678,7 +18681,7 @@ function ghostSheet208(e){
         return "<button type=\"button\" data-gd=\"" + d + "\" style=\"min-height:52px;border:1.5px solid var(--line);border-radius:8px;background:#fff;font-weight:800;text-align:left;padding:8px 12px\">"
           + nm(d) + (d === e.depth ? "（今の深さ）" : "") + "</button>";
       }).join("")
-    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">やめる</button></div>";
+    + "</div><div class=\"row\" style=\"margin-top:8px\"><button class=\"btn sub\" id=\"gdCan\" type=\"button\">×</button></div>";
   $("modal").hidden = false;
   mb.querySelectorAll("[data-gd]").forEach(function(b){
     b.onclick = function(){
@@ -20473,6 +20476,57 @@ function winWarn250(n0){
       sv.appendChild(el);
     } catch(e){}
   }, 120);
+})();
+</script>
+<style>
+#putBand253{position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:9000;display:none;align-items:center;gap:8px;background:rgba(27,36,48,.93);color:#fff;border-radius:999px;padding:5px 6px 5px 14px;font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.3);max-width:calc(100vw - 130px);white-space:nowrap}
+#putBand253.on253{display:flex}
+#putBand253 .pbLbl253{overflow:hidden;text-overflow:ellipsis}
+#putBand253 button{flex:0 0 auto;min-height:34px;padding:0 14px;border-radius:999px;border:0;background:#2563B0;color:#fff;font:inherit;font-weight:800}
+#toolCh .grp253{grid-column:1/-1;font-size:11px;font-weight:800;color:var(--sub);text-align:left}
+#toolCh:has(> .grp253){grid-auto-flow:row}
+</style>
+<script>
+/* ===== CAD-253：「置く」中の帯（全画面で手順タブが見えない間の案内）と、仕様「床の見切り」の結線 ===== */
+(function(){ "use strict";
+  /* ---- 置く帯：全画面（fsDraw）で物を構えている間だけ、上に細い帯を出す。
+         帯の「終了」は選択バーの sbOk（終了）と同じ解除（構え・選択・照明の構えを落として再描画）。 ---- */
+  let band = null;
+  const syncBand = () => {
+    try {
+      if (!band){
+        band = document.createElement("div"); band.id = "putBand253";
+        band.innerHTML = `<span class="pbLbl253"></span><button type="button">終了</button>`;
+        band.querySelector("button").onclick = () => {
+          try { sel = null; } catch(e){}
+          HB.__put = null; HB.__sashAct = null; HB.__ltAct = null;
+          try { ltTool = null; } catch(e){}
+          try { drawToolsUI(); } catch(e){}
+          try { drawPlan(); } catch(e){}
+          try { toast("終了しました"); } catch(e){}
+          syncBand();
+        };
+        document.body.appendChild(band);
+      }
+      const modal = document.getElementById("modal");
+      const on = !!(HB.__pageM && document.body.classList.contains("fsDraw") && (HB.__put || (typeof ltTool !== "undefined" && ltTool)) && !document.body.classList.contains("nbtutRun") && !(modal && !modal.hidden));
+      band.classList.toggle("on253", on);
+      if (on) band.querySelector(".pbLbl253").textContent = "置くモード中：" + (HB.__put ? HB.__put.label : (typeof LTN !== "undefined" && ltTool ? LTN[ltTool] : ""));
+    } catch(e){}
+  };
+  setInterval(syncBand, 250);
+  /* ---- 床の見切り（記録と表示だけ。見積の計算には一切使わない） ---- */
+  document.addEventListener("click", e => {
+    try { const b = e.target && e.target.closest ? e.target.closest("[data-mk253]") : null; if (!b) return; S.mikiri253 = b.dataset.mk253; save(); syncMk(); } catch(err){}
+  }, true);
+  const syncMk = () => {
+    try {
+      const seg = document.getElementById("mikiriSeg253"); if (!seg || typeof S === "undefined" || !S) return;
+      const v = S.mikiri253 === "nashi" ? "nashi" : "ari";
+      seg.querySelectorAll("[data-mk253]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.mk253 === v)));
+    } catch(e){}
+  };
+  setInterval(syncMk, 600);
 })();
 </script>
 </html>
