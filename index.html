@@ -11484,6 +11484,14 @@ HB.__dskSeg32 = true;
 (function(){
   var KEY = "gosei-pro-v1";
   var CODE = "350";   /* 有料版の合言葉（村田が渡す。今は仮の合言葉） */
+  /* CAD-231：試作段階の開放スイッチ（本人の決定 2026-11-14）。true の間は、CAD側の単価まわり
+     （単価の変更・保存／利益率の変更／単価表の入口と編集）だけを、合言葉なしで使える。
+     販売開始の時は、この true を false に変えるだけで従来の鍵に戻る（閉じる場所はここ1か所）。
+     見積帳への受け渡し口 HB.__goseiIsPro143 には触らない：請負契約書は行政書士の確認が
+     終わってから開放するので、書類側の鍵（fmWrite143）は閉じたままにする。 */
+  var BETA_OPEN231 = true;
+  HB.__betaOpen231 = function(){ return BETA_OPEN231; };
+  function betaOpen(){ return BETA_OPEN231; }
   function isPro(){ try { return localStorage.getItem(KEY) === "1"; } catch(e){ return false; } }
   HB.__goseiIsPro143 = isPro;   /* CAD-143：有料判定はここ1か所に寄せる（利益率ロック・書類アプリも同じ判定を使う） */
   function inTut(){ try { return !!HB.__nbtut; } catch(e){ return false; } }
@@ -11497,7 +11505,7 @@ HB.__dskSeg32 = true;
        ゲートの実体はこの IIFE の局所（snap／isPro／inTut／say）を使うため、HB 内部専用の口として登録だけ残す（registry の94種には含めない）。
        引数 origSaveP は統合側が渡す本体の実処理（core）。分岐条件・巻き戻し・snap の更新を含む本文は verbatim のまま1文字も変えていない。 */
     HB.__savePGate45 = function(origSaveP){
-      if (!isPro() && !inTut()){
+      if (!betaOpen() && !isPro() && !inTut()){
         var cur = null;
         try { cur = JSON.stringify(PR); } catch(e){}
         if (cur && snap && cur !== snap){
@@ -11518,6 +11526,15 @@ HB.__dskSeg32 = true;
   function refreshSheet(){
     if (!sheet) return;
     var st = sheet.querySelector("#proState"), ca = sheet.querySelector("#proCancel"), rw = sheet.querySelector("#proCodeRow");
+    var bn231 = sheet.querySelector("#proBetaNote231");
+    if (bn231) bn231.style.display = betaOpen() ? "" : "none";
+    if (betaOpen() && !isPro()){
+      /* CAD-231：試作の開放中は、合言葉の入力欄も解約の欄も出さない（単価まわりはそのまま使える） */
+      if (st) st.innerHTML = "";
+      if (rw) rw.style.display = "none";
+      if (ca) ca.innerHTML = "";
+      return;
+    }
     if (isPro()){
       if (st) st.innerHTML = "<div style=\"font-size:14px;font-weight:800;color:#2E7D32;margin-top:10px\">いまは有料版を使っています</div>";
       if (rw) rw.style.display = "none";
@@ -11543,6 +11560,7 @@ HB.__dskSeg32 = true;
     sheet.style.cssText = "position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center";
     sheet.innerHTML = "<div style=\"background:#fff;width:100%;max-width:480px;max-height:88vh;overflow:auto;border-radius:16px 16px 0 0;padding:18px 16px 20px;box-sizing:border-box\">"
       + "<div style=\"font-size:17px;font-weight:900\">有料版のご案内</div>"
+      + "<div id=\"proBetaNote231\" style=\"display:none;font-size:13.5px;line-height:1.65;margin-top:10px;padding:10px 12px;border:1.5px solid #F9A825;border-radius:10px;background:#FFF8E1\">今は試作の公開中です。単価の変更など、ほとんどの機能を無料で使えます。請負契約書は、行政書士の確認が終わってから使えるようにします。正式な販売の時には、自分の単価に変える事と、請負契約書が有料になります。</div>"
       + "<div style=\"font-size:14px;line-height:1.65;margin-top:8px\">タダで使える所：描く・数量・金額まで、何軒でも。見積書・請求書・領収書も作れます。<br>書類だけなら、ずっと無料です。単価も自分で変えられます。図面とつながると、描いた図面から金額が出て、そのまま見積書になります。ここからが有料で、月980円です。工事台帳と請負契約書も使えます。<br>有料版で使える所：CADで<b>単価を自分の物に変える事</b>と、<b>工事台帳・請負契約書</b>。<br><span style=\"color:#B00020\">解約すると、単価は最初の仮単価に戻ります。</span></div>"
       + "<div id=\"proState\"></div>"
       + "<div id=\"proCodeRow\" style=\"display:flex;gap:8px;margin-top:12px\"><input id=\"proCode\" type=\"text\" placeholder=\"合言葉（コード）\" style=\"flex:1;min-width:0;font-size:16px;padding:10px;border:1.5px solid #BBB;border-radius:10px;box-sizing:border-box\"><button type=\"button\" id=\"proGo\" style=\"font-size:15px;font-weight:800;padding:10px 14px;border-radius:10px;border:0;background:#FFC400\">入れる</button></div>"
@@ -11597,14 +11615,14 @@ HB.__dskSeg32 = true;
   document.addEventListener("click", function(ev){
     var t = ev.target;
     if (!t || !t.closest) return;
-    if (viewOnly && t.closest("#priceList,#workList,#itemAdd,#ocrBtn")){
+    if (viewOnly && !betaOpen() && t.closest("#priceList,#workList,#itemAdd,#ocrBtn")){
       ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
       say("見るだけです。単価を変えるのは有料版です");
       return;
     }
     if (t.closest("#priceBtn")){
       if (bypass){ bypass = false; return; }
-      if (isPro() || inTut()) return;
+      if (betaOpen() || isPro() || inTut()) return;
       ev.preventDefault(); ev.stopPropagation(); ev.stopImmediatePropagation();
       closeMenu(); openSheet();
       return;
@@ -12625,7 +12643,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 (function(){
   "use strict";
   var KEY = "gosei-pro-v1";
-  function isPro(){ try { if (HB.__goseiIsPro143) return HB.__goseiIsPro143(); } catch(e){} try { return localStorage.getItem(KEY) === "1"; } catch(e){ return false; } }   /* CAD-143：判定は CAD-22 の1か所に寄せた */
+  function isPro(){ try { if (HB.__betaOpen231 && HB.__betaOpen231()) return true; } catch(e){} try { if (HB.__goseiIsPro143) return HB.__goseiIsPro143(); } catch(e){} try { return localStorage.getItem(KEY) === "1"; } catch(e){ return false; } }   /* CAD-143：判定は CAD-22 の1か所に寄せた。CAD-231：試作の開放中は利益率も開ける（このブロック内の判定だけに効く。__goseiIsPro143 自体は変えない） */
   function inTut(){ try { return !!HB.__nbtut; } catch(e){ return false; } }
   function say(m){ try { toast(m); } catch(e){} }
 
