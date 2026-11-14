@@ -787,7 +787,7 @@ function evalExpr(s){
   let r = v2[0]; o2.forEach((o, i) => { r = o === "+" ? r + v2[i + 1] : r - v2[i + 1]; });
   return isFinite(r) ? r : NaN;
 }
-function toast(t){ const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }
+function toast(t){ document.querySelectorAll(".toast").forEach(d0 => d0.remove()); const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }   /* CAD-258：トーストは同じ位置に出るため、重ねず常に1つだけにする */
 
 /* ---------- 状態 ---------- */
 const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, keta: 180, hari: 180, moya: 90, tsuka: 90, roof: "kata", k: 2, muneStep: 600, geya: [], shokei: {mode: "pct", v: 5}, startD: "", high: "auto", ridge: "x", noki: 450, keraba: 300, colP: 1820, modul: "910", hariP: 1820, moyaP: 910, taruP: 455, genba: "",
@@ -2112,7 +2112,8 @@ function dimOverlay(P, sc){
     const ts = [0, L];
     parts.forEach(q => [[q.x1, q.y1], [q.x2, q.y2]].forEach(pt => { const r = segDist(pt, a, c); if (r.d < 3){ const t = r.t * L; if (t > 5 && t < L - 5) ts.push(t); } }));
     ts.sort((x, y) => x - y);
-    const off = 300, col = e.set ? "#1E3A8A" : "#8A96A3", vert = Math.abs(u[0]) < 0.5;
+    let off = 300; swings252.forEach(sw => { if (sw.e === i) off = Math.max(off, sw.r + 120); });   /* CAD-258：外へ開くドアの弧が届く辺は、寸法線ごと弧の外へ逃がす（寸法の値は変えない） */
+    const col = e.set ? "#1E3A8A" : "#8A96A3", vert = Math.abs(u[0]) < 0.5;
     const A0 = P([a[0] + n[0] * off, a[1] + n[1] * off]), C0 = P([c[0] + n[0] * off, c[1] + n[1] * off]);
     out.push(`<line x1="${A0[0]}" y1="${A0[1]}" x2="${C0[0]}" y2="${C0[1]}" stroke="${col}" stroke-width=".8"/>`);
     for (let k = 0; k < ts.length; k++){ const q0 = P([a[0] + u[0] * ts[k] + n[0] * off, a[1] + u[1] * ts[k] + n[1] * off]); out.push(`<circle cx="${q0[0]}" cy="${q0[1]}" r="1.8" fill="${col}"/>`); }
@@ -3323,7 +3324,11 @@ function hallSvg(z, P, a, b, t){
     for (let k = 0; k < n; k++){ const t0 = k / n, t1 = (k + 1) / n, mx = hz ? x1 + (x2 - x1) * (t0 + t1) / 2 : x1, my = hz ? y1 : y1 + (y2 - y1) * (t0 + t1) / 2; if (!inside(mx, my)){ if (!cur) cur = [t0, t1]; else cur[1] = t1; } else flush(); }
     flush();
   });
-  return `<g pointer-events="none"><rect x="${x0}" y="${y0}" width="${wp}" height="${hp}" fill="${t[1]}" fill-opacity=".8" shape-rendering="crispEdges"/>${ln}</g>`;
+  /* CAD-258：ホール（廊下）にも他のゾーンと同じく名前を出す（従来は塗りだけで名前が無かった） */
+  let txt258 = "";
+  if (wp >= 30 && hp >= 16) txt258 += `<text x="${x0 + wp / 2}" y="${y0 + hp / 2 + 5}" text-anchor="middle" class="halo" style="font-size:14px;font-weight:900;fill:${t[2]}">${t[0]}</text>`;
+  if (wp >= 52 && hp >= 30) txt258 += `<text x="${x0 + wp / 2}" y="${y0 + hp / 2 + 20}" text-anchor="middle" class="halo" style="font-size:10.5px;font-weight:800;fill:${t[2]}">${f5(z.x1 - z.x0)}×${f5(z.y1 - z.y0)}</text>`;
+  return `<g pointer-events="none"><rect x="${x0}" y="${y0}" width="${wp}" height="${hp}" fill="${t[1]}" fill-opacity=".8" shape-rendering="crispEdges"/>${ln}${txt258}</g>`;
 }
 function zoneSvg(z, P){
   const t = ZT[z.k]; if (!t) return "";
@@ -7585,7 +7590,7 @@ const ROOM_ABBR = {"トイレ": "便", "浴室": "浴", "玄関": "玄", "廊下
 function roomShort(r, R, P){
   /* CAD-250：1文字の略称（洗・Cなど）は意味が通じないので使わない。名前が無い部屋は空白。
      クローゼットだけは、名前が収まらない時に「CL」と出す。 */
-  const full = roomNm(r); if (!full) return "";
+  const full = roomNm(r); if (!full) return r.label === "CL" ? "CL" : "";   /* CAD-258：収納ゾーンの部屋（ラベルCL）は平面図でも CL と出す */
   if (full !== "クローゼット") return full;
   let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; r.cells.forEach(k => { const i = k % R.NX, j = (k - i) / R.NX; i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j); });
   const a = P([R.b.x0 + i0 * R.st, R.b.y0 + j0 * R.st]), b = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (j1 + 1) * R.st]);
@@ -7634,7 +7639,9 @@ function roomsCalc(){
     let best = cells[0], bd = -Infinity; cells.forEach(c => { const sc = Math.min(dist.get(c) || 0, 12) * st - 0.3 * Math.hypot(cx(c % NX) - mx, cy((c - c % NX) / NX) - my); if (sc > bd){ bd = sc; best = c; } });
     return {cid, cells, cxm: mx, cym: my, area: cells.length * st * st / 1e6, p: [cx(best % NX), cy((best - best % NX) / NX)]};
   }).sort((a, c) => Math.floor(a.cym / 1500) - Math.floor(c.cym / 1500) || a.cxm - c.cxm);
-  let ln = 0; rooms.forEach(r => { const zk = zoneKindCells(r.cells, NX, b, st); if (zk){ r.label = ZK_NAME[zk]; return; } const n = ln++; r.label = n < 26 ? RM_LET[n] : RM_LET[Math.floor(n / 26) - 1] + RM_LET[n % 26]; });
+  const clFrac258 = r => { const zs = (S.zones || []).filter(z => z.k === "closet"); if (!zs.length || !r.cells.length) return 0; let hit = 0; r.cells.forEach(c => { const i = c % NX, j = (c - i) / NX, x = b.x0 + (i + 0.5) * st, y = b.y0 + (j + 0.5) * st; if (zs.some(z => x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1)) hit++; }); return hit / r.cells.length; };
+  let ln = 0; rooms.forEach(r => { const zk = zoneKindCells(r.cells, NX, b, st); if (zk){ r.label = ZK_NAME[zk]; return; } if (clFrac258(r) >= 0.6){ r.label = "CL"; return; }   /* CAD-258：収納の部屋は「C」でなく「CL」 */
+    const n = ln++; r.label = n < 26 ? RM_LET[n] : RM_LET[Math.floor(n / 26) - 1] + RM_LET[n % 26]; });
   const res = {NX, NY, st, b, comp, rooms, byCid: {}};
   rooms.forEach(r => { res.byCid[r.cid] = r; });
   roomsCalc.k = key; roomsCalc.v = res; return res;
@@ -8064,9 +8071,23 @@ function roomLabelsSvg(P, top){
   R.rooms.forEach(r => {
 if (top === "tint"){ if (!roomZoneKind(r) && S.parts2D && S.parts2D.length && R.rooms.length > 1 && roomNonRect(r, R)) h += roomTint(r, R, P); return; }
     const c = rlAvoid(P(r.p), P, !!sr && sr.cid === r.cid), on = !!sr && sr.cid === r.cid;
-    { const f1 = roomFinOf(r); /* CAD-197: UB の部屋に見積用に自動で付く仕上げなし（auto）は、図に「工事なし」のバッテンを描かない。手で切り替えた工事なしだけ描く */ if (f1 && !f1.auto && f1.f === "none" && f1.w === "none" && f1.c === "none") h += roomHatch(r, R, P) + `<text x="${c[0]}" y="${c[1] + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#C62828;pointer-events:none">工事なし</text>`; }
-{ const f2 = roomFinOf(r); if (f2 && f2.t && f2.f !== "none" && !(f2.f === "none" && f2.w === "none" && f2.c === "none")) h += `<text x="${c[0]}" y="${c[1] + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#2F6B5F;pointer-events:none">床 ${FT_LABEL[f2.t] || ""}</text>`; }
-h += `<text x="${c[0]}" y="${c[1]}" text-anchor="middle" class="halo" style="font-size:20px;font-weight:900;fill:${on ? "#C2571A" : "#2563B0"};pointer-events:none">${roomShort(r, R, P)}</text><text x="${c[0]}" y="${c[1] + 16}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:700;fill:#5B6673;pointer-events:none">${fmt(r.area, 1)}㎡</text>`;
+    /* CAD-258：部屋の名前・面積は部屋の枠の中に収める（入らなければ名前を小さくし、位置を枠内へ寄せる） */
+    const nm258 = roomShort(r, R, P);
+    let cx258 = c[0], cy258 = c[1], fs258 = 20, ax258 = c[0];
+    if (R && r.cells && r.cells.length){
+      let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1;
+      r.cells.forEach(k => { const ii = k % R.NX, jj = (k - ii) / R.NX; if (ii < i0) i0 = ii; if (ii > i1) i1 = ii; if (jj < j0) j0 = jj; if (jj > j1) j1 = jj; });
+      const pa = P([R.b.x0 + i0 * R.st, R.b.y0 + j0 * R.st]), pb = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (j1 + 1) * R.st]);
+      const rx0 = Math.min(pa[0], pb[0]) + 2, rx1 = Math.max(pa[0], pb[0]) - 2, ry0 = Math.min(pa[1], pb[1]) + 2, ry1 = Math.max(pa[1], pb[1]) - 2;
+      const clampC258 = (ctr, w) => (rx1 - rx0 >= w) ? Math.max(rx0 + w / 2, Math.min(rx1 - w / 2, ctr)) : (rx0 + rx1) / 2;
+      if (nm258){ const wAt = f => [...nm258].length * f * 0.98 + 4; if (wAt(fs258) > rx1 - rx0) fs258 = Math.max(11, Math.floor(fs258 * (rx1 - rx0) / wAt(fs258))); cx258 = clampC258(c[0], wAt(fs258)); }
+      ax258 = clampC258(c[0], (String(fmt(r.area, 1)) + "㎡").length * 11 * 0.62 + 4);
+      const yMin258 = ry0 + fs258 * 0.8, yMax258 = ry1 - 19;
+      cy258 = yMax258 >= yMin258 ? Math.max(yMin258, Math.min(yMax258, c[1])) : (ry0 + ry1) / 2 - 3;
+    }
+    { const f1 = roomFinOf(r); /* CAD-197: UB の部屋に見積用に自動で付く仕上げなし（auto）は、図に「工事なし」のバッテンを描かない。手で切り替えた工事なしだけ描く */ if (f1 && !f1.auto && f1.f === "none" && f1.w === "none" && f1.c === "none") h += roomHatch(r, R, P) + `<text x="${cx258}" y="${cy258 + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#C62828;pointer-events:none">工事なし</text>`; }
+{ const f2 = roomFinOf(r); if (f2 && f2.t && f2.f !== "none" && !(f2.f === "none" && f2.w === "none" && f2.c === "none")) h += `<text x="${cx258}" y="${cy258 + 32}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:#2F6B5F;pointer-events:none">床 ${FT_LABEL[f2.t] || ""}</text>`; }
+h += `<text x="${cx258}" y="${cy258}" text-anchor="middle" class="halo" style="font-size:${fs258}px;font-weight:900;fill:${on ? "#C2571A" : "#2563B0"};pointer-events:none">${nm258}</text><text x="${ax258}" y="${cy258 + 16}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:700;fill:#5B6673;pointer-events:none">${fmt(r.area, 1)}㎡</text>`;
   });
   return h;
 }
@@ -12055,6 +12076,10 @@ document.addEventListener("click", function(e){
     }
     const b6 = t.closest('[data-step="6"]');
     if (b6 && S.mode === "zo"){ try { S.roomView = "iso"; save(); } catch(err){} }
+    if (b6 && S.mode === "rf"){ /* CAD-258：RF では step6 のボタン自体が「③室内図」。立体でなく室内図（立面）で開く */
+      e.preventDefault(); e.stopImmediatePropagation();
+      HB.__elevStep(); go(6); return;
+    }
   }, true);
   // 画面6の「次へ」：室内図を見ている時は屋根へ、それ以外は仕様へ
   function fixFlow(){
@@ -14340,7 +14365,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var sheetOpen = false;
     try{ sheetOpen = !!((m && !m.hidden) || (ao && ao.style.display === "flex") || (ps && ps.style.display && ps.style.display !== "none")); }catch(e){}
     if (fsState !== "off") cab.style.top = "";
-    else if (sheetOpen) cab.style.top = "calc(env(safe-area-inset-top,0px) + 8px)";
+    else if (sheetOpen){
+      /* CAD-258：モーダルのシート表示中は、シートの上端（題字の右）に置く。画面最上部だと
+         ヘッダーの「保存」ボタンに重なって見える（Claudeの不具合メモ）ため。 */
+      var mb258 = (m && !m.hidden) ? document.getElementById("mbox") : null, mt258 = 0;
+      try { if (mb258) mt258 = mb258.getBoundingClientRect().top; } catch(e){}
+      cab.style.top = mt258 > 40 ? (mt258 + 8) + "px" : "calc(env(safe-area-inset-top,0px) + 8px)";
+    }
     else {
       if (document.body.classList.contains("mfull")){
         var pbr = null;
