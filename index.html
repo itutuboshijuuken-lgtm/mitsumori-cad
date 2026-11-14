@@ -21037,4 +21037,195 @@ function build(S,T,opt){
   sync254();
 })();
 </script>
+
+<style>
+/* ===== CAD-254：置く物を選んで一覧が閉じた後、「いま何を置いているか」と「変える」を1行で出す（既存の ux-sheet-off と組み合わせ。重ねない） ===== */
+body.tc254 .toast{bottom:calc(var(--ux-bot,76px) + 64px)!important}
+#tcStrip254{position:fixed;left:8px;right:8px;bottom:calc(var(--ux-bot,76px) + 6px);z-index:45;display:none;align-items:center;justify-content:space-between;gap:8px;min-height:46px;padding:4px 6px 4px 14px;box-sizing:border-box;background:#fff;color:#1b2430;border:2px solid #1F5F8B;border-radius:12px;font-size:14px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.18)}
+#tcStrip254.on254{display:flex}
+body.gold #tcStrip254{background:#14171C;color:#F4EEDD;border-color:#E3C777}
+#tcStrip254 .tcLbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tcStrip254 button{flex:0 0 auto;min-height:38px;padding:0 16px;border-radius:999px;border:0;background:#2563B0;color:#fff;font:inherit;font-weight:800}
+</style>
+<script>
+(function(){ "use strict";
+  var strip = null;
+  function armedLabel(){ try { return HB.__put ? HB.__put.label : ((typeof ltTool !== "undefined" && ltTool && typeof LTN !== "undefined") ? LTN[ltTool] : ""); } catch(e){ return ""; } }
+  function ensure(){
+    if (strip) return;
+    strip = document.createElement("div"); strip.id = "tcStrip254";
+    strip.innerHTML = '<span class="tcLbl"></span><button type="button">変える</button>';
+    strip.querySelector("button").onclick = function(){ document.body.classList.remove("ux-sheet-off"); };
+    document.body.appendChild(strip);
+  }
+  /* 一覧が閉じていて、置く物を構えている間だけ、細い帯を出す。置き終わったら一覧を開いた形に戻す。 */
+  setInterval(function(){
+    try {
+      ensure();
+      var off = document.body.classList.contains("ux-sheet-off");
+      var ch = document.getElementById("toolCh");
+      var lbl = armedLabel();
+      var tabsOn = !!(document.getElementById("toolTabs") && document.getElementById("toolTabs").getClientRects().length);
+      var show = off && !!lbl && !!ch && tabsOn;
+      strip.classList.toggle("on254", show); document.body.classList.toggle("tc254", show);
+      if (show) strip.querySelector(".tcLbl").textContent = "▲ 「" + lbl + "」を置いています";
+      if (off && !lbl && ch && tabsOn) document.body.classList.remove("ux-sheet-off");
+    } catch(e){}
+  }, 250);
+})();
+</script>
+<style>
+/* ===== CAD-254：戻す・進めるボタンを、矢印＋文字で分かりやすく（動きは変えない） ===== */
+#planBar #undoBtn,#planBar #redoBtn{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:1px;line-height:1;min-width:46px!important;padding:0 6px!important;font-size:18px!important;font-weight:800}
+#planBar #undoBtn small,#planBar #redoBtn small{font-size:10px;font-weight:800;line-height:1}
+#planBar #undoBtn:disabled,#planBar #redoBtn:disabled{opacity:.35}
+</style>
+<script>
+(function(){ "use strict";
+  function lab(id, arrow, text){
+    var b = document.getElementById(id);
+    if (!b || b.getAttribute("data-lab254") === "1") return;
+    b.innerHTML = arrow + "<small>" + text + "</small>"; b.setAttribute("data-lab254", "1");
+  }
+  setInterval(function(){ try { lab("undoBtn", "↶", "戻す"); lab("redoBtn", "↷", "進める"); } catch(e){} }, 400);
+})();
+</script>
+<style>
+/* ===== CAD-254：☰「置いた物」の一覧。どれが消えるか分かる／うっかり消さない ===== */
+#drawnList .loc254{display:block;margin-top:3px}
+#drawnList .sprow{align-items:center}
+#drawnList .sprow.arm254{outline:3px solid #C62828;outline-offset:-2px;border-radius:10px;background:#FDECEA}
+body.gold #drawnList .sprow.arm254{background:#3a1f1f}
+#drawnList button.arm254{background:#C62828!important;color:#fff!important;border-color:#C62828!important;font-weight:800}
+</style>
+<script>
+(function(){ "use strict";
+  var DEL = ["dp","do","dk","dt"], timer = null;
+  function pos(b){
+    try {
+      var d = b.dataset, W = S.edges[0].v, D = S.edges[1].v;
+      if (d.eo != null){ var a = S.sashes[+d.eo]; if (!a || !a.host) return null;
+        var c = (a.pos || 0) + (a.w || 0) / 2, h = a.host, x, y;
+        if (h.t === "e"){ if (h.i === 0){ x = c; y = 0; } else if (h.i === 1){ x = W; y = c; } else if (h.i === 2){ x = W - c; y = D; } else { x = 0; y = D - c; } }
+        else { var q = S.parts2D[h.i]; if (!q) return null; var L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1) || 1; x = q.x1 + (q.x2 - q.x1) * c / L; y = q.y1 + (q.y2 - q.y1) * c / L; }
+        return {k: "dot", x: x, y: y}; }
+      if (d.ek != null){ var o = S.tenken[+d.ek]; return o ? {k: "box", x: o.x, y: o.y, w: o.w || 400, h: o.d || o.w || 400} : null; }
+      if (d.ep != null){ var p = S.parts2D[+d.ep]; return p ? {k: "line", x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2} : null; }
+      if (d.et != null){ var r = S.tatami[+d.et]; return r ? {k: "rect", x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1} : null; }
+    } catch(e){}
+    return null;
+  }
+  /* 家の小さな図に、その物だけを赤く出す（数字ではなく、絵で場所が分かる） */
+  function thumb(t){
+    var W = S.edges[0].v, D = S.edges[1].v, w = 84, h = Math.max(36, Math.round(84 * D / W)), k = w / W, R = "#D32F2F";
+    var s = '<svg class="th254" width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><rect x="1" y="1" width="' + (w - 2) + '" height="' + (h - 2) + '" fill="#fff" stroke="#6b7a8c" stroke-width="2"/>';
+    (S.parts2D || []).forEach(function(q){ s += '<line x1="' + q.x1 * k + '" y1="' + q.y1 * k + '" x2="' + q.x2 * k + '" y2="' + q.y2 * k + '" stroke="#b8c2cf" stroke-width="1.5"/>'; });
+    if (t.k === "dot") s += '<circle cx="' + t.x * k + '" cy="' + t.y * k + '" r="5.5" fill="' + R + '" stroke="#fff" stroke-width="1.5"/>';
+    else if (t.k === "box") s += '<rect x="' + (t.x - t.w / 2) * k + '" y="' + (t.y - t.h / 2) * k + '" width="' + Math.max(7, t.w * k) + '" height="' + Math.max(7, t.h * k) + '" fill="' + R + '" fill-opacity=".85" stroke="' + R + '"/>';
+    else if (t.k === "line") s += '<line x1="' + t.x1 * k + '" y1="' + t.y1 * k + '" x2="' + t.x2 * k + '" y2="' + t.y2 * k + '" stroke="' + R + '" stroke-width="4" stroke-linecap="round"/>';
+    else if (t.k === "rect") s += '<rect x="' + t.x0 * k + '" y="' + t.y0 * k + '" width="' + (t.x1 - t.x0) * k + '" height="' + (t.y1 - t.y0) * k + '" fill="' + R + '" fill-opacity=".55" stroke="' + R + '"/>';
+    return s + '</svg>';
+  }
+  function decorate(){
+    var L = document.getElementById("drawnList"); if (!L) return;
+    L.querySelectorAll(".sprow").forEach(function(row){
+      if (row.getAttribute("data-loc254")) return; row.setAttribute("data-loc254", "1");
+      var b = row.querySelector("[data-eo],[data-ek],[data-ep],[data-et]"); if (!b) return;
+      var t = pos(b), first = row.firstElementChild; if (!t || !first) return;
+      var s = document.createElement("span"); s.className = "loc254"; s.innerHTML = thumb(t); first.appendChild(s);
+    });
+    L.querySelectorAll("button").forEach(function(b){ if (isDel(b) && !b.getAttribute("data-t254")){ b.setAttribute("data-t254", b.textContent); } });
+  }
+  function isDel(b){ var d = b.dataset; return DEL.some(function(k){ return d[k] != null; }); }
+  function disarm(){
+    clearTimeout(timer);
+    document.querySelectorAll("#drawnList .arm254").forEach(function(e){
+      if (e.tagName === "BUTTON"){ e.textContent = e.getAttribute("data-t254") || "消す"; e.removeAttribute("data-arm254"); }
+      e.classList.remove("arm254");
+    });
+  }
+  document.addEventListener("click", function(e){
+    try {
+      var lb = e.target.closest && e.target.closest("#listBtn"); if (lb){ setTimeout(decorate, 80); setTimeout(decorate, 300); return; }
+      var b = e.target.closest && e.target.closest("#drawnList button"); if (!b) return;
+      if (!isDel(b)){ disarm(); return; }
+      if (b.getAttribute("data-arm254") === "1"){ disarm(); try { toast("消しました。まちがえたら「戻す」で戻せます"); } catch(x){} return; }   /* 2回目：そのまま本来の消す処理へ */
+      e.stopPropagation(); e.preventDefault(); disarm();
+      b.setAttribute("data-arm254", "1"); b.classList.add("arm254"); b.textContent = "ほんとに消す";
+      var row = b.closest(".sprow"); if (row) row.classList.add("arm254");
+      timer = setTimeout(disarm, 4000);
+    } catch(err){}
+  }, true);
+})();
+</script>
+<style>
+/* ===== CAD-254：室内図（壁の面カード）に「いま見ている面」を、家の小さな図で光らせて出す ===== */
+#elevBox .card .th254{margin-left:auto;flex:0 0 auto;align-self:center;line-height:0}
+#elevBox .card .th254 svg{display:block}
+</style>
+<script>
+(function(){ "use strict";
+  var ORD = {"上側": 0, "右側": 1, "下側": 2, "左側": 3};
+  function thumb(name){
+    var W = S.edges[0].v, D = S.edges[1].v, w = 128, h = Math.max(48, Math.round(128 * D / W)), k = w / W, O = "#F26B00";
+    var sr = selRoom(), R = roomsCalc();
+    var xs = sr.cells.map(function(c){ return c % R.NX; }), ys = sr.cells.map(function(c){ return (c - c % R.NX) / R.NX; });
+    var X0 = R.b.x0 + Math.min.apply(null, xs) * R.st, X1 = R.b.x0 + (Math.max.apply(null, xs) + 1) * R.st, Y0 = R.b.y0 + Math.min.apply(null, ys) * R.st, Y1 = R.b.y0 + (Math.max.apply(null, ys) + 1) * R.st;
+    var s = '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '"><rect x="1" y="1" width="' + (w - 2) + '" height="' + (h - 2) + '" fill="#fff" stroke="#6b7a8c" stroke-width="2"/>';
+    (S.parts2D || []).forEach(function(q){ s += '<line x1="' + q.x1 * k + '" y1="' + q.y1 * k + '" x2="' + q.x2 * k + '" y2="' + q.y2 * k + '" stroke="#b8c2cf" stroke-width="1.5"/>'; });
+    s += '<rect x="' + X0 * k + '" y="' + Y0 * k + '" width="' + (X1 - X0) * k + '" height="' + (Y1 - Y0) * k + '" fill="#FFE2BF" fill-opacity=".9"/>';
+    var e = {"上側": [X0, Y0, X1, Y0], "右側": [X1, Y0, X1, Y1], "下側": [X0, Y1, X1, Y1], "左側": [X0, Y0, X0, Y1]}[name];
+    if (e) s += '<line x1="' + e[0] * k + '" y1="' + e[1] * k + '" x2="' + e[2] * k + '" y2="' + e[3] * k + '" stroke="' + O + '" stroke-opacity=".35" stroke-width="13" stroke-linecap="round"/><line x1="' + e[0] * k + '" y1="' + e[1] * k + '" x2="' + e[2] * k + '" y2="' + e[3] * k + '" stroke="' + O + '" stroke-width="7" stroke-linecap="round"/>';
+    return s + '</svg>';
+  }
+  function decorate(){
+    try {
+      var box = document.getElementById("elevBox"); if (!box || box.style.display === "none" || typeof elevFaces === "undefined" || !elevFaces.length) return;
+      box.querySelectorAll(":scope > .card").forEach(function(c, i){
+        var F = elevFaces[i]; if (!F || c.querySelector(".th254")) return;
+        var head = c.firstElementChild; if (!head) return;
+        var t = document.createElement("span"); t.className = "th254"; t.innerHTML = thumb(F.name); head.appendChild(t);
+      });
+    } catch(e){}
+  }
+  setInterval(decorate, 400);
+})();
+</script>
+<style>
+/* ===== CAD-254：仕様「部屋ごとの設定」の「直す」の横に、「× 工事なし」を置く（押すだけで、その部屋を工事なしにする／戻す） ===== */
+#rfRooms .row254{display:flex;align-items:stretch;gap:6px;border-bottom:1px solid var(--line)}
+#rfRooms .row254 > .set{flex:1 1 auto;min-width:0;border-bottom:0}
+#rfRooms .nw254{flex:0 0 auto;align-self:center;min-width:64px;min-height:52px;padding:4px 8px;border-radius:12px;border:2px solid #C62828;background:#fff;color:#C62828;font:inherit;font-size:13px;font-weight:800;line-height:1.2;text-align:center}
+#rfRooms .nw254.lock254{opacity:.3;pointer-events:none}
+#rfRooms .nw254.on254{background:#C62828;color:#fff}
+body.gold #rfRooms .nw254{background:#14171C}
+body.gold #rfRooms .nw254.lock254{opacity:.3;pointer-events:none}
+#rfRooms .nw254.on254{background:#C62828}
+</style>
+<script>
+(function(){ "use strict";
+  function decorate(){
+    try {
+      var box = document.getElementById("rfRooms"); if (!box) return;
+      var R = null;
+      box.querySelectorAll(":scope > button.set[data-rr]").forEach(function(b){
+        if (!R) R = roomsCalc();
+        var cid = b.dataset.rr, rm = R.byCid[cid]; if (!rm) return;
+        var w = document.createElement("div"); w.className = "row254"; b.parentNode.insertBefore(w, b); w.appendChild(b);
+        var off = roomIsNoWork(rm);
+        var n = document.createElement("button"); n.type = "button"; n.className = "nw254" + (off ? " on254" : "");
+        n.innerHTML = off ? "工事あり<br>に戻す" : "×<br>工事なし";
+        if (S.mode === "zo"){ n.disabled = true; n.classList.add("lock254"); n.title = "新築では使いません"; }   /* 新築・増築：うっすら表示で押せない */
+        else n.onclick = function(){ try { roomNoWorkToggle(cid); drawRfRooms(); } catch(e){} };
+        w.appendChild(n);
+      });
+    } catch(e){}
+  }
+  setInterval(decorate, 400);
+})();
+</script>
+<style>
+/* ===== CAD-254：仕様の画面の青い「次へ：○○」「これで決まり」ボタンを出さない（すぐ下の欄を押せばよく、選ぶ欄より目立ってしまうため） ===== */
+#st4 .ux-n{display:none!important}
+</style>
 </html>
