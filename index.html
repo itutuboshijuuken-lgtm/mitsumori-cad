@@ -6914,11 +6914,22 @@ function drawEst(){
   const subRow = () => { const r = sub ? `<tr class="sum"><td>小計</td><td class="cost">${fmt(Math.round(sub))}</td></tr>` : ""; sub = 0; return r; };
   const TR0 = TRADES[HB.__trade];
   const rowOrder = () => { const all = C.rows.map((r, i) => [r, i]); if (!TR0) return all; const el = all.filter(([r]) => !r.grp && !r.hide && TR0.re.test(r.name || "")); if (!el.length) return all; const ss = el.reduce((a, [r]) => a + (r.cost || 0), 0); return [[{grp: `${TR0.i} ${TR0.n}の工事　原価 ${fmt(Math.round(ss))}円`}, -1]].concat(el, [[{grp: "■ そのほかの工事"}, -1]], all.filter(x => !el.includes(x))); };
-  rowOrder().forEach(([r, i]) => {
+  const d249 = (() => {   /* CAD-249：手刻み／プレカットの差額（表示だけ・合計には入れない。式は calc00 の行と同一） */
+    if (!C.rows.some(r => r.name === "刻み人工" || r.name === "プレカット加工費")) return null;
+    const wk = workP("kizami"), wn = workP("ninku"), kRate = wk.avg && C.nobeT <= 15 ? 2 : wk.p, kizami = kRate * C.nobeT * wn.p;
+    const wp = workP("precut"), wm = workP("precutMin"), wu = workP("precutUnpan"), precut = Math.max(wp.p * C.nobeT, wm.p) + wu.p;
+    const d = S.precut ? kizami - precut : precut - kizami, man = Math.round(Math.abs(d) / 10000), sgn = d < 0 ? "\u2212" : "+";
+    return S.precut ? `いまプレカット。手刻みにすると ${sgn}約${man}万円` : `いま手刻み。プレカットにすると ${sgn}約${man}万円`;
+  })();
+  const ord249 = rowOrder();
+  let anch249 = -1; ord249.forEach(([r], j) => { if (r.name === "刻み人工" || r.name === "プレカット運搬費") anch249 = j; });
+  if (anch249 < 0) ord249.forEach(([r], j) => { if (r.name === "プレカット加工費") anch249 = j; });
+  ord249.forEach(([r, i], j249) => {
     if (r.hide) return;
     if (r.grp){ html += subRow() + `<tr class="grp"><td colspan="2">${r.grp}</td></tr>`; return; }
     sub += r.cost || 0;
     html += `<tr class="tap" data-row="${i}"><td>${esc(r.name)}${r.qty ? `　<b>${esc(r.qty)}</b>` : ""}<small>${esc(r.spec)}${r.note ? "・" + r.note : ""}${r.conv ? "・長さで換算" : ""}</small></td><td class="cost ${r.miss ? "miss" : ""}">${r.note ? "—" : r.miss ? "単価なし" : fmt(Math.round(r.cost))}${r.avg && !r.note ? `<span class="kari">仮</span>` : ""}</td></tr>`;
+    if (d249 && j249 === anch249) html += `<tr class="diff249"><td colspan="2" style="font-size:13px;background:rgba(128,128,128,.13);color:inherit">${d249}</td></tr>`;   /* CAD-249：差額表示（表示だけ） */
   });
   html += subRow() + `<tr class="sum"><td>原価合計</td><td class="cost">${fmt(Math.round(C.genka))}</td></tr><tr class="sum"><td>見積（税抜）利益率 ${fmt(S.margin, 1)}%・${fmt(S.marginEq ?? 15, 1)}%</td><td class="cost">${fmt(Math.round(C.mitsu))}</td></tr>`;
   $("mat").innerHTML = html;
