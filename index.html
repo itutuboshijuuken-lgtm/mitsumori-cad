@@ -790,7 +790,7 @@ function evalExpr(s){
 function toast(t){ document.querySelectorAll(".toast").forEach(d0 => d0.remove()); const d = document.createElement("div"); d.className = "toast"; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1800); }   /* CAD-258：トーストは同じ位置に出るため、重ねず常に1つだけにする */
 
 /* ---------- 状態 ---------- */
-const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, keta: 180, hari: 180, moya: 90, tsuka: 90, roof: "kata", k: 2, muneStep: 600, geya: [], shokei: {mode: "pct", v: 5}, startD: "", high: "auto", ridge: "x", noki: 450, keraba: 300, colP: 1820, modul: "910", hariP: 1820, moyaP: 910, taruP: 455, genba: "",
+const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, keta: 180, hari: 180, moya: 105, tsuka: 105, roof: "kata", k: 2, muneStep: 600, geya: [], shokei: {mode: "pct", v: 5}, startD: "", high: "auto", ridge: "x", noki: 450, keraba: 300, colP: 1820, modul: "910", hariP: 1820, moyaP: 910, taruP: 455, genba: "",
   kisoNew: true, floor: "wood", tr: "menzai", suji: "kata", sujiN: null, gbW: "石膏ボード 12.5", gbC: "石膏ボード 9.5", cloth: true, precut: false,
   sp: { dodai: "ヒノキ", obiki: "ヒノキ", hashira: "ヒノキ", mabashira: "スギ", suji: "スギ", keta: "米松", hari: "米松", tsuka: "米松", moya: "米松", taruki: "米松", hafu: "スギ", sumigi: "米松", yukabari: "米松", tenjo: "スギ" },
   /* 動的キー（段階1・状態の1か所化）：従来は DEF に無く、実行中に S へ後付けされていた38キー。由来の大半は blk2（例外：askedRooms は blk33、hgAri・hgDan・hgShita は blk14、roofW は blk28）。
@@ -4897,7 +4897,7 @@ const SETS = [
   ["taruP", "垂木の間隔", ""]
 ];
 function drawSets(){
-  $("setList").innerHTML = SETS.map(([k, n, s]) => `<button class="set" data-set="${k}" type="button"><span>${n}${s ? `<small>${s}</small>` : ""}</span><b>${fmt(S[k])}</b></button>`).join("") + `<div class="sub2">母屋・棟木の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="moya" data-v="${v}" aria-pressed="${S.moya === v}" type="button">${v}角${v === 90 ? "（標準）" : ""}</button>`).join("")}</div><div class="sub2">小屋束の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="tsuka" data-v="${v}" aria-pressed="${S.tsuka === v}" type="button">${v}角${v === 90 ? "（標準）" : ""}</button>`).join("")}</div>`;
+  $("setList").innerHTML = SETS.map(([k, n, s]) => `<button class="set" data-set="${k}" type="button"><span>${n}${s ? `<small>${s}</small>` : ""}</span><b>${fmt(S[k])}</b></button>`).join("") + `<div class="sub2">母屋・棟木の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="moya" data-v="${v}" aria-pressed="${S.moya === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div><div class="sub2">小屋束の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="tsuka" data-v="${v}" aria-pressed="${S.tsuka === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div>`;
   $("setList").querySelectorAll("[data-mq]").forEach(b => b.onclick = () => { S[b.dataset.mq] = +b.dataset.v; save(); drawSets(); });
   $("setList").querySelectorAll("[data-set]").forEach(b => b.addEventListener("click", () => {
     const [k, n] = SETS.find(x => x[0] === b.dataset.set);
