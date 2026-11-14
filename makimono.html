@@ -1397,6 +1397,47 @@ $("wSave").addEventListener("click", () => {
 });
 
 
+/* ---------- 木目（図の木の見た目だけ） ----------
+   部材の形・寸法・文字・計算は変えず、木の塗りに木目と木口を重ねる。
+   図はCSSで反転表示されるので、色は従来の明るい木の色の範囲で作る。 */
+let __wid = 0;
+function __wRnd(seed){ let a = (seed >>> 0) || 7; return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function __wClip(shape){ const id = "wg" + (++__wid); return [id, `<clipPath id="${id}">${shape}</clipPath>`]; }
+function __wGrain(seed, L, W, dark, light, op){
+  const r = __wRnd(seed), out = [];
+  if (W < 7){ out.push(`<line x1="${(-L / 2).toFixed(1)}" y1="0" x2="${(L / 2).toFixed(1)}" y2="0" stroke="${dark}" stroke-width="0.8" opacity="${(0.35 * op).toFixed(2)}"/>`); return out.join(""); }
+  const n = Math.max(2, Math.round(W / 6.5));
+  for (let i = 0; i < n; i++){
+    const y = -W / 2 + (i + 0.5) * (W / n) + (r() - 0.5) * 2.2, amp = 0.4 + r() * 1.0, ph = r() * 6.28, seg = Math.max(2, Math.round(L / 44));
+    let d = "M" + (-L / 2).toFixed(1) + " " + y.toFixed(1);
+    for (let j = 1; j <= seg; j++) d += " L" + (-L / 2 + L * j / seg).toFixed(1) + " " + (y + Math.sin(ph + j * 1.7) * amp).toFixed(1);
+    out.push(`<path d="${d}" fill="none" stroke="${r() < 0.7 ? dark : light}" stroke-width="${(0.7 + r() * 0.8).toFixed(2)}" opacity="${((0.26 + r() * 0.30) * op).toFixed(2)}" stroke-linecap="round"/>`);
+  }
+  if (L > 55 && W > 15 && r() < 0.85){
+    const kx = (r() - 0.5) * L * 0.5, ky = (r() - 0.5) * W * 0.3;
+    out.push(`<ellipse cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" rx="3.8" ry="2.4" fill="none" stroke="${dark}" stroke-width="0.9" opacity="${(0.38 * op).toFixed(2)}"/><ellipse cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" rx="2.1" ry="1.3" fill="none" stroke="${dark}" stroke-width="0.9" opacity="${(0.5 * op).toFixed(2)}"/><circle cx="${kx.toFixed(1)}" cy="${ky.toFixed(1)}" r="1" fill="${dark}" opacity="${(0.5 * op).toFixed(2)}"/>`);
+  }
+  return out.join("");
+}
+function __wEnd(seed, w, h, dark){
+  const r = __wRnd(seed), cx = (r() - 0.5) * w * 0.2, cy = (r() - 0.5) * h * 0.2, m = Math.min(w, h), n = Math.max(2, Math.round(m / 5.5)), out = [];
+  for (let i = 1; i <= n; i++){ const rr = i * m / (n + 0.7); out.push(`<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rr.toFixed(1)}" ry="${(rr * h / Math.max(w, 1)).toFixed(1)}" fill="none" stroke="${dark}" stroke-width="0.8" opacity="${Math.max(0.1, 0.4 - i * 0.05).toFixed(2)}"/>`); }
+  return out.join("");
+}
+function woodRect(x, y, w, h, fill, stroke, seed, mode){
+  x = +x; y = +y; w = +w; h = +h;
+  if (!(w > 1 && h > 1)) return `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${stroke}"/>`;
+  const cl = __wClip(`<rect x="${x}" y="${y}" width="${w}" height="${h}"/>`), cx = x + w / 2, cy = y + h / 2;
+  let inner;
+  if (mode === "e") inner = `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)})">${__wEnd(seed, w, h, "#8A6E45")}</g>`;
+  else if (mode === "v") inner = `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(90)">${__wGrain(seed, h, w, "#8A6E45", "#FFF6E0", 1)}</g>`;
+  else inner = `<g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)})">${__wGrain(seed, w, h, "#8A6E45", "#FFF6E0", 1)}</g>`;
+  return `<defs>${cl[1]}</defs><g clip-path="url(#${cl[0]})"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"/>${inner}</g><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${stroke}"/>`;
+}
+function woodPoly(ptsStr, fill, stroke, seed, ang, cx, cy, L, W, dark, light, op, baseOp, sw){
+  const cl = __wClip(`<polygon points="${ptsStr}"/>`);
+  return `<defs>${cl[1]}</defs><g clip-path="url(#${cl[0]})"><polygon points="${ptsStr}" fill="${fill}"${baseOp != null ? ` fill-opacity="${baseOp}"` : ""}/><g transform="translate(${cx.toFixed(1)} ${cy.toFixed(1)}) rotate(${ang.toFixed(1)})">${__wGrain(seed, L, W, dark, light, op)}</g></g><polygon points="${ptsStr}" fill="none" stroke="${stroke}"${sw ? ` stroke-width="${sw}"` : ""}/>`;
+}
 /* ---------- 筋交・野地 ---------- */
 const comma = s => { const [i, d] = String(s).split("."); return i.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (d ? "." + d : ""); };
 const SJ = {pl:105, pr:105, t:30, bt:45, bw:90, hb:1, ht:1, rf:"bot", dr:1, b1:"d", jk:0};
@@ -1454,22 +1495,25 @@ function runS(){
   const lab = (x, y, txt, c, anc, fs, rot) => `<text x="${x}" y="${y}" text-anchor="${anc || "middle"}" ${rot != null ? `transform="rotate(${rot} ${x} ${y})"` : ""} style="font-size:${fs || 12}px;font-weight:700;fill:${c};paint-order:stroke;stroke:#fff;stroke-width:3px">${txt}</text>`;
   const dimV = (x, y0, y1, txt, c) => `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" stroke="${c}" stroke-width="1.2"/><path d="M${x - 4} ${y0} h8 M${x - 4} ${y1} h8" stroke="${c}" stroke-width="1.2"/>` + lab(x - 5, (y0 + y1) / 2, txt, c, "middle", 13, -90);
   const dimH = (x0, x1, y, txt, c, fs) => `<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}" stroke="${c}" stroke-width="1.2"/><path d="M${x0} ${y - 4} v8 M${x1} ${y - 4} v8" stroke="${c}" stroke-width="1.2"/>` + lab((x0 + x1) / 2, y - 4, txt, c, "middle", fs || 13);
-  let g = `<rect x="70" y="${Y(Hmv) - 20}" width="${mid - 70}" height="${Y(Hv) - Y(Hmv) + 20}" fill="#E9D8BE" stroke="#A88B62"/><rect x="${mid}" y="${Y(Hmv) - 20}" width="${290 - mid}" height="${Y(HRv) - Y(Hmv) + 20}" fill="#E9D8BE" stroke="#A88B62"/>`;
-  g += `<rect x="70" y="${Y(0)}" width="220" height="20" fill="#E9D8BE" stroke="#A88B62"/>`;
-  g += rc(-PLv, 0, 0, Hv, "#F1E4CF", "#A88B62") + rc(Wv, 0, Wv + PRv, HRv, "#F1E4CF", "#A88B62");
+  let g = woodRect(70, Y(Hmv) - 20, mid - 70, Y(Hv) - Y(Hmv) + 20, "#E9D8BE", "#A88B62", 13, "h") + woodRect(mid, Y(Hmv) - 20, 290 - mid, Y(HRv) - Y(Hmv) + 20, "#E9D8BE", "#A88B62", 14, "h");
+  g += woodRect(70, Y(0), 220, 20, "#E9D8BE", "#A88B62", 15, "h");
+  g += woodRect(X(-PLv), Y(Hv), X(0) - X(-PLv), Y(0) - Y(Hv), "#F1E4CF", "#A88B62", 11, "v") + woodRect(X(Wv), Y(HRv), X(Wv + PRv) - X(Wv), Y(0) - Y(HRv), "#F1E4CF", "#A88B62", 12, "v");
   g += lab(X(Wv) - 4, Y(Hmv) - 6, Hv !== HRv ? "桁・梁（継ぎ目）" : "桁・梁", "#7A6243", "end", 11) + lab(X(Wv) - 4, Y(0) + 14, SJ.b1 === "g" ? "土台（上に床合板）" : "土台", "#7A6243", "end", 11);
-  if (SJ.b1 === "g" && G) g += `<rect x="${X(0)}" y="${Y(G) - 1}" width="${X(Wv) - X(0)}" height="4" fill="#B79E6C"/>`;
+  if (SJ.b1 === "g" && G) g += woodRect(X(0), Y(G) - 1, X(Wv) - X(0), 4, "#B79E6C", "none", 16, "h");
   const kb = mB ? 9 : 0, kt = mT ? 9 : 0, y0s = SJ.b1 === "g" && G ? Y(G) - 3 : Y(0);
   studs.forEach((c, i) => { const xa = X(c - tA(i) / 2), w = Math.max(4, X(c + tA(i) / 2) - xa), yt2 = Y(H > 0 ? hS(i) : Hv);
     if (kb) g += `<rect x="${xa - 3}" y="${y0s}" width="${w + 6}" height="${kb + 2}" fill="#6B4E2A"/>`;
     if (kt) g += `<rect x="${xa - 3}" y="${yt2 - kt - 2}" width="${w + 6}" height="${kt + 2}" fill="#6B4E2A"/>`;
-    g += `<rect x="${xa}" y="${yt2 - kt}" width="${w}" height="${y0s + kb - yt2 + kt}" fill="#FBF5EA" stroke="#B89B70"/>`; });
+    g += woodRect(xa, yt2 - kt, w, y0s + kb - yt2 + kt, "#FBF5EA", "#B89B70", 20 + i, "v"); });
   if (studs.length){ const xa = X(studs[0] - tA(0) / 2), yr = SJ.rf === "bot" ? y0s + kb : y0s;
     if (kb) g += lab(xa + Math.max(4, X(studs[0] + tA(0) / 2) - xa) + 5, y0s + 13, `欠き${mB}`, "#6B4E2A", "start", 10);
     if (kt) g += lab(xa + Math.max(4, X(studs[0] + tA(0) / 2) - xa) + 5, Y(H > 0 ? hS(0) : Hv) - 6, `欠き${mT}`, "#6B4E2A", "start", 10);
     g += `<path d="M${xa - 14} ${yr} h12" stroke="#B3261E" stroke-width="2"/><path d="M${xa - 2} ${yr} l-5 -3 v6 z" fill="#B3261E"/>` + lab(xa - 16, yr + 4, SJ.rf === "bot" ? "0 溝底" : "0 土台ツラ", "#B3261E", "end", 10); }
   if (B){
-    g += `<polygon points="${B.poly.map(p => X(p[0]) + "," + Y(p[1])).join(" ")}" fill="#E8742C" fill-opacity=".85" stroke="#C2571A"/>`;
+    const __bp = B.poly.map(p => X(p[0]) + "," + Y(p[1])).join(" ");
+    const __a0 = [X(B.poly[1][0]), Y(B.poly[1][1])], __a1 = [X(B.poly[2][0]), Y(B.poly[2][1])], __b0 = [X(B.poly[4][0]), Y(B.poly[4][1])], __b1 = [X(B.poly[5][0]), Y(B.poly[5][1])];
+    const __ma = [(__a0[0] + __a1[0]) / 2, (__a0[1] + __a1[1]) / 2], __mb = [(__b0[0] + __b1[0]) / 2, (__b0[1] + __b1[1]) / 2];
+    g += woodPoly(__bp, "#E8742C", "#C2571A", 31, Math.atan2(__a1[1] - __a0[1], __a1[0] - __a0[0]) * 180 / Math.PI, (__ma[0] + __mb[0]) / 2, (__ma[1] + __mb[1]) / 2, Math.hypot(__a1[0] - __a0[0], __a1[1] - __a0[1]), Math.max(10, Math.hypot(__ma[0] - __mb[0], __ma[1] - __mb[1])), "#B34A12", "#FFD9A8", 0.8, ".85");
     const p0 = [X(dir > 0 ? 0 : Wv), Y(B.yb)], p1 = [X(dir > 0 ? Wv : 0), Y(B.yt)], rot = deg(Math.atan2(p1[1] - p0[1], p1[0] - p0[0])), r2 = dir > 0 ? rot : rot + 180;
     const fx = p0[0] + (p1[0] - p0[0]) * 0.3, fy = p0[1] + (p1[1] - p0[1]) * 0.3, ln = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]), nx = -(p1[1] - p0[1]) / ln * dir, ny = (p1[0] - p0[0]) / ln * dir;
     g += lab(fx + nx * 32, fy + ny * 32 + 4, `全長 ${comma(mm(B.L))}`, "#C2571A", "middle", 13, r2);
@@ -1556,7 +1600,8 @@ function drawN(k, hv, sv, mode){
   const v = (x, c) => x > 0 ? ` ${comma(fmtLen(x))}` : "";
   let g = "";
   // 屋根面（下地）
-  g += `<polygon points="${pts([[0, 0], [L, 0], [L, D], [D, D]])}" fill="#F6EEDF" stroke="#C9B48E"/>`;
+  { const q0 = P(0, 0), q1 = P(0, 1), qL = P(L, 0), qD = P(0, D), qR = P(L, D), qT = P(D, D), qC = [(q0[0] + qL[0] + qR[0] + qT[0]) / 4, (q0[1] + qL[1] + qR[1] + qT[1]) / 4];
+    g += woodPoly(pts([[0, 0], [L, 0], [L, D], [D, D]]), "#F6EEDF", "#C9B48E", 41, Math.atan2(q1[1] - q0[1], q1[0] - q0[0]) * 180 / Math.PI, qC[0], qC[1], Math.hypot(qD[0] - q0[0], qD[1] - q0[1]), Math.hypot(qL[0] - q0[0], qL[1] - q0[1]), "#A88B62", "#FFF6E0", 0.5, null); }
   // 桁の線（壁の位置）と軒の出
   const yk = 0.9;
   g += `<line x1="${P(yk, yk)[0]}" y1="${P(yk, yk)[1]}" x2="${P(L, yk)[0]}" y2="${P(L, yk)[1]}" stroke="#8A96A3" stroke-width="1.2" stroke-dasharray="5 4"/>`;
@@ -1575,7 +1620,8 @@ function drawN(k, hv, sv, mode){
   // 鼻隠し（軒先）
   g += `<line x1="${P(-0.3, -0.3)[0]}" y1="${P(-0.3, -0.3)[1] + 3}" x2="${P(L + 0.15, -0.3)[0]}" y2="${P(L + 0.15, -0.3)[1] + 3}" stroke="#A88B62" stroke-width="5"/>`;
   // 野地板（下から2段・左は隅木に沿って切る）
-  g += `<polygon points="${pts([[0, 0], [5, 0], [5, 2.4], [2.4, 2.4]])}" fill="${hl("d") ? "#F5C9A4" : "#EAD6B0"}" fill-opacity=".95" stroke="#A88B62" stroke-width="1.5"/>`;
+  { const r0 = P(0, 0), r1 = P(0, 1), rL = P(5, 0), rD = P(0, 2.4), rC = [(P(0, 0)[0] + P(5, 0)[0] + P(5, 2.4)[0] + P(2.4, 2.4)[0]) / 4, (P(0, 0)[1] + P(5, 0)[1] + P(5, 2.4)[1] + P(2.4, 2.4)[1]) / 4];
+    g += woodPoly(pts([[0, 0], [5, 0], [5, 2.4], [2.4, 2.4]]), hl("d") ? "#F5C9A4" : "#EAD6B0", "#A88B62", 42, Math.atan2(r1[1] - r0[1], r1[0] - r0[0]) * 180 / Math.PI, rC[0], rC[1], Math.hypot(rD[0] - r0[0], rD[1] - r0[1]), Math.hypot(rL[0] - r0[0], rL[1] - r0[1]), "#A87F45", "#FFF6E0", 0.85, ".95", "1.5"); }
   { const q = P(4.3, 0.55); g += lab(q[0], q[1], "野地板 1枚", "#8A6E45", "middle", 11); }
   // 野地の切り（1段目）：縦・横・斜め
   const c0 = P(0, 0), c1 = P(2.4, 2.4), c2 = P(2.4, 0);
@@ -1705,13 +1751,15 @@ function runG(){
   $("gyOut").innerHTML = h;
   const y0 = 190, sy = Math.min(1, 125 / Math.max(wallH, 1)), Wy = y0 - wallH * sy, Ty = y0 - topH * sy;
   const bwp = Math.max(10, ut * 240 / Math.max(Lh, 1)), Bx = 60 + bwp, Byb = Ty + uh * sy;
+  const __tlen = Math.hypot(240, y0 - Wy), __tux = -(y0 - Wy) / __tlen * 6, __tuy = 240 / __tlen * 6, __tang = Math.atan2(y0 - Wy, 240) * 180 / Math.PI;
+  const __tpts = `${60 + __tux},${Wy + __tuy} ${300 + __tux},${y0 + __tuy} ${300 - __tux},${y0 - __tuy} ${60 - __tux},${Wy - __tuy}`;
   svg.innerHTML = `
-    <rect x="30" y="20" width="30" height="${y0 + 14 - 20}" fill="#F1E4CF" stroke="#A88B62"/>
+    ${woodRect(30, 20, 30, y0 + 14 - 20, "#F1E4CF", "#A88B62", 51, "v")}
     <text x="45" y="14" text-anchor="middle" style="font-size:11px;fill:#7A6243">母屋の柱</text>
-    <rect x="60" y="${Ty}" width="${bwp}" height="${Byb - Ty}" fill="#D9B98A" stroke="#A88B62"/>
-    <line x1="60" y1="${Wy}" x2="300" y2="${y0}" stroke="#E8742C" stroke-width="12" opacity=".35"/>
+    ${woodRect(60, Ty, bwp, Byb - Ty, "#D9B98A", "#A88B62", 52, "e")}
+    ${woodPoly(__tpts, "#DCAE76", "none", 53, __tang, 180, (Wy + y0) / 2, __tlen, 12, "#8A6E45", "#FFF6E0", 0.9, ".92")}
     <line x1="60" y1="${Wy}" x2="300" y2="${y0}" stroke="#C2571A" stroke-width="2"/>
-    <rect x="287" y="${y0}" width="26" height="16" fill="#E9D8BE" stroke="#A88B62"/>
+    ${woodRect(287, y0, 26, 16, "#E9D8BE", "#A88B62", 54, "e")}
     <text x="300" y="${y0 + 30}" text-anchor="middle" style="font-size:11px;fill:#7A6243">下屋の桁（頂点）</text>
     <line x1="60" y1="${y0}" x2="300" y2="${y0}" stroke="#6B5233" stroke-dasharray="4 3" stroke-width="1"/>
     <text x="64" y="${y0 - 4}" style="font-size:10px;fill:#6B5233">桁の上端 0</text>
