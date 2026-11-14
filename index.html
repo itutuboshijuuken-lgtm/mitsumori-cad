@@ -21712,4 +21712,36 @@ body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
   }catch(e){} },200);
 })();
 </script>
+<style id="fast262css">
+/* ===== CAD-262：なめらかにする。2本指で拡大・移動している間だけ、図の文字のふち取りと線のなめらか処理を止めて軽くする（指を離すと元に戻る） ===== */
+body.pz262 #plan text,body.pz262 #plan text.halo{stroke:none!important;paint-order:normal!important}
+body.pz262 #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optimizeSpeed!important}
+</style>
+<script id="fast262js">
+(function(){ "use strict";
+  /* 1) 置いた物を指で動かしている間は、文字の重なり直し（毎回ぜんぶの文字を測り直す重い処理）を止める。指を離したら1回だけ直す。 */
+  var skipped=false, orig=null, K=(typeof PLAN_FONT_K!=="undefined")?PLAN_FONT_K:0.6;
+  function fontsOnly(){   /* 文字の大きさだけは、いつもと同じに小さくする（重なり直しだけを止める） */
+    var svg=document.getElementById("plan"); if(!svg) return;
+    var texts=[].filter.call(svg.querySelectorAll("text"),function(t){ return !t.closest("#planInk")&&!t.closest("[data-sno]"); }), cs=[];
+    texts.forEach(function(t){ cs.push(getComputedStyle(t)); });
+    var fs=cs.map(function(c){ return parseFloat(c.fontSize); }), sw=cs.map(function(c){ return parseFloat(c.strokeWidth); });
+    texts.forEach(function(t,i){ if(fs[i]) t.style.fontSize=(fs[i]*K)+"px"; if(t.classList.contains("halo")&&sw[i]) t.style.strokeWidth=(sw[i]*K)+"px"; });
+  }
+  try{
+    orig=tidyPlanLabels;
+    tidyPlanLabels=function(){
+      try{ if(typeof dragging!=="undefined"&&dragging&&dragging.moved){ skipped=true; fontsOnly(); return; } }catch(e){}
+      skipped=false; return orig.apply(this,arguments);
+    };
+  }catch(e){}
+  setInterval(function(){ try{
+    if(skipped&&!(typeof dragging!=="undefined"&&dragging&&dragging.moved)){ skipped=false; drawPlan(); }
+  }catch(e){} },200);
+  /* 2) 2本指の間だけ軽くする */
+  function upd(e){ try{ document.body.classList.toggle("pz262",(e.touches&&e.touches.length>=2)); }catch(x){} }
+  ["touchstart","touchmove"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });
+  ["touchend","touchcancel"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });
+})();
+</script>
 </html>
