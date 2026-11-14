@@ -6873,7 +6873,13 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   }
   { const ext = S.sashes.filter(s => sState(s) === "new" && !/室内ドア|クローゼット|開口/.test(s.cat) && (S.gaiMode !== "pick" || !(S.gaiFace && S.gaiFace[s.wall + "-" + (s.fl || 1)] === false))), cm = ext.reduce((x, s) => x + 2 * (s.w + s.h) * s.n, 0) / 1000 * 1.1;
     if (cm > 0) work("caulkM", "サッシまわり コーキング", cm, "m", `${ext.reduce((x, s) => x + s.n, 0)}か所のまわり＋10% ＝ ${fmt(cm, 1)}m × ${fmt(workP("caulkM").p)}円`); }
-  if (S.cloth) work("clothNew", "クロス（壁＋天井）", inner1 + inner2 + nobe, "㎡");
+  if (S.cloth){   /* CAD-258: 新築も内装と同じ仕上げ材（クロス/塗装/左官）を選べる。選んだ仕上げの分だけクロスから引く（二重に数えない） */
+    const WZ = {paint: ["wallPaint", "壁 塗装"], diato: ["wallDiato", "壁 珪藻土（塗り）"], shikkui: ["wallShikkui", "壁 漆喰（塗り）"], juraku: ["wallJuraku", "壁 聚楽（塗り）"]},
+          wm = WZ[S.rfWallMat] ? S.rfWallMat : "", cm = S.rfCeilMat === "paint" ? "paint" : "", wA = inner1 + inner2, cA = nobe;
+    if (wm && wA > 0){ work(WZ[wm][0], WZ[wm][1], wA, "㎡"); if (wm !== "paint" && S.rfSakanBase !== false) work("wallShitaji", "壁 左官 下地調整", wA, "㎡"); }
+    if (cm && cA > 0) work("ceilPaint", "天井 塗装", cA, "㎡");
+    { const cq = (wm ? 0 : wA) + (cm ? 0 : cA); if (cq > 0) work("clothNew", "クロス（壁＋天井）", cq, "㎡"); }
+  }
   let ashPro = null; try { if (S.ashPro && window.ASH230P) ashPro = window.ASH230P(ashG, {Hk, R, kata, topGL, D, gableA: (ashG.full || S.gaiGable) ? gableA : 0}); } catch(e){}
   if (ashPro){ ashibaA = ashPro.A; rows.push({grp: "足場工事", ash: true}); }
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
@@ -21537,4 +21543,62 @@ body.nbtutRun #zUndoBtn,body.nbtutRun #zRedoBtn{display:none!important}
 })();
 </script>
 
+<style id="zoMat258css">
+#zoMat258 .sub2{margin-top:10px}
+#st4 .hid258{display:none!important}
+</style>
+<script id="zoMat258js">
+/* ===== CAD-258：新築・増築でも、壁・天井の仕上げ材（クロス/塗装/左官）を内装と同じ並びで選べる。タブは「床｜壁｜天井｜構造・外まわり｜その他」 ===== */
+(function(){ "use strict";
+  var WM=[["cloth","クロス"],["paint","塗装"],["diato","珪藻土"],["shikkui","漆喰"],["juraku","聚楽"]], CM=[["cloth","クロス"],["paint","塗装"]];
+  var T_KOZO="構造・外まわり", KOZO=["基礎","屋根の重さ","モジュール","耐力壁","外壁","足場","構造材の積算","部材ごとの樹種"];
+  function SS(){ return (typeof S!=="undefined") ? S : null; }
+  function isZo(){ var s=SS(); return !!s && s.mode==="zo"; }
+  function mk(id,title,list){ var h='<div class="sub2">'+title+'</div><div class="seg" id="'+id+'">'; list.forEach(function(a){h+='<button type="button" data-v="'+a[0]+'">'+a[1]+'</button>';}); return h+'</div>'; }
+  function build(){
+    var cl=document.getElementById("clSeg"); if(!cl||document.getElementById("zoWall258")) return;
+    var w=document.createElement("div"); w.id="zoWall258"; w.innerHTML=mk("zoWM258","壁の仕上げ材",WM);
+    var c=document.createElement("div"); c.id="zoCeil258"; c.innerHTML=mk("zoCM258","天井の仕上げ材",CM)+'<div id="zoNote258" style="margin:10px 2px;font-size:14px;opacity:.75">「仕上げなし」にしているので、天井の仕上げ材はありません。</div>';
+    cl.parentNode.insertBefore(c,cl.nextSibling); cl.parentNode.insertBefore(w,cl.nextSibling);
+    [w,c].forEach(function(d){ d.addEventListener("click",function(e){
+      var b=e.target.closest("button[data-v]"); if(!b) return; var wall=d===w, v=b.getAttribute("data-v"),
+          o=document.querySelector(wall?'#rfWallMat [data-rfwm="'+v+'"]':'#rfCeilMat [data-rfcm="'+v+'"]'); if(o) o.click(); sync(); }); });
+  }
+  function sync(){ var s=SS(); if(!s) return;
+    [["zoWM258",s.rfWallMat||"cloth"],["zoCM258",s.rfCeilMat||"cloth"]].forEach(function(a){ var el=document.getElementById(a[0]); if(!el) return;
+      [].forEach.call(el.querySelectorAll("button"),function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-v")===a[1]?"true":"false"); }); }); }
+  function curTab(bar){ var b=bar&&bar.querySelector('button[aria-pressed="true"]'); return b?b.dataset.t254:""; }
+  var busy=false;
+  function apply(){
+    if(busy) return; busy=true;
+    try{
+      var st=document.getElementById("st4"), bar=st&&st.querySelector(":scope > .tabs254"); if(!st||!bar||!st.getClientRects().length) return;
+      var zo=isZo(), kb=bar.querySelector('button[data-t254="'+T_KOZO+'"]');
+      if(zo&&!kb){ kb=document.createElement("button"); kb.type="button"; kb.textContent=T_KOZO; kb.dataset.t254=T_KOZO; var last=bar.lastElementChild; bar.insertBefore(kb,last); }
+      if(!zo&&kb){ var was=kb.getAttribute("aria-pressed")==="true"; kb.remove(); if(was){ var f=bar.querySelector("button"); if(f) f.click(); } }
+      if(!zo){ [].forEach.call(st.querySelectorAll(".hid258"),function(e){e.classList.remove("hid258");}); return; }
+      var cur=curTab(bar), cloth=SS().cloth!==false;
+      var put=function(e,tab){ if(!e) return; e.classList.toggle("hid254",cur!==tab); };
+      /* 仕上げ（クロス仕上げ／なし）と壁の仕上げ材 → 壁タブ、天井の仕上げ材 → 天井タブ */
+      var cl=document.getElementById("clSeg"), sub=cl&&cl.previousElementSibling;
+      put(cl,"壁"); if(sub&&sub.classList.contains("sub2")) put(sub,"壁");
+      put(document.getElementById("zoWall258"),"壁"); var wl=document.getElementById("zoWall258"); if(wl) wl.classList.toggle("hid258",!cloth);
+      put(document.getElementById("zoCeil258"),"天井");
+      var cm=document.getElementById("zoCM258"), nt=document.getElementById("zoNote258");
+      if(cm){ cm.previousElementSibling.classList.toggle("hid258",!cloth); cm.classList.toggle("hid258",!cloth); } if(nt) nt.classList.toggle("hid258",cloth);
+      /* 構造・外まわりの項目 → 専用タブ（見出しごと） */
+      [].forEach.call(st.querySelectorAll("h2.ux-h"),function(h){
+        if(h.closest("details")) return; var k=(h.getAttribute("data-uxk")||(h.firstChild?h.firstChild.textContent:h.textContent)).trim();
+        if(!KOZO.some(function(p){return k.indexOf(p)===0;})) return;
+        put(h,T_KOZO); var el=h.nextElementSibling;
+        while(el&&(el.tagName!=="H2"||el.classList.contains("ux-sub"))&&el.tagName!=="DETAILS"&&!el.classList.contains("ux-n")){ put(el,T_KOZO); el=el.nextElementSibling; }
+      });
+    }catch(e){} finally{ busy=false; }
+  }
+  function boot(){ try{ build(); sync(); apply(); }catch(e){} }
+  setInterval(boot,400);
+  /* 既存のタブ（CAD-254）が付け外しした直後に、すぐ直す（ちらつき防止） */
+  try{ new MutationObserver(function(){ apply(); }).observe(document.body,{subtree:true,attributes:true,attributeFilter:["class"]}); }catch(e){}
+})();
+</script>
 </html>
