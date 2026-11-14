@@ -19891,10 +19891,12 @@ body.gold #st4 .ux-n button{background:var(--gold);color:#1B1405;border:1px soli
   var cur=null,lastMode=null;
   function vis(e){return e.getClientRects().length>0}
   function key(h){var k=h.getAttribute('data-uxk');if(!k){k=h.firstChild?h.firstChild.textContent.trim():h.textContent.trim();h.setAttribute('data-uxk',k)}return k}
+  var TREE='#rfWall,#rfCeil,#rfFloor,#rfCur,#rfWallMat,#rfCeilMat,#rfSakanBase,#rfMawari,#rfRooms';
+  function isHdr(h){return !h.closest('details')&&!h.closest(TREE)}
   function collect(){var st=document.getElementById('st4');if(!st||!vis(st))return[];
-    var hs=[].slice.call(st.querySelectorAll('h2')).filter(function(h){return !h.closest('details')&&getComputedStyle(h).display!=='none'&&vis(h)});
-    return hs.map(function(h){var items=[],el=h.nextElementSibling;
-      while(el&&el.tagName!=='H2'&&!el.classList.contains('ux-n')&&!el.querySelector('h2')){items.push(el);el=el.nextElementSibling}
+    var hs=[].slice.call(st.querySelectorAll('h2')).filter(function(h){return isHdr(h)&&getComputedStyle(h).display!=='none'&&vis(h)});
+    return hs.filter(function(h){return !h.classList.contains('ux-sub')}).map(function(h){var items=[],el=h.nextElementSibling;
+      while(el&&(el.tagName!=='H2'||el.classList.contains('ux-sub'))&&el.tagName!=='DETAILS'&&!el.classList.contains('ux-n')&&![].some.call(el.querySelectorAll('h2'),isHdr)){items.push(el);el=el.nextElementSibling}
       return{h:h,items:items}})}
   function summ(g){var t=[];
     g.items.forEach(function(el){
@@ -19928,6 +19930,142 @@ body.gold #st4 .ux-n button{background:var(--gold);color:#1B1405;border:1px soli
     document.querySelectorAll('#st4 .ux-n').forEach(function(n){if(keep.indexOf(n)<0)n.remove()})}catch(e){}}
   function nxt0(gs,i,keys){return gs[i+1]?'次へ：'+keys[i+1]:'これで決まり'}
   document.addEventListener('click',function(e){var h=e.target.closest&&e.target.closest('#st4 h2.ux-h');if(!h)return;var k=key(h);cur=(cur===k)?'':k;tick();if(cur)go(h)},true);
+  setInterval(tick,500);
+})();
+</script>
+<style id="ux237css">
+#exAdd.ux-hid{display:none!important}
+#uxAddBtn{width:100%;min-height:52px;border:0;border-radius:14px;background:#2563b0;color:#fff;font-weight:800;font-size:16px;margin:8px 0}
+#uxDim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:70;display:none}
+#uxSheet{position:fixed;left:0;right:0;bottom:0;z-index:71;background:#fff;border-radius:18px 18px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.3);padding:10px 10px calc(14px + env(safe-area-inset-bottom,0px));display:none;max-height:70vh;overflow-y:auto}
+#uxSheet .hd{display:flex;justify-content:space-between;align-items:center;font-weight:800;margin:2px 4px 8px}
+#uxSheet .hd button{border:0;background:none;color:#667;font-size:14px;min-height:36px}
+#uxSheet .tabs{display:flex;gap:6px;margin-bottom:8px;overflow-x:auto}
+#uxSheet .tabs button{flex:0 0 auto;border:0;padding:0 14px;min-height:38px;border-radius:999px;background:#eef2f7;font-weight:700;font-size:13px;white-space:nowrap}
+#uxSheet .tabs button.on{background:#2563b0;color:#fff}
+#uxSheet .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#uxSheet .grid button{min-height:56px;padding:6px 4px;border:2px solid #d5dde8;background:#fff;border-radius:12px;font-weight:700;font-size:13px;line-height:1.3;color:#234}
+</style>
+<script>
+/* CAD-237 工事を追加：分類つきの一覧（置く、と同じ形）。選ぶ処理はアプリ本来のまま */
+(function(){
+  var CATS=[['外装',/外壁|屋根|軒天|雨樋|庇|ベランダ|コーキング|足場/],['内装',/漆喰|和室|建材|階段|内窓/],['水まわり・設備',/浴室|ユニットバス|トイレ|ウォシュレット|キッチン|レンジフード|洗面|手洗い|設備|エコキュート|エアコン|電気/],['構造',/土台|柱|土間打ち|新築の費用/],['外構',/外構|玄関ポーチ|ウッドデッキ|フェンス/],['その他',/./]];
+  var cat=0;
+  function catOf(t){for(var i=0;i<CATS.length;i++)if(CATS[i][1].test(t))return i;return CATS.length-1}
+  function close(){var d=document.getElementById('uxDim'),s=document.getElementById('uxSheet');if(d)d.style.display='none';if(s)s.style.display='none'}
+  function render(sel){var s=document.getElementById('uxSheet');
+    var opts=[].slice.call(sel.options).filter(function(o,i){return i>0&&o.value!==''});
+    var tabs=CATS.map(function(c,i){return '<button type="button" data-c="'+i+'" class="'+(i===cat?'on':'')+'">'+c[0]+'</button>'}).join('');
+    var items=opts.filter(function(o){return catOf(o.textContent)===cat});
+    s.innerHTML='<button type="button" id="uxFree" style="width:100%;min-height:52px;border:2px solid #d98a00;background:#fff6e0;color:#8a5200;border-radius:12px;font-weight:800;font-size:15px;margin-bottom:8px">✏️ 自分で名前と金額を入れる（アプリにない工事）</button><div class="hd"><span>追加する工事を選ぶ</span><button type="button" id="uxClose">閉じる</button></div><div class="tabs">'+tabs+'</div><div class="grid">'+items.map(function(o){return '<button type="button" data-v="'+o.value.replace(/"/g,'&quot;')+'">'+o.textContent.trim()+'</button>'}).join('')+'</div>';
+    s.querySelector('#uxClose').onclick=close;
+    s.querySelector('#uxFree').onclick=function(){sel.value='free';close();sel.dispatchEvent(new Event('change',{bubbles:true}));setTimeout(function(){var all=document.querySelectorAll('#exList input.nm');var n=all[all.length-1];if(n){n.scrollIntoView({block:'center',behavior:'smooth'});n.focus()}},350)};
+    [].forEach.call(s.querySelectorAll('.tabs button'),function(b){b.onclick=function(){cat=+b.dataset.c;render(sel)}});
+    [].forEach.call(s.querySelectorAll('.grid button'),function(b){b.onclick=function(){sel.value=b.dataset.v;close();sel.dispatchEvent(new Event('change',{bubbles:true}))}})}
+  function open(sel){var d=document.getElementById('uxDim'),s=document.getElementById('uxSheet');
+    if(!d){d=document.createElement('div');d.id='uxDim';d.onclick=close;document.body.appendChild(d)}
+    if(!s){s=document.createElement('div');s.id='uxSheet';document.body.appendChild(s)}
+    render(sel);d.style.display='block';s.style.display='block'}
+  function tick(){try{
+    var sel=document.getElementById('exAdd');if(!sel)return;
+    sel.classList.add('ux-hid');
+    if(!document.getElementById('uxAddBtn')){var b=document.createElement('button');b.type='button';b.id='uxAddBtn';b.textContent='＋ 工事を追加';b.onclick=function(){open(sel)};sel.parentElement.insertBefore(b,sel)}
+  }catch(e){}}
+  var UNITS=['式','㎡','m','個','台','箇所','人工'];
+  function fmtN(n){return Math.round(n).toLocaleString('ja-JP')}
+  function freeCards(){try{
+    document.querySelectorAll('#exList input.nm[data-xn]').forEach(function(inp){
+      var i=+inp.getAttribute('data-xn'),e=S.extras[i];if(!e||e.k!=='free')return;var card=inp.closest('.ex');if(!card)return;
+      var u=card.querySelector('.ux-u');
+      if(!u){u=document.createElement('div');u.className='seg ux-u';u.style.marginTop='6px';
+        u.innerHTML=UNITS.map(function(x){return '<button type="button" data-u="'+x+'">'+x+'</button>'}).join('');
+        [].forEach.call(u.querySelectorAll('button'),function(b){b.onclick=function(){e=S.extras[i];e.unit=b.dataset.u;save();drawExtras()}});
+        var fs=card.querySelector('.fs');fs.parentElement.insertBefore(u,fs.nextSibling);
+        var t=document.createElement('div');t.className='ux-t';t.style.cssText='margin:6px 2px 2px;font-size:13px;font-weight:700;color:#234;display:flex;justify-content:space-between';
+        u.parentElement.insertBefore(t,u.nextSibling);
+        var h=document.createElement('p');h.className='hint ux-h2';h.style.margin='2px 2px 0';h.textContent='金額は原価（税抜）です。利益は見積で自動で足されます。';t.parentElement.insertBefore(h,t.nextSibling)}
+      e=S.extras[i];
+      [].forEach.call(u.querySelectorAll('button'),function(b){b.setAttribute('aria-pressed',String((e.unit||'式')===b.dataset.u))});
+      var t2=card.querySelector('.ux-t');var txt='<span>小計（原価）</span><span>'+fmtN((e.q||0)*(e.p||0))+'円</span>';if(t2.innerHTML!==txt)t2.innerHTML=txt;
+    })}catch(x){}}
+  setInterval(function(){tick();freeCards()},500);
+})();
+</script>
+<style id="ux238css">
+#st4 .rf h2.ux-sub{font-size:13px;font-weight:700;margin:12px 4px 4px;opacity:.8}
+#st4 .rf .ux-w{display:none!important}
+</style>
+<script>
+/* CAD-238 壁・天井：「何をする→何で仕上げる」の順にして、材料の二重質問をなくす。計算・保存は変えない */
+(function(){
+  function vis(e){return e&&e.getClientRects().length>0}
+  function h2(rf,t){return [].slice.call(rf.children).filter(function(e){return e.tagName==='H2'&&(e.getAttribute('data-uxk')||e.firstChild.textContent.trim())===t})[0]}
+  function unit(h){var u=[h],e=h.nextElementSibling;while(e&&e.tagName!=='H2'&&!e.classList.contains('ux-n')){u.push(e);e=e.nextElementSibling}return u}
+  function mv(rf,mt,wt,label){
+    var m=h2(rf,mt),w=h2(rf,wt);if(!m||!w)return;
+    if(m.getAttribute('data-uxm'))return;
+    if(!(m.compareDocumentPosition(w)&Node.DOCUMENT_POSITION_FOLLOWING))return;
+    var mu=unit(m),wu=unit(w),ref=wu[wu.length-1];
+    m.setAttribute('data-uxm',mt);m.classList.remove('ux-h','ux-o');m.removeAttribute('data-uxk');m.classList.add('ux-sub');m.textContent=label;
+    var after=ref.nextSibling;mu.forEach(function(n){rf.insertBefore(n,after)});
+    mu.forEach(function(n){n.setAttribute('data-uxmu',mt)})}
+  function tick(){try{
+    var rf=document.querySelector('#st4 .rf');if(!rf)return;
+    mv(rf,'壁の仕上げ材','壁','何で仕上げる？（壁）');
+    mv(rf,'天井の仕上げ材','天井','何で仕上げる？（天井）');
+    // 左官の下地：塗り壁（珪藻土・漆喰・聚楽）を選んだときだけ、壁の中に入れる
+    var sk=h2(rf,'左官の下地調整'),mh=rf.querySelector('h2[data-uxm="壁の仕上げ材"]');
+    if(sk&&mh&&!sk.getAttribute('data-uxm')){
+      var su=unit(sk),mu2=unit(mh),r2=mu2[mu2.length-1];
+      sk.setAttribute('data-uxm','左官');sk.classList.remove('ux-h','ux-o');sk.removeAttribute('data-uxk');sk.classList.add('ux-sub');sk.textContent='塗り壁の下地は？';
+      var af=r2.nextSibling;su.forEach(function(n){rf.insertBefore(n,af);n.setAttribute('data-uxmu','左官')});
+      var seg=document.getElementById('rfSakanBase');
+      if(seg&&!document.getElementById('uxSakHint')){var p=document.createElement('p');p.id='uxSakHint';p.className='hint';p.style.cssText='margin:4px 4px 0;font-size:12px;opacity:.8';p.textContent='塗り壁の前に、パテ・シーラーで下地を整める工程です。ふつうは入れます。';seg.parentNode.insertBefore(p,seg.nextSibling);p.setAttribute('data-uxmu','左官')}}
+    var wmOk=(typeof S!=='undefined')&&S&&(S.rfWall||'none')!=='none'&&/^(diato|shikkui|juraku)$/.test(S.rfWallMat||'');
+    [].forEach.call(rf.querySelectorAll('[data-uxmu="左官"]'),function(n){n.classList.toggle('ux-w',!wmOk)});
+    var b1=rf.querySelector('[data-rfsb="1"]'),b0=rf.querySelector('[data-rfsb="0"]');
+    if(b1&&b1.textContent!=='整える')b1.textContent='整える';
+    if(b0&&b0.textContent!=='整えない')b0.textContent='整えない';
+    // 材料は「仕上げを替える」を選んだときだけ
+    [['壁の仕上げ材','w'],['天井の仕上げ材','c']].forEach(function(p){
+      var on=(typeof S!=='undefined')&&S&&((p[1]==='w'?S.rfWall:S.rfCeil)||'none')!=='none';
+      [].forEach.call(rf.querySelectorAll('[data-uxmu="'+p[0]+'"]'),function(n){n.classList.toggle('ux-w',!on)})});
+    // ボタンの名前：材料の名前を繰り返さない
+    [].forEach.call(rf.querySelectorAll('#rfWall [data-tree],#rfCeil [data-tree]'),function(b){
+      var t=b.getAttribute('data-tree');
+      if(/:cloth$/.test(t)&&b.textContent!=='仕上げを替える')b.textContent='仕上げを替える';
+      if(/:reform$/.test(t)&&b.textContent!=='下地から直す')b.textContent='下地から直す'})
+  }catch(e){}}
+  setInterval(tick,400);
+})();
+</script>
+<script>
+/* CAD-239 説明の言い換え（文字だけ。計算・保存は変えない） */
+(function(){
+  var MAP={
+    '壁のない辺（開放する辺・外壁・面材・柱・間柱・内壁・断熱から除き、既存との取り合いを出す）':'壁のない辺（既存の建物とつながる辺など）　選んだ辺は、壁の材料に数えません',
+    '床の増し貼り下地（構造用合板の厚み）':'床に重ねる合板の厚み（増し貼りの下地）',
+    'ラミテンの厚み':'ラミテン（天井の仕上げ板）の厚み',
+    '間柱の断面（標準は45×105）':'間柱（壁の中の細い柱）の太さ　標準は45×105',
+    '間柱の数え方':'間柱の本数の数え方',
+    '床根太の断面（根太からやり替える時）':'床の根太の太さ（根太からやり替える時だけ）',
+    '壁の下地補強の材料（部分工事の下地補強）':'壁の下地補強に使う材料（部分工事）',
+    '全部 同じ太さ':'すべて同じ太さで数える',
+    '柱間30厚間柱':'継ぎ目の位置は45・間は30で数える',
+    '内装のボード':'ボード・合板の細かい設定',
+    '整える（パテ・シーラー）':'整える',
+    '整えない（そのまま塗る）':'整えない'
+  };
+  function tick(){try{
+    document.querySelectorAll('.sub2,summary,h2,.chips button,#rfSakanBase button').forEach(function(e){
+      if(e.children.length)return;var t=e.textContent.trim();
+      if(MAP[t]&&e.textContent!==MAP[t])e.textContent=MAP[t]});
+    // 壁・天井のボード見出し
+    document.querySelectorAll('.sub2').forEach(function(e){var n=e.nextElementSibling;
+      if(!n)return;var t=e.textContent.trim();
+      if(t==='壁'&&n.id==='gbW')e.textContent='壁に張るボード（種類・厚み）';
+      if(t==='天井'&&n.id==='gbC')e.textContent='天井に張るボード（厚み）'})
+  }catch(e){}}
   setInterval(tick,500);
 })();
 </script>
