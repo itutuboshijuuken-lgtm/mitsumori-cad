@@ -1639,7 +1639,7 @@ function projectSheet(){
     <div class="seg" id="themeSeg"><button data-th="std" type="button" aria-pressed="${themeNow194() === "std"}">標準</button><button data-th="gold" type="button" aria-pressed="${themeNow194() === "gold"}">黒×金</button></div>
     <div class="row"><button class="btn" id="sampleOpen" type="button" style="flex:1">🔍 確認用の見本を開く</button></div>
     <div class="row"><button class="btn" id="bkOut" type="button" style="flex:1">💾 バックアップ保存</button><button class="btn" id="bkIn" type="button" style="flex:1">📂 読み込む</button></div>
-    <p class="hint">バックアップ保存＝現場・見積・台帳・顧客・書類・単価表・設定を1つのファイルに保存します（写真は含まれません）。新しい版や別のスマホでは「読み込む」で元に戻せます。</p>
+    <p class="hint">バックアップ保存＝現場・見積・台帳・顧客・書類・単価表・設定を1つのファイルに保存します（写真も含みます。写真が多いと、ファイルが大きくなります）。新しい版や別のスマホでは「読み込む」で元に戻せます。</p>
     <p class="hint" style="text-align:center;margin-top:10px">伍星住建 制作</p>
     <div class="row"><button class="btn sub" id="pjClose" type="button">閉じる</button></div>`;
   $("modal").hidden = false;
@@ -19705,6 +19705,106 @@ window.ASH230F = function(rows){
       return r;
     };
   }
+})();
+</script>
+<script>
+/* ---------- CAD-232: バックアップを見つけやすく・忘れにくく（2026-11-14）----------
+   バックアップの書き出し・読み込みは、もともと有る（bkExport / bkImport）。ここでは「入口・お知らせ・消えにくくする」だけを足す。
+   ・「⋯」メニューに「バックアップ保存」「バックアップを読み込む」を置く
+   ・最後に書き出した日を覚えて（rcad_lastbk。バックアップの対象外）、14日以上たつと下にお知らせを出す（あとで＝1日お休み）
+   ・ブラウザに「データを消さないで」とお願いする（navigator.storage.persist）
+   計算・保存・単価・書類の部分には触れない。 */
+(function(){
+  const LK = "rcad_lastbk", SK = "rcad_bksnooze", DAY = 86400000;
+  const get = k => { try { return +localStorage.getItem(k) || 0; } catch(e){ return 0; } };
+  const set = (k, v) => { try { localStorage.setItem(k, String(v)); } catch(e){} };
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+  try {   // 書き出せたら日付を覚える（toast の文言で判定：書き出せた時だけ「書き出しました」と出る）
+    const t0 = window.toast;
+    if (typeof t0 === "function") window.toast = function(t){ try { if (typeof t === "string" && t.indexOf("書き出しました") === 0){ set(LK, Date.now()); hide(); } else if (typeof t === "string" && t.indexOf("データをコピーしました") >= 0){ set(LK, Date.now()); hide(); } } catch(e){} return t0.apply(this, arguments); };
+  } catch(e){}
+  function hasData(){ try { for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.indexOf("zochiku-p-") === 0){ const v = JSON.parse(localStorage.getItem(k) || "null"); if (v && (v.edges || v.genba || (v.extras || []).length || v.daicho)) return true; } } } catch(e){} return false; }
+  function hide(){ const b = document.getElementById("bkBan"); if (b) b.remove(); }
+  function ban(){
+    try {
+      if (document.getElementById("bkBan") || !hasData()) return;
+      const m = document.getElementById("modal"); if (m && !m.hidden) return;
+      const last = get(LK), now = Date.now();
+      if (last && now - last < 14 * DAY) return; if (now - get(SK) < DAY) return;
+      const d = last ? Math.floor((now - last) / DAY) + "日前" : "まだ取っていません";
+      const b = document.createElement("div"); b.id = "bkBan";
+      b.style.cssText = "position:fixed;left:8px;right:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:60;background:#18202A;color:#fff;border:1px solid #E3C777;border-radius:10px;padding:5px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 3px 12px rgba(0,0,0,.3);font-size:13px;line-height:1.3";
+      b.innerHTML = `<span style="flex:1">💾 バックアップ（最後：${d}）</span><button type="button" id="bkNow" style="min-height:36px;padding:0 12px;border:0;border-radius:8px;background:#E3C777;color:#18202A;font-weight:800">いま保存</button><button type="button" id="bkLater" style="min-height:36px;padding:0 8px;border:0;background:transparent;color:#cfd6df">あとで</button>`;
+      document.body.appendChild(b);
+      document.getElementById("bkNow").onclick = () => { hide(); try { bkExport(); } catch(e){} };
+      document.getElementById("bkLater").onclick = () => { set(SK, Date.now()); hide(); };
+    } catch(e){}
+  }
+  function menu(){
+    try {
+      const mm = document.querySelector("details.mo .mm"); if (!mm || document.getElementById("bkMenuOut")) return;
+      const mk = (id, t, fn) => { const x = document.createElement("button"); x.type = "button"; x.id = id; x.textContent = t; x.onclick = () => { try { document.querySelector("details.mo").open = false; } catch(e){} try { fn(); } catch(e){} }; mm.appendChild(x); };
+      mk("bkMenuOut", "バックアップ保存", () => bkExport()); mk("bkMenuIn", "バックアップを読み込む", () => bkImport());
+    } catch(e){}
+  }
+  setInterval(menu, 1500); menu();
+  setTimeout(ban, 6000); setInterval(ban, 60000);
+})();
+</script>
+<script>
+/* ---------- CAD-233: バックアップに写真も入れる（2026-11-14）----------
+   写真は IndexedDB（gosei-photos）にあり、これまでのバックアップ（書き出し・読み込み）には入らなかった。
+   ・書き出し：現場・見積などの項目（今までどおり）＋全部の写真（原寸の blob とサムネイル）を、1つのファイルに入れる（v:2）
+   ・読み込み：ファイルに写真があれば、同じ id の写真を上書きで戻す（無い写真はそのまま残る）。確認ボタンは、写真を戻し終えてから先へ進む
+   ・古いバックアップ（写真なし）も、今までどおり読み込める
+   ・取り込み側の手順（キーの合体・失敗時に元へ戻す）は、既存の bkImport のまま。 */
+(function(){
+  const b2d = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+  const d2b = async u => (await fetch(u)).blob();
+  async function allPhotos(){ const db = await phOpen(); return phReq(db.transaction("ph").objectStore("ph").getAll()); }
+  window.bkExport = async function(){
+    try { save(); } catch(e){}
+    const keys = {}; bkKeys().filter(k => k !== "gosei-pro-v1" && k !== "zochiku-bkprev-v1").forEach(k => { try { keys[k] = localStorage.getItem(k); } catch(e){} });
+    let ps = []; try { ps = await allPhotos(); } catch(e){}
+    const n = Object.keys(keys).length; if (!n && !ps.length){ toast("書き出すデータがありません"); return; }
+    if (ps.length) toast(`写真${ps.length}枚を含めて書き出しています…`);
+    const parts = ['{"app":"gosei-backup","v":2,"at":' + Date.now() + ',"keys":' + JSON.stringify(keys) + ',"photos":['];
+    let np = 0;
+    for (const p of ps){
+      const o = {id: p.id, pj: p.pj, cat: p.cat, at: p.at};
+      try { o.blob = p.blob ? await b2d(p.blob) : null; o.thumb = p.thumb ? await b2d(p.thumb) : null; } catch(e){ continue; }
+      parts.push((np ? "," : "") + JSON.stringify(o)); np++;
+    }
+    parts.push("]}");
+    const blob = new Blob(parts, {type: "application/json"});
+    const d = new Date(), p2 = v => String(v).padStart(2, "0");
+    const name = `${typeof APP_NAME === "string" ? APP_NAME : "見積即答CAD"}バックアップ_${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}_${p2(d.getHours())}${p2(d.getMinutes())}.json`;
+    const msg = `書き出しました（${n}項目・写真${np}枚）`;
+    try { const f = new File([blob], name, {type: "application/json"}); if (navigator.canShare && navigator.canShare({files: [f]})){ await navigator.share({files: [f]}); toast(msg); return; } } catch(e){ if (e && e.name === "AbortError") return; }
+    try { const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => { try { URL.revokeObjectURL(u); } catch(e){} }, 8000); toast(msg); return; } catch(e){}
+    if (!np){ try { await navigator.clipboard.writeText(await blob.text()); toast("ファイルにできないため、データをコピーしました。メモなどに貼り付けて保管してください"); return; } catch(e){} }
+    toast("ここでは書き出せませんでした");
+  };
+  /* 読み込み：ファイルが選ばれたら、写真があれば戻す。確認ボタン（askOK）は、写真を戻し終えてから進める */
+  document.addEventListener("change", ev => {
+    const t = ev.target; if (!t || t.type !== "file" || !/json/.test(t.accept || "")) return;
+    const f = t.files && t.files[0]; if (!f) return;
+    window.__phBusy = (async () => {
+      try {
+        const o = JSON.parse(await f.text());
+        if (o && o.app === "gosei-backup" && Array.isArray(o.photos) && o.photos.length){
+          let n = 0;
+          for (const p of o.photos){ try { if (!p || !p.id || !p.blob) continue; const rec = {id: p.id, pj: p.pj, cat: p.cat, at: p.at, blob: await d2b(p.blob)}; if (p.thumb) rec.thumb = await d2b(p.thumb); await phPut(rec); n++; } catch(e){} }
+          toast(`写真${n}枚を戻しました`);
+        }
+      } catch(e){}
+    })();
+  }, true);
+  const ask0 = window.askOK;
+  if (typeof ask0 === "function") window.askOK = function(msg, okText, onOK, onCancel){
+    const busy = window.__phBusy; window.__phBusy = null;
+    return ask0.call(this, msg, okText, busy ? () => { busy.then(() => onOK && onOK()); } : onOK, onCancel);
+  };
 })();
 </script>
 </html>
