@@ -1022,6 +1022,8 @@ const WORK = [
   ["ashRoad","道路使用許可・占用の申請","円/式",0,20000],
   ["ashGuard","交通誘導員","円/人日",0,14000],
   ["kaidan", "階段（一式）", "円/か所", 0, 150000],
+  ["kaidanL", "階段（かね折れ）", "円/か所", 0, 200000],
+  ["kaidanM", "階段（回り階段）", "円/か所", 0, 220000],
   ["ninkuT", "大工の人工（増築・坪あたり）", "人工/坪", 0, 5],
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
   ["kaitai", "解体（床・壁・天井）", "円/㎡", 0, 2500],
@@ -2352,9 +2354,10 @@ function tatFromStroke(pm){ return floorRectFromStroke(pm); }
   slot.addEventListener("pointerup", end, true); slot.addEventListener("pointercancel", end, true);
 })();
 /* ---------- 床下・天井点検口 ---------- */
-const TKN = {floor: "床下点検口", ceil: "天井点検口", dansa: "段差解消・敷居撤去", pillar: "独立柱", acout: "エアコン用コンセント（天井付け）", kitchen: "キッチン", senmen: "洗面化粧台", makura: "枕棚", chudan: "中段棚", wc: "便器", bath: "浴槽", tearai: "手洗い", geta: "下駄箱", senpan: "洗濯機パン", yukashu: "床下収納庫"};
-const tkExt = o => o.k === "dansa" ? (o.dir === "v" ? [60, o.w / 2] : [o.w / 2, 60]) : (o.k === "kitchen" || o.k === "senmen" || o.k === "counter" || o.k === "makura" || o.k === "chudan" || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? ((o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2]) : [o.w / 2, o.w / 2];
-const isShelf = o => o.k === "makura" || o.k === "chudan", isKS = o => o.k === "kitchen" || o.k === "senmen" || isShelf(o) || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan";
+const STN = {s: "直階段", L: "かね折れ", M: "回り（3等分）", N: "回り（2等分）"};
+const TKN = {floor: "床下点検口", ceil: "天井点検口", dansa: "段差解消・敷居撤去", pillar: "独立柱", acout: "エアコン用コンセント（天井付け）", kitchen: "キッチン", senmen: "洗面化粧台", makura: "枕棚", chudan: "中段棚", wc: "便器", bath: "浴槽", tearai: "手洗い", geta: "下駄箱", senpan: "洗濯機パン", yukashu: "床下収納庫", stair: "階段"};
+const tkExt = o => o.k === "dansa" ? (o.dir === "v" ? [60, o.w / 2] : [o.w / 2, 60]) : (o.k === "kitchen" || o.k === "senmen" || o.k === "counter" || o.k === "makura" || o.k === "chudan" || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan" || o.k === "stair") ? ((o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2]) : [o.w / 2, o.w / 2];
+const isShelf = o => o.k === "makura" || o.k === "chudan", isKS = o => o.k === "kitchen" || o.k === "senmen" || isShelf(o) || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan" || o.k === "stair";
 function moveTenken(o, dx, dy){ const b = bbox(), [hx, hy] = tkExt(o), sn = (v, h) => Math.round((v - h) / 2.5) * 2.5 + h; const ox = o.x, oy = o.y; o.x = Math.max(b.x0 + hx, Math.min(b.x1 - hx, sn(o.x + dx, hx))); o.y = Math.max(b.y0 + hy, Math.min(b.y1 - hy, sn(o.y + dy, hy)));
   // CAD-148: 外形ポリゴンの外（L字の凹みを含む）へは動かさない
   try { if (HB.__g148 && !HB.__g148.rect(o)){ o.x = ox; o.y = oy; } } catch(e){} }
@@ -2366,7 +2369,7 @@ function addEquip(k){
      本体は明示の return が無く戻り値は undefined だが、元のラッパーが戻り値 r を捕って返していた形に合わせ、本体は無名関数で受けてその戻り値を返す（calc・drawIso と同じ作法）。本体が例外を投げれば後段は走らず伝播する点も元のまま。n0 は段がある時だけ本体の前に捕る。 */
   const n0 = HB.__aeSeg26 ? (S.tenken || []).length : 0;
   const r = (function(k){
-  const c = HB.__putAt || viewCenterMM(), pol = pts(), w = k === "kitchen" ? 2550 : k === "counter" ? ctDef().w : (k === "makura" || k === "chudan") ? 1820 : k === "tearai" ? 450 : k === "geta" ? 910 : k === "senpan" ? 640 : 750, d = k === "tearai" ? 320 : k === "kitchen" ? 650 : k === "counter" ? ctDef().d : k === "makura" ? 450 : k === "chudan" ? 800 : k === "geta" ? 350 : k === "senpan" ? 640 : 560, tw = 60;
+  const c = HB.__putAt || viewCenterMM(), pol = pts(), w = k === "kitchen" ? 2550 : k === "counter" ? ctDef().w : (k === "makura" || k === "chudan") ? 1820 : k === "tearai" ? 450 : k === "geta" ? 910 : k === "senpan" ? 640 : k === "stair" ? 910 : 750, d = k === "tearai" ? 320 : k === "kitchen" ? 650 : k === "counter" ? ctDef().d : k === "makura" ? 450 : k === "chudan" ? 800 : k === "geta" ? 350 : k === "senpan" ? 640 : k === "stair" ? 2730 : 560, tw = 60;
   const wl = pol.map((a, i) => [a, pol[(i + 1) % pol.length]]), pl = (S.parts2D || []).filter(z => pState(z) !== "remove").map(z => [[z.x1, z.y1], [z.x2, z.y2]]), all = wl.concat(pl);
   let best = null;
   all.forEach(([a, e]) => { const v = Math.abs(a[0] - e[0]) < 1, h = Math.abs(a[1] - e[1]) < 1; if (!v && !h) return; const sd = segDist(c, a, e).d; if (!best || sd < best.sd) best = {sd, v, a, e}; });
@@ -2397,7 +2400,7 @@ function addTenken(k){
   if (HB.__atPre69 && !HB.__atPre69()) return;   /* 旧 blk69 前段：寄せられなければ配置自体を止める（戻り値なし） */
   const __atN0 = (typeof S !== "undefined" && S.tenken) ? S.tenken.length : 0;   /* 旧 blk69：後段の「増えたか」判定用に本体前の件数を捕る（前段の直後・元の位置通り） */
   const __atR = (function(k){
-  if (k === "kitchen" || k === "senmen" || k === "counter" || k === "makura" || k === "chudan" || k === "tearai" || k === "geta" || k === "senpan") return addEquip(k);
+  if (k === "kitchen" || k === "senmen" || k === "counter" || k === "makura" || k === "chudan" || k === "tearai" || k === "geta" || k === "senpan" || k === "stair") return addEquip(k);
   pushUndo(); const c = HB.__putAt || viewCenterMM(), w = k === "wc" ? 400 : k === "bath" ? 1600 : k === "acout" ? 200 : k === "pillar" ? 105 : k === "floor" ? 600 : k === "yukashu" ? 600 : k === "dansa" ? 910 : 450, o = {k, w, x: Math.round(c[0] / 5) * 5, y: Math.round(c[1] / 5) * 5};
   if (HB.__snap207 && k !== "dansa"){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：配置の吸着（段差はドア中心から決まるので対象外） */
   if (k === "wc" || k === "bath"){ o.d = k === "wc" ? 700 : 800; o.dir = "n"; }
@@ -2454,6 +2457,34 @@ function tenkenSvg(o, i, P){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2, mk = o.k === "makura", col = mk ? "#8A6A3A" : "#6B4F1D", ins = W2 >= 70 && H2 >= 28;
     let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="${mk ? "rgba(235,217,184,.22)" : "rgba(235,217,184,.5)"}" stroke="${col}" stroke-width="1.4" ${mk ? 'stroke-dasharray="7 4"' : ""}/>`;
     g += `<text x="${cx}" y="${ins ? cy - 1 : y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:${col}">${mk ? "枕棚" : "中段"}</text><text x="${cx}" y="${ins ? cy + 9 : y0 + H2 + 21}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:700;fill:${col}">H${fmt(o.h || 0)}</text></g>`;
+    if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
+    return g;
+  }
+  if (o.k === "stair"){
+    const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2;
+    const ew = o.dir === "e" || o.dir === "w", lw = ew ? H2 : W2, lh = ew ? W2 : H2, rot = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, T = o.st || "s", C = "#5B6B7A";
+    const ln = (x1, y1, x2, y2, w) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${C}" stroke-width="${w || .9}"/>`, hw = lw / 2, hh = lh / 2;
+    let L = "";
+    const sx = lw / o.w, sy = lh / o.d, TD = 227.5;   /* 踏み面は、上りも下りも同じ227.5mmにそろえる */
+    const arrow = (x, y, dx, dy) => { const a = Math.atan2(dy, dx), r = Math.max(5, Math.min(lw, lh) * .07); return `<path d="M${x + Math.cos(a + 2.6) * r} ${y + Math.sin(a + 2.6) * r} L${x} ${y} L${x + Math.cos(a - 2.6) * r} ${y + Math.sin(a - 2.6) * r}" fill="none" stroke="${C}" stroke-width="1.5"/>`; };
+    if (T === "s"){
+      const n = Math.max(4, Math.round(o.d / TD)); for (let k = 1; k < n; k++){ const y = lh * k / n; L += ln(0, y, lw, y); }
+      L += ln(hw, lh * .94, hw, lh * .08, 1.5) + arrow(hw, lh * .08, 0, -1);
+    } else if (T === "L"){   /* かね折れ（折返し）：踊り場は幅いっぱい・奥行910。上りも下りも同じ段数・同じ踏み面 */
+      const ly = Math.min(lh * .5, 910 * sy), n = Math.max(3, Math.round((o.d - 910) / TD));
+      L += ln(0, ly, lw, ly, 1.3) + ln(hw, ly, hw, lh, 1.3);
+      for (let k = 1; k < n; k++){ const y = ly + (lh - ly) * k / n; L += ln(0, y, lw, y); }
+      L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${ly * .5} L${lw * .25} ${ly * .5} L${lw * .25} ${lh * .9}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .25, lh * .9, 0, 1);
+    } else {   /* 回り階段：右下から上り、角で90°曲がって左へ。角の三角は、3等分（30°ずつ）か2等分（45°ずつ） */
+      const na = Math.max(3, Math.round((o.d / 2) / TD)), nw = T === "N" ? 2 : 3;
+      L += ln(hw, hh, lw, hh, 1.3) + ln(hw, 0, hw, hh, 1.3) + ln(hw, hh, hw, lh, 1.3);
+      for (let k = 1; k < na; k++){ const y = lh - hh * k / na; L += ln(hw, y, lw, y); }
+      for (let k = 1; k < na; k++){ const x = hw - hw * k / na; L += ln(x, 0, x, hh); }
+      for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, tn = Math.tan(th); const ex = tn <= 1 ? lw : hw + hh / tn, ey = tn <= 1 ? hh - hw * tn : 0; L += ln(hw, hh, ex, ey); }
+      L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
+    }
+    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+    g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${STN[T]}）</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
   }
@@ -2515,13 +2546,13 @@ function drawSelBarK(bar){
     r = drawSelBarC(bar, o);
   } else {
     r = (function(bar){
-  const o = S.tenken[sel.i], title = o.k === "dansa" ? `段差解消 ${fmt(o.w)}（${o.dir === "v" ? "縦" : "横"}）` : isShelf(o) ? `${TKN[o.k]} ${fmt(o.w)}×${fmt(o.d)}（高さ ${fmt(o.h || 0)}）` : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? `${TKN[o.k]} 幅${fmt(o.w)}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : o.k === "acout" ? TKN[o.k] : `${TKN[o.k]}（${o.w}角）`;
+  const o = S.tenken[sel.i], title = o.k === "dansa" ? `段差解消 ${fmt(o.w)}（${o.dir === "v" ? "縦" : "横"}）` : isShelf(o) ? `${TKN[o.k]} ${fmt(o.w)}×${fmt(o.d)}（高さ ${fmt(o.h || 0)}）` : o.k === "stair" ? `階段（${STN[o.st || "s"]}）${fmt(o.w)}×${fmt(o.d)}　向きは下のボタン` : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? `${TKN[o.k]} 幅${fmt(o.w)}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : o.k === "acout" ? TKN[o.k] : `${TKN[o.k]}（${o.w}角）`;
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">✓ 決定</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw">${o.k === "dansa"
       ? `<div class="sbL"><button id="sbStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button><button id="sbLen" type="button">長さ</button><button id="sbFit" type="button">壁まで</button></div>`
-      : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmt(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" ? "<span></span>" : isKS(o) ? "<span></span>" : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
+      : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : o.k === "stair" ? STN[o.st || "s"] + " ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmt(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" ? "<span></span>" : o.k === "stair" ? `<button id="sbKH" type="button">階高 ${fmt(o.kh || ((S.ch || 2400) + (S.dosa || 240)))}${o.kh ? "" : "（自動）"} ▸</button>` : isKS(o) ? "<span></span>" : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${o.k === "dansa" ? `<button id="sbRotK" class="rot" type="button">⟳<small>90°</small></button>` : isKS(o) ? `<button id="sbKK" class="rot" type="button">⟳<small>向き</small></button>` : ""}</div>
     <div class="sbR"><span></span><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
   $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; HB.__put = null; HB.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
@@ -2536,7 +2567,8 @@ function drawSelBarK(bar){
     $("sbFit").onclick = () => { pushUndo(); const q = asQ(), vt = o.dir === "v"; const a = extendTo(q, vt, -1), c = extendTo(q, vt, 1); o.w = Math.max(100, c - a); if (vt) o.y = (a + c) / 2; else o.x = (a + c) / 2; save(); bar.dataset.k = ""; drawPlan(); };
     $("sbRotK").onclick = () => { pushUndo(); o.dir = o.dir === "v" ? "h" : "v"; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
   }
-  if ($("sbKS")) $("sbKS").onclick = () => { if (isShelf(o)){ shelfSheet(sel.i); return; } pushUndo(); if (o.k === "dansa"){ const ws = [780, 910, 1820]; o.w = ws[(ws.indexOf(o.w) + 1) % ws.length] || 910; } else if (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan"){ const A = o.k === "kitchen" ? [1800, 2100, 2400, 2550, 2700, 3000] : o.k === "tearai" ? [350, 450, 600] : o.k === "geta" ? [600, 910, 1200, 1820] : o.k === "senpan" ? [640, 750] : [600, 750, 900, 1200]; o.w = A[(A.indexOf(o.w) + 1) % A.length]; } else if (o.k === "acout"){ toast("天井付けです（位置は矢印で動かせます）"); return; } else if (o.k === "pillar"){ o.w = o.w === 105 ? 120 : o.w === 120 ? 150 : 105; } else o.w = o.w === 600 ? 450 : 600; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
+  if ($("sbKS")) $("sbKS").onclick = () => { if (o.k === "stair"){ pushUndo(); const T = ["s", "L", "M", "N"]; o.st = T[(T.indexOf(o.st || "s") + 1) % 4]; if (o.st === "s"){ o.w = 910; o.d = 2730; } else if (o.st === "L"){ o.w = 1820; o.d = 2730; } else { o.w = 1820; o.d = 1820; } moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); return; } if (isShelf(o)){ shelfSheet(sel.i); return; } pushUndo(); if (o.k === "dansa"){ const ws = [780, 910, 1820]; o.w = ws[(ws.indexOf(o.w) + 1) % ws.length] || 910; } else if (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan"){ const A = o.k === "kitchen" ? [1800, 2100, 2400, 2550, 2700, 3000] : o.k === "tearai" ? [350, 450, 600] : o.k === "geta" ? [600, 910, 1200, 1820] : o.k === "senpan" ? [640, 750] : [600, 750, 900, 1200]; o.w = A[(A.indexOf(o.w) + 1) % A.length]; } else if (o.k === "acout"){ toast("天井付けです（位置は矢印で動かせます）"); return; } else if (o.k === "pillar"){ o.w = o.w === 105 ? 120 : o.w === 120 ? 150 : 105; } else o.w = o.w === 600 ? 450 : 600; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
+  if ($("sbKH")) $("sbKH").onclick = () => { const aH = (S.ch || 2400) + (S.dosa || 240); openPad({title: "階段の階高", sub: "段数の計算に使います（自動は天井高＋胴差 ＝ " + fmt(aH) + "）", value: Math.round(o.kh || aH), extra: [{label: "自動に戻す", fn: () => { closePad(); if (o.kh){ pushUndo(); delete o.kh; save(); bar.dataset.k = ""; drawPlan(); } }}], done: v => { if (v){ pushUndo(); if (Math.round(v) === aH) delete o.kh; else o.kh = Math.round(v); save(); bar.dataset.k = ""; drawPlan(); } }}); };
   if ($("sbKK")) $("sbKK").onclick = () => { pushUndo(); if (o.k === "dansa") o.dir = o.dir === "v" ? "h" : "v"; else if (isKS(o)) o.dir = ({n: "e", e: "s", s: "w", w: "n"})[o.dir] || "n"; else o.k = o.k === "floor" ? "ceil" : "floor"; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); moveTenken(o, ...alignStopT(o, ax * selStep, ay * selStep)); save(); drawPlan(); };
   bar.querySelectorAll("[data-ar]").forEach(b => {
@@ -2940,7 +2972,7 @@ function drawToolsUICore(){
      電気（ダウンライト・シーリング・エアコン）は照明の葉 "light"（#toolCh3）へ寄せた。置く操作そのものは不変。 */
   $("toolCh2").innerHTML = toolOpen === "mizu"
     ? `<button type="button" data-tk="wc">便器</button><button type="button" data-tk="tearai">手洗い</button><button type="button" data-tk="bath">浴槽</button><button type="button" data-tk="senmen">洗面台</button><button type="button" data-tk="senpan">洗濯機パン</button><button type="button" data-tk="kitchen">キッチン</button>`
-    : `<button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="yukashu">床下収納</button><button type="button" data-tk="geta">下駄箱</button>`;
+    : `<button type="button" data-tk="counter">カウンター</button><button type="button" data-tk="makura">枕棚</button><button type="button" data-tk="chudan">中段棚</button><button type="button" data-tk="pillar">独立柱</button><button type="button" data-tk="floor">床点検</button><button type="button" data-tk="ceil">天点検</button><button type="button" data-tk="dansa">段差</button><button type="button" data-tk="yukashu">床下収納</button><button type="button" data-tk="geta">下駄箱</button><button type="button" data-tk="stair">階段</button>`;
   $("toolCh2").querySelectorAll("[data-tk]").forEach(b => b.onclick = () => addTenken(b.dataset.tk));
   $("toolCh3").innerHTML = Object.keys(LTN).map(k => `<button type="button" data-lt="${k}" aria-pressed="${ltTool === k}">${LTN[k]}</button>`).join("") + `<button type="button" data-tk="acout" aria-pressed="${!!(HB.__put && HB.__put.g === "light" && HB.__put.label === "エアコン")}">エアコン</button>` + (ltTool && HB.__ltAct && HB.__ltAct.k === ltTool ? `<button type="button" data-ltact="1" class="armBlink" style="grid-column:1/-1;background:#FFF8DC;border:2px solid #FFC400;font-size:13px;line-height:1.3">いま：${LTA[HB.__ltAct.act]}<br><small>（変える）</small></button>` : "");
   $("toolCh3").querySelectorAll("[data-ltact]").forEach(b => b.onclick = () => { HB.__ltAct = null; toast("次に置くときに、選びます"); drawToolsUI(); });
@@ -2954,7 +2986,7 @@ function drawToolsUICore(){
   (S.parts2D || []).forEach((q, i) => it.push(`<div class="sprow"><div>${q.top ? "パーティション" : "間仕切り"}（${PST[pState(q)][0]}）<small>長さ ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}・${q.y1 === q.y2 ? "横" : "縦"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ep="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dp="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
   S.sashes.forEach((sa, i) => { if (sa.drawn) it.push(`<div class="sprow"><div style="display:flex;gap:6px;align-items:center">${sashIcon(sa.cat, sa.name)}<span>${sa.cat} ${sa.name}<small>${sa.w}×${sa.h}</small></span></div><div style="display:flex;gap:4px"><button class="btn" data-eo="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-do="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`); });
   (S.tatami || []).forEach((r, i) => it.push(`<div class="sprow"><div>${r.fk ? (r.fk === "flAge" && HB.__ageLabel ? HB.__ageLabel(r) : "床 " + ((HB.__FLN || {})[r.fk] || r.fk)) : `畳 ${fmt(tatCount(r), 1)}帖（${TST[r.st || "new"][0]}）`}<small>${fmt(r.x1 - r.x0)}×${fmt(r.y1 - r.y0)}</small></div><div style="display:flex;gap:4px"><button class="btn" data-et="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">変える</button><button class="btn sub" data-dt="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
-  (S.tenken || []).forEach((o, i) => it.push(`<div class="sprow"><div>${TKN[o.k]}<small>${o.k === "dansa" ? "幅" + o.w : (o.k === "geta" || o.k === "senpan") ? fmt(o.w) + "×" + fmt(o.d) : o.w + "角"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ek="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dk="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
+  (S.tenken || []).forEach((o, i) => it.push(`<div class="sprow"><div>${TKN[o.k]}<small>${o.k === "dansa" ? "幅" + o.w : (o.k === "geta" || o.k === "senpan" || o.k === "stair") ? fmt(o.w) + "×" + fmt(o.d) : o.w + "角"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ek="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dk="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
   $("drawnList").innerHTML = it.length ? `<h3>置いた物</h3><div>${it.join("")}</div><div class="row"><button class="btn sub" id="dlClose" type="button">閉じる</button></div>` : `<h3>置いた物</h3><p class="hint">まだありません。</p><div class="row"><button class="btn sub" id="dlClose" type="button">閉じる</button></div>`;
   $("drawnList").querySelectorAll("[data-ep]").forEach(b => b.onclick = () => { sel = {t: "p", i: +b.dataset.ep}; drawPlan(); $("plan").scrollIntoView({block: "center"}); });
   $("drawnList").querySelectorAll("[data-eo]").forEach(b => b.onclick = () => { sel = {t: "o", i: +b.dataset.eo}; drawPlan(); $("plan").scrollIntoView({block: "center"}); });
@@ -5946,7 +5978,16 @@ function calc00(){
     }
     rows.push({name, spec: spc, qty: "", cost: w.p * qty, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: qty});
   }
+  function stairRows(){
+    const st = (S.tenken || []).filter(o => o.k === "stair"); if (!st.length) return;
+    const nm = {s: ["kaidan", "階段（直階段）"], L: ["kaidanL", "階段（かね折れ）"], M: ["kaidanM", "階段（回り階段）"]};
+    const autoH = (S.ch || 2400) + (S.dosa || 240);
+    const by = {};
+    st.forEach(o => { const t = (o.st || "s") === "N" ? "M" : (o.st || "s"), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });
+    Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190); work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段）`); });
+  }
   function tenkenRows(){
+    stairRows();
     const f = (S.tenken || []).filter(o => o.k === "floor").length, c = (S.tenken || []).filter(o => o.k === "ceil").length;
     if (f) work("tenkenF", "床下点検口", f, "か所"); if (c) work("tenkenC", "天井点検口", c, "か所");
     const ac = (S.tenken || []).filter(o => o.k === "acout").length; if (ac) work("acOutlet", "エアコン用コンセント（天井付け）", ac, "か所");
@@ -6776,7 +6817,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (ashPro){ ashibaA = ashPro.A; rows.push({grp: "足場工事", ash: true}); }
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
-  if (two) work("kaidan", "階段", 1, "か所");
+  if (two && !(S.tenken || []).some(o => o.k === "stair")) work("kaidan", "階段", 1, "か所");
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
   const np1 = workP("ninku");
