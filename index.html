@@ -643,8 +643,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="chips" id="kPanelG"></div>
     <div class="sub2">天井下地の野縁（材）</div>
     <div class="chips" id="tenjoSec"></div>
-    <div class="sub2">天井と壁の順番（天井下地の長さに効きます）</div>
-    <div class="chips" id="ceilFirst"></div>
+    <div class="sub2">天井下地の型（野縁の流し方）</div>
+    <div class="chips" id="ceilKata"></div>
     <div class="sub2">天井下地の種類</div>
     <div class="chips" id="ceilFrame"></div></details>
     <div class="zo"><div class="sub2">仕上げ</div>
@@ -5221,7 +5221,7 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   const chipsN = (el, list, key, def) => { if (!el) return; el.innerHTML = list.map(v => `<button data-v="${v}" aria-pressed="${(S[key] == null ? def : S[key]) === v}" type="button">${v}mm</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = +b.dataset.v; save(); drawSpec(); }); };
   chipsN($("flBaseT"), [9, 12, 15], "rfFloorBaseT", 12); chipsN($("lamiT"), [2, 3.2, 5.5], "lamiT", 5.5);
   { const el = $("tenjoSec"); if (el){ el.innerHTML = [[36, "36×45（標準）"], [30, "30×45"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.tenjoSec === 30 ? 30 : 36) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.tenjoSec = +b.dataset.v; save(); drawSpec(); }); } }
-  { const el = $("ceilFirst"); if (el){ el.innerHTML = [["ceil", "天井先行"], ["wall", "壁先行"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilFirst === "wall" ? "wall" : "ceil") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilFirst = b.dataset.v; save(); drawSpec(); }); } }
+  { const el = $("ceilKata"); if (el){ el.innerHTML = [["tante", "野縁は短手に流す"], ["chote", "野縁は長手に流す"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilKata === "chote" ? "chote" : "tante") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilKata = b.dataset.v; try { localStorage.setItem("gosei-ceilkata-v1", b.dataset.v); } catch(e){} save(); drawSpec(); }); } }
   { const el = $("ceilFrame"); if (el){ el.innerHTML = [["wood", "木下地（野縁）"], ["lgs", "LGS（軽鉄）"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilFrame === "lgs" ? "lgs" : "wood") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilFrame = b.dataset.v; save(); drawSpec(); }); } }
   const chipsKV = (id, opts, key, def) => { const el = $(id); if (!el) return; el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S[key] || def) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = b.dataset.v; save(); drawSpec(); }); };
   { const el = $("noWall"); if (el){ const opts = [[-1, "なし（全部の辺に壁）"]].concat((S.edges || []).map((e, i) => [i, `辺${i + 1}（${fmt(e.v)}mm）${i === S.house ? "・母屋側" : ""}`])); el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.noWall == null ? -1 : S.noWall) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.noWall = +b.dataset.v; save(); drawSpec(); }); } }
@@ -6009,28 +6009,33 @@ function calc00(){
     if (a <= 0) return;
     if (S.ceilFrame === "lgs"){ work("lgsCeil", `${pre}天井 LGS下地（軽鉄・材工）`, a, "㎡", `${fmt(a, 1)}㎡ × ${fmt(workP("lgsCeil").p)}円`); return; }
     const sec = S.tenjoSec === 30 ? 30 : 36;
-    // CAD-244: 天井下地の計算ルール（2026-11-14・翔伍が確認済みのルール）。部屋ごとに縁・野縁・野縁受け・吊木を「寸法×本数」で出す。
-    // 柱面＝芯芯−柱の太さ105mm。壁先行の時は壁ボード厚×2も引く。野縁は短手に流し303ピッチ（端は縁が受けるので数えない）、
-    // 野縁受けは910ピッチ、吊木は野縁受けの上に910ピッチで長さ250mm固定。縁は壁ぎわを一周（長辺＝柱面いっぱい、短辺＝柱面−90）。
     if (w > 0 && h > 0){
-      const wf = S.ceilFirst === "wall", bt = wf ? (gbParse(S.gbW)[1] || 12.5) * 2 : 0;
-      const Lf = Math.max(w, h) - 105 - bt, Sf = Math.min(w, h) - 105 - bt;
-      if (Sf > 90){
-        lum("tenjo", `${pre}天井 縁`, sec, 45, [Lf, Lf, Sf - 90, Sf - 90], `${sec}×45・壁ぎわ一周 長辺2本×${fmt(Lf)}mm・短辺2本×${fmt(Sf - 90)}mm（${wf ? "壁先行" : "天井先行"}）`, false);
-        const nN = Math.ceil(Lf / 303) - 1;
-        if (nN > 0) lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(nN).fill(Sf - 90), `${sec}×45・短手に流す・${nN}本×${fmt(Sf - 90)}mm（303ピッチ）`, false);
-        const nU = Math.ceil(Sf / 910) - 1, uLen = Lf - 90;
-        if (nU > 0) lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(nU).fill(uLen), `${sec}×45・${nU}本×${fmt(uLen)}mm（910ピッチ）`, false);
-        const nH = nU > 0 ? nU * (Math.ceil(uLen / 910) - 1) : 0;
-        if (nH > 0) lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(nH).fill(250), `${sec}×45・${nH}本×250mm（野縁受けの上に910ピッチ）`, false);
-        return;
-      }
+      /* CAD-240 天井下地（翔伍さん確認済み・2026-11-14）
+         部屋寸法＝柱の芯芯。柱面＝芯芯−柱(105)。壁先行はさらに壁ボード厚×2を引く。
+         縁：ぐるり一周・45平使い。野縁受けと同じ向きの2辺は通し、野縁と同じ向きの2辺は両端を45ずつ引いて突き付け。
+         野縁：@303、縁の内側から内側（−90）、端は縁が受けるので本数に入れない。
+         野縁受け：@910、同じく−90。吊木：野縁受けの上に@910（縁には付けない）、1か所250mm。 */
+      const PIL = +S.pil || 105, wall = S.ceilOrder === "wall", bd = wall ? (gbParse(S.gbW)[1] || 12.5) : 0;
+      const cut = PIL + 2 * bd, wf = w - cut, hf = h - cut, T = 45, TL = +S.tsuriLen || 250;
+      const kata = S.ceilKata === "chote" ? "chote" : "tante";
+      const sh = Math.min(wf, hf), lo = Math.max(wf, hf);
+      const nLen = kata === "tante" ? sh : lo, nSpan = kata === "tante" ? lo : sh;
+      const nN = Math.max(0, Math.ceil(nSpan / 303) - 1), nU = Math.max(0, Math.ceil(nLen / 910) - 1);
+      const lN = nLen - 2 * T, lU = nSpan - 2 * T, nT = nU * Math.max(0, Math.ceil(nSpan / 910) - 1);
+      const od = wall ? `壁先行（柱面＝芯芯−${fmt(cut)}）` : `天井先行（柱面＝芯芯−${fmt(cut)}）`;
+      lum("tenjo", `${pre}天井 縁`, sec, T, [nSpan, nSpan, lN, lN], `${sec}×${T}平使い・ぐるり一周 ${fmt(nSpan)}×2＋${fmt(lN)}×2・${od}`, false);
+      if (nN > 0) lum("tenjo", `${pre}天井 野縁`, sec, T, Array(nN).fill(lN), `${sec}×${T}・@303・${nN}本×${fmt(lN)}mm・${kata === "tante" ? "短手" : "長手"}に流す`, false);
+      if (nU > 0) lum("tenjo", `${pre}天井 野縁受け`, sec, T, Array(nU).fill(lU), `${sec}×${T}・@910・${nU}本×${fmt(lU)}mm`, false);
+      if (nT > 0) lum("tenjo", `${pre}天井 吊木`, sec, T, Array(nT).fill(TL), `${sec}×${T}・野縁受けの上@910・${nT}本×${fmt(TL)}mm`, false);
+      return;
     }
-    // 寸法が無い時（部分工事で面積だけの時）は面積から出す。まわりの長さが分からないので縁は出さない
-    const lN = a / 0.303, lU = a / 0.91, nH = Math.ceil(a / 0.8281);
-    lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(Math.ceil(lN / 3.9)).fill(4000), `${sec}×45・野縁@303 ${fmt(lN, 1)}m`, false);
-    lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(Math.ceil(lU / 3.9)).fill(4000), `${sec}×45・野縁受け@910 ${fmt(lU, 1)}m`, false);
-    if (nH > 0) lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(nH).fill(250), `${sec}×45・吊木${nH}本×250mm`, false);
+    const hl = Math.max(300, S.fuko + 150), nH = Math.ceil(a / 0.8281);
+    {
+      const lN = a / 0.303, lU = a / 0.91, per4 = Math.max(1, Math.floor(4000 / 250));
+      lum("tenjo", `${pre}天井 野縁`, sec, 45, Array(Math.ceil(lN / 3.9)).fill(4000), `${sec}×45・野縁@303 ${fmt(lN, 1)}m（寸法が取れない部屋は面積から概算）`, false);
+      lum("tenjo", `${pre}天井 野縁受け`, sec, 45, Array(Math.ceil(lU / 3.9)).fill(4000), `${sec}×45・野縁受け@910 ${fmt(lU, 1)}m`, false);
+      lum("tenjo", `${pre}天井 吊木`, sec, 45, Array(Math.ceil(nH / per4)).fill(4000), `${sec}×45・吊木${nH}本（長さ250）`, false);
+    }
   }
   function sash(){
     S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
@@ -6466,6 +6471,25 @@ function calc00(){
     const car = scopes.some(sc => sc.ff === "base" || sc.ff === "frame" || sc.ff === "joist" || sc.ff === "strip" || sc.ff === "tat" || sc.ff === "new" || sc.ff === "oki" || sc.fw === "board" || sc.fw === "base" || sc.fc === "board" || sc.fc === "frame" || sc.fc === "base" || (sc.fc === "fin" && sc.cm === "lami"));
     const scMaterials = sc => {
       const {area: a0, ff, fw, fc} = sc;
+      /* CAD-241 床の根太（翔伍さん確認済み・2026-11-14）
+         部屋寸法＝芯芯。柱面＝芯芯−柱(105)。リフォームは土台に差し込めないので根太の長さは部屋の内内（柱面）。
+         大引は4mで収まる向きに@910で通す（標準は長手。S.obikiDir="short"で短手）。根太は大引と直交・@303（和室で断熱材が455用なら S.joistP=455）。
+         根太は加工しないので長さは気にしない。根太の端は「受け」45×105（土台に打つ）の上に載る。受けは大引と同じ向きの壁際2本（S.joistUke===false で無し）。
+         材は標準45×45（S.joistSec="60" で45×60）。 */
+      const joistFrame = (sc2, js, label) => {
+        const PIL = +S.pil || 105, P = S.joistP === 455 ? 455 : 303, dim = sc2.dim;
+        if (!(dim && dim[0] > 0 && dim[1] > 0)){
+          const nn = Math.ceil(sc2.area / (P / 1000) / 4 * 1.05);
+          lum("taruki", label, 45, js, Array(nn).fill(4000), `45×${js}・@${P}・床 ${fmt(sc2.area, 1)}㎡（寸法が取れない部屋は面積から概算）`, false);
+          return;
+        }
+        const wf = dim[0] - PIL, hf = dim[1] - PIL, lo = Math.max(wf, hf), sh = Math.min(wf, hf);
+        let along = S.obikiDir === "short" ? sh : lo, across = S.obikiDir === "short" ? lo : sh;
+        if (along > 4000 && across <= 4000){ const t = along; along = across; across = t; }
+        const n = Math.max(0, Math.ceil(along / P) - 1);
+        if (n > 0) lum("taruki", label, 45, js, Array(n).fill(across), `45×${js}・@${P}・${n}本×${fmt(across)}mm（受けの上に載る・大引と直交）`, false);
+        if (S.joistUke !== false) lum("mabashira", "床 根太受け", 45, 105, [along, along], `45×105・土台に打つ・${fmt(along)}mm×2（大引と同じ向きの壁際）`, false);
+      };
       if (ff === "frame" || ff === "new"){
         const JR = sc.jr();
         lum("obiki", "大引", 90, 90, JR.raw.map(L => L + 100), "90角・910間隔", false);
@@ -6475,10 +6499,10 @@ function calc00(){
       if (ff === "oki") okiRows(a0, sc.perOki);
       if (ff === "base") sheet("構造用合板", S.rfFloorBaseT || 12, `床 下地合板 ${S.rfFloorBaseT || 12}mm（上張り）`, 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`);
 
-if (ff === "joist"){ const nn = Math.ceil(a0 / 0.303 / 4 * 1.05); const js = S.joistSec === "45" ? 45 : 60; lum("taruki", "床根太", 45, js, Array(nn).fill(4000), `45×${js}・@303・床 ${fmt(a0, 1)}㎡`, false); sheet("構造用合板", 28, "床合板 28mm", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`); }
+if (ff === "joist"){ const js = S.joistSec === "60" ? 60 : 45; joistFrame(sc, js, "床根太"); sheet("構造用合板", 28, "床合板 28mm", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`); }
 if (ff === "strip") sheet("構造用合板", 12, "床 下地合板 12mm（はがして張替え）", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`);
 
-if (ff === "tat"){ const nn = Math.ceil(a0 / 0.303 / 4 * 1.05); lum("taruki", "床 高さ合わせ 根太（畳との厚み差）", 45, 45, Array(nn).fill(4000), `45×45・@303・床 ${fmt(a0, 1)}㎡`, false); sheet("構造用合板", 12, "床 下地合板 12mm（畳から床へ）", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`); }
+if (ff === "tat"){ joistFrame(sc, 45, "床 高さ合わせ 根太（畳との厚み差）"); sheet("構造用合板", 12, "床 下地合板 12mm（畳から床へ）", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`); }
       if (fc === "frame") tenjo(sc.ca || a0, "", sc.dim ? sc.dim[0] : 0, sc.dim ? sc.dim[1] : 0);
       const [wc, wt] = gbParse(S.gbW), [cc, ct] = gbParse(S.gbC), gs = ch <= 2420 ? 2420 : 2730;
       if (fw === "board" || fw === "base") sheet(wc, wt, `壁 ${S.gbW}（3×${gs === 2420 ? 8 : 9}）`, 910, gs, Math.ceil(sc.wallN / (0.91 * gs / 1000) * 1.05), `壁 ${fmt(sc.wallN, 1)}㎡（窓・ドアを引いた）`);
@@ -20148,6 +20172,64 @@ body{--ux-bot:76px}
     if(b.closest('#toolCh'))setTimeout(function(){document.body.classList.add('ux-sheet-off')},60);
     else if(b.closest('#toolTabs')||b.closest('#grpSub'))document.body.classList.remove('ux-sheet-off')},true);
   setInterval(tick,300);
+})();
+</script>
+<!-- CAD-240 天井下地の施工順（天井先行／壁先行）。tenjo() の差し替え（CAD-240-tenjo-function.js）とセットで使う -->
+<style id="t240css">#ceilOrder button{min-height:44px}</style>
+<script id="t240js">
+(function(){
+  try { var v = localStorage.getItem("gosei-ceilorder-v1"); if (typeof S !== "undefined"){ if (v) S.ceilOrder = v; else if (S.ceilFirst === "wall") S.ceilOrder = "wall"; } } catch(e){} /* CAD-245互換: CAD-244で壁先行(ceilFirst)を選んだ保存データを ceilOrder に読み替え */
+  function ready(){ return typeof S !== "undefined" && document.getElementById("ceilKata"); }
+  function build(){
+    if (!ready()) return;
+    var k = document.getElementById("ceilKata");
+    if (!document.getElementById("ceilOrder")){
+      var t = document.createElement("div"); t.className = "sub2"; t.id = "ceilOrderT"; t.textContent = "天井の施工順（野縁の長さが変わります）";
+      var c = document.createElement("div"); c.className = "chips"; c.id = "ceilOrder";
+      var after = k.nextElementSibling && k.nextElementSibling.classList.contains("sub2") ? k.nextElementSibling : null;
+      // 「天井下地の型」のチップの直後に並べる（種類の前）
+      k.parentNode.insertBefore(t, after); k.parentNode.insertBefore(c, after);
+    }
+    var el = document.getElementById("ceilOrder"), cur = S.ceilOrder === "wall" ? "wall" : "ceil";
+    var want = [["ceil", "天井先行"], ["wall", "壁先行"]].map(function(p){ return '<button data-v="' + p[0] + '" aria-pressed="' + (cur === p[0]) + '" type="button">' + p[1] + '</button>'; }).join("");
+    if (el.getAttribute("data-s") !== cur){
+      el.innerHTML = want; el.setAttribute("data-s", cur);
+      el.querySelectorAll("button").forEach(function(b){
+        b.onclick = function(){ S.ceilOrder = b.dataset.v; try { localStorage.setItem("gosei-ceilorder-v1", b.dataset.v); } catch(e){} save(); drawSpec(); build(); };
+      });
+    }
+  }
+  setInterval(build, 600); build();
+})();
+</script>
+<!-- CAD-241 床根太の設定チップ。根太の関数差し替え（CAD-241-joist-function.js）とセットで使う。#joistSec の直後に並べる -->
+<style id="t241css">#joistP button,#obikiDir button,#joistUke button{min-height:44px}</style>
+<script id="t241js">
+(function(){
+  var K="gosei-joist-v1";
+  try{ var o=JSON.parse(localStorage.getItem(K)||"{}"); if(typeof S!=="undefined"){ if(o.p)S.joistP=o.p; if(o.d)S.obikiDir=o.d; if(o.u===false)S.joistUke=false; } }catch(e){}
+  function keep(){ try{ localStorage.setItem(K,JSON.stringify({p:S.joistP,d:S.obikiDir,u:S.joistUke})); }catch(e){} }
+  function mk(id,title,opts,cur,set){
+    var el=document.getElementById(id);
+    if(!el){ var j=document.getElementById("joistSec"); if(!j)return;
+      var t=document.createElement("div"); t.className="sub2"; t.id=id+"T"; t.textContent=title;
+      el=document.createElement("div"); el.className="chips"; el.id=id;
+      j.parentNode.insertBefore(t,j.nextSibling); j.parentNode.insertBefore(el,t.nextSibling); }
+    var sig=String(cur); if(el.getAttribute("data-s")===sig)return; el.setAttribute("data-s",sig);
+    el.innerHTML=opts.map(function(p){return '<button data-v="'+p[0]+'" aria-pressed="'+(String(cur)===String(p[0]))+'" type="button">'+p[1]+'</button>';}).join("");
+    el.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ set(b.dataset.v); keep(); save(); drawSpec(); build(); }; });
+  }
+  function washitsu(){ try{ return JSON.stringify(S.roomNames||[]).indexOf("和室")>=0; }catch(e){return false;} }
+  function build(){
+    if(typeof S==="undefined"||!document.getElementById("joistSec"))return;
+    // 逆順に差し込むので 受け→向き→間隔 の順で並ぶ
+    mk("joistUke","壁際の受け（45×105を土台に打つ）",[["1","あり（標準）"],["0","なし"]],S.joistUke===false?"0":"1",function(v){S.joistUke=v==="1";});
+    mk("obikiDir","大引の向き（根太は直角に渡す）",[["long","長手（標準・4mで足りる方）"],["short","短手"]],S.obikiDir==="short"?"short":"long",function(v){S.obikiDir=v;});
+    var w=washitsu(), t=document.getElementById("joistPT"), e=document.getElementById("joistP");
+    if(w){ mk("joistP","根太の間隔（和室：使う断熱材の幅で決める）",[["303","303（標準）"],["455","455"]],S.joistP===455?"455":"303",function(v){S.joistP=+v;}); if(t)t.hidden=false; if(e)e.hidden=false; }
+    else { if(t)t.hidden=true; if(e)e.hidden=true; if(S.joistP===455){S.joistP=303;} }
+  }
+  setInterval(build,600); build();
 })();
 </script>
 </html>
