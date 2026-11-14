@@ -1009,7 +1009,18 @@ const WORK = [
   ["roofKawara", "屋根（瓦・ルーフィング・桟木・役物共）", "円/㎡", 0, 12000],
   ["sujiKana", "筋交い金物（筋交いプレート・ビス共）", "円/本", 0, 600],
   ["cloth", "クロス", "円/㎡", 0, 1680],
-  ["ashiba", "足場", "円/㎡", 0, 1560],
+  ["ashiba", "足場（くさび式）", "円/㎡", 0, 1000],
+  ["ashibaW", "足場（枠組）", "円/㎡", 0, 900],
+  ["ashSheet", "足場 養生シート（メッシュ）", "円/㎡", 0, 250],
+  ["ashRail", "足場 手すり先行", "円/㎡", 0, 100],
+  ["ashStair", "足場 昇降階段", "円/か所", 0, 15000],
+  ["ashSound","足場 防音シート","円/㎡",0,450],
+  ["ashAsa","足場 朝顔（飛散防止）","円/m",0,1800],
+  ["ashRoofM","屋根上 安全手すり","円/m",0,700],
+  ["ashExt","足場 使用期間の延長","円/㎡月",0,150],
+  ["ashTrans","足場 材料の運搬（2tトラック往復）","円/回",0,12000],
+  ["ashRoad","道路使用許可・占用の申請","円/式",0,20000],
+  ["ashGuard","交通誘導員","円/人日",0,14000],
   ["kaidan", "階段（一式）", "円/か所", 0, 150000],
   ["ninkuT", "大工の人工（増築・坪あたり）", "人工/坪", 0, 5],
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
@@ -5383,6 +5394,7 @@ const EXT = {
   clean: {n: "ハウスクリーニング", f: [["a", "床・部屋", "㎡", 0], ["kit", "キッチン", "か所", 0], ["bath", "浴室", "か所", 0], ["toi", "トイレ", "か所", 0], ["sen", "洗面所", "か所", 0], ["ac", "エアコン", "台", 0], ["win", "窓・サッシ", "か所", 0]], d: {}},
   repair: {n: "リペア・小さな補修", f: [["fl", "フローリング補修", "か所", 0], ["tg", "建具の調整", "か所", 0], ["cr", "クロス部分補修", "か所", 0], ["am", "網戸の張り替え", "枚", 0], ["sh", "障子・襖", "枚", 0], ["na", "床鳴り補修", "か所", 0], ["te", "戸車の交換", "か所", 0], ["ck", "水まわりコーキング", "か所", 0]], d: {}},
   caulk: {n: "コーキング打ち替え", f: [["len", "長さ", "m", 20], ["H", "一番高い所", "m", 3]], d: {ashiba: false}},
+  ashi: {n: "足場だけ（外周と高さ）", f: [["len", "建物の外周", "m", 30], ["H", "軒の高さ", "m", 6]], d: {ashiba: true}},
   setsubi: {n: "設備工事（水栓・給排水・給湯器・換気扇）", f: [["suisen", "水栓（蛇口）取替", "か所", 0], ["kyusui", "給水・給湯管 引き直し", "m", 0], ["haisui", "排水管 引き直し", "m", 0], ["kyuto", "ガス給湯器 取替", "台", 0], ["kanki", "換気扇 取替", "台", 0], ["sentaku", "洗濯機パン・水栓", "か所", 0], ["ana", "配管の穴あけ・貫通", "か所", 0]], d: {}},
   kaidan: {n: "階段", f: [["dan", "段数", "段", 13], ["rail", "手すりの長さ", "m", 0]], d: {type: "ue", non: true}},
   free: {n: "自由項目", f: [["q", "数量", "", 1], ["p", "単価（原価）", "円", 0]], d: {name: "", unit: "式"}}
@@ -5398,6 +5410,8 @@ const GOMI = {floor: [0.08, 25, "wood"], wall: [0.03, 11, "board"], ceil: [0.04,
 const GCAT = [["wood", "木くず", "gWood"], ["board", "廃石膏ボード", "gBoard"], ["pla", "廃プラスチック", "gPla"], ["gareki", "その他がれき類", "gGareki"], ["con", "コンクリート・モルタルがら", "gCon"], ["toki", "ガラス・陶磁器くず", "gToki"], ["zan", "残土", "gomiZan"]];
 // 足場の自動面積（㎡）
 function ashibaAuto(e){
+  if (S.ashPro && window.ASH230X){ try { const v = window.ASH230X(e); if (v != null) return v; } catch(x){} }
+  if (e.k === "ashi") return (e.len + 7.2) * (e.H + 1);
   if (e.k === "gaiheki" || e.k === "tosou") return (e.w + 1.8) * (e.h + 1);
   if (e.k === "nokiten") return (e.len + 1.8) * (e.H + 1);
   if (e.k === "hisashi") return (e.w + 1.8) * (e.H + 1) * (e.n || 1);
@@ -6056,7 +6070,7 @@ function calc00(){
     let panDone = false;
     const tear = (key, name, a, kind) => { work(key, name, a, "㎡"); addS(kind || "gaiheki", a); };
     const ashL = [];
-    const ash = e => { if (e.ashiba) ashL.push({n: EXT[e.k].n.replace(/（.*）/, ""), a: ashibaOf(e)}); };
+    const ash = e => { if (e.ashiba) ashL.push({n: EXT[e.k].n.replace(/（.*）/, ""), a: ashibaOf(e), h: +(e.H || e.h || e.th || 3)}); };
     S.extras.forEach(e => {
       if (e.k === "gaiheki" || e.k === "tosou"){
         const a = Math.max(0, e.w * e.h - (e.minus || 0));
@@ -6107,6 +6121,7 @@ function calc00(){
         if (e.fukkyu) work("fukkyu", "周辺の床・壁 解体復旧", e.n, "か所");
         const w = workP("hashiraNk"); crew("大工手間（柱差し替え）", {n: e.n * w.p, avg: w.avg, key: "hashiraNk"});
       } else if (e.k === "caulk"){ work("caulkM", "コーキング打ち替え", e.len, "m"); ash(e); }
+      else if (e.k === "ashi"){ ash(e); }
       else if (e.k === "furo"){
         const fa = e.L * e.W;
         if (e.type === "ub"){ work("ubKaitai", "ユニットバス解体", 1, "か所"); addG("pla", 1.2, 200); }
@@ -6332,13 +6347,18 @@ function calc00(){
     if (ashL.length){
       const names = [...new Set(ashL.map(x => x.n))].join("・");
       if (S.mode === "zo") rows.push({name: `足場（${names}）`, spec: "増築の足場に含む", qty: "", cost: 0, note: "増築の足場に含む"});
-      else { const a = Math.max(...ashL.map(x => x.a)); work("ashiba", `足場（${names}${ashL.length > 1 ? " まとめて1回" : ""}）`, a, "㎡", `${fmt(a, 1)}㎡${ashL.length > 1 ? "（一番大きい分で共通）" : ""} × ${fmt(workP("ashiba").p)}円`); }
+      else { let a = Math.max(...ashL.map(x => x.a)); const hM = Math.max(...ashL.map(x => x.h)), wk = S.ashK === "waku", key = wk ? "ashibaW" : "ashiba", pro = !!S.ashPro;
+        let Hs = hM + 1, spec0 = `${fmt(a, 1)}㎡${ashL.length > 1 ? "（一番大きい分で共通）" : ""}`;
+        if (pro){ if (S.ashA > 0){ a = +S.ashA; spec0 = `面積を手で入力 ${fmt(a, 1)}㎡`; } if (S.ashH > 0){ Hs = S.ashH / 1000; } else Hs = hM + (S.ashUp == null ? 1000 : S.ashUp) / 1000; const ad = Math.max(0, +S.ashAdd || 0); if (ad){ a += ad; spec0 += `＋追加${fmt(ad, 1)}㎡ ＝ ${fmt(a, 1)}㎡`; } rows.push({grp: "足場工事", ash: true}); }
+        work(key, `足場（${names}${ashL.length > 1 ? " まとめて1回" : ""}）${wk ? "（枠組）" : ""}`, a, "㎡", `${spec0} × ${fmt(workP(key).p)}円`);
+        try { if (window.ASH230) window.ASH230(rows, work, a, 0, 0, false, {A: a, L: a / Hs, H: Hs, Hmax: Hs}); } catch(e){} }
     }
     gomiRows();
   }
   if (PT){
     exRows();
     rows.push({name: "処分費", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
+    try { if (window.ASH230F) window.ASH230F(rows); } catch(e){}
     const genka = rows.reduce((x, r) => x + (r.cost || 0), 0);
     return {R, rows, genka, mitsu: genka / (1 - S.margin / 100), area: 0, tsubo: 0, nobe: 0, nobeT: 0, wallA: 0, roofA: 0, pt: true, gomi};
   }
@@ -6485,6 +6505,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     bisouRow(area);
     rows.push({name: "処分費（ほか）", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
     if (HB.__wlRows) HB.__wlRows({grp, work});
+    try { if (window.ASH230F) window.ASH230F(rows); } catch(e){}
     const genka = rows.reduce((x, r) => x + (r.cost || 0), 0);
     return {R, rows, genka, mitsu: genka / (1 - S.margin / 100), area, tsubo, nobe: area, nobeT: tsubo, wallA: wallN, roofA: 0, Lc, Hk, kata, two: false, rf: true, gomi};
   }
@@ -6562,12 +6583,12 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   const perI = S.noWall >= 0 && S.edges[S.noWall] ? per - S.edges[S.noWall].v : per;   // CAD-121: 開放辺の内側に壁はないので内壁ボード・断熱の周長から除く
   const PI1 = partInfo(S.ch), inner1 = Math.max(0, perI * S.ch / 1e6 - opF(1)) + PI1.area, inner2 = two ? Math.max(0, perI * S.ch2 / 1e6 - opF(2)) : 0;
   const topGL = Hk + R.topRise + 60 * n + 105 + S.kiso;
-  let ashibaA = (wallLen + 2000) * (topGL + 1000) / 1e6;
+  let ashibaA = (wallLen + 2000) * (topGL + 1000) / 1e6, ashG = {L: wallLen, runs: 0, hh: topGL, full: true};
   if (S.gaiMode === "pick"){   // 選んだ面だけに足場を組む：長さは選んだ面＋端の分、高さは2階を張るなら全体・1階だけなら1階分
     const nE = S.edges.length, on = (i, f) => i !== S.house && !(S.gaiFace && S.gaiFace[i + "-" + f] === false), sel = i => on(i, 1) || (two && on(i, 2));
     let L = 0, runs = 0, any2 = false; S.edges.forEach((e, i) => { if (!sel(i)) return; L += e.v; if (!sel((i + nE - 1) % nE)) runs++; if (two && on(i, 2)) any2 = true; });
     const hh = two && !any2 ? Hd + 105 + S.kiso : topGL;
-    ashibaA = L > 0 ? (L + 2000 * Math.max(1, runs)) * (hh + 1000) / 1e6 : 0;
+    ashibaA = L > 0 ? (L + 2000 * Math.max(1, runs)) * (hh + 1000) / 1e6 : 0; ashG = {L, runs, hh, full: false};
   }
   const sujiN = (S.sujiN ?? sujiAuto()) * F, sujiL = Math.hypot(910, Lc);
 
@@ -6751,7 +6772,10 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   { const ext = S.sashes.filter(s => sState(s) === "new" && !/室内ドア|クローゼット|開口/.test(s.cat) && (S.gaiMode !== "pick" || !(S.gaiFace && S.gaiFace[s.wall + "-" + (s.fl || 1)] === false))), cm = ext.reduce((x, s) => x + 2 * (s.w + s.h) * s.n, 0) / 1000 * 1.1;
     if (cm > 0) work("caulkM", "サッシまわり コーキング", cm, "m", `${ext.reduce((x, s) => x + s.n, 0)}か所のまわり＋10% ＝ ${fmt(cm, 1)}m × ${fmt(workP("caulkM").p)}円`); }
   if (S.cloth) work("clothNew", "クロス（壁＋天井）", inner1 + inner2 + nobe, "㎡");
-  work("ashiba", "足場" + gaiSfx, ashibaA, "㎡");
+  let ashPro = null; try { if (S.ashPro && window.ASH230P) ashPro = window.ASH230P(ashG, {Hk, R, kata, topGL, D, gableA: (ashG.full || S.gaiGable) ? gableA : 0}); } catch(e){}
+  if (ashPro){ ashibaA = ashPro.A; rows.push({grp: "足場工事", ash: true}); }
+  work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
+  try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two) work("kaidan", "階段", 1, "か所");
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
@@ -6762,6 +6786,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   rows.push({name: "処分費", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
 
   if (HB.__wlRows) HB.__wlRows({grp, work});
+    try { if (window.ASH230F) window.ASH230F(rows); } catch(e){}
   const genka = rows.reduce((a, r) => a + (r.cost || 0), 0);
   const mitsu = genka / (1 - S.margin / 100);
   return {R, rows, genka, mitsu, area, tsubo, nobe, nobeT, wallA: wallNet, roofA, Lc, Hk, kata, two, gomi};
@@ -7073,7 +7098,7 @@ function drawKoutei(C){
     const k = r.fix && r.fix.key, q = r.q;
     if (/^大工手間/.test(r.name)){ const m = String(r.spec).match(/([\d.]+)人工/); if (m) d.daiku += +m[1]; return; }
     if (k && PH_RATE[k] && q > 0){ const [ph, per] = PH_RATE[k]; d[ph] += q / per; }
-    if (k === "ashiba") d.ashiba1 = d.ashiba2 = 1;
+    if (k === "ashiba" || k === "ashibaW"){ d.ashiba1 = d.ashiba2 = 1; try { const x = window.ASH230D && window.ASH230D(); if (x){ d.ashiba1 = x.a; d.ashiba2 = x.b; } } catch(e){} }
   });
   if (C.ouen && C.ouen.H > 0) d.daiku = Math.max(d.daiku - C.ouen.H, d.daiku / 2);
   Object.keys(d).forEach(k => { if (d[k] > 0) d[k] = Math.max(1, Math.ceil(d[k] * 2) / 2); });
@@ -19522,4 +19547,164 @@ setInterval(gkSync208, 600);
 </script>
 
 </html>
+<script>
+/* ---------- CAD-231: 足場屋さん向け（住宅の足場を、本職の内訳で）----------
+   「詳しく拾う」をONにすると：離隔・軒高・使用期間・運搬・養生・朝顔・割増・許可・誘導員・人工まで拾う。OFFなら従来どおり（金額も変わらない）。
+   「足場だけの見積」をONにすると、足場に関係ない行（木材・大工手間・処分費など）を外して、足場工事だけの見積書にする。
+   変数：S.ashK, S.ashPro, S.ashOnly, S.ashD(離隔mm), S.ashUp(軒の上乗せmm), S.ashH(高さmm・手入力), S.ashA(面積㎡・手入力), S.ashAdd(追加面積㎡),
+         S.ashSheet(false|"mesh"|"sound"), S.ashRail, S.ashStair, S.ashAsa(朝顔m), S.ashRoofM(屋根上手すりm), S.ashMon(期間・月), S.ashTrk(運搬 自動/手入力), S.ashRz(割増%), S.ashRoad, S.ashGuard(人日), S.ashCrew(人) */
+window.ASH230P = function(g, c){
+  const d = (S.ashD || 1000) / 1000;
+  const L = g.L / 1000 + (g.full ? 8 * d : 2 * d * Math.max(1, g.runs));
+  const eaveH = c.Hk + 105 + S.kiso, up = (S.ashUp == null ? 1000 : S.ashUp) / 1000;
+  const Hm = (!g.full && g.hh < c.topGL - 1) ? g.hh : eaveH;
+  const H = S.ashH > 0 ? S.ashH / 1000 : Hm / 1000 + up;
+  const handA = S.ashA > 0;
+  /* 屋根の形：妻側は棟の高さまで、片流れは高い側が高い。三角部分・高い側の分を、面積と段数に足す */
+  const kataX = (c.kata && g.full && Hm === eaveH) ? c.D * c.R.topRise / 1e6 : 0, extraG = handA || S.ashH > 0 ? 0 : (c.gableA || 0) + kataX;
+  const Hmax = H + (extraG > 0 ? c.R.topRise / 1000 : 0);
+  let A = handA ? +S.ashA : L * H + extraG; const add = Math.max(0, +S.ashAdd || 0);
+  const A2 = A + add;
+  const spec = (handA ? `面積を手で入力 ${fmt(A, 1)}㎡` : `外周${fmt(g.L / 1000, 1)}m＋${g.full ? "離隔分" + fmt(8 * d, 1) : "端の分" + fmt(2 * d * Math.max(1, g.runs), 1)}m ＝ ${fmt(L, 1)}m × 高さ${fmt(H, 1)}m${extraG ? `＋屋根の形の分（妻の三角・高い側）${fmt(extraG, 1)}㎡` : ""} ＝ ${fmt(A, 1)}㎡`) + (add ? `＋追加${fmt(add, 1)}㎡ ＝ ${fmt(A2, 1)}㎡` : "");
+  return {A: A2, L: handA ? A / H : L, H, Hmax, d, spec, eaveH: Hm};
+};
+window.ASH230 = function(rows, work, ashibaA, wallLen, topGL, two, P){
+  if (!(ashibaA > 0)) return;
+  const waku = S.ashK === "waku", hasP = !!P, pro = hasP && !!S.ashPro;
+  const H = hasP ? (P.Hmax || P.H) : (topGL + 1000) / 1000, L = hasP ? Math.max(1.8, P.L) : Math.max(1.8, ashibaA / H);
+  const n = Math.ceil(L / 1.8 - 1e-9), lv = Math.max(1, Math.ceil(H / (pro ? 1.8 : 1.9) - 1e-9));
+  const note = "足場の㎡単価に含む（本数は目安）";
+  const t0 = rows.length;
+  const line = (name, spec) => rows.push({name, spec, qty: "", cost: 0, note, ash: true});
+  line("足場の長さ・段数", `外周＋端 ${fmt(L, 1)}m ÷ 1.8m ＝ ${n}スパン・高さ ${fmt(H, 1)}m ÷ ${pro ? "1.8" : "1.9"}m ＝ ${lv}段`);
+  if (waku){
+    line("建枠（1,700）", `${n + 1}列 × ${lv}段 ＝ ${(n + 1) * lv}枚`);
+    line("筋交い（1.8m）", `${n}スパン × ${lv}段 × 2 ＝ ${n * lv * 2}本`);
+    line("踏み板（1.8m×幅900）", `${n}スパン × ${lv}段 × 4枚 ＝ ${n * lv * 4}枚`);
+    if (pro){ line("手すり枠", `${n}スパン × ${lv}段 ＝ ${n * lv}枚`); }
+  } else {
+    line("支柱（くさび式・1.8m）", `(${n}スパン＋1) × 2列 × ${lv}段 ＝ ${(n + 1) * 2 * lv}本`);
+    line("手すり（1.8m）", `${n}スパン × ${lv}段 × 2 ＝ ${n * lv * 2}本`);
+    line("踏み板（1.8m×幅600）", `${n}スパン × ${lv}段 × 3枚 ＝ ${n * lv * 3}枚`);
+  }
+  if (pro){
+    line("幅木（1.8m）", `${n}スパン × ${lv}段 ＝ ${n * lv}枚`);
+    line("妻側（端）の手すり", `両端 2か所 × ${lv}段 ＝ ${2 * lv}組`);
+    line("ジャッキベース", `(${n}スパン＋1) × 2 ＝ ${(n + 1) * 2}個`);
+    line("根がらみ", `${n}スパン ＝ ${n}本`);
+    const wt = (Math.ceil(L / 5.4 - 1e-9) + 1) * Math.ceil(H / 3.6 - 1e-9);
+    line("壁つなぎ", `水平5.4m・垂直3.6m以内 ＝ ${wt}か所`);
+  } else line("壁つなぎ", `${Math.ceil(n / 2)}か所 × ${Math.ceil(lv / 2)}段 ＝ ${Math.ceil(n / 2) * Math.ceil(lv / 2)}本`);
+  const sh = S.ashSheet === true ? "mesh" : S.ashSheet;
+  if (sh === "mesh") work("ashSheet", "足場 養生シート（メッシュ）", ashibaA, "㎡");
+  if (sh === "sound") work("ashSound", "足場 防音シート", ashibaA, "㎡");
+  if (S.ashRail) work("ashRail", "足場 手すり先行", ashibaA, "㎡");
+  const st = Math.max(0, Math.round(+S.ashStair || 0)); if (st > 0) work("ashStair", "足場 昇降階段", st, "か所");
+  let man = null;
+  if (pro){
+    const asa = Math.max(0, +S.ashAsa || 0); if (asa > 0) work("ashAsa", "足場 朝顔（飛散防止）", asa, "m");
+    const rm = Math.max(0, +S.ashRoofM || 0); if (rm > 0) work("ashRoofM", "屋根上 安全手すり", rm, "m");
+    const mon = Math.max(2, Math.round(+S.ashMon || 2)); if (mon > 2) work("ashExt", `足場 使用期間の延長（${mon}か月使用）`, ashibaA * (mon - 2), "㎡月", `${fmt(ashibaA, 1)}㎡ × ${mon - 2}か月 × ${fmt(workP("ashExt").p)}円（2か月までは単価に含む）`);
+    const trips = S.ashTrk > 0 ? Math.round(S.ashTrk) : Math.max(2, 2 * Math.ceil(ashibaA * (waku ? 20 : 15) / 2000 - 1e-9));
+    work("ashTrans", "足場 材料の運搬（2tトラック往復）", trips, "回", `${trips}回（${S.ashTrk > 0 ? "手で入力" : "組立と解体で " + fmt(trips / 2) + "台ずつの目安"}）× ${fmt(workP("ashTrans").p)}円`);
+    if (S.ashRoad) work("ashRoad", "道路使用許可・占用の申請", 1, "式");
+    const gd = Math.max(0, +S.ashGuard || 0); if (gd > 0) work("ashGuard", "交通誘導員", gd, "人日");
+    const rz = +S.ashRz || 0;
+    if (rz > 0){ const base = workP(waku ? "ashibaW" : "ashiba"), ext = mon > 2 ? workP("ashExt").p * (mon - 2) : 0; rows.push({name: "足場 割増（狭小地・傾斜地・電線近接など）", spec: `足場の金額の${rz}%`, qty: "", cost: (base.p + ext) * ashibaA * rz / 100, ash: true}); }
+    const crew = Math.max(1, Math.round(+S.ashCrew || 3));
+    const mA = ashibaA / (waku ? 55 : 65), mB = ashibaA / (waku ? 90 : 100);
+    const dA = Math.max(1, Math.ceil(mA / crew - 1e-9)), dB = Math.max(1, Math.ceil(mB / crew - 1e-9));
+    rows.push({name: "作業の目安", spec: `組立 ${fmt(mA, 1)}人工・解体 ${fmt(mB, 1)}人工 ／ 職人${crew}人なら 組立${dA}日・解体${dB}日（工程表に反映）`, qty: "", cost: 0, note: "人件費は足場の㎡単価に含む", ash: true});
+    man = {a: dA, b: dB};
+  }
+  window.__ashInfo = pro ? man : null;
+  for (let i = t0; i < rows.length; i++) rows[i].ash = true;
+};
+window.ASH230X = function(e){
+  const d = (S.ashD || 1000) / 1000, u = (S.ashUp == null ? 1000 : S.ashUp) / 1000;
+  switch (e.k){
+    case "gaiheki": case "tosou": return (e.w + 2 * d) * (e.h + u);
+    case "nokiten": return (e.len + 2 * d) * (e.H + u);
+    case "hisashi": return (e.w + 2 * d) * (e.H + u) * (e.n || 1);
+    case "toi": return (e.len + 2 * d) * (e.th + u);
+    case "yane": return (4 * Math.sqrt(e.a) + 8 * d) * (e.H + u);
+    case "caulk": return (e.len / 2 + 2 * d) * (e.H + u);
+    case "ashi": return (e.len + 8 * d) * (e.H + u);
+  } return null;
+};
+window.ASH230D = function(){ return S.ashPro && window.__ashInfo ? window.__ashInfo : null; };
+window.ASH230F = function(rows){
+  if (!(S.ashPro && S.ashOnly)) return;
+  const keep = rows.filter(r => r.ash || /^足場/.test(r.name || ""));
+  rows.length = 0; keep.forEach(r => rows.push(r));
+};
+(function(){
+  const money = v => fmt(Math.round(v));
+  function box(){
+    try {
+      const anchor = document.getElementById(S.mode === "rf" || S.mode === "pt" ? "exList" : "gaiBox"); if (!anchor) return;
+      let b = document.getElementById("ashBox");
+      if (!b){ b = document.createElement("div"); b.id = "ashBox"; }
+      if (anchor.nextElementSibling !== b){ anchor.after(b); b.dataset.sig = ""; }
+      const k = S.ashK === "waku" ? "waku" : "kusabi", sh = S.ashSheet === true ? "mesh" : (S.ashSheet || ""), ra = !!S.ashRail, st = Math.max(0, Math.min(3, Math.round(+S.ashStair || 0)));
+      const pro = !!S.ashPro;
+      const sig = [k, sh, ra, st, S.mode, pro, S.ashOnly, S.ashD, S.ashUp, S.ashH, S.ashA, S.ashAdd, S.ashAsa, S.ashRoofM, S.ashMon, S.ashTrk, S.ashRz, S.ashRoad, S.ashGuard, S.ashCrew].join("|");
+      if (b.dataset.sig === sig) return; b.dataset.sig = sig;
+      const lab = t => `<div style="margin-top:10px;font-weight:700;font-size:14px">${t}</div>`;
+      const seg = (attr, cur, list) => `<div class="seg" style="margin-top:6px">${list.map(([v, t]) => `<button type="button" data-${attr}="${v}" aria-pressed="${String(cur) === String(v)}">${t}</button>`).join("")}</div>`;
+      const num = (key, t, v, unit, sub) => `<button class="set" type="button" data-pad="${key}" style="margin-top:6px"><span>${t}<small>${sub || ""}</small></span><b>${v > 0 ? fmt(v, 1) + unit : "自動・なし"}</b></button>`;
+      let h = `<h2>足場</h2>` + seg("ak", k, [["kusabi", "くさび式"], ["waku", "枠組"]]) +
+        lab("養生シート") + seg("ash", sh, [["", "なし"], ["mesh", "メッシュ"], ["sound", "防音"]]) +
+        lab("手すり先行") + seg("arail", ra ? 1 : 0, [[1, "あり"], [0, "なし"]]) +
+        lab("昇降階段") + seg("ast", st, [0, 1, 2, 3].map(i => [i, i + "か所"])) +
+        `<p class="hint">部材の本数と長さは、見積の「くわしく」に出ます（目安）。単価は単価表で自分の値段に直せます。</p>` +
+        lab("足場屋さん向け") + seg("apro", pro ? 1 : 0, [[1, "詳しく拾う"], [0, "ふつう"]]);
+      if (pro){
+        h += `<p class="hint">離隔・軒高・使用期間・運搬・養生・朝顔・割増・許可・人工まで拾います。</p>` +
+          seg("aonly", S.ashOnly ? 1 : 0, [[1, "足場だけの見積"], [0, "家全体の見積に足場"]]) +
+          lab("壁から足場までの離隔") + seg("ad", S.ashD || 1000, [[600, "0.6m"], [1000, "1.0m（標準）"], [1200, "1.2m"]]) +
+          lab("軒より上に出す高さ") + seg("aup", S.ashUp == null ? 1000 : S.ashUp, [[500, "0.5m"], [1000, "1.0m"], [1500, "1.5m"]]) +
+          num("H", "足場の高さ（測った高さを入れる）", (+S.ashH || 0) / 1000, "m", "空なら、軒の高さ＋上乗せから自動") +
+          num("A", "足場の面積（そのまま入れる）", +S.ashA || 0, "㎡", "空なら、外周×高さで自動") +
+          num("Add", "追加の面積（下屋・別棟など）", +S.ashAdd || 0, "㎡", "高さが違う所を、面積で足します") +
+          lab("使う期間") + seg("amon", Math.max(2, +S.ashMon || 2), [[2, "2か月まで"], [3, "3か月"], [4, "4か月"], [6, "6か月"]]) +
+          lab("職人の人数（組立・解体）") + seg("acrew", Math.max(1, +S.ashCrew || 3), [2, 3, 4, 5].map(i => [i, i + "人"])) +
+          num("Asa", "朝顔（飛散防止の跳ね出し）", +S.ashAsa || 0, "m", "道路・隣地に面した長さ") +
+          num("RoofM", "屋根上の安全手すり", +S.ashRoofM || 0, "m", "屋根工事があるとき") +
+          num("Trk", "材料の運搬（往復の回数）", +S.ashTrk || 0, "回", "空なら面積から自動") +
+          lab("割増（狭小地・傾斜地・電線近接）") + seg("arz", +S.ashRz || 0, [[0, "なし"], [10, "10%"], [20, "20%"], [30, "30%"]]) +
+          lab("道路使用許可・占用の申請") + seg("aroad", S.ashRoad ? 1 : 0, [[1, "あり"], [0, "なし"]]) +
+          num("Guard", "交通誘導員", +S.ashGuard || 0, "人日", "道路に出る日数 × 人数");
+      }
+      b.innerHTML = h;
+      const re = () => { save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); };
+      const on = (attr, fn) => b.querySelectorAll(`[data-${attr}]`).forEach(x => x.onclick = () => { fn(x.dataset[attr]); re(); });
+      on("ak", v => S.ashK = v); on("ash", v => S.ashSheet = v || false); on("arail", v => S.ashRail = v === "1"); on("ast", v => S.ashStair = +v);
+      on("apro", v => S.ashPro = v === "1"); on("aonly", v => S.ashOnly = v === "1");
+      on("ad", v => S.ashD = +v); on("aup", v => S.ashUp = +v); on("amon", v => S.ashMon = +v); on("acrew", v => S.ashCrew = +v);
+      on("arz", v => S.ashRz = +v); on("aroad", v => S.ashRoad = v === "1");
+      const PAD = {H: ["ashH", "足場の高さ", "m", 1000], A: ["ashA", "足場の面積", "㎡", 1], Add: ["ashAdd", "追加の面積", "㎡", 1], Asa: ["ashAsa", "朝顔の長さ", "m", 1], RoofM: ["ashRoofM", "屋根上の安全手すり", "m", 1], Trk: ["ashTrk", "運搬の回数（往復）", "回", 1], Guard: ["ashGuard", "交通誘導員", "人日", 1]};
+      b.querySelectorAll("[data-pad]").forEach(x => x.onclick = () => { const p = PAD[x.dataset.pad], cur = +S[p[0]] || 0;
+        openPad({title: p[1], sub: "空のまま決定で、自動（なし）に戻ります", unit: p[2], value: cur ? cur / p[3] : "", done: v => { S[p[0]] = v > 0 ? v * p[3] : 0; re(); }}); });
+    } catch(e){}
+  }
+  setInterval(box, 800); box();
+  /* 足場だけの見積：お客様へ送る文面を足場工事用に差し替える */
+  const d0 = window.drawEst;
+  if (typeof d0 === "function"){
+    window.drawEst = function(){
+      const r = d0.apply(this, arguments);
+      try {
+        if (S.ashPro && S.ashOnly){
+          const C = calc(), tax = Math.round(C.mitsu * 0.1), nm = S.genba ? S.genba + " " : "";
+          const ar = C.rows.find(x => /^足場（/.test(x.name || ""));
+          const lines = C.rows.filter(x => !x.grp && !x.note && x.cost > 0).map(x => `・${x.name.replace(/（.*）/, "")} ${fmt(Math.round(x.cost * (x.mk || 1 / (1 - S.margin / 100))))}円`);
+          custText = `${nm}足場工事 お見積り（概算）\n\n${ar ? ar.spec : ""}\n${S.ashK === "waku" ? "枠組足場" : "くさび式足場"}／使用期間 ${Math.max(2, +S.ashMon || 2)}か月\n\n${lines.join("\n")}\n\n税抜 ${money(C.mitsu)}円\n税込 ${money(C.mitsu + tax)}円\n※概算です。現地の状況で変わることがあります。`;
+        }
+      } catch(e){}
+      return r;
+    };
+  }
+})();
+</script>
 </html>
