@@ -19931,6 +19931,11 @@ body.gold #st4 .ux-n button{background:var(--gold);color:#1B1405;border:1px soli
   function nxt0(gs,i,keys){return gs[i+1]?'次へ：'+keys[i+1]:'これで決まり'}
   document.addEventListener('click',function(e){var h=e.target.closest&&e.target.closest('#st4 h2.ux-h');if(!h)return;var k=key(h);cur=(cur===k)?'':k;tick();if(cur)go(h)},true);
   setInterval(tick,500);
+  /* CAD-241: 本体が仕様を作り直したら、定期処理を待たず即座に反映する（表示の遅れ対策） */
+  var uxBusy=false,uxQ=false;
+  function uxRun(){if(uxBusy){uxQ=true;return}uxBusy=true;try{tick()}catch(e){}uxBusy=false;if(uxQ){uxQ=false;setTimeout(uxRun,0)}}
+  var uxSt4=document.getElementById('st4');
+  if(uxSt4&&window.MutationObserver)new MutationObserver(function(){uxRun()}).observe(uxSt4,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
 })();
 </script>
 <style id="ux237css">
@@ -20049,6 +20054,11 @@ body.gold #uxSheet .grid button{background:#14171C;border-color:rgba(227,199,119
       if(/:reform$/.test(t)&&b.textContent!=='下地から直す')b.textContent='下地から直す'})
   }catch(e){}}
   setInterval(tick,400);
+  /* CAD-241: 本体が壁・天井を作り直したら、定期処理を待たず即座に反映する（表示の遅れ対策） */
+  var wBusy=false,wQ=false;
+  function wRun(){if(wBusy){wQ=true;return}wBusy=true;try{tick()}catch(e){}wBusy=false;if(wQ){wQ=false;setTimeout(wRun,0)}}
+  var wRf=document.querySelector('#st4 .rf');
+  if(wRf&&window.MutationObserver)new MutationObserver(function(){wRun()}).observe(wRf,{childList:true,subtree:true});
 })();
 </script>
 <script>
@@ -20079,6 +20089,11 @@ body.gold #uxSheet .grid button{background:#14171C;border-color:rgba(227,199,119
       if(t==='天井'&&n.id==='gbC')e.textContent='天井に張るボード（厚み）'})
   }catch(e){}}
   setInterval(tick,500);
+  /* CAD-241: 本体が仕様を作り直したら、定期処理を待たず即座に言い換える（表示の遅れ対策） */
+  var lBusy=false,lQ=false;
+  function lRun(){if(lBusy){lQ=true;return}lBusy=true;try{tick()}catch(e){}lBusy=false;if(lQ){lQ=false;setTimeout(lRun,0)}}
+  var lSt4=document.getElementById('st4');
+  if(lSt4&&window.MutationObserver)new MutationObserver(function(){lRun()}).observe(lSt4,{childList:true,subtree:true});
 })();
 </script>
 </html>
