@@ -20096,4 +20096,49 @@ body.gold #uxSheet .grid button{background:#14171C;border-color:rgba(227,199,119
   if(lSt4&&window.MutationObserver)new MutationObserver(function(){lRun()}).observe(lSt4,{childList:true,subtree:true});
 })();
 </script>
+<style id="ux236css">
+/* CAD-236 間取り：下に3つの大きなボタン／置く物は下から一覧／上の列を1段に */
+#toolTabs{position:fixed!important;left:0;right:0;bottom:0;z-index:45;background:#fff;border-top:1px solid #d5dde8;padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px))!important;margin:0!important;gap:8px}
+#toolTabs:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:flex!important}
+#toolTabs button{flex:1;min-height:52px!important;font-size:15px!important;font-weight:800;border-radius:14px}
+#grpSub,#toolCh{position:fixed!important;left:0;right:0;z-index:44;background:#fff;margin:0!important;padding:8px 10px!important;box-shadow:0 -4px 14px rgba(0,0,0,.18)}
+#grpSub:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:flex!important}
+#grpSub{gap:6px;overflow-x:auto;border-radius:18px 18px 0 0;flex-wrap:nowrap!important}
+#grpSub button{flex:0 0 auto;white-space:nowrap;min-height:38px;border-radius:999px;padding:0 14px}
+#toolCh:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:grid!important}
+#toolCh{grid-template-columns:repeat(3,1fr);gap:8px;max-height:36vh;overflow-y:auto;box-shadow:none}
+#toolCh button{min-height:48px;white-space:normal;font-size:14px;font-weight:700;border-radius:12px}
+body.ux-sheet-off #grpSub:not([hidden]):not([style*="display: none"]):not([style*="display:none"]),body.ux-sheet-off #toolCh:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:none!important}
+#planBar:not([hidden]):not([style*="display: none"]):not([style*="display:none"]){display:flex!important}
+#planBar{flex-wrap:nowrap!important;align-items:center;gap:4px!important;overflow:hidden}
+#planBar button{min-width:0!important;padding:0 7px!important;min-height:38px;font-size:12px!important}
+#planBar .pbG,#planBar>div{display:flex;gap:4px;flex-wrap:nowrap}
+#planBarCmp,#planCmp{transform:scale(.8);transform-origin:center}
+body.mfull .toast{bottom:calc(92px + env(safe-area-inset-bottom,0px))!important}
+body.mfull #fsBtn{display:none!important}
+body.mfull #stM .modeSeg,body.mfull #st2 .modeSeg{display:none!important}
+#gkBar208 .hint,#gkBar208 p,#gkBar208 small,#gkBar208 span{font-size:11px}
+#gkBar208{padding:2px 8px!important}
+#gkBar208 .seg{margin:0!important}
+#gkM208,#gkN208{min-height:38px!important}
+body{--ux-bot:76px}
+#stM,#st2{padding-bottom:calc(var(--ux-bot) + 8px)}
+</style>
+<script>
+/* CAD-236 下の一覧の高さを合わせ、置く物を選んだら閉じる */
+(function(){
+  function vis(e){return e&&e.getClientRects().length>0}
+  function tick(){try{
+    var tt=document.getElementById('toolTabs'),gs=document.getElementById('grpSub'),ch=document.getElementById('toolCh');
+    if(!tt||!vis(tt))return;
+    var bh=tt.offsetHeight;document.body.style.setProperty('--ux-bot',bh+'px');
+    if(ch&&vis(ch)){ch.style.bottom=bh+'px';if(gs&&vis(gs))gs.style.bottom=(bh+ch.offsetHeight)+'px'}
+    else if(gs&&vis(gs))gs.style.bottom=bh+'px';
+  }catch(e){}}
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button');if(!b)return;
+    if(b.closest('#toolCh'))setTimeout(function(){document.body.classList.add('ux-sheet-off')},60);
+    else if(b.closest('#toolTabs')||b.closest('#grpSub'))document.body.classList.remove('ux-sheet-off')},true);
+  setInterval(tick,300);
+})();
+</script>
 </html>
