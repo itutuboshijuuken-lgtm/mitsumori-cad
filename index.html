@@ -3001,7 +3001,7 @@ function drawToolsUICore(){
   drawSelBar();
   /* --- 旧 blk06 後段：置く物のボタンへの結線と、構え中ボタンの点滅 --- */
   if (HB.__dtSeg06){ try {
-      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ HB.__putOff(); return; } sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
+      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ（続けて置けます）`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ（続けて置けます）`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", toolOpen === "mizu" ? "mizu" : "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
@@ -8357,12 +8357,23 @@ function ltPlanClick(mm){
      置いた直後の建具が選択中でも、別の場所のタップで次の1つが置けるよう !sel の条件を外し
      （建具の上のタップは段5aが先に受ける）、置けた時は選択を消さずコントローラーを出したままにする） */
   if (HB.__ltSeg06){
-    if (HB.__put && (!sel || (sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))) && !ltTool && toolOpen === HB.__put.g){
+    /* CAD-247：浴槽を置いた直後は浴槽が選択されたままになる。その状態でも続けて置けるよう、浴槽が選択中の時も配置を受ける */
+    const bathSel247 = !!(sel && sel.t === "k" && S.tenken && S.tenken[sel.i] && S.tenken[sel.i].k === "bath");
+    const doorMode247 = !!(HB.__doorState205 && HB.__doorState205());   /* CAD-247：入口の設定中は配置しない */
+    if (HB.__put && !doorMode247 && (!sel || bathSel247 || (sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))) && !ltTool && toolOpen === HB.__put.g){
       HB.__putAt = mm;
-      const g217 = HB.__put.g, n217 = (S.sashes || []).length;
+      const g217 = HB.__put.g, n217 = (S.sashes || []).length, nTk247 = (S.tenken || []).length;
       try { HB.__put.fn(); } catch(e){} finally { HB.__putAt = null; }
-      if (!((g217 === "door" || g217 === "win" || g217 === "gen") && (S.sashes || []).length > n217 && sel && sel.t === "o")) sel = null;
-      drawPlan(); return true;
+      /* CAD-247：浴槽を置いたら選択を消さず、選択バー（入口ボタン付き）を出す。入口の案内も出す */
+      const bath247 = (S.tenken || []).length > nTk247 && sel && sel.t === "k" && S.tenken[sel.i] && S.tenken[sel.i].k === "bath" ? S.tenken[sel.i] : null;
+      if (!bath247 && !((g217 === "door" || g217 === "win" || g217 === "gen") && (S.sashes || []).length > n217 && sel && sel.t === "o")) sel = null;
+      drawPlan();
+      if (bath247){
+        const z247 = (S.zones || []).find(q => q && q.fid && bath247.fid && q.fid === bath247.fid && q.k === "ub");
+        if (z247){ HB.__doorBlink247 = bath247.fid; try { drawSelBar(); } catch(e){} toast("浴槽を置きました。下の「入口」ボタンから入口を設定できます"); }
+        else toast("浴槽を置きました。入口は、間仕切りで浴室の範囲を決めると設定できます");
+      }
+      return true;
     }
   }
   /* 本体（旧 blk02・照明を置く／置いてある照明の状態変更。本文 verbatim） */
@@ -11285,9 +11296,9 @@ HB.__dskSeg32 = true;
   HB.__dtPost36 = function(){
     try {
       if (prevOpen !== undefined && toolOpen !== prevOpen && !HB.__put && !ltTool && !enclMode){
-        if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK")}; toast("腰窓：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
-        else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS")}; toast("玄関シングル：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
-        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "ドア", fn: () => addStdOpening("door")}; toast("ドア：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK"), autoArm: true};   /* CAD-247：自動構えの印 */ toast("腰窓：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS"), autoArm: true}; toast("玄関シングル：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "ドア", fn: () => addStdOpening("door"), autoArm: true}; toast("ドア：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
       }
       prevOpen = toolOpen;
       const box = document.getElementById("toolCh2");
@@ -18176,6 +18187,7 @@ applyTheme194();
   HB.__doorOpen205 = function(zi, placed, fromEdit){
     try {
       var z = (S.zones || [])[zi]; if (!z || z.k !== "ub") return;
+      HB.__doorBlink247 = null;   /* CAD-247：入口の設定に入ったら点滅を止める */
       if (typeof sel !== "undefined" && sel) sel = null;
       var eb = document.getElementById("enclBar"); if (eb) eb.hidden = true;
       var sb = document.getElementById("selBar"); if (sb) sb.hidden = true;
@@ -18191,6 +18203,8 @@ applyTheme194();
     var z = (S.zones || []).find(function(q){ return q && q.fid && o.fid && q.fid === o.fid && q.k === "ub"; });
     b.style.visibility = "visible";
     b.textContent = "入口：" + label205(z);
+    /* CAD-247：置いた直後の浴槽（入口は未設定）は、入口ボタンを点滅させて目立たせる */
+    if (o.fid && HB.__doorBlink247 === o.fid && !(z && z.door)) b.classList.add("armBlink"); else b.classList.remove("armBlink");
     b.onclick = function(){
       var zz = (S.zones || []).find(function(q){ return q && q.fid && o.fid && q.fid === o.fid && q.k === "ub"; });
       if (zz) HB.__doorOpen205((S.zones || []).indexOf(zz));
