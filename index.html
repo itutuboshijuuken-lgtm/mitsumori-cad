@@ -4417,11 +4417,13 @@ function flAdd(){
   ["edges", "house", "ch", "rot"].forEach(k => { if (cur[k] !== undefined) snap[k] = flClone(cur[k]); });
   snap.zones = (cur.zones || []).filter(z => z.k === "stair").map(flClone);
   Object.assign(snap, {rfFloor: "none", rfWall: "none", rfCeil: "none", rfWallMat: "cloth", rfCeilMat: "cloth"}); if (cur.flType) snap.flType = cur.flType;   // 新しい階は、「工事なし」から始める
-  S.fl.push({name: (S.fl.length + 1) + "階", snap}); flSwitch(S.fl.length - 1);
+  S.fl.push({name: (S.fl.length + 1) + "階", snap}); if (S.mode === "zo" && S.floors !== 2) S.floors = 2;   // CAD-230: 階を足したら、見積の2階建て判定（S.floors）も合わせる（階段・2階分が見積から落ちる不具合の修正）
+  flSwitch(S.fl.length - 1);
 }
 function flDel(){
   flEnsure(); if (S.fl.length < 2) return; const old = S.fi, to = old > 0 ? old - 1 : 1;
   flSwitch(to); S.fl.splice(old, 1); S.fi = to > old ? to - 1 : to; S.fl.forEach((f, k) => { f.name = (k + 1) + "階"; });
+  if (S.mode === "zo" && S.fl.length < 2 && S.floors !== 1) S.floors = 1;   // CAD-230: 1階だけに戻ったら、2階建て判定も平屋に戻す
   save(); go(step); flTitle(); toast("階を削除しました");
 }
 function flSheet(){
