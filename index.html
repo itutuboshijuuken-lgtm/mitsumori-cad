@@ -2877,7 +2877,7 @@ function planExtras(P, sc){
       h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#E8742C" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#E8742C"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#E8742C"/></g>`;
     }
     h += `<g data-pt="${i}" style="cursor:grab"><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""}/><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
-      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${q.top ? "・パーティション " + fmt(q.top) : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
+      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${q.top ? "・パーティション " + fmt(q.top) : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
     const q = S.parts2D[sel.i], a = P([q.x1, q.y1]), c = P([q.x2, q.y2]);
@@ -7570,10 +7570,13 @@ function roomTint(r, R, P){
 // 狭い部屋は、名前を1文字にする（広い部屋は、そのまま）
 const ROOM_ABBR = {"トイレ": "便", "浴室": "浴", "玄関": "玄", "廊下": "廊", "階段室": "階", "洗面所": "洗", "脱衣室": "脱", "洗面脱衣室": "洗", "キッチン": "台", "リビング": "居", "ダイニング": "食", "和室": "和", "洋室": "洋", "納戸": "納", "寝室": "寝", "押入れ": "押", "クローゼット": "衣", "書斎": "書", "ホール": "ホ", "ユーティリティ": "ユ", "縁側": "縁", "子供部屋": "子"};
 function roomShort(r, R, P){
-  const full = roomLbl(r), ab = ROOM_ABBR[full]; if (!ab) return full;
+  /* CAD-250：1文字の略称（洗・Cなど）は意味が通じないので使わない。名前が無い部屋は空白。
+     クローゼットだけは、名前が収まらない時に「CL」と出す。 */
+  const full = roomNm(r); if (!full) return "";
+  if (full !== "クローゼット") return full;
   let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; r.cells.forEach(k => { const i = k % R.NX, j = (k - i) / R.NX; i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j); });
   const a = P([R.b.x0 + i0 * R.st, R.b.y0 + j0 * R.st]), b = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (j1 + 1) * R.st]);
-  return full.length * 21 + 6 > Math.abs(b[0] - a[0]) ? ab : full;
+  return full.length * 21 + 6 > Math.abs(b[0] - a[0]) ? "CL" : full;
 }
 function roomsCalc(){
   const p = pts(), b = bbox(), st = RM_STEP;
@@ -7639,7 +7642,13 @@ if (i < 0 || j < 0 || i >= R.NX || j >= R.NY) continue;
 if (R.comp[j * R.NX + i] === r.cid && e.name) return e.name;
 }
 // 廊下・UB・WCの範囲に6割以上重なる部屋は、自動で「廊下」「浴室」「トイレ」という名前にする
-const zk = roomZoneKind(r); return zk ? ZK_NAME[zk] : null;
+const zk = roomZoneKind(r); if (zk) return ZK_NAME[zk];
+// CAD-250：置いた物からも自動で名前を付ける（浴槽→浴室・便器→トイレ・洗面台→洗面所）
+const FN250 = {bath: "浴室", wc: "トイレ", senmen: "洗面所"};
+for (const k250 of ["bath", "wc", "senmen"]){
+if ((S.tenken || []).some(o => { if (o.k !== k250) return false; const i = Math.floor((o.x - R.b.x0) / R.st), j = Math.floor((o.y - R.b.y0) / R.st); return i >= 0 && j >= 0 && i < R.NX && j < R.NY && R.comp[j * R.NX + i] === r.cid; })) return FN250[k250];
+}
+return null;
 }
 function roomLbl(r){ return roomNm(r) || r.label; }
 // 囲んだ四角の中で、一番広く入っている部屋
@@ -8392,6 +8401,7 @@ function ltPlanClick(mm){
         if (z247){ HB.__doorBlink247 = bath247.fid; try { drawSelBar(); } catch(e){} toast("浴槽を置きました。下の「入口」ボタンから入口を設定できます"); }
         else toast("浴槽を置きました。入口は、間仕切りで浴室の範囲を決めると設定できます");
       }
+      if (typeof winWarn250 === "function") winWarn250(nTk247);   /* CAD-250：窓と被る物を置いたら警告（窓を消す／そのまま／やめる） */
       return true;
     }
   }
@@ -10722,7 +10732,7 @@ HB.__dskSeg32 = true;
     const r = n.r, R = roomsCalc(), m2 = Math.round(n.a / 1e5) / 10;
     const o = document.createElement("div"); o.id = "senmenAsk";
     o.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:99998;background:#fff;border-top:3px solid #2563B0;box-shadow:0 -6px 20px rgba(0,0,0,.25);padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))";
-    o.innerHTML = `<div style="font-size:17px;font-weight:800;margin-bottom:4px">ここは「洗面脱衣室」になりますか？</div><div style="font-size:13px;color:#555;margin-bottom:10px">浴室の${n.dir}となりの小さい部屋です（約${m2}㎡）。</div><div style="display:flex;gap:8px"><button type="button" data-y style="flex:1.3;min-height:48px;border-radius:10px;border:0;background:#2563B0;color:#fff;font-size:16px;font-weight:800">はい</button><button type="button" data-n style="flex:1;min-height:48px;border-radius:10px;border:1.5px solid #6B7787;background:#fff;color:#223;font-size:15px;font-weight:700">いいえ</button></div><div style="font-size:12px;color:#777;margin-top:6px">「いいえ」の時は、A・B…の名前のままです。あとから名前は直せます。</div>`;
+    o.innerHTML = `<div style="font-size:17px;font-weight:800;margin-bottom:4px">ここは「洗面脱衣室」になりますか？</div><div style="font-size:13px;color:#555;margin-bottom:10px">浴室の${n.dir}となりの小さい部屋です（約${m2}㎡）。</div><div style="display:flex;gap:8px"><button type="button" data-y style="flex:1.3;min-height:48px;border-radius:10px;border:0;background:#2563B0;color:#fff;font-size:16px;font-weight:800">はい</button><button type="button" data-n style="flex:1;min-height:48px;border-radius:10px;border:1.5px solid #6B7787;background:#fff;color:#223;font-size:15px;font-weight:700">いいえ</button></div><div style="font-size:12px;color:#777;margin-top:6px">「いいえ」の時は、名前なしのままです。あとから名前は付けられます。</div>`;
     document.body.appendChild(o);
     const done = nm => {
       S.askedRooms = (S.askedRooms || []).concat([key(r)]);
@@ -20353,5 +20363,44 @@ body{--ux-bot:76px}
   setTimeout(tick, 60);
   tick();
 })();
+</script>
+<script>
+/* ---------- CAD-250：窓と被る物を置いたら警告する（窓を消す／そのまま／やめる） ---------- */
+/* 置いた物の四角と、窓（サッシのうち typeOf === "win"）の位置の重なりを調べる。
+   窓の向きに沿った方向で「幅が重なっている」事と、壁と直交する方向の距離（150mmまで）を条件にする。 */
+function winHit250(o){
+  const [hx, hy] = tkExt(o), rx0 = o.x - hx, rx1 = o.x + hx, ry0 = o.y - hy, ry1 = o.y + hy, hits = [];
+  const corners = [[rx0, ry0], [rx1, ry0], [rx1, ry1], [rx0, ry1]];
+  (S.sashes || []).forEach((sa, i) => {
+    if (!sa.drawn || !sa.host || typeOf(sa) !== "win") return;
+    const seg = hostSeg(sa.host); if (!seg) return;
+    const [a, c] = seg, L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L];
+    const p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L);
+    const A = [a[0] + u[0] * p0, a[1] + u[1] * p0];
+    const along = corners.map(p => (p[0] - A[0]) * u[0] + (p[1] - A[1]) * u[1]);
+    const perp = corners.map(p => (p[0] - A[0]) * -u[1] + (p[1] - A[1]) * u[0]);
+    const a0 = Math.min(...along), a1 = Math.max(...along), q0 = Math.min(...perp), q1 = Math.max(...perp);
+    const perpGap = q1 < 0 ? -q1 : (q0 > 0 ? q0 : 0);
+    if (a0 < w && a1 > 0 && perpGap <= 150) hits.push(i);
+  });
+  return hits;
+}
+function winWarn250(n0){
+  try {
+    if (document.getElementById("winWarn250")) return;
+    const TARGET = ["kitchen", "senmen", "counter", "tearai", "geta", "senpan", "wc", "bath", "makura", "chudan"];
+    const news = (S.tenken || []).slice(n0 || 0).filter(o => TARGET.includes(o.k));
+    if (!news.length) return;
+    const o = news[news.length - 1], hits = winHit250(o);
+    if (!hits.length) return;
+    const el = document.createElement("div"); el.id = "winWarn250";
+    el.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#fff;border-top:3px solid #C62828;box-shadow:0 -6px 20px rgba(0,0,0,.25);padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px))";
+    el.innerHTML = `<div style="font-size:17px;font-weight:800;margin-bottom:4px">窓と被っています</div><div style="font-size:13px;color:#555;margin-bottom:10px">${TKN[o.k] || "置いた物"}が、窓の位置と重なっています。どうしますか。</div><div style="display:flex;gap:8px"><button type="button" data-w style="flex:1.2;min-height:48px;border-radius:10px;border:0;background:#C62828;color:#fff;font-size:15px;font-weight:800">窓を消す</button><button type="button" data-k style="flex:1;min-height:48px;border-radius:10px;border:1.5px solid #6B7787;background:#fff;color:#223;font-size:15px;font-weight:700">そのまま</button><button type="button" data-c style="flex:1;min-height:48px;border-radius:10px;border:1.5px solid #6B7787;background:#fff;color:#223;font-size:15px;font-weight:700">やめる</button></div>`;
+    document.body.appendChild(el);
+    el.querySelector("[data-w]").onclick = () => { pushUndo(); [...hits].sort((a, b) => b - a).forEach(i => S.sashes.splice(i, 1)); el.remove(); save(); drawPlan(); toast("窓を消しました"); };
+    el.querySelector("[data-k]").onclick = () => { el.remove(); };
+    el.querySelector("[data-c]").onclick = () => { const ix = (S.tenken || []).indexOf(o); if (ix >= 0){ pushUndo(); S.tenken.splice(ix, 1); if (sel && sel.t === "k" && sel.i === ix) sel = null; } el.remove(); save(); drawPlan(); };
+  } catch(e){ console.warn(e); }
+}
 </script>
 </html>
