@@ -19946,6 +19946,18 @@ body.gold #st4 .ux-n button{background:var(--gold);color:#1B1405;border:1px soli
 #uxSheet .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 #uxSheet .grid button{min-height:56px;padding:6px 4px;border:2px solid #d5dde8;background:#fff;border-radius:12px;font-weight:700;font-size:13px;line-height:1.3;color:#234}
 </style>
+<style id="ux240goldcss">
+/* CAD-240: 黒×金では「工事を追加」シート（#uxSheet）も黒×金にそろえる（本人の決定 2026-11-14）。
+   CAD-237 と同じ考え方で、このシートの中だけに効く。地は他のカードと同じ暗い背景＋金の細い縁、
+   見出しは生成り、閉じるは金、未選択タブと項目ボタンは暗い地＋生成りの文字＋金の細い縁。
+   選択中タブ（青地に白文字）と橙の入口ボタンは今の見え方のまま。body.gold の時だけ効く。 */
+body.gold #uxSheet{background:linear-gradient(160deg,#1C1F26,#121418);border-top:1px solid rgba(227,199,119,.38);color:#F4EEDD;-webkit-text-fill-color:#F4EEDD;box-shadow:0 -4px 16px rgba(0,0,0,.55)}
+body.gold #uxSheet .hd{color:#F4EEDD;-webkit-text-fill-color:#F4EEDD}
+body.gold #uxSheet .hd button{color:#E3C777;-webkit-text-fill-color:#E3C777}
+body.gold #uxSheet .tabs button{background:#14171C;border:1px solid rgba(227,199,119,.30);color:#F4EEDD;-webkit-text-fill-color:#F4EEDD}
+body.gold #uxSheet .tabs button.on{background:#2563b0;color:#fff;-webkit-text-fill-color:#fff}
+body.gold #uxSheet .grid button{background:#14171C;border-color:rgba(227,199,119,.30);color:#F4EEDD;-webkit-text-fill-color:#F4EEDD}
+</style>
 <script>
 /* CAD-237 工事を追加：分類つきの一覧（置く、と同じ形）。選ぶ処理はアプリ本来のまま */
 (function(){
