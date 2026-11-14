@@ -2717,20 +2717,23 @@ body.theme-ink .thx span{color:#E3C777}
 @keyframes thxin{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.thx{animation:none}}
 /* ===== 図面の入口・契約書プラン・印鑑づくり ===== */
-.cadban{display:flex;align-items:center;gap:12px;width:100%;margin:12px 0 2px;padding:14px;border-radius:16px;border:1.5px solid var(--acc);background:linear-gradient(135deg,rgba(227,199,119,.22),rgba(227,199,119,.06));color:var(--ink);font:inherit;text-align:left;cursor:pointer;position:relative;overflow:hidden;animation:cbglow 2.8s ease-in-out infinite}
-.cadban svg{width:34px;height:34px;flex:none;fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.cadban .cb-t{flex:1;min-width:0}
-.cadban b{display:block;font-size:17px;font-weight:900;line-height:1.35}
-.cadban small{display:block;font-size:12.5px;color:var(--sub);margin-top:2px}
-.cadban .cb-go{flex:none;font-size:13px;font-weight:900;padding:6px 12px;border-radius:999px;background:var(--acc);color:#1B1405}
+.cadban{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;width:100%;margin:12px 0 2px;padding:26px 18px 22px;border-radius:16px;border:1.5px solid var(--acc);background:linear-gradient(135deg,rgba(227,199,119,.22),rgba(227,199,119,.06));color:var(--ink);font:inherit;text-align:left;cursor:pointer;position:relative;overflow:hidden;animation:cbglow 2.8s ease-in-out infinite}
+.cadban svg{width:64px;height:64px;flex:none;fill:none;stroke:var(--acc);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.cadban .cb-t{flex:none;min-width:0;text-align:center}
+.cadban b{display:block;font-size:24px;font-weight:900;line-height:1.35}
+.cadban small{display:block;font-size:14px;line-height:1.6;color:var(--sub);margin-top:2px}
+.cadban .cb-story{display:block;font-size:13.5px;line-height:1.75;color:var(--ink);text-align:left;border-top:1px solid var(--line);padding-top:12px;margin-top:4px;width:100%}
+.cadban .cb-story em{display:block;font-style:normal;font-size:12px;font-weight:900;color:var(--acc);margin-bottom:4px}
+.cadban .cb-note{display:block;font-size:12px;line-height:1.6;color:var(--sub);margin-top:2px}
+.cadban .cb-go{flex:none;font-size:17px;font-weight:900;padding:12px 34px;margin-top:6px;border-radius:999px;background:var(--acc);color:#1B1405}
 .cadban::after{content:"";position:absolute;top:-30%;bottom:-30%;width:28%;left:-40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:cbshine 4.2s ease-in-out infinite}
 @keyframes cbglow{50%{box-shadow:0 0 18px rgba(227,199,119,.45)}}
 @keyframes cbshine{0%,55%{left:-40%}100%{left:130%}}
-#tabbar button[data-go="cad"]{position:relative;color:var(--acc)}
-#tabbar button[data-go="cad"]::after{content:"";position:absolute;top:4px;left:calc(50% + 8px);width:9px;height:9px;border-radius:50%;background:#E5584A;animation:cdot 1.8s ease-out infinite}
+#cadTop{position:relative;color:var(--acc)}
+#cadTop::after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:#E5584A;animation:cdot 1.8s ease-out infinite}
 @keyframes cdot{0%{box-shadow:0 0 0 0 rgba(229,88,74,.7)}100%{box-shadow:0 0 0 9px rgba(229,88,74,0)}}
-body.fx-off .cadban,body.fx-off .cadban::after,body.fx-off #tabbar button[data-go="cad"]::after{animation:none}
-@media (prefers-reduced-motion:reduce){.cadban,.cadban::after,#tabbar button[data-go="cad"]::after{animation:none}}
+body.fx-off .cadban,body.fx-off .cadban::after,body.fx-off #cadTop::after{animation:none}
+@media (prefers-reduced-motion:reduce){.cadban,.cadban::after,#cadTop::after{animation:none}}
 .planbar{border:1.5px solid var(--acc) !important}
 .planbar b{font-size:16px}
 .planCancel{border-color:#E0705F !important;color:#E0705F !important;font-weight:900}
@@ -2742,6 +2745,12 @@ body.theme-ink .cadban b{background:var(--goldtxt);-webkit-background-clip:text;
 body.theme-ink .cadban .cb-go{background:var(--gold)}
 body.theme-ink a.cpOpen{background:var(--gold) !important;color:#1B1405 !important;border-radius:999px !important}
 body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !important}
+.cchips{display:flex;gap:6px;overflow-x:auto;margin:8px 0;padding-bottom:2px}
+.cchips button{flex:none;border-radius:999px;padding:7px 13px;border:1px solid var(--line,#999);background:transparent;color:inherit;font:inherit;font-size:13px;margin:0;width:auto}
+.cchips button[aria-pressed="true"]{background:var(--acc,#E3C777);color:#111;font-weight:700}
+.tkrow{display:flex;justify-content:space-between;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line,#ccc)}.tkrow small{opacity:.8;white-space:nowrap}
+.thead{font-weight:700;margin:12px 2px 4px;font-size:14px;opacity:.9}
+.tcat{margin:-2px 0 8px;font-size:13px;padding:6px 10px;min-height:0}
 </style>
 </head>
 <body>
@@ -2840,7 +2849,7 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
 
 <!-- ホーム -->
 <div class="panel" id="homePanel" role="main" aria-label="ホーム">
-  <header class="top"><div class="top-in"><span style="width:72px"></span><b>見積帳</b><button class="tbtn" id="themeQuick" type="button" aria-label="画面の色を切り替える（青／黒×金）" style="min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>色</button></div></header>
+  <header class="top"><div class="top-in"><button class="tbtn" id="cadTop" type="button" aria-label="図面（見積即答CAD）へ" style="min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M12 20v-3M16 20v-2"/></svg>図面</button><b>見積帳</b><button class="tbtn" id="themeQuick" type="button" aria-label="画面の色を切り替える（青／黒×金）" style="min-width:72px;display:flex;align-items:center;justify-content:center;gap:5px"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>色</button></div></header>
   <main id="homeMain"></main>
 </div>
 
@@ -2849,7 +2858,7 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
   <button type="button" data-go="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>ホーム</span></button>
   <button type="button" data-go="jobs"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg><span>現場</span></button>
   <button type="button" data-go="new" class="plus"><b><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></b><span>つくる</span></button>
-  <button type="button" data-go="cad"><svg viewBox="0 0 24 24"><path d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M12 20v-3M16 20v-2"/></svg><span>図面</span></button>
+  <button type="button" data-go="tanka"><svg viewBox="0 0 24 24"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M12 3v18M4 7.5l16 9M20 7.5l-16 9" opacity=".0"/><path d="M9 10h6M9 14h6M12 8v8"/></svg><span>単価</span></button>
   <button type="button" data-go="set"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg><span>設定</span></button>
 </nav>
 
@@ -2932,6 +2941,25 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
 </div>
 
 <!-- 設定 -->
+<div class="panel" id="tankaPanel" role="main" aria-label="単価">
+  <header class="top"><div class="top-in"><span style="width:72px"></span><b>単価</b><span style="width:72px"></span></div></header>
+  <main>
+    <div class="cchips" id="tkTabs"><button type="button" data-tk="sell" aria-pressed="true">売値の単価</button><button type="button" data-tk="labor" aria-pressed="false">人工</button><button type="button" data-tk="cost" aria-pressed="false">原価表（図面）</button></div>
+    <div id="tkSell"></div>
+    <div id="tkLabor" hidden></div>
+    <div id="tkCost" hidden>
+      <section>
+        <h2>原価表 <small>見るだけ・税抜</small></h2>
+        <p class="note">図面（CAD）の単価表・材料表です。値段を直すときは、図面で直してください。</p>
+        <div class="cchips" id="tkCostTabs"><button type="button" data-ct="unit" aria-pressed="true">単価表</button><button type="button" data-ct="mat" aria-pressed="false">材料表</button></div>
+        <input type="search" id="tkCostQ" placeholder="さがす（品名）" aria-label="原価表をさがす" class="f">
+        <div id="tkCostList"></div>
+        <button class="btn" id="tkCostCad" type="button">図面で直す</button>
+      </section>
+    </div>
+  </main>
+</div>
+
 <div class="panel" id="setPanel" role="dialog" aria-label="設定">
   <header class="top"><div class="top-in"><button class="tbtn" id="stBack">戻る</button><b>設定</b><span style="width:72px"></span></div></header>
   <main>
@@ -2956,8 +2984,12 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
     </section>
     <section>
       <h2>ゲーム性</h2>
-      <div class="f"><label for="p_goal">今月の入金目標（円）</label><div class="yen"><input id="p_goal" data-p="goal" inputmode="numeric"></div></div>
-      <p class="note">入れると、ホームに目標までの進み具合がゲージで出ます。利益メーターの目標は、上の「標準の利益率」を使います。</p>
+      <div class="f"><label>目標の種類</label><div class="chips" id="goalKindChips"><button type="button" data-gk="profit">利益（手元に残るお金）</button><button type="button" data-gk="sales">売上（入金）</button></div></div>
+      <div class="f"><label for="p_goalY">今期（1〜12月）の目標（円）</label><div class="yen"><input id="p_goalY" data-p="goalY" inputmode="numeric"></div></div>
+      <div class="f"><label for="p_workDays">1か月に平均で何日働く？（1日の目標に使います）</label><input id="p_workDays" data-p="workDays" inputmode="numeric" placeholder="日数を入れる"></div>
+      <div class="f"><label for="p_workHours">1日に何時間働く？（時給に直すのに使います）</label><input id="p_workHours" data-p="workHours" inputmode="decimal" placeholder="時間を入れる"></div>
+      <p class="note" id="goalCalc">目標を入れると、月の目標・日の目標が出ます。</p>
+      <p class="note">利益は「契約額 − 原価（経費込み）」で、完成日（なければ契約日）の月に数えます。原価を入れていない現場は数えません。</p>
       <label class="switch">演出を使う（ハンコ・達成花火・光るメーター）<input type="checkbox" id="p_fx" data-p="fx"></label>
       <label class="switch">音（ハンコ・花火の音）<input type="checkbox" id="p_snd" data-p="snd"></label>
       <label class="switch">振動（対応する機種のみ）<input type="checkbox" id="p_vib" data-p="vib"></label>
@@ -2998,10 +3030,10 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
       <button class="btn" id="openCadPrice">図面の単価表を開く</button>
     </section>
     <section>
-      <h2>定番項目 <small>売値・税抜</small></h2>
-      <p class="note">いつもの仕事を、名前と売値で登録しておく所です。書類を作る時の「単価表・材料表・人工から追加」の「定番」から、売値のまま明細に入ります（利益率は乗りません）。</p>
-      <div id="teibanEd"></div>
-      <button class="btn" id="teibanAdd" type="button">＋ 定番を追加</button>
+      <h2>単価 <small>売値・税抜</small></h2>
+      <p class="note">いつもの仕事を、名前と売値で登録します。五十音に自動で並び、「分類」（内装・建具など）は付けなくてもOK。書類を作る時の「単価表・材料表・人工から追加」→「単価」から、売値のまま入ります。</p>
+      <input type="search" id="teibanQ" placeholder="さがす（品名）" aria-label="単価をさがす" class="f"><div class="cchips" id="teibanChips"></div><div id="teibanCatBar" style="margin:4px 0 8px"></div><div id="teibanEd"></div><datalist id="teibanCats"></datalist>
+      <button class="btn" id="teibanAdd" type="button">＋ 単価を追加</button>
     </section>
     <section>
       <h2>クラウド保存（自動）</h2>
@@ -3050,9 +3082,9 @@ body.theme-ink .planCancel{color:#F08A80 !important;border-color:#E0705F !import
 
 <div class="shade" id="pkShade" hidden></div>
 <div class="sheetbox" id="pk" hidden role="dialog" aria-label="単価表から追加">
-  <div class="tabs" id="pkTabs"><button data-pk="unit">単価表</button><button data-pk="mat">材料表</button><button data-pk="teiban">定番</button><button data-pk="labor">人工</button><button data-pk="close" aria-label="閉じる" style="flex:.5">✕</button></div>
+  <div class="tabs" id="pkTabs"><button data-pk="unit">単価表</button><button data-pk="mat">材料表</button><button data-pk="teiban">単価</button><button data-pk="labor">人工</button><button data-pk="close" aria-label="閉じる" style="flex:.5">✕</button></div>
   <input type="search" id="pkQ" placeholder="品名で探す" aria-label="品名で探す" class="f">
-  <div id="pkList"></div>
+  <div class="cchips" id="pkCats" hidden></div><div id="pkList"></div>
   <div id="pkLabor" hidden>
     <div class="g2 f"><div><label for="lbP">人数</label><input id="lbP" type="number" inputmode="decimal" step="0.5" value="1"></div><div><label for="lbD">日数</label><input id="lbD" type="number" inputmode="decimal" step="0.5" value="1"></div></div>
     <div class="f"><label for="lbName">明細の名称</label><input id="lbName" value="大工手間"></div>
@@ -3144,7 +3176,7 @@ const DEFAULT_PROFILE = {
   person:"", regno:"",
   payNote:"お支払いは下記銀行口座へ振り込みくださいますようお願い申し上げます。",
   bank:"",
-  logo:null, seal:null, showLogo:true, showSeal:true, lastNo:"", rate:"", margin:"", goal:"", fx:true, snd:false, vib:true, theme:"ink"
+  logo:null, seal:null, showLogo:true, showSeal:true, lastNo:"", rate:"", margin:"", goal:"", goalY:"", goalKind:"profit", workDays:"22", workYear:"250", workHours:"8", fx:true, snd:false, vib:false, theme:"ink"
 };
 const PKEY = "shorui-profile-v1", DKEY = "shorui-docs-v1", CKEY = "shorui-current-v1";
 const readLS = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
@@ -3822,7 +3854,7 @@ function closePicker(){ $("pk").hidden = true; $("pkShade").hidden = true; pkSel
 function setPk(t){
   pkTab = t; pkSel = null;
   document.querySelectorAll("#pkTabs [data-pk]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.pk === t)));
-  $("pkQ").hidden = $("pkList").hidden = t === "labor"; $("pkLabor").hidden = t !== "labor";
+  $("pkQ").hidden = $("pkList").hidden = t === "labor"; if (t === "labor" && $("pkCats")) $("pkCats").hidden = true; $("pkLabor").hidden = t !== "labor";
   $("pkQtyRow").hidden = t === "labor";
   $("pkForm").hidden = t !== "labor";
   if (t === "labor") pkPreview(); else renderPk();
@@ -3831,7 +3863,13 @@ function renderPk(){
   const q = $("pkQ").value.trim();
   const pkSrc = pkTab === "unit" ? profile.unitTable : pkTab === "teiban" ? profile.teiban : profile.matTable;
   const list = pkSrc.map((it, i) => ({it, i})).filter(({it}) => !q || it.name.includes(q));
-  $("pkList").innerHTML = list.map(({it, i}) => `<button class="pitem" data-i="${i}"><span>${esc(it.name)}</span><small>${it.labor ? it.labor + "人工/" + esc(it.unit) : yen(num(it.price)) + "円/" + esc(it.unit)}</small></button>`).join("") || (pkTab === "teiban" && !profile.teiban.length ? `<p class="note">定番はまだ登録がありません。設定の「定番項目」で追加できます。</p>` : `<p class="note">見つかりません。</p>`);
+  if (pkTab === "teiban"){
+    const cb = $("pkCats"); catChips(cb, renderPk);
+    const f2 = list.filter(({it}) => catMatch(it, teibanCat));
+    list.length = 0; f2.forEach(x => list.push(x));
+    list.sort((a, b) => (!(a.it.cat || "")) - (!(b.it.cat || "")) || (a.it.cat || "").localeCompare(b.it.cat || "", "ja") || a.it.name.localeCompare(b.it.name, "ja"));
+  } else { const cb = $("pkCats"); if (cb) cb.hidden = true; }
+  $("pkList").innerHTML = list.map(({it, i}) => `<button class="pitem" data-i="${i}"><span>${esc(it.name)}</span><small>${it.cat ? esc(it.cat) + "　" : ""}${it.labor ? it.labor + "人工/" + esc(it.unit) : yen(num(it.price)) + "円/" + esc(it.unit)}</small></button>`).join("") || (pkTab === "teiban" && !profile.teiban.length ? `<p class="note">単価はまだ登録がありません。設定の「単価」で追加できます。</p>` : `<p class="note">見つかりません。</p>`);
   $("pkList").querySelectorAll(".pitem").forEach(b => b.addEventListener("click", () => {
     $("pkList").querySelectorAll(".pitem").forEach(x => x.setAttribute("aria-pressed", "false")); b.setAttribute("aria-pressed", "true");
     pkSel = pkSrc[+b.dataset.i];
@@ -3858,7 +3896,7 @@ function pkData(){
 function pkPreview(){
   const d = pkData(); if (!d) return;
   $("pkName").textContent = pkTab === "labor" ? "大工手間（1人工 " + yen(num(profile.rate)) + "円）" : $("pkName").textContent;
-  if (d.fixed != null){ $("pkCost").textContent = "定番（売値のまま）"; $("pkSell").textContent = "売値 " + yen(d.qty * d.fixed) + "円"; return; }
+  if (d.fixed != null){ $("pkCost").textContent = "単価（売値のまま）"; $("pkSell").textContent = "売値 " + yen(d.qty * d.fixed) + "円"; return; }
   $("pkCost").textContent = "原価 " + yen(d.qty * d.cost) + "円";
   $("pkSell").textContent = "売値 " + yen(d.qty * sellUnit(d.cost)) + "円";
 }
@@ -3907,21 +3945,74 @@ $("matReset").addEventListener("click", () => { if (!confirm("材料表を最初
 $("setBtn").addEventListener("click", () => { tableEditor("unitEd", "unitTable"); tableEditor("matEd", "matTable"); teibanEditor(); });
 
 /* 設定：定番項目の編集 */
+let teibanCat = "";   /* ""＝すべて／"\u0000"＝分類なし／それ以外＝その分類 */
+const NOCAT = "\u0000";
+function teibanCats(){ return [...new Set(profile.teiban.map(p => (p.cat || "").trim()).filter(Boolean))].sort((x, y) => x.localeCompare(y, "ja")); }
+function teibanSort(){
+  /* 空の行は一番上（入力待ち）。あとは 分類（五十音）→ 品名（五十音）。分類なしは最後 */
+  profile.teiban.sort((x, y) => (!y.name) - (!x.name) || (!(x.cat || "")) - (!(y.cat || "")) || (x.cat || "").localeCompare(y.cat || "", "ja") || (x.name || "").localeCompare(y.name || "", "ja"));
+}
+function catMatch(p, c){ return !c || (c === NOCAT ? !(p.cat || "").trim() : (p.cat || "").trim() === c); }
+function catChips(box, onPick){
+  const cats = teibanCats(); box.innerHTML = "";
+  if (!cats.length){ box.hidden = true; return; }
+  box.hidden = false;
+  if (teibanCat && teibanCat !== NOCAT && !cats.includes(teibanCat)) teibanCat = "";
+  const items = [["", "すべて（" + profile.teiban.length + "）"]].concat(cats.map(c => [c, c + "（" + profile.teiban.filter(p => (p.cat || "").trim() === c).length + "）"]));
+  const n0 = profile.teiban.filter(p => !(p.cat || "").trim()).length;
+  if (n0) items.push([NOCAT, "分類なし（" + n0 + "）"]);
+  items.forEach(([v, label]) => {
+    const bt = document.createElement("button"); bt.type = "button"; bt.textContent = label; bt.setAttribute("aria-pressed", String(teibanCat === v));
+    bt.addEventListener("click", () => { teibanCat = v; onPick(); });
+    box.appendChild(bt);
+  });
+}
 function teibanEditor(){
   const box = $("teibanEd"); if (!box) return; box.innerHTML = "";
-  profile.teiban.forEach((p, i) => {
+  teibanSort();
+  catChips($("teibanChips"), teibanEditor);
+  $("teibanCats").innerHTML = teibanCats().map(c => `<option value="${esc(c)}">`).join("");
+  const bar = $("teibanCatBar"); bar.innerHTML = "";
+  if (teibanCat && teibanCat !== NOCAT){
+    const rn = document.createElement("button"); rn.className = "btn"; rn.type = "button"; rn.style.margin = "0"; rn.textContent = "「" + teibanCat + "」の名前を変える";
+    rn.addEventListener("click", () => {
+      const nn = (prompt("新しい分類名", teibanCat) || "").trim(); if (!nn) return;
+      profile.teiban.forEach(p => { if ((p.cat || "").trim() === teibanCat) p.cat = nn; });
+      teibanCat = nn; saveProfile(); teibanEditor();
+    });
+    bar.appendChild(rn);
+  }
+  const q = ($("teibanQ") ? $("teibanQ").value : "").trim().toLowerCase();
+  const list = profile.teiban.filter(p => catMatch(p, teibanCat) && (!q || (p.name || "").toLowerCase().includes(q) || !p.name));
+  let lastCat = null;
+  list.forEach(p => {
+    if (!teibanCat && teibanCats().length && p.name){
+      const c = (p.cat || "").trim();
+      if (c !== lastCat){
+        lastCat = c;
+        const n = profile.teiban.filter(x => (x.cat || "").trim() === c).length;
+        const h = document.createElement("div"); h.className = "thead"; h.textContent = (c || "分類なし") + "（" + n + "）"; box.appendChild(h);
+      }
+    }
     const row = document.createElement("div"); row.className = "prow";
     row.innerHTML = `<input aria-label="品名" placeholder="品名（例：障子張替 標準 小）"><input aria-label="単位" placeholder="単位"><div class="yen"><input aria-label="売値" inputmode="numeric" placeholder="0"></div><button class="del" aria-label="消す">×</button>`;
     const [n, u, v] = row.querySelectorAll("input");
     n.value = p.name; u.value = p.unit; v.value = p.price ? yen(p.price) : ""; yenInput(v);
     n.addEventListener("input", () => { p.name = n.value; saveProfile(); });
+    n.addEventListener("change", () => { teibanEditor(); });
     u.addEventListener("input", () => { p.unit = u.value; saveProfile(); });
     v.addEventListener("input", () => { p.price = num(v.value); saveProfile(); });
-    row.querySelector(".del").addEventListener("click", () => { if (!confirm(`「${p.name || "この定番"}」を消しますか？`)) return; profile.teiban.splice(i, 1); saveProfile(); teibanEditor(); });
+    row.querySelector(".del").addEventListener("click", () => { if (!confirm(`「${p.name || "この単価"}」を消しますか？`)) return; const i = profile.teiban.indexOf(p); if (i >= 0) profile.teiban.splice(i, 1); saveProfile(); teibanEditor(); });
     box.appendChild(row);
+    const ci = document.createElement("input"); ci.className = "tcat"; ci.setAttribute("list", "teibanCats"); ci.setAttribute("aria-label", "分類"); ci.placeholder = "分類（例：内装・建具）　空でもOK"; ci.value = p.cat || "";
+    ci.addEventListener("input", () => { p.cat = ci.value; saveProfile(); });
+    ci.addEventListener("change", () => { p.cat = ci.value.trim(); saveProfile(); teibanEditor(); });
+    box.appendChild(ci);
   });
+  if ((q || teibanCat) && !list.length) box.innerHTML = '<p class="note">見つかりません。</p>';
 }
-$("teibanAdd").addEventListener("click", () => { profile.teiban.push({name:"", unit:"", price:0}); saveProfile(); teibanEditor(); });
+$("teibanQ").addEventListener("input", teibanEditor);
+$("teibanAdd").addEventListener("click", () => { $("teibanQ").value = ""; profile.teiban.push({name:"", unit:"", price:0, cat: (teibanCat && teibanCat !== NOCAT) ? teibanCat : ""}); saveProfile(); teibanEditor(); const f = $("teibanEd").querySelector(".prow input"); if (f) f.focus(); });
 
 /* ---------- 起動 ---------- */
 refreshImgs();
@@ -5065,7 +5156,7 @@ $("kdExport").addEventListener("click", async () => {
 
 /* ===== アプリらしい操作：ホーム・下のタブ・入力の分割（表示と切り替えだけ。計算・保存は触らない） ===== */
 (function(){
-  const TOPS = ["homePanel", "listPanel", "setPanel"];
+  const TOPS = ["homePanel", "listPanel", "tankaPanel", "setPanel"];
   const isOpen = id => { const e = $(id); return !!(e && e.classList.contains("open")); };
   const tabbar = $("tabbar");
   let flow = true;   // 下のタブで動いている間 true／書類を開いて入力している間 false
@@ -5077,7 +5168,7 @@ $("kdExport").addEventListener("click", async () => {
     tabbar.hidden = !on;
     document.body.classList.toggle("tab-on", on);
     document.body.classList.toggle("cust-view", !$("custView").hidden);
-    const cur = top === "homePanel" ? "home" : top === "listPanel" ? "jobs" : top === "setPanel" ? "set" : "";
+    const cur = top === "homePanel" ? "home" : top === "listPanel" ? "jobs" : top === "tankaPanel" ? "tanka" : top === "setPanel" ? "set" : "";
     tabbar.querySelectorAll("button[data-go]").forEach(b => b.classList.toggle("on", b.dataset.go === cur));
   }
   const mo = new MutationObserver(syncTab);
@@ -5102,8 +5193,8 @@ $("kdExport").addEventListener("click", async () => {
           <div class="hst"><span>見積中</span><b>${yen(sum("estimate"))}<small>円</small></b><em>${cnt("estimate")}件</em></div>
         </div></div>
       ${backupDue() ? `<button type="button" class="hh" id="hmBk" style="display:block;width:100%;text-align:left;border:1px dashed var(--line);border-radius:12px;padding:10px 12px;margin:10px 0 0;background:transparent;letter-spacing:0;font-size:13.5px;line-height:1.5;color:var(--ink)">💾 データは、このスマホの中にあります。<b>書き出して控えを取ると安心です ›</b></button>` : ""}
-      <button type="button" class="cadban" data-go="cad"><svg viewBox="0 0 24 24"><path d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M12 20v-3M16 20v-2"/></svg><span class="cb-t"><b>図面を描くだけで、見積が出る</b><small>この「図面」って何？ 押してみてください</small></span><span class="cb-go">見る ›</span></button>
-      ${gaugeHtml()}
+      ${proNow143() ? "" : `<button type="button" class="cadban" data-go="cad"><svg viewBox="0 0 24 24"><path d="M4 20V4l16 16z"/><path d="M4 12h3M4 8h2M12 20v-3M16 20v-2"/></svg><span class="cb-t"><b>図面を描くだけで、<br>見積が出る</b><small>指でなぞって部屋を描くと、<br>材料も金額も自動で出ます。<br>この「図面」って何？ 押してみてください</small></span><span class="cb-story"><em>開発のきっかけ</em>現役の職人が、元請けで困った経験をもとに、「現調に行ったその場で、お客様に金額を出せたら」という理想を実現したくて、自分のために作り始めたアプリです。<br>個人事業主の方ほど、ぜひ使ってみてください。</span><span class="cb-go">図面を見てみる ›</span><span class="cb-note">有料プランにすると、この枠は表示されなくなります。</span></button>`}
+      ${gaugeHtml()}${num(profile.goalY) > 0 ? `<button type="button" id="hmSave" style="display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;border:1.5px solid var(--acc);border-radius:14px;background:rgba(227,199,119,.10);color:var(--ink);padding:12px 14px;margin:8px 0 4px;font:inherit;cursor:pointer"><span><b style="display:block;font-size:15px;color:var(--acc)">図面を使うと、何時間ラクになる？</b><small style="display:block;font-size:12.5px;opacity:.85;margin-top:2px">今のやり方と、並べて比べる</small></span><span style="flex:none;font-weight:900;padding:6px 12px;border-radius:999px;background:var(--acc);color:#1B1405;font-size:13px">比べる ›</span></button>` : ""}
       <div class="hh">つくる</div>
       <div class="tiles">
         <button type="button" class="tile" data-make="estimate"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 12h7M9 16h7"/></svg><span>見積書<small>見積を作る</small></span></button>
@@ -5128,6 +5219,34 @@ $("kdExport").addEventListener("click", async () => {
   function goHome(){ flow = true; closeTops(); renderHome(); openPanel("homePanel"); syncTab(); }
   function goJobs(){ flow = true; closeTops(); pickMode = false; $("listBtn").click(); }
   function goSet(){ flow = true; closeTops(); $("setBtn").click(); }
+  function goTanka(){ flow = true; closeTops(); tkInit(); teibanEditor(); tkShow(tkCur); openPanel("tankaPanel"); syncTab(); }
+  let tkCur = "sell", tkDone = false, ctCur = "unit";
+  function tkInit(){
+    if (tkDone) return; tkDone = true;
+    const s1 = $("teibanEd").closest("section"), s2 = $("p_rate").closest("section");
+    $("tkSell").appendChild(s1); $("tkLabor").appendChild(s2);
+    s2.querySelector("h2").textContent = "人工・利益率";
+    const sb = document.createElement("button"); sb.type = "button"; sb.className = "btn"; sb.textContent = "図面を使うと何時間ラクになる？（今のやり方と比べる）"; sb.addEventListener("click", () => window.showSaveTable()); s2.appendChild(sb);
+    $("tkTabs").addEventListener("click", e => { const b = e.target.closest("button[data-tk]"); if (b) tkShow(b.dataset.tk); });
+    $("tkCostTabs").addEventListener("click", e => { const b = e.target.closest("button[data-ct]"); if (b){ ctCur = b.dataset.ct; tkCostRender(); } });
+    $("tkCostQ").addEventListener("input", tkCostRender);
+    $("tkCostCad").addEventListener("click", () => { if ($("cadPriceSec") && !$("cadPriceSec").hidden) $("openCadPrice").click(); else $("toCad").click(); });
+  }
+  function tkShow(k){
+    tkCur = k;
+    $("tkSell").hidden = k !== "sell"; $("tkLabor").hidden = k !== "labor"; $("tkCost").hidden = k !== "cost";
+    $("tkTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tk === k)));
+    if (k === "cost") tkCostRender();
+    $("tankaPanel").scrollTop = 0;
+  }
+  function tkCostRender(){
+    $("tkCostTabs").querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.ct === ctCur)));
+    const q = $("tkCostQ").value.trim().toLowerCase();
+    const src = (ctCur === "unit" ? profile.unitTable : profile.matTable) || [];
+    const l = src.filter(it => !q || (it.name || "").toLowerCase().includes(q)).slice().sort((a, b) => (a.name || "").localeCompare(b.name || "", "ja"));
+    $("tkCostList").innerHTML = l.map(it => `<div class="tkrow"><span>${esc(it.name)}</span><small>${it.labor ? it.labor + "人工" : yen(num(it.price)) + "円"}/${esc(it.unit || "")}</small></div>`).join("") || (src.length ? '<p class="note">見つかりません。</p>' : '<p class="note">まだ空です。図面（CAD）とつながると、ここに出ます。</p>');
+  }
+  $("cadTop").addEventListener("click", () => $("toCad").click());
   function sheet(on){ $("newSheet").classList.toggle("open", !!on); }
   $("listBtn").addEventListener("click", () => { flow = true; });
 
@@ -5137,6 +5256,7 @@ $("kdExport").addEventListener("click", async () => {
     if (g === "home") goHome();
     else if (g === "jobs") goJobs();
     else if (g === "set") goSet();
+    else if (g === "tanka") goTanka();
     else if (g === "cad") $("toCad").click();
     else if (g === "new") sheet(true);
   });
@@ -5153,8 +5273,9 @@ $("kdExport").addEventListener("click", async () => {
     else if (b.dataset.go === "jobs") goJobs();
     else if (b.id === "hmKd") $("kdChip").click();
     else if (b.id === "hmFm") $("fmChip").click();
+    else if (b.id === "hmSave") showSaveTable();
     else if (b.id === "hmBk"){ goSet(); setTimeout(() => { const el = $("bkOut2"); if (el) el.scrollIntoView({block: "center"}); }, 400); }
-    else if (b.id === "hmGauge"){ goSet(); setTimeout(() => { const el = $("p_goal"); if (el){ el.scrollIntoView({block: "center"}); el.focus(); } }, 400); }
+    else if (b.id === "hmGauge"){ goSet(); setTimeout(() => { const el = $("p_goalY"); if (el){ el.scrollIntoView({block: "center"}); el.focus(); } }, 400); }
   });
 
   /* ---- 入力を4つに分ける ---- */
@@ -5201,18 +5322,75 @@ $("kdExport").addEventListener("click", async () => {
   const syncFx = () => document.body.classList.toggle("fx-off", !fxOn());
   $("p_fx").addEventListener("change", syncFx); syncFx();
 
+  /* 目標：今期（その年）→ ÷12 → 月 → ÷稼働日 → 日 */
+  function goalVals(){
+    const Y = num(profile.goalY), kind = profile.goalKind === "sales" ? "sales" : "profit";
+    const wd = Math.max(1, num(profile.workDays) || 22), hh = Math.max(1, Math.min(24, num(profile.workHours) || 8));
+    const ym = today().slice(0, 7), yy = today().slice(0, 4);
+    let year = 0, month = 0;
+    if (kind === "sales"){
+      docs.filter(d => d.type === "invoice" && d.payDate && num(d.payAmt)).forEach(d => {
+        const k = calc(d), r = k.total ? k.sub / k.total : 1, v = Math.round(num(d.payAmt) * r), ds = String(d.payDate);
+        if (ds.slice(0, 4) === yy) year += v; if (ds.slice(0, 7) === ym) month += v;
+      });
+    } else {
+      KD.jobs.forEach(j => { const c = kdCalc(j); if (!(c.act > 0)) return; const ds = String((j.info || {}).end || (j.info || {}).cdate || ""); if (ds.slice(0, 4) === yy) year += c.profit; if (ds.slice(0, 7) === ym) month += c.profit; });
+    }
+    return {Y, kind, wd, year, month, M: Math.round(Y / 12), D: Math.round(Y / 12 / wd), H: hh, W: Math.round(Y / 12 / wd / hh)};
+  }
+  function goalUi(){
+    document.querySelectorAll("#goalKindChips button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.gk === (profile.goalKind === "sales" ? "sales" : "profit"))));
+    const g = goalVals(), el = $("goalCalc"); if (!el) return;
+    el.textContent = g.Y > 0 ? "月の目標 " + yen(g.M) + "円　／　1日に " + yen(g.D) + "円 稼げば達成／時給にすると " + yen(g.W) + "円（月に " + g.wd + "日・1日" + g.H + "時間働く場合" + (num(profile.workDays) ? "" : "。日数が空なので22日で計算") + "）" : "目標を入れると、月の目標・日の目標が出ます。";
+  }
+  document.querySelectorAll("#goalKindChips button").forEach(b => b.addEventListener("click", () => { profile.goalKind = b.dataset.gk; saveProfile(); goalUi(); }));
+  ["p_goalY", "p_workDays", "p_workHours"].forEach(id => $(id).addEventListener("input", goalUi));
+  function showSaveTable(){
+    const g = goalVals(), W = g.Y > 0 ? g.W : 0;
+    /* [項目, 今(最小,最大)時間, CAD(最小,最大)時間, 補足] ＝ 仮の目安 */
+    const rows = [
+      ["見積づくり", 2, 4, 0.5, 1, "事務所で図面起こし・拾い・計算 → その場で図面から自動"],
+      ["現場に行く", 2, 4, 1, 2, "採寸のあと、確認でもう1回 → 1回で済む（往復＋滞在）"],
+      ["業者との打ち合わせ・同行", 0.5, 1, 0.25, 0.5, "口頭で伝える・聞き直す → 図面を共有"],
+      ["お客様への報告・説明", 0.5, 1, 0.25, 0.5, "資料づくり → 図面と金額をそのまま見せる"]
+    ];
+    const sum = i => rows.reduce((a, r) => a + r[i], 0);
+    const nLo = sum(1), nHi = sum(2), cLo = sum(3), cHi = sum(4), sLo = nLo - cLo, sHi = nHi - cHi;
+    const mx = Math.max(...rows.map(r => r[2]), nHi / 1);
+    const h = v => (Math.round(v * 100) / 100) + "時間", rg = (a, b2) => a === b2 ? h(a) : h(a) + "〜" + h(b2);
+    const bar = (lo, hi, col) => `<div style="display:flex;align-items:center;gap:8px;margin:3px 0"><i style="display:block;height:10px;border-radius:5px;background:${col};width:${Math.max(3, ((lo + hi) / 2) / Math.max(...rows.map(r => (r[1] + r[2]) / 2)) * 62)}%"></i><span style="font-size:12.5px;white-space:nowrap">${rg(lo, hi)}</span></div>`;
+    let ov = $("saveModal"); if (ov) ov.remove();
+    ov = document.createElement("div"); ov.id = "saveModal";
+    ov.style.cssText = "position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:14px";
+    ov.innerHTML = `<div style="background:var(--panel,#14171C);color:var(--ink,#F4EEDD);border:1.5px solid var(--acc,#E3C777);border-radius:16px;padding:16px 14px;max-width:440px;width:100%;max-height:90vh;overflow:auto">
+      <h2 style="margin:0 0 2px;font-size:18px">今のやり方 と 図面（CAD）の比較</h2>
+      <p class="note" style="margin:0 0 8px">見積1件あたり。仮の目安で、実測ではありません。</p>
+      <div style="display:flex;gap:14px;font-size:12px;margin-bottom:2px"><span><i style="display:inline-block;width:12px;height:8px;border-radius:4px;background:#8a8f99;margin-right:4px"></i>今のやり方</span><span><i style="display:inline-block;width:12px;height:8px;border-radius:4px;background:var(--acc,#E3C777);margin-right:4px"></i>図面（CAD）</span></div>
+      ${rows.map(r => `<div style="padding:10px 0;border-bottom:1px solid var(--line,#555)"><b>${r[0]}</b>${bar(r[1], r[2], "#8a8f99")}${bar(r[3], r[4], "var(--acc,#E3C777)")}<div style="font-size:12px;opacity:.8;margin-top:2px">${r[5]}</div></div>`).join("")}
+      <div style="padding:12px 0 2px"><b style="font-size:16px">合計（1件）</b>${bar(nLo, nHi, "#8a8f99")}${bar(cLo, cHi, "var(--acc,#E3C777)")}
+        <div style="margin-top:8px;font-size:17px;font-weight:900;color:var(--acc,#E3C777)">減る時間 ${rg(sLo, sHi)}${W ? `<br>あなたの時給 ${yen(W)}円で、約${yen(Math.round(sLo * W))}〜${yen(Math.round(sHi * W))}円ぶん` : ""}</div></div>
+      <div style="margin:10px 0 6px;padding:12px 12px;border-radius:12px;border:1.5px solid var(--acc,#E3C777);background:rgba(227,199,119,.14)"><b style="display:block;font-size:16px;line-height:1.5;color:var(--acc,#E3C777)">仕事につながらなかった見積もりにも、同じ時間がかかります。</b><span style="display:block;font-size:13px;margin-top:4px;opacity:.9">受けた仕事の分だけでなく、取れなかった見積の分も、毎回この時間が減ります。</span></div>
+      <p class="note">${W ? "時給は、設定の目標・働く日数・働く時間から出しています。月3件なら、この3倍です。" : "設定で今期の目標を入れると、あなたの時給に直した金額も出ます。"}業者との同行は、会う必要そのものは残ります。減るのは聞き直しや後からの確認です。</p>
+      <button class="btn solid" type="button" id="saveClose" style="margin-top:6px">閉じる</button></div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", e => { if (e.target === ov || e.target.id === "saveClose") ov.remove(); });
+  }
+  window.showSaveTable = showSaveTable;
+  yenInput($("p_goalY"));
+  $("setBtn").addEventListener("click", () => setTimeout(() => { const el = $("p_goalY"); if (num(el.value) > 0) el.value = Number(num(el.value)).toLocaleString("ja-JP"); goalUi(); }, 0));
   window.gaugeHtml = function(){
-    const ym = today().slice(0, 7);
-    const paid = docs.filter(d => d.type === "invoice" && d.payDate && String(d.payDate).slice(0, 7) === ym).reduce((a, d) => a + num(d.payAmt), 0);
-    const goal = num(profile.goal);
-    if (goal <= 0){ paidSnap = paid; }
-    if (goal <= 0) return `<button type="button" class="gauge empty" id="hmGauge"><b>今月の入金目標を決める</b><small>目標を入れると、進み具合がゲージで見えます ›</small></button>`;
-    paidSnap = paid;
-    const pct = Math.min(100, Math.round(paid / goal * 100)), done = paid >= goal;
+    const g = goalVals(), nm = g.kind === "sales" ? "売上" : "利益";
+    goalSnap = g.month;
+    if (g.Y <= 0) return `<button type="button" class="gauge empty" id="hmGauge"><b>今期の${nm}目標を決める</b><small>決めると、月の目標・日の目標まで出ます ›</small></button>`;
+    const pct = Math.max(0, Math.min(100, Math.round(g.month / g.M * 100))), done = g.month >= g.M;
+    const ypct = Math.max(0, Math.min(100, Math.round(g.year / g.Y * 100)));
     return `<button type="button" class="gauge${done ? " done" : ""}" id="hmGauge" data-w="${pct}">
-      <div class="gtop"><span>今月の入金</span><b>${yen(paid)}円<small>／目標 ${yen(goal)}円</small></b></div>
+      <div class="gtop"><span>今月の${nm}</span><b>${yen(g.month)}円<small>／月の目標 ${yen(g.M)}円</small></b></div>
       <div class="gtrack"><i style="width:0"></i></div>
-      <div class="gnote">${done ? "目標達成！おつかれさまです" : "あと " + yen(goal - paid) + "円で目標（" + pct + "%）"}</div></button>`;
+      <div class="gnote">${done ? "今月の目標達成！おつかれさまです" : "あと " + yen(g.M - g.month) + "円（" + pct + "%）"}</div>
+      <div class="gnote" style="margin-top:6px;font-size:15px;font-weight:900;color:var(--acc)">1日 ${yen(g.D)}円 稼げば、今期の目標に届きます</div>
+      <div class="gnote" style="margin-top:2px">時給にすると ${yen(g.W)}円（1日${g.H}時間働く場合）</div>
+      <div class="gnote" style="margin-top:4px;opacity:.85">今期の${nm} ${yen(g.year)}円／目標 ${yen(g.Y)}円（${ypct}%）</div></button>`;
   };
 
   function stamp(force, label){
@@ -5294,17 +5472,17 @@ $("kdExport").addEventListener("click", async () => {
   }
 
   /* ---- 今月の入金の目盛り（目標をまたいだ瞬間を見つけるため） ---- */
-  let paidSnap = 0;
+  let paidSnap = 0, goalSnap = 0;
   function monthPaid(){ const ym = today().slice(0, 7); return docs.filter(d => d.type === "invoice" && d.payDate && String(d.payDate).slice(0, 7) === ym).reduce((a, d) => a + num(d.payAmt), 0); }
-  function snapPaid(){ paidSnap = monthPaid(); }
+  function snapPaid(){ paidSnap = monthPaid(); goalSnap = goalVals().month; }
   const BIG_PAY = 1000000;
   function paidFx(){
     if (!fxOn()){ snapPaid(); return; }
     stamp();
-    const now = monthPaid(), goal = num(profile.goal), delta = now - paidSnap;
-    const crossed = goal > 0 && paidSnap < goal && now >= goal;
-    paidSnap = now;
-    if (crossed) setTimeout(() => bigWin("目標達成", "今月の入金目標をクリア！", "goal"), 1000);
+    const now = monthPaid(), delta = now - paidSnap;
+    const gv = goalVals(), crossed = gv.M > 0 && goalSnap < gv.M && gv.month >= gv.M;
+    paidSnap = now; goalSnap = gv.month;
+    if (crossed) setTimeout(() => bigWin("目標達成", "今月の目標をクリア！", "goal"), 1000);
     else if (delta >= BIG_PAY) setTimeout(() => bigWin("大口入金", "¥" + yen(delta) + " の入金！", "big"), 1000);
   }
 
@@ -5351,7 +5529,7 @@ $("kdExport").addEventListener("click", async () => {
     const b = e.target.closest("[data-fxt]"); if (!b) return;
     const k = b.dataset.fxt;
     if (k === "stamp") stamp(true);
-    else if (k === "big") bigWin("目標達成", "今月の入金目標をクリア！", "goal", true);
+    else if (k === "big") bigWin("目標達成", "今月の目標をクリア！", "goal", true);
   });
   snapPaid();
 
