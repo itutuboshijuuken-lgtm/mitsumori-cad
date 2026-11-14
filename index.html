@@ -17709,13 +17709,11 @@ seg「立体図」を押すと、室内の立体ではなく屋根つきの外�
    見出しと金額は金のグラデーション文字（--goldtxt）、本文は生成り（--ink）。
    body.gold の時だけ効く。標準（青白）のCSS・切り替えの仕組み・保存キー
    （gosei-theme-v1）・既定（標準）は今のまま。
-   図面キャンバスは、黒×金の時だけ filter（invert＋hue-rotate）で線と文字を
-   明るくする。SVGの中の fill/stroke をCSSで変えると、書き出し（elToPng が
-   計算済みスタイルをコピーする方式）に漏れて白地・黒線でなくなるため、
-   図面の中身の色には触らない。書き出し・印刷は従来通り白地・黒線のまま。
-   点滅の色（選択 #FF00C8／道具の黄色）は不変。 */
+   図面は、黒×金でも白いまま（標準テーマと同じ見た目）にする（CAD-235・
+   本人の実機指摘と決定 2026-11-14：反転 filter で図面まで暗くなり、部屋の
+   色と文字が読みにくかった）。図面の中身の色には触らない。書き出し・印刷
+   は従来通り白地・黒線のまま。点滅の色（選択 #FF00C8／道具の黄色）は不変。 */
 #drawGround{display:none}
-body.gold #drawGround{display:block}
 body.gold{
   color-scheme:dark;
   --bg:#080A0D; --panel:#14171C; --ink:#F4EEDD; --sub:#B6AD97;
@@ -17828,20 +17826,15 @@ body.gold .phBar{background:linear-gradient(180deg,#14171C,#0B0D10);border-top:2
 body.gold .phBar button,body.gold .phBar label{background:#0B0D10;color:#E3C777;border-color:#E3C777}
 body.gold #phWrap .phHead{background:linear-gradient(180deg,#14171C,#0B0D10);color:#E3C777}
 body.gold #shoruiWrap,body.gold #shoruiWrap iframe{background:#080A0D}
-/* ===== 図面キャンバス：線と文字だけ明るくする（中身の色は変えない＝書き出しは白地・黒線のまま） ===== */
-body.gold #draw{background:#0B0D10}
-body.gold #gridRect{fill:url(#gridGold)}
-body.gold #inkG{stroke:#E3C777;filter:drop-shadow(0 0 3px rgba(227,199,119,.8))}
-body.gold #drawHint{fill:#B6AD97!important}
-body.gold #compassBox circle{fill:#14171C;stroke:rgba(227,199,119,.30)}
-body.gold #compassBox path{stroke:#B6AD97}
-body.gold #compassBox text{fill:#B6AD97}
-body.gold #plan,body.gold #pvSvg,body.gold #iso,body.gold #sec,body.gold #elevBox svg,body.gold #miniPlan219 svg{filter:invert(1) hue-rotate(180deg)}
-body.gold #landView218 svg:not(:has(#inkG)){filter:invert(1) hue-rotate(180deg)}
-body.gold #pvCard{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.38)}
-body.gold #pvLegend{color:#B6AD97!important}
-body.gold #miniPlan219{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.38)}
-body.gold #miniPlan219 .mpCap{color:#B6AD97}
+/* ===== 図面は白いまま（CAD-235・本人の決定）：反転 filter は廃止。描く画面の
+   金色の上書き（地の色・格子・インク・方位）もやめ、標準テーマと同じ見た目に
+   戻した。図面を入れる枠・土台（カード・完成図カード・小さい平面図）も白に
+   そろえ、暗い縁が残らない様にする。画面まわりは黒×金のまま。 ===== */
+body.gold #pvCard{background:#fff;border-color:#111}
+body.gold #miniPlan219{background:#fff;border-color:#DCE3EB}
+body.gold #miniPlan219 .mpCap{color:#5B6673}
+body.gold .card:has(> #draw),body.gold .card:has(> #plan),body.gold .card:has(> #iso),body.gold .card:has(> #sec){background:#fff;border-color:#DCE3EB}
+body.gold #elevBox .card{background:#fff;border-color:#DCE3EB}
 /* ===== JS生成のシート・ボタン（インラインの白背景は !important で上書き。書き出し用の生成ページには当てない） ===== */
 body.gold #proSheet > div{background:linear-gradient(160deg,#1C1F26,#121418)!important;color:var(--ink);border:1px solid rgba(227,199,119,.38)}
 body.gold #proSheet #proView,body.gold #proSheet #proClose{background:#0B0D10!important;color:#E3C777!important;border-color:rgba(227,199,119,.55)!important}
