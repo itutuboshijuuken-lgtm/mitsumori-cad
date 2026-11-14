@@ -973,10 +973,11 @@ const WORK = [
   ["precut", "プレカット加工費", "円/坪", 0, 7600],
   ["precutMin", "プレカット加工費 最低額", "円", 0, 0],
   ["precutUnpan", "プレカット運搬費", "円/式", 0, 50000],
-  ["kizami", "刻み人工（坪あたり）", "人工/坪", 0, 1.5],
+  ["kizami", "刻み人工（坪あたり・15坪以下は2.0）", "人工/坪", 0, 1.5]   /* CAD-248：15坪以下は計算側で2.0に切り替える */,
   ["toriai", "既存との取り合い（既存外壁撤去・雨仕舞い）", "円/m", 0, 8000],
-  ["kisoBase", "基礎（ベース）", "円/㎡", 0, 16000],
-  ["kisoRise", "基礎（立ち上がり）", "円/m", 0, 13000],
+  ["kisoBase", "基礎（ベース）", "円/㎡", 0, 18000],
+  ["kisoRise", "基礎（立ち上がり）", "円/m", 0, 15000],
+  ["kisoPump", "基礎 生コン・ポンプ最低料金", "円/式", 0, 30000],   /* CAD-248：少量の生コン・ポンプの最低料金（新設。案の幅30,000〜50,000の下限） */
   ["domaCon", "土間コンクリート", "円/㎡", 0, 7000],
   ["domaFin", "土間仕上げ（金ゴテ等）", "円/㎡", 0, 2500],
   ["floorFin", "床 フロアタイル", "円/㎡", 0, 6000],
@@ -1023,10 +1024,11 @@ const WORK = [
   ["ashTrans","足場 材料の運搬（2tトラック往復）","円/回",0,12000],
   ["ashRoad","道路使用許可・占用の申請","円/式",0,20000],
   ["ashGuard","交通誘導員","円/人日",0,14000],
+  ["eLockB", "電子錠 電池式（暗証・カード・リモコン）", "円/台", 0, 60000], ["eLockS", "電子錠 スマホ・タッチ", "円/台", 0, 90000], ["eLockE", "電子錠 電気錠（配線あり）", "円/台", 0, 120000],   /* CAD-248：電子錠（玄関ドアで選ぶ） */
   ["kaidan", "階段（一式）", "円/か所", 0, 150000],
   ["kaidanL", "階段（かね折れ）", "円/か所", 0, 200000],
   ["kaidanM", "階段（回り階段）", "円/か所", 0, 220000],
-  ["ninkuT", "大工の人工（増築・坪あたり）", "人工/坪", 0, 5],
+  ["ninkuT", "大工の人工（建方・造作・仕上げ全部／坪・刻みは別）", "人工/坪", 0, 5]   /* CAD-248：刻みは含まない事を明記 */,
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
   ["kaitai", "解体（床・壁・天井）", "円/㎡", 0, 2500],
   ["caulkM", "サッシまわり・目地コーキング", "円/m", 0, 660],
@@ -1226,7 +1228,7 @@ const WORK = [
   ["deckStep", "ウッドデッキ 階段", "円/か所", 0, 30000],
   ["fenceHinoki", "フェンス ヒノキ（高さ1.2m・材工）", "円/m", 0, 15000],
   ["fenceAlu", "フェンス アルミ（高さ1.2m・材工）", "円/m", 0, 12000],
-  ["kHon", "キッチン本体（クリナップ ラクエラ）", "円/台", 0, 320000],
+  ["kHon", "キッチン本体（クリナップ ラクエラ）", "円/台", 0, 380000],
   ["kHaiso", "キッチン 配送費", "円/台", 0, 9000],
   ["kGencho", "キッチン 現調費", "円/台", 0, 11000],
   ["sHon600", "洗面化粧台 W600（クリナップ ファンシオ 二面鏡）", "円/台", 0, 151700],
@@ -1258,7 +1260,7 @@ const WORK = [
   ["pBousuiTape", "防水両面テープ 50mm×20m", "円/巻", 0, 600],
   ["pJoiner", "目地ジョイナー 3030", "円/本", 0, 220],
   ["kTear", "キッチン 既存撤去", "円/台", 0, 30000],
-  ["kWork", "キッチン 施工費", "円/台", 0, 45000],
+  ["kWork", "キッチン 施工費", "円/台", 0, 60000],
   ["kSetsubi", "キッチン 給排水・ガス接続", "円/台", 0, 40000],
   ["kIH", "IH 電気工事", "円/か所", 0, 30000],
   ["kDuct", "ダクト工事", "円/か所", 0, 15000],
@@ -1267,9 +1269,9 @@ const WORK = [
   ["kPanel", "キッチンパネル（壁）", "円/㎡", 0, 9000], ["paraVent", "パラペット 通気金物（笠木側）", "円/m", 0, 2500], ["kasagi", "笠木（板金・材料＋工事）", "円/m", 0, 4500], ["ventIn", "屋根の通気金物（軒・入口）", "円/m", 0, 2000], ["kPanelM", "キッチンパネル（壁）中級", "円/㎡", 0, 12000], ["kPanelH", "キッチンパネル（壁）高級", "円/㎡", 0, 16000], ["fxUnderW", "壁の下地補強（Mクロス取付）", "円/か所", 0, 1200],
   ["kBase", "吊戸・パネル用 壁下地補強", "円/か所", 0, 8000],
   ["uHon1216", "ユニットバス 1216（標準グレード）", "円/台", 0, 400000],
-  ["uHon1616", "ユニットバス 1616（標準グレード）", "円/台", 0, 450000],
+  ["uHon1616", "ユニットバス 1616（標準グレード）", "円/台", 0, 650000],
   ["uHon1620", "ユニットバス 1620（標準グレード）", "円/台", 0, 480000],
-  ["uKumi", "ユニットバス 組立", "円/台", 0, 80000],
+  ["uKumi", "ユニットバス 組立", "円/台", 0, 90000],
   ["uSetsubi", "ユニットバス 給排水・給湯接続", "円/台", 0, 50000],
   ["uDenki", "ユニットバス 電気（換気扇・照明）", "円/台", 0, 25000],
   ["uWaku", "浴室入口まわり補修（枠・ボード・クロス）", "円/か所", 0, 30000],
@@ -1399,10 +1401,12 @@ function sashRow(s, two){
   if (st === "fusuma" || st === "shoji"){ const w = workP("rpShoji"), k = sPanels(s) * s.n; return {name: `${st === "fusuma" ? "襖" : "障子"} 張替え`, spec: `${s.cat === "クローゼット" ? "押入" : /掃き出し|腰窓|小窓/.test(s.cat) ? s.cat + " " + s.name : s.name}・${where}・${fmt(w.p)}円/枚`, qty: `${k}枚`, cost: w.p * k, avg: w.avg, fix: {kind: "work", key: "rpShoji"}}; }
   if (st === "ip"){ const pr = s.ipPrice || AVG_IP[s.cat] || 60000; return {name: `インプラス（内窓） ${s.cat} ${s.name}`, spec: `既存窓の内側・${where}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.ipPrice, fix: {kind: "sash"}}; }
   if (s.cat === "シャッター"){ const bp = shutterPrice(s), pr = s.price || bp.p; return {name: `シャッター ${s.name}`, spec: `${where}・${s.price ? "入れた単価" : bp.note}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && bp.avg, fix: {kind: "sash"}}; }
-  const out = s.frame === "outset", pr = s.price || (out ? AVG_OUTSET : MY_SASH[s.cat] || AVG_SASH[s.cat] || 50000);
-  return {name: s.cat === "室内ドア" ? `室内 ${sashLabel(s)}` : `${s.cat} ${s.name}`, spec: where, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && (out || !MY_SASH[s.cat]), fix: {kind: "sash"}};
+  const out = s.frame === "outset", oyako248 = s.cat === "玄関" && /親子/.test(s.name || "");   /* CAD-248：玄関の親子ドアは本体330,000＋取付50,000 */
+  const pr = s.price || (oyako248 && !out ? 380000 : (out ? AVG_OUTSET : MY_SASH[s.cat] || AVG_SASH[s.cat] || 50000));
+  return {name: s.cat === "室内ドア" ? `室内 ${sashLabel(s)}` : `${s.cat} ${s.name}`, spec: oyako248 && !s.price && !out ? `${where}・本体330,000円＋取付50,000円` : where, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && (out || !MY_SASH[s.cat]), fix: {kind: "sash"}};
 }
-const AVG_OUTSET = 60000;   // アウトセット引戸（材料・仮の平均。単価を入れると置き換わる）
+const AVG_OUTSET = 60000;
+const ELOCK248 = [["b", "電池式（暗証・カード・リモコン）", "eLockB"], ["s", "スマホ・タッチ", "eLockS"], ["e", "電気錠（配線あり）", "eLockE"]];   /* CAD-248：電子錠の選択肢（玄関ドアだけ・初期値は付けない） */   // アウトセット引戸（材料・仮の平均。単価を入れると置き換わる）
 const AVG_SASH = {"室内ドア": 45000, "クローゼット": 35000, "掃き出し": 85000, "腰窓": 55000, "小窓": 25000, "FIX": 30000, "玄関": 250000, "勝手口": 90000};
 let PR;
 try { PR = JSON.parse(localStorage.getItem("zochiku-price-v1") || "null"); } catch(e){ PR = null; }
@@ -4640,14 +4644,16 @@ function changeSheet(i){
   const sa = S.sashes[i]; if (!sa) return;
   const p = pickInit(sa);
   const render = () => {
-    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
+    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (sa.cat === "玄関" ? elockSeg248(sa) : "") + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
     $("modal").hidden = false;
     $("csNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-cfl]").forEach(b => b.onclick = () => { pushUndo(); sa.flip = (sa.flip || 0) ^ +b.dataset.cfl; save(); drawPlan(); });
-    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (!sOpts(sa).includes(sState(sa))) sa.st = "new"; save(); drawPlan(); $("modal").hidden = true; toast(`${sashLabel(sa)} ${sa.w}×${sa.h} にしました`); });
+    $("mbox").querySelectorAll("[data-elk248]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.elk248) sa.elock = b.dataset.elk248; else delete sa.elock; save(); drawPlan(); render(); });   /* CAD-248：電子錠の選択 */
+    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sashLabel(sa)} ${sa.w}×${sa.h} にしました`); });
   };
   render();
 }
+function elockSeg248(sa){ const cur = sa.elock || ""; return `<div class="sub2" style="margin-top:8px">電子錠（任意）</div><div class="seg">${[["", "付けない"]].concat(ELOCK248.map(x => [x[0], x[1] + " ＋" + fmt(workP(x[2]).p) + "円"])).map(([v, n]) => `<button data-elk248="${v}" aria-pressed="${cur === v}" type="button">${n}</button>`).join("")}</div>`; }   /* CAD-248：電子錠を選ぶ段 */
 function sashLabel(s){ return s.cat === "室内ドア" ? (s.name === "片開き" ? "ドア 片開き" : s.name) + (s.frame === "outset" ? "（アウトセット）" : s.frame === "casing" ? "（ケーシング枠）" : "（固定枠）") : `${s.cat} ${s.name}`; }
 
 function openSheet(i){
@@ -5581,7 +5587,7 @@ const STOCK = [3000, 4000], STOCK_T = [3000, 4000, 6000];
 function stocks(needs, allow6){ const m = {}, ST = allow6 ? STOCK_T : STOCK; needs.forEach(n => { const s = ST.find(x => n <= x); if (s) m[s] = (m[s] || 0) + 1; else { const k = Math.floor(n / 4000), r = n - k * 4000; m[4000] = (m[4000] || 0) + k; if (r > 0.5){ const s2 = ST.find(x => x <= 4000 && r <= x) || 4000; m[s2] = (m[s2] || 0) + 1; } } }); return m; }
 const stockTxt = m => Object.keys(m).sort((a, b) => b - a).map(k => `${k / 1000}m×${m[k]}`).join("、");
 function openArea(){ return S.sashes.reduce((a, s) => a + s.w * s.h * s.n, 0) / 1e6; }
-const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
+const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","eLockB","eLockS","eLockE","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
 ["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
 // 「外周が同じを2階建て」の計算で、③階の図面の中身（窓・ドア・設備・間仕切りなど）も足して数える
@@ -6038,7 +6044,7 @@ function calc00(){
     }
   }
   function sash(){
-    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
   function floorFin(a, pre, ft){ const ty = ft || S.flType || "floorFin"; work(ty, `${pre}床 ${FTN[ty] || "フロアタイル"}`, a, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(ty).p)}円`); rows[rows.length - 1].cost *= 1.05; }
@@ -6114,7 +6120,7 @@ function calc00(){
       else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nAll).fill(ch + 100), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
     lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(L * 2 / 3900)).fill(4000), "45×105", false);
     const w = workP("ninku"), nin = Math.ceil(L / 1000 * 0.4 * 2) / 2;
-    rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});
+    if (!(S.mode === "zo" && !zoAttached())) rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
   }
   function exRows(){
     S.extras.forEach(normEx);
@@ -6811,13 +6817,14 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   }
   grp("工事");
   if (S.precut){ const w = workP("precut"), wm = workP("precutMin"), raw = w.p * nobeT; rows.push({name: "プレカット加工費", spec: raw < wm.p ? `最低額 ${fmt(wm.p)}円（${fmt(w.p)}円/坪 × ${fmt(nobeT, 2)}坪 ＝ ${fmt(Math.round(raw))}円のため）` : `${fmt(w.p)}円/坪 × ${fmt(nobeT, 2)}坪`, qty: `${fmt(nobeT, 2)}坪`, cost: Math.max(raw, wm.p), avg: w.avg || wm.avg, fix: {kind: "work", key: "precut"}}); }
-  else { const wk = workP("kizami"), wn = workP("ninku"), nk = wk.p * nobeT; rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(wk.p, 1)}人工/坪 × ${fmt(nobeT, 2)}坪）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }
+  else { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT; rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
   if (S.precut){ const wu = workP("precutUnpan"); rows.push({name: "プレカット運搬費", spec: `工場からの配達 ${fmt(wu.p)}円`, qty: "1式", cost: wu.p, avg: wu.avg, fix: {kind: "work", key: "precutUnpan"}}); }   // CAD-122: 運搬費は交通費・移動とは別の行（プレカット方法だけ）
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
   if (S.kisoNew){
     const w1 = workP("kisoBase"), w2 = workP("kisoRise"), k = S.kiso / 400;
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
+    { const w3 = workP("kisoPump"); rows.push({name: "基礎 生コン・ポンプ最低料金", spec: `少量の割増 ${fmt(w3.p)}円`, qty: "1式", cost: w3.p, avg: w3.avg, fix: {kind: "work", key: "kisoPump"}}); }   /* CAD-248：生コン・ポンプの最低料金（新設） */
     { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・柱${zi.n}本の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }
   }
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
@@ -6851,10 +6858,11 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two && !(S.tenken || []).some(o => o.k === "stair")) work("kaidan", "階段", 1, "か所");
-  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); wakuRows(s, two).forEach(x => rows.push(x)); }); const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
   const np1 = workP("ninku");
-  rows.push({name: "大工手間", spec: `${fmt(nk.n, 1)}人工 × ${fmt(np1.p)}円${nk.avg ? `（坪${fmt(workP("ninkuT").p, 1)}人工で計算）` : ""}`, qty: "", cost: nk.n * np1.p, avg: nk.avg, fix: {kind: "ninku"}});
+  const note248 = `${S.precut ? "・プレカット加工費は別行" : "・刻み人工は別行"}・間仕切りは${rows.some(r => r.name === "大工手間（新設間仕切り）") ? "別行" : "この人工に含む"}`;   /* CAD-248：刻み・間仕切りの扱いを明示 */
+  rows.push({name: "大工手間", spec: `${fmt(nk.n, 1)}人工 × ${fmt(np1.p)}円${nk.avg ? `（坪${fmt(workP("ninkuT").p, 1)}人工で計算）` : ""}${note248}`, qty: "", cost: nk.n * np1.p, avg: nk.avg, fix: {kind: "ninku"}});
   exRows();
   bisouRow(nobe);
   rows.push({name: "処分費", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
