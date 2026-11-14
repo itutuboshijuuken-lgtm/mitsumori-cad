@@ -5892,6 +5892,7 @@ function calc00(){
   const R = PT ? {b: {w: 0, h: 0}} : roof(), {W, D, n, Lc, Lc2, Hd, two, Hk, ms, kerA, kerB, nokiA, nokiB, t} = R, kata = S.roof === "kata", yose = S.roof === "yose";
   const F = two ? 2 : 1;
   const lens = PT ? [] : S.edges.map(e => e.v), per = lens.reduce((a, b) => a + b, 0);
+  const lensD = PT ? [] : lens.filter((v, i) => i !== S.house);   // CAD-232: 土台用（母屋側の辺は土台を拾わない。本人の決定 2026-11-14）
   const GY = (!PT && S.mode === "zo" && two) ? (S.geya || []).map(g => geyaDim(g, R)) : [];
   const gyA = GY.reduce((x, g) => x + g.L * g.d, 0) / 1e6;
   const area = PT ? 0 : areaMM() / 1e6, tsubo = area * 0.3025, nobe = area * F + gyA, nobeT = nobe * 0.3025, wood = S.floor !== "doma" && S.floor !== "oki";   /* CAD-183: 床の種別は図面の記録から拾う。S.floor は全面土間・土間+置き床で作った旧物件の互換のためだけに残す */
@@ -6571,7 +6572,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   const sujiN = (S.sujiN ?? sujiAuto()) * F, sujiL = Math.hypot(910, Lc);
 
   grp("木材");
-  lum("dodai", "土台", 105, 105, jtA(lens, 150), "105角", true);
+  lum("dodai", "土台", 105, 105, jtA(lensD, 150), "105角", true);
   if (wood) lum("obiki", "大引", 90, 90, JR2.raw.map(L => L + 100), "90角・910間隔", true);
   if (two){
     lum("hashira", "通し柱", 105, 105, Array(corners).fill(Lc + S.dosa + Lc2 + 120), `105角・長さ${fmt(Lc + S.dosa + Lc2)}`, true);
@@ -6720,7 +6721,8 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
   if (S.kisoNew){
     const w1 = workP("kisoBase"), w2 = workP("kisoRise"), k = S.kiso / 400;
-    rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(per / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * per / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
+    const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
+    rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・柱${zi.n}本の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }
   }
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
@@ -8293,7 +8295,7 @@ function fxRows(work, sheet){
   const sumLen = k => F.filter(f => f.k === k).reduce((a, f) => a + f.len, 0) / 1000;
   if (cnt("outlet")) work("fxOutlet", "コンセント増設", cnt("outlet"), "か所");
   if (cnt("switch")) work("fxSwitch", "スイッチ増設", cnt("switch"), "か所");
-  if (cnt("rail")) work("fxRail", "手すり", cnt("rail"), "本");
+  if (cnt("rail")) work("fxRail", "手すり（下地込み）", cnt("rail"), "本");   // CAD-232: 下地込みの表記（単価は下地込みの材工。本人の決まり 2026-11-12、表記直し 2026-11-14）
   if (cnt("under")){ const sheetF = sheet || HB.__sheetFx; if (sheetF && (S.underMat === "mc95" || S.underMat === "mc125")){ const mt = S.underMat === "mc95" ? 9.5 : 12.5, ua = areaM("under"); sheetF("Mクロス", mt, `壁の下地補強 Mクロス ${mt}mm`, 910, 1820, Math.max(1, Math.ceil(ua / 1.6562 * 1.05)), `${cnt("under")}か所・${fmt(ua, 1)}㎡`); work("fxUnderW", "壁の下地補強（Mクロス取付）", cnt("under"), "か所"); } else work("fxUnder", "壁の下地補強", cnt("under"), "か所"); }
   if (areaM("demo") > 0){ const da = areaM("demo"), n = cnt("demo"); const sp = `${n}面（${fmt(da, 1)}㎡）`;
     work("kaitai", "壁の一部を剥がす 解体（室内図）", da, "㎡", sp);
