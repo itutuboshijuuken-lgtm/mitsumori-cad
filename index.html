@@ -19452,6 +19452,52 @@ setInterval(gkSync208, 600);
   HB.__cad227 = {themeBtn: true};
 })();
 </script>
-</body>
+<script>
+/* ================= CAD-229：Instagramのアプリ内ブラウザで開いた時の案内 =================
+   本人の実機の困りごと（2026-11-14）：Instagramのプロフィール等のリンクから
+   開くと、Instagramアプリの中のブラウザで表示され、画面が小さく出て使いにくい。
+   Claude側の「次に決める事」にも同じ項目があった。
+   → ユーザーエージェントに Instagram が含まれる時だけ、最初に案内を出す。
+   案内は閉じられる（閉じたらそのまま使える。使う事自体は止めない）。
+   閉じた事は新しい保存キー gosei-igguide-v1 に覚えて、毎回は出さない。
+   【小さく見える原因の確認】viewport は width=device-width, initial-scale=1,
+   viewport-fit=cover で標準どおり。中身は最大幅560pxの流動レイアウトで、
+   図面のSVGも viewBox＋幅100% で画面幅に追随する。読み込み時に
+   screen.width や innerWidth で大きさを決め打ちする箇所は無い（innerWidthを
+   読むのは吹き出し位置と横画面コピーの判定だけ）。アプリ側の表示計算に
+   明らかな原因は無かったので、直しは入れず案内だけにする（小ささは
+   Instagram側のブラウザの枠と表示領域による）。 */
+(function(){
+  "use strict";
+  HB.__cad229 = {igGuide: true};
+  var KEY = "gosei-igguide-v1";
+  try {
+    if (!/Instagram/i.test(navigator.userAgent || "")) return;
+    if (localStorage.getItem(KEY)) return;
+  } catch(e){ return; }
+  var tries = 0;
+  function show(){
+    if (document.getElementById("igGuide229")) return;
+    if (document.getElementById("introBox") && tries < 20){ tries++; setTimeout(show, 600); return; }
+    var o = document.createElement("div");
+    o.id = "igGuide229";
+    o.style.cssText = "position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
+    o.innerHTML = '<div style="background:#fff;color:#1b2430;border-radius:16px;max-width:360px;width:100%;padding:22px 18px;text-align:center;font-family:inherit">'
+      + '<div style="font-size:40px;line-height:1.2">\uD83D\uDCF1</div>'
+      + '<div style="font-size:19px;font-weight:800;margin:6px 0">Instagramの中で開いています</div>'
+      + '<p style="font-size:15px;line-height:1.7;margin:0 0 16px;text-align:left">このままだと、画面が小さく表示されます。<br>右上の「…」を押して<b>「ブラウザで開く」</b>を選ぶと、大きく使えます。<br>ホーム画面に追加しても、大きく使えます。</p>'
+      + '<button type="button" id="igGuideClose229" style="width:100%;min-height:48px;border-radius:10px;border:0;background:#2563B0;color:#fff;font-size:16px;font-weight:700">このまま使う</button>'
+      + '</div>';
+    document.body.appendChild(o);
+    document.getElementById("igGuideClose229").onclick = function(){
+      try { localStorage.setItem(KEY, "1"); } catch(e){}
+      o.remove();
+    };
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", function(){ setTimeout(show, 300); });
+  else setTimeout(show, 300);
+})();
+</script>
+
 </html>
 </html>
