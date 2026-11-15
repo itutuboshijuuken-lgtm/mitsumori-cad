@@ -23698,4 +23698,116 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 })();
 </script>
 
+
+<script id="flfix284js">
+/* ===== CAD-284：部屋全体に置いた床にも材料の絵を出す（緊急修正） =====
+   本人の実機指摘（2026-11-16）：部屋全体にフローリング／クッションフロアを置いても
+   平色のままで絵が出ない。無垢は小さい部屋では出るが大きい部屋では出ない。
+   原因：CAD-178 の後加工（__tatPost78）が、同じ仕上げの範囲同士が接すると間の
+   点線を消すために rect を「点線なし」で描き直す。部屋タップ（部屋全体）は部屋を
+   複数のつながるレコードに分けるため、CAD-277〜282 の差し替え（点線枠
+   stroke-dasharray="5 3" が条件）に当たらず、平色のまま残っていた。1レコードで
+   済む小さい部屋だけ点線が残り、絵が出ていた（大きさ依存の正体）。
+   直し：点線の有無に頼らず、S.tatami のレコードと図形の位置が一致する rect を
+   探して、平色（または tex264 の描き模様）の間だけ写真 pattern に差し替える。
+   範囲指定で出ている絵と同じ pattern・同じ実寸の縮尺。見積・数量は不変。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg", XL = "http://www.w3.org/1999/xlink";
+  function imgEl(uri, w, h){
+    var img = document.createElementNS(NS, "image");
+    img.setAttribute("x", 0); img.setAttribute("y", 0);
+    img.setAttribute("width", w); img.setAttribute("height", h);
+    img.setAttribute("preserveAspectRatio", "none");
+    img.setAttribute("href", uri);
+    try { img.setAttributeNS(XL, "xlink:href", uri); } catch(e){}
+    return img;
+  }
+  function mkPat(id, w, h, bg, uri){
+    var pat = document.createElementNS(NS, "pattern");
+    pat.setAttribute("id", id);
+    pat.setAttribute("patternUnits", "userSpaceOnUse");
+    pat.setAttribute("width", w); pat.setAttribute("height", h);
+    var r = document.createElementNS(NS, "rect");
+    r.setAttribute("width", w); r.setAttribute("height", h); r.setAttribute("fill", bg);
+    pat.appendChild(r); pat.appendChild(imgEl(uri, w, h));
+    return pat;
+  }
+  /* 差し替え先の pattern が無ければ、277〜282 と同じ作りで用意する
+     （pFl だけは tex264 の管轄なので作らない。無い時は差し替えない） */
+  function ensurePat(svg, id){
+    if (svg.querySelector("#" + id)) return true;
+    if (id === "pFl") return false;
+    var T = window.__flTex275 || {};
+    var ref = svg.querySelector("#pCf");
+    var w6 = ref ? parseFloat(ref.getAttribute("width")) : 0;
+    if (!(w6 > 0)) w6 = 600 / 26.86;
+    var defs = svg.querySelector("defs");
+    if (!defs){ defs = document.createElementNS(NS, "defs"); defs.id = "flDefs284"; svg.insertBefore(defs, svg.firstChild); }
+    if (id === "pFt277" && T.ftile) defs.appendChild(mkPat(id, w6, w6, "#D8D5CF", T.ftile));
+    else if (id === "pCfT278" && T.cf) defs.appendChild(mkPat(id, w6 * 1820 / 600, w6 * 1000 / 600, "#EFEBE4", T.cf));
+    else if (id === "pMuku279" && T.muku) defs.appendChild(mkPat(id, w6 * 1800 / 600, w6 * 900 / 600, "#E3C08A", T.muku));
+    else if (id === "pDoma280" && T.doma) defs.appendChild(mkPat(id, w6 * 1000 / 600, w6 * 1000 / 600, "#B9B7B3", T.doma));
+    else if (id === "pTat282" && T.tatami) defs.appendChild(mkPat(id, w6 * 1820 / 600, w6 * 910 / 600, "#C9CFA3", T.tatami));
+    else if (id === "pCarp282" && T.carpet) defs.appendChild(mkPat(id, w6 * 1000 / 600, w6 * 1000 / 600, "#D9C6A5", T.carpet));
+    return !!svg.querySelector("#" + id);
+  }
+  /* fk → 差し替え先と、差し替え前の fill（平色／tex264 の描き模様） */
+  var FK = {
+    flComp:   { pat: "pFl",      from: ["#EAC288"] },
+    floorFin: { pat: "pFt277",   from: ["#C9CED4", "url(#pCf)"] },
+    flCF:     { pat: "pCfT278",  from: ["#A9D8CF"] },
+    flMuku:   { pat: "pMuku279", from: ["#DFA95E", "#CE8F35"] },
+    flDoma:   { pat: "pDoma280", from: ["#ABA29A", "url(#pDo)"] }
+  };
+  var FINP = { carpet: "pCarp282", flComp: "pFl", flCF: "pCfT278", flMuku: "pMuku279", tatami: "pTat282" };
+  var ZAFILL = ["#9DBE8C", "#B8CCE4", "#DCBE8C"];   /* 座上げの工法色（枝分かれ分岐の rect） */
+  function planFix284(){
+    try{
+      var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
+      if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+      if (document.body.classList.contains("pz262")) return;
+      if (typeof S === "undefined" || !S || !S.tatami || !S.tatami.length) return;
+      if (typeof HB === "undefined" || !HB.__planT) return;
+      var T = HB.__planT; if (!(T.s > 0)) return;
+      var jobs = [];
+      S.tatami.forEach(function(r){
+        if (!r) return;
+        var pat = null, from = null;
+        if (r.fk && FK[r.fk]){ pat = FK[r.fk].pat; from = FK[r.fk].from; }
+        else if (r.za && r.det && FINP[r.det.fin]){ pat = FINP[r.det.fin]; from = ZAFILL; }
+        else if ((r.fk === "flAge" || r.fk === "flOki" || r.fk === "flPura") && FINP[r.fin]){ pat = FINP[r.fin]; from = ZAFILL; }
+        if (!pat) return;
+        jobs.push({ x: r.x0 * T.s + T.ox, y: r.y0 * T.s + T.oy,
+                    w: (r.x1 - r.x0) * T.s, h: (r.y1 - r.y0) * T.s,
+                    pat: pat, fromU: from.map(function(s){ return s.toUpperCase(); }) });
+      });
+      if (!jobs.length) return;
+      var rects = [];
+      svg.querySelectorAll("rect").forEach(function(rc){
+        if (rc.closest("pattern") || rc.closest("defs")) return;
+        if (rc.closest("#flOver") || rc.closest("#flAll282") || rc.closest("#dir281")) return;
+        if (rc.getAttribute("stroke-dasharray") === "8 5") return; /* 囲みのプレビューは対象外 */
+        rects.push(rc);
+      });
+      jobs.forEach(function(L){
+        for (var i = 0; i < rects.length; i++){
+          var rc = rects[i];
+          var f = (rc.getAttribute("fill") || "").toUpperCase();
+          if (L.fromU.indexOf(f) < 0) continue;
+          var x = parseFloat(rc.getAttribute("x")), y = parseFloat(rc.getAttribute("y"));
+          var w = parseFloat(rc.getAttribute("width")), h = parseFloat(rc.getAttribute("height"));
+          if (Math.abs(x - L.x) < 1.0 && Math.abs(y - L.y) < 1.0 && Math.abs(w - L.w) < 1.0 && Math.abs(h - L.h) < 1.0){
+            if (ensurePat(svg, L.pat)){ rc.setAttribute("fill", "url(#" + L.pat + ")"); rc.setAttribute("fill-opacity", "1"); rc.setAttribute("data-fl284", "1"); }
+            break;
+          }
+        }
+      });
+    }catch(e){}
+  }
+  setInterval(planFix284, 400); planFix284();
+  var prev = window.tidyPlanLabels;
+  if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); planFix284(); return r; }; }
+})();
+</script>
+
 </html>
