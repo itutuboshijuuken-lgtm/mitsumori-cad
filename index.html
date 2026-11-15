@@ -715,7 +715,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div style="height:10px"></div>
     <div class="seg" id="pvSeg"><button data-pv="iso" type="button" aria-pressed="true">立体図</button><button data-pv="room" type="button" aria-pressed="false">室内図</button><button data-pv="plan" type="button" aria-pressed="false">平面図</button></div>
     <div id="pvBar">
-      <div class="row" style="margin:0 0 6px"><button class="btn" id="pvStruct" type="button" aria-pressed="false" style="flex:1">柱・間柱を表示</button></div>
+      <div class="row" style="margin:0 0 6px"><button class="btn" id="pvStruct" type="button" aria-pressed="true" style="flex:1">柱・間柱を表示</button></div>
       <p id="pvLegend" style="margin:0 0 8px;font-size:12.5px;line-height:1.55;color:#5B6673"></p>
     </div>
     <div id="roomBar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px"></div>
@@ -4238,7 +4238,13 @@ function wallTapPx175(pt, h, t){
     const proj = [a[0] + (b[0] - a[0]) * tt, a[1] + (b[1] - a[1]) * tt];
     const conv = mm => { const q = svg.createSVGPoint(); q.x = mm[0] * T.s + T.ox; q.y = mm[1] * T.s + T.oy; return q.matrixTransform(svg.getScreenCTM()); };
     const p1 = conv(pt), p2 = conv(proj);
-    return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    const dPx175 = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    /* CAD-271 B5: 大きい画面では 25px が実寸で小さく（PCでは約144mm）、描かれている
+       壁の帯の端のタップでも届かなかった。実寸200mm分は 25px 判定から割り引く
+       （スマホでは 200mm は 25px 未満なので従来通り変わらない）。 */
+    const mmD175 = Math.hypot(pt[0] - proj[0], pt[1] - proj[1]);
+    if (mmD175 > 0 && dPx175 > 0){ const allow175 = Math.max(0, 200 * (dPx175 / mmD175) - 25); return Math.max(0, dPx175 - allow175); }
+    return dPx175;
   } catch(e){ return null; }
 }
 function addStdOpening(ty){
@@ -7354,11 +7360,11 @@ function toShoruiText(C){
   const lines = [];
   const MAT = ["木材", "合板・ボード・金物", "断熱材", "材料"];
   let grp = "", acc = null;
-  const flush = () => { if (acc && acc.cost > 0) lines.push({name: `${acc.grp} 一式`, spec: acc.names.slice(0, 3).join("・") + (acc.names.length > 3 ? " ほか" : ""), qty: "1", unit: "式", price: String(Math.round(acc.price)), tax: "10"}); acc = null; };
+  const flush = () => { if (acc && acc.cost > 0) lines.push({name: `${acc.grp} 一式`, spec: acc.names.join("・")   /* CAD-271 C10: 先頭3つ＋ほか ではなく、全材料と数量を出す（金額は不変） */, qty: "1", unit: "式", price: String(Math.round(acc.price)), tax: "10"}); acc = null; };
   C.rows.forEach(r => {
     if (r.grp){ flush(); grp = r.grp; if (MAT.includes(grp) || /^下屋/.test(grp)) acc = {grp, cost: 0, names: []}; return; }
     if (!r.cost) return;
-    if (acc){ acc.cost += r.cost; acc.price = (acc.price || 0) + r.cost * (r.mk || 1); acc.names.push(r.name.replace(/ (ヒノキ|スギ|米松|米ツガ)$/, "")); return; }
+    if (acc){ acc.cost += r.cost; acc.price = (acc.price || 0) + r.cost * (r.mk || 1); acc.names.push(r.name.replace(/ (ヒノキ|スギ|米松|米ツガ)$/, "") + (r.qty ? " " + r.qty : "")); return; }   /* CAD-271 C10: 本数・枚数も見積書側で見えるように */
     const clean = String(r.spec || "").replace(/（[^）]*(円|人工|仮|計算)[^）]*）/g, "").replace(/\s*×\s*[\d,.]+円(\/\S+)?/g, "").replace(/[\d,.]+人工\s*/g, "").replace(/\s+/g, " ").trim();
     lines.push({name: r.name.replace(/^大工手間/, "大工工事"), spec: clean.slice(0, 40), qty: "1", unit: "式", price: String(Math.round(r.cost * (r.mk || 1))), tax: "10"});
   });
@@ -8484,9 +8490,12 @@ function sashHit217(pt){
       if (!sa.drawn || !sa.host) return; const seg = hostSeg(sa.host); if (!seg) return;
       const L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
       const A = [seg[0][0] + u[0] * sa.pos, seg[0][1] + u[1] * sa.pos], B = [A[0] + u[0] * sa.w, A[1] + u[1] * sa.w];
-      let d = segDist(pt, A, B).d;
-      if (typeOf(sa) === "door"){ const m = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; d = Math.min(d, Math.max(0, Math.hypot(pt[0] - m[0], pt[1] - m[1]) - sa.w * 0.45)); }
-      if (d < rad && d < bd){ bd = d; best = i; }
+      /* CAD-271 B5: 選択に回すのは建具その物の上のタップだけ（壁方向は本体の前後80mm・
+         壁線から140mm以内）。従来は一番近い建具から26px以内なら壁線の横でも選択に化け、
+         壁線ちょうどをタップしても次の窓が置けなかった。ドアの開き円弧の上の選択は、
+         構えていない時の pickCands が従来通り受ける。 */
+      const vx271 = pt[0] - A[0], vy271 = pt[1] - A[1], al271 = vx271 * u[0] + vy271 * u[1], pp271 = Math.abs(vx271 * -u[1] + vy271 * u[0]);
+      if (al271 >= -80 && al271 <= sa.w + 80 && pp271 <= 140){ const d = Math.max(0, -al271, al271 - sa.w) + pp271; if (d < bd){ bd = d; best = i; } }
     });
     return best;
   } catch(e){ return -1; }
@@ -8522,7 +8531,7 @@ function ltPlanClick(mm){
      （建具の上のタップは段5aが先に受ける）、置けた時は選択を消さずコントローラーを出したままにする） */
   if (HB.__ltSeg06){
     /* CAD-247：浴槽を置いた直後は浴槽が選択されたままになる。その状態でも続けて置けるよう、浴槽が選択中の時も配置を受ける */
-    const bathSel247 = !!(sel && sel.t === "k" && S.tenken && S.tenken[sel.i] && S.tenken[sel.i].k === "bath");
+    const bathSel247 = !!(sel && sel.t === "k" && S.tenken && S.tenken[sel.i] && (S.tenken[sel.i].k === "bath" || S.tenken[sel.i].k === "wc"));   /* CAD-271 B8: 便器も選択が残ったまま次を受けられるように */
     const doorMode247 = !!(HB.__doorState205 && HB.__doorState205());   /* CAD-247：入口の設定中は配置しない */
     if (HB.__put && !doorMode247 && (!sel || bathSel247 || (sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen"))) && !ltTool && toolOpen === HB.__put.g){
       HB.__putAt = mm;
@@ -8530,7 +8539,8 @@ function ltPlanClick(mm){
       try { HB.__put.fn(); } catch(e){} finally { HB.__putAt = null; }
       /* CAD-247：浴槽を置いたら選択を消さず、選択バー（入口ボタン付き）を出す。入口の案内も出す */
       const bath247 = (S.tenken || []).length > nTk247 && sel && sel.t === "k" && S.tenken[sel.i] && S.tenken[sel.i].k === "bath" ? S.tenken[sel.i] : null;
-      if (!bath247 && !((g217 === "door" || g217 === "win" || g217 === "gen") && (S.sashes || []).length > n217 && sel && sel.t === "o")) sel = null;
+      const wc271 = (S.tenken || []).length > nTk247 && sel && sel.t === "k" && S.tenken[sel.i] && S.tenken[sel.i].k === "wc" ? S.tenken[sel.i] : null;   /* CAD-271 B8: 便器も置いた直後は選択を残し、選択バーの「⟳向き」をすぐ出せるようにする */
+      if (!bath247 && !wc271 && !((g217 === "door" || g217 === "win" || g217 === "gen") && (S.sashes || []).length > n217 && sel && sel.t === "o")) sel = null;
       drawPlan();
       if (bath247){
         const z247 = (S.zones || []).find(q => q && q.fid && bath247.fid && q.fid === bath247.fid && q.k === "ub");
@@ -10883,7 +10893,7 @@ HB.__dskSeg32 = true;
     const ch = _sync.apply(this, arguments);
     if (ch){
       const nz = (S.zones || []).find(z => z.fid && z.k === "ub" && !before.has(z.fid));
-      if (nz) setTimeout(() => { try { const n = findNeighbor(nz); if (n) ask(n); } catch(e){ console.warn(e); } }, 250);
+      if (nz) setTimeout(() => { try { const n = findNeighbor(nz); if (n){ /* CAD-271 B6: 部屋名の確認（はい/いいえ）は出さない。部屋名は後で仕様で決める形に統一 */ } } catch(e){ console.warn(e); } }, 250);
     }
     return ch;
   };
@@ -13005,7 +13015,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 (function(){
   "use strict";
   const $id = id => document.getElementById(id);
-  let pvStructOn = false;
+  let pvStructOn = true;   /* CAD-271 B9: 柱・間柱は最初から薄く出す（切替ボタンは従来通り） */
   const pvIsOn = () => { const st = $id("st6"); return !!(st && st.classList.contains("pvOn")); };
   const pvMix = () => S.mabaKata === "mix";
   const r2 = v => Math.round(v * 100) / 100;
@@ -13330,7 +13340,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     g += pvSashes(P, s, bandO, bandP);
     g += pvRooms(P);
     const F = pvFrame();
-    if (pvStructOn) g += pvMarks(P, F, bandO, s);
+    if (pvStructOn) g += '<g opacity="0.45">' + pvMarks(P, F, bandO, s) + "</g>";   /* CAD-271 B9: 薄く出す */
     g += pvNorth(W);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.innerHTML = g;
@@ -13857,7 +13867,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__partDraw = true;
     document.body.classList.add("partdraw");
     try { drawToolsUI(); } catch(e){}
-    toast("指で線を描くと間仕切りが入ります");
+    toast("間仕切り：置きたい所を長押ししながら、指で線をなぞると描けます");
   }
   HB.__partDrawOn = pdOn;
 
@@ -19331,7 +19341,7 @@ setInterval(gkSync208, 600);
    1) 室内図（room表示）の間は表示タブ #pvSeg を出さない（立体図・完成の平面図は⑤完成図の画面だけに寄せる）。
    2) 小さい平面図 #miniPlan219 は室内図の時だけ出す（壁の辺タップで面を選ぶ）。
    3) パレットの枝バー #fxBranch219 も室内図の時だけ出す（場所ベースの枝の器）。 */
-#st6[data-v162="room"]:not(.pvOn) #pvSeg{display:none!important}
+#st6[data-v162="room"]:not(.pvOn) #pvSeg{ /* CAD-271 B3: 室内図でも切替バーを出す（他の見方と同じ操作で戻れるように。CAD-219 の非表示は取りやめ） */ }
 #st6:not([data-v162="room"]) #miniPlan219{display:none!important}
 #st6:not([data-v162="room"]) #fxBranch219{display:none!important}
 #miniPlan219{background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 8px;margin-bottom:8px}
@@ -20968,6 +20978,10 @@ function build(S,T,opt){
  else{cam.fov=30;cam.position.set(W*.5,15.5,D*.5+9.0);tgt=[W/2,0,D*.5];root.remove(ceilG)}
  if(mode!=='in'&&opt.rot){const a=opt.rot*Math.PI/2,cx=W/2,cz=D/2,dx=cam.position.x-cx,dz=cam.position.z-cz;cam.position.x=cx+dx*Math.cos(a)-dz*Math.sin(a);cam.position.z=cz+dx*Math.sin(a)+dz*Math.cos(a)}
  cam.lookAt(...tgt);
+ /* CAD-271 B1: 縦画面（canvas の縦横比が小さい）でも家全体が入るよう、家の外接球と
+    実効画角（縦・横の小さい方）から必要な距離を求め、足りなければ視線方向のまま引く。
+    横画面で今まで通り入っている時は位置を変えない。室内（in）は対象外。 */
+ if(mode!=='in'&&!opt.cam){try{const bb=new T.Box3().setFromObject(root),ctr=bb.getCenter(new T.Vector3()),sz=bb.getSize(new T.Vector3()),R=.5*Math.hypot(sz.x,sz.y,sz.z)+Math.hypot(ctr.x-tgt[0],ctr.y-tgt[1],ctr.z-tgt[2]),vf=cam.fov*Math.PI/180,hf=2*Math.atan(Math.tan(vf/2)*cam.aspect),need=R/Math.sin(Math.min(vf,hf)/2)*1.03,dx=cam.position.x-tgt[0],dy=cam.position.y-tgt[1],dz=cam.position.z-tgt[2],cur=Math.hypot(dx,dy,dz);if(cur<need&&cur>0){const k=need/cur;cam.position.set(tgt[0]+dx*k,tgt[1]+dy*k,tgt[2]+dz*k);cam.lookAt(tgt[0],tgt[1],tgt[2]);}}catch(e){}}
  if(opt.cam){cam.fov=opt.cam.fov||50;cam.position.set(...opt.cam.p);cam.lookAt(...opt.cam.t)}
  cam.updateProjectionMatrix();
  return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name)};
@@ -22271,6 +22285,114 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   }
   setInterval(tick269, 300);
   tick269();
+})();
+</script>
+
+<script>
+/* ================= CAD-271 B4: 文字×置いた物／番号バッジ×ドアの円弧 の重なり解消 =================
+   CAD-267 の tidyPlanLabels は「文字同士・太い線・番号丸」しか避けておらず、
+   (1) 部屋名や床のラベルが置いた物（便器など）の上に乗る、(2) 番号バッジが
+   ドアの開き円弧（CAD-265 の g[data-d265]）の上に乗る、が残っていた（Claude 動画の実測）。
+   tidyPlanLabels を最後尾で包み、本体と 264〜266 の装飾が終わった後に、この2つだけを足しで直す。
+   速さ対策（CAD-262）と同じく、ドラッグ中・ピンチ中は何もしない。 */
+(function(){
+  "use strict";
+  var prev = window.tidyPlanLabels;
+  if (typeof prev !== "function") return;
+  window.tidyPlanLabels = function(){
+    var r = prev.apply(this, arguments);
+    try { fix271(); } catch(e){}
+    return r;
+  };
+  function fix271(){
+    var svg = document.getElementById("plan");
+    if (!svg || !svg.getScreenCTM) return;
+    if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+    if (document.body.classList.contains("pz262")) return;
+    var root = svg.getScreenCTM(); if (!root) return;
+    var inv = root.inverse();
+    function box(el){
+      var bb; try { bb = el.getBBox(); } catch(e){ return null; }
+      var ctm = el.getScreenCTM(); if (!bb || !ctm) return null;
+      var m = inv.multiply(ctm);
+      var ps = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]].map(function(q){ return [m.a * q[0] + m.c * q[1] + m.e, m.b * q[0] + m.d * q[1] + m.f]; });
+      var xs = ps.map(function(q){ return q[0]; }), ys = ps.map(function(q){ return q[1]; });
+      return { el: el, m: m, x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs), y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys) };
+    }
+    function move(b, dx, dy){
+      var m = b.m, det = m.a * m.d - m.b * m.c;
+      if (Math.abs(det) < 1e-9) return;
+      var lx = (m.d * dx - m.c * dy) / det, ly = (-m.b * dx + m.a * dy) / det;
+      b.el.setAttribute("transform", (b.el.getAttribute("transform") || "") + " translate(" + lx + " " + ly + ")");
+      b.x0 += dx; b.x1 += dx; b.y0 += dy; b.y1 += dy;
+    }
+    function hit(a, dx, dy, list){ return list.some(function(b){ return a.x0 + dx < b.x1 && a.x1 + dx > b.x0 && a.y0 + dy < b.y1 && a.y1 + dy > b.y0; }); }
+    function shift(b, obstacles){
+      if (!hit(b, 0, 0, obstacles)) return;
+      var w = b.x1 - b.x0, h = b.y1 - b.y0, best = null;
+      for (var ix = -8; ix <= 8; ix++) for (var iy = -10; iy <= 10; iy++){
+        if (!ix && !iy) continue;
+        var dx = ix * w * 0.3, dy = iy * h * 0.4, d = Math.hypot(dx / (w || 1), dy / (h || 1));
+        if ((best == null || d < best.d) && !hit(b, dx, dy, obstacles)) best = { dx: dx, dy: dy, d: d };
+      }
+      if (best) move(b, best.dx, best.dy);
+    }
+    /* (1) 文字 × 置いた物（便器・浴槽など g[data-tk2]） */
+    var fixBoxes = [];
+    svg.querySelectorAll("g[data-tk2]").forEach(function(g){ var b = box(g); if (b) fixBoxes.push(b); });
+    if (fixBoxes.length){
+      var placedT = [];
+      svg.querySelectorAll("text").forEach(function(t){
+        if (t.closest("#planInk") || t.closest("[data-sno]") || t.closest("[data-tk2]")) return;
+        if (!(t.textContent || "").trim()) return;
+        var b = box(t); if (!b) return;
+        shift(b, fixBoxes.concat(placedT));
+        placedT.push(b);
+      });
+    }
+    /* (2) 番号バッジ × ドアの開き円弧 */
+    var arcs = [];
+    svg.querySelectorAll("g[data-d265]").forEach(function(g){ var b = box(g); if (b) arcs.push(b); });
+    if (arcs.length){
+      var placedB = [];
+      svg.querySelectorAll("g[data-sno]").forEach(function(g){
+        var b = box(g); if (!b) return;
+        shift(b, arcs.concat(placedB));
+        placedB.push(b);
+      });
+    }
+  }
+})();
+</script>
+<script>
+/* ================= CAD-271 C11: 見積画面に「材料の本数を見る」ボタン =================
+   「くわしく」は縦に非常に長い（工程表・内訳・材料表）ため、見積の上のボタン置き場
+   （#estActs）から、材料表（#mat）の木材の行へ直接飛べるようにする。 */
+(function(){
+  "use strict";
+  function addBtn(){
+    var grp = document.getElementById("estActs");
+    if (!grp || document.getElementById("estJumpMat271")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "estJumpMat271"; b.className = "btn";
+    b.style.cssText = "width:100%;margin:0;min-height:54px;font-size:16px";
+    b.textContent = "材料の本数を見る";
+    b.onclick = function(){
+      var more = document.getElementById("estMore");
+      if (more) more.open = true;
+      setTimeout(function(){
+        var t = document.getElementById("mat"); if (!t) return;
+        var rows = t.querySelectorAll("tr.grp"), tgt = null;
+        for (var i = 0; i < rows.length; i++){ if (/木材/.test(rows[i].textContent || "")){ tgt = rows[i]; break; } }
+        if (!tgt) tgt = rows[0] || t;
+        try { tgt.scrollIntoView({ block: "start" }); } catch(e){}
+        if (tgt && tgt.style){ tgt.style.outline = "3px solid #E8742C"; setTimeout(function(){ tgt.style.outline = ""; }, 1600); }
+      }, 80);
+    };
+    grp.appendChild(b);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addBtn);
+  else addBtn();
 })();
 </script>
 </html>
