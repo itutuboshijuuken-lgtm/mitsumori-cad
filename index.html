@@ -22238,4 +22238,29 @@ var prev=window.tidyPlanLabels;
 if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
 })();
 </script>
+<script>
+/* ===== CAD-269：完成図・立体図（きれい）の切替バー右端が方位コンパス(#isoCmp)に重なって「室内」が隠れる件。
+   切替バー・3D・きれい/軽い切替の動作は一切変えず、3D表示中だけコンパスを切替バー(#h3dBar254)の下へずらす。
+   3Dでない時（軽い表示・室内図など）は元の位置（top:6px）のまま。コンパスは pointer-events:none で、
+   重なりの問題は「文字が見えない」事だけなので、位置の移動で足りる。 ===== */
+(function(){ "use strict";
+  function tick269(){
+    try {
+      var cmp = document.getElementById("isoCmp");
+      if (!cmp) return;
+      var cnv = document.getElementById("h3d");
+      var bar = document.getElementById("h3dBar254");
+      var on3d = !!(cnv && cnv.style.display !== "none" && cnv.getClientRects().length);
+      if (on3d && bar && bar.getClientRects().length){
+        var t = (bar.offsetTop + bar.offsetHeight + 4) + "px";
+        if (cmp.style.top !== t) cmp.style.top = t;
+      } else if (cmp.style.top && cmp.style.top !== "6px"){
+        cmp.style.top = "6px";
+      }
+    } catch(e){}
+  }
+  setInterval(tick269, 300);
+  tick269();
+})();
+</script>
 </html>
