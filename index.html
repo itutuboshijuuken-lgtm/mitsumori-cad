@@ -21815,4 +21815,85 @@ body.pz262 #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optimi
   ["touchend","touchcancel"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });
 })();
 </script>
+<style id="st263">
+#pvSvg{background:#fff}
+#pvSvg .t263{paint-order:stroke;stroke:#fff;stroke-width:3.4px;stroke-linejoin:round}
+</style>
+<script>
+/* CAD-263: 完成図の平面図クオリティMAX（床の質感・壁の断面・影・文字の縁取り・文字のはみ出し自動調整）。完成図の平面図だけ。描く画面は触らない */
+(function(){
+"use strict";
+var NS="http://www.w3.org/2000/svg", svg=null, mo=null;
+function el(t,a,p){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e}
+function defs(s,K){ /* K = 1mm が何px か */
+  var pl=150*K,L=1820*K,w9=910*K,h18=1820*K;
+  var d=el("defs",{id:"d263"});
+  d.innerHTML=
+  '<pattern id="p263Fl" patternUnits="userSpaceOnUse" width="'+L+'" height="'+pl*4+'"><rect width="'+L+'" height="'+pl*4+'" fill="#EBD2A8"/><rect width="'+L+'" height="'+pl+'" fill="#EFD8B2"/><rect y="'+pl*2+'" width="'+L+'" height="'+pl+'" fill="#E7CC9F"/>'
+  +'<path d="M0 0H'+L+'M0 '+pl+'H'+L+'M0 '+pl*2+'H'+L+'M0 '+pl*3+'H'+L+'" stroke="#B99565" stroke-width=".3" opacity=".6"/>'
+  +'<path d="M0 0V'+pl+'M'+L*.4+' '+pl+'V'+pl*2+'M'+L*.75+' '+pl*2+'V'+pl*3+'M'+L*.15+' '+pl*3+'V'+pl*4+'" stroke="#B99565" stroke-width=".3" opacity=".6"/>'
+  +'<path d="M3 '+pl*.5+'q7 -1 15 0t16 0M'+L*.45+' '+pl*1.5+'q8 1 16 0M6 '+pl*2.5+'q9 -1 18 0M'+L*.6+' '+pl*3.5+'q7 1 15 0" stroke="#D6B684" stroke-width=".35" fill="none" opacity=".8"/></pattern>'
+  +'<pattern id="p263Ply" patternUnits="userSpaceOnUse" width="'+w9+'" height="'+h18+'"><rect width="'+w9+'" height="'+h18+'" fill="#F0DBBC"/><path d="M0 0H'+w9+'M0 0V'+h18+'" stroke="#C9AB7C" stroke-width=".35" opacity=".7"/></pattern>'
+  +'<pattern id="p263Ta" patternUnits="userSpaceOnUse" width="'+w9+'" height="'+h18+'"><rect width="'+w9+'" height="'+h18+'" fill="#DDE3B6"/>'
+  +'<path d="'+Array.from({length:Math.max(6,Math.floor(w9/0.8))},function(_,i){return "M"+(0.6+i*0.8)+" 1.4V"+(h18-1.4)}).join("")+'" stroke="#CAD39A" stroke-width=".22" opacity=".9"/>'
+  +'<path d="M0 0H'+w9+'M0 '+h18+'H'+w9+'" stroke="#5E6A33" stroke-width=".8"/><path d="M0 0V'+h18+'" stroke="#7F8C47" stroke-width=".3"/></pattern>'
+  +'<pattern id="p263Ti" patternUnits="userSpaceOnUse" width="'+300*K+'" height="'+300*K+'"><rect width="'+300*K+'" height="'+300*K+'" fill="#D3E9E3"/><path d="M0 0H'+300*K+'M0 0V'+300*K+'" stroke="#9FC9BE" stroke-width=".4"/></pattern>'
+  +'<pattern id="p263Bt" patternUnits="userSpaceOnUse" width="'+200*K+'" height="'+200*K+'"><rect width="'+200*K+'" height="'+200*K+'" fill="#C4DEEE"/><path d="M0 0H'+200*K+'M0 0V'+200*K+'" stroke="#93BCD6" stroke-width=".25"/></pattern>'
+  +'<pattern id="p263Do" patternUnits="userSpaceOnUse" width="'+450*K+'" height="'+450*K+'"><rect width="'+450*K+'" height="'+450*K+'" fill="#D2C3A5"/><path d="M0 0H'+450*K+'M0 0V'+450*K+'" stroke="#A8977A" stroke-width=".5"/><g fill="#B7A685"><circle cx="2.5" cy="4" r=".4"/><circle cx="8" cy="9" r=".5"/><circle cx="11" cy="3" r=".3"/></g></pattern>'
+  +'<pattern id="p263Cf" patternUnits="userSpaceOnUse" width="'+600*K+'" height="'+600*K+'"><rect width="'+600*K+'" height="'+600*K+'" fill="#E3DED6"/><path d="M0 0H'+600*K+'M0 0V'+600*K+'" stroke="#C4BCAE" stroke-width=".4"/><g fill="#CFC7B9"><circle cx="4" cy="6" r=".4"/><circle cx="11" cy="12" r=".5"/></g></pattern>'
+  +'<pattern id="p263Po" patternUnits="userSpaceOnUse" width="3" height="3" patternTransform="rotate(45)"><rect width="3" height="3" fill="#F6F3EC"/><path d="M0 0V3" stroke="#8C877B" stroke-width=".45"/></pattern>'
+  +'<filter id="f263" x="-10%" y="-10%" width="125%" height="130%"><feGaussianBlur stdDeviation="2.2"/></filter>';
+  s.insertBefore(d,s.firstChild);
+}
+function matOf(nm){
+  nm=nm||"";
+  if(/浴/.test(nm))return "Bt"; if(/トイレ|便所|WC/.test(nm))return "Ti"; if(/洗面|脱衣|サニタリー/.test(nm))return "Cf";
+  if(/玄関|土間|ポーチ/.test(nm))return "Do"; if(/和|畳/.test(nm))return "Ta"; if(/収納|クローゼット|物入|押入|納戸|C$/.test(nm))return "Ply";
+  return "Fl";
+}
+function build(){
+  try{
+    svg=document.getElementById("pvSvg"); if(!svg||!svg.firstChild||svg.querySelector("#g263")||!S.edges||!S.edges.length)return;
+    var b=bbox(), W=360,mL=68,mT=68,mR=42,mB=38, s=Math.min((W-mL-mR)/b.w,(470-mT-mB)/b.h);
+    var P=function(q){return [mL+(q[0]-b.x0)*s, mT+(q[1]-b.y0)*s]};
+    defs(svg,s);
+    var g=el("g",{id:"g263","pointer-events":"none"});
+    /* 影（建物の外形をぼかして右下へ） */
+    var p=pts(), sh=el("polygon",{points:p.map(function(q){var c=P(q);return (c[0]+3)+","+(c[1]+4)}).join(" "),fill:"#000","fill-opacity":".16",filter:"url(#f263)"},g);
+    /* 床 */
+    var R=roomsCalc(), NX=R.NX, st=R.st, widths=[];
+    R.rooms.forEach(function(r){
+      var nm=""; try{nm=roomNm(r)||""}catch(e){} if(!nm)nm=r.label||"";
+      var m=matOf(nm), rows={}; r.cells.forEach(function(c){var y=(c/NX)|0,x=c%NX;(rows[y]=rows[y]||[]).push(x)});
+      var maxRun=0, py=(r.p[1]-R.b.y0)/st|0;
+      Object.keys(rows).forEach(function(y){var xs=rows[y].sort(function(a,c){return a-c}),s0=xs[0],pr=s0;
+        function fl(){var A=P([R.b.x0+s0*st,R.b.y0+y*st]),B=P([R.b.x0+(pr+1)*st,R.b.y0+(+y+1)*st]);
+          el("rect",{x:A[0],y:A[1],width:B[0]-A[0]+.35,height:B[1]-A[1]+.35,fill:"url(#p263"+m+")"},g);
+          if(+y===py)maxRun=Math.max(maxRun,(pr+1-s0)*st*s)}
+        for(var k=1;k<xs.length;k++){if(xs[k]!==pr+1){fl();s0=xs[k]}pr=xs[k]} fl()});
+      widths.push(maxRun);
+    });
+    svg.insertBefore(g,svg.querySelector("#d263").nextSibling);
+    /* 壁の断面（白抜き部分を斜線の断面表示に） */
+    var kids=svg.children, i=0; while(i<kids.length&&kids[i].tagName!=="polygon")i++;
+    for(;i<kids.length&&kids[i].tagName==="polygon"&&!kids[i].getAttribute("class");i++){ if((kids[i].getAttribute("fill")||"")==="#fff")kids[i].setAttribute("fill","url(#p263Po)") }
+    /* 文字：縁取り＋はみ出し自動調整 */
+    var tx=[].slice.call(svg.querySelectorAll("text")); var idx=0;
+    for(var t=0;t<tx.length;t++){ var x=tx[t]; x.classList.add("t263");
+      var fs=(x.getAttribute("style")||"");
+      if(/font-size:14px/.test(fs)&&idx<widths.length){ var w=widths[idx]-3, nxt=tx[t+1];
+        var L=x.getComputedTextLength?x.getComputedTextLength():0;
+        if(L>w&&w>10){ var f=Math.max(7,14*w/L); x.style.fontSize=f+"px"; if(nxt){nxt.style.fontSize=Math.max(6.5,Math.min(10,f*0.72))+"px"; nxt.setAttribute("y",(+x.getAttribute("y")+f*0.95+2).toFixed(2))} }
+        idx++ } }
+  }catch(e){ try{console.warn("CAD-263",e)}catch(_){} }
+}
+function fixVB(){ var s=document.getElementById('pvSvg'); if(!s)return; var v=s.getAttribute('viewBox')||''; if(s.getAttribute('data-v263')===v)return; var a=v.split(' ').map(Number); if(a.length!==4||!(a[3]>0))return; var n='0 0 '+a[2]+' '+(a[3]+9); s.setAttribute('viewBox',n); s.setAttribute('data-v263',n) }
+function arm(){
+  var s=document.getElementById("pvSvg"); if(!s){setTimeout(arm,500);return}
+  if(mo)mo.disconnect(); mo=new MutationObserver(function(){ if(!s.querySelector("#g263"))build(); setTimeout(fixVB,0) });
+  mo.observe(s,{childList:true}); build(); setTimeout(fixVB,0);
+}
+arm();
+})();
+</script>
 </html>
