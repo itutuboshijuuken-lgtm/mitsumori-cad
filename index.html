@@ -23078,4 +23078,231 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); both(); return r; }; }
 })();
 </script>
+
+<script id="dir281js">
+/* ===== CAD-281：フローリングと無垢板は、部屋・範囲の長い方に板が流れるようにする =====
+   本人の指示（最優先）：フローリングは部屋の長手方向に張る。今までは絵の向きが
+   固定で、縦長の部屋でも板が横に流れていた（実機：5,005×5,460 の部屋で横向き）。
+   ・対象は木の板の絵がある物だけ：フローリング（CAD-275 の3色）と無垢板
+     （CAD-279 のオーク）。フロアタイル・CF・土間・カーペット・畳は対象外。
+   ・判定：矩形の奥行が幅×1.05 より大きい時だけ「縦長」として絵を90°回す。
+     正方形に近い物（1.05 以下）は今の向きのまま。
+   ・回転は、元 pattern の複製に patternTransform="rotate(90)" を付けた別 pattern
+     （pFlV／p263FlV／pMuku279V／p263MukuV）で行う。元の data-w275（色）や
+     子要素が変わったら複製を作り直すので、色切替との連動は壊れない。
+   ・完成図：#g263 の部屋ラン rect は、中心が入る部屋（roomsCalc の bbox を
+     CAD-263 と同じ P 変換で px 化）の縦横で判定する。無垢の範囲
+     （#g279Muku の rect）は rect 自身の縦横で判定する。
+   ・間取り：全面フローリングは全体1枚 polygon なので、縦長で素材が
+     フローリングの部屋だけ、行ラン rect で url(#pFlV) を上描きする
+     グループ #dir281 を土台 polygon の直後に入れる（ゾーン・範囲・壁は
+     その上に描かれるので、範囲で決めた仕上げが優先される）。素材判定は
+     CAD-263 の matOf と同じ規則。無垢の範囲 rect と、pFl を使うゾーン
+     rect は、rect 自身の縦横で判定する。
+   ・ボタンの背景（276〜279）は対象外。見積・数量・保存データは不変。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+
+  function isVert(w, d){ return w > 0 && d > w * 1.05; }
+
+  /* 元 pattern の回転複製を用意する（色・内容が変わったら作り直す）。
+     create=false の時は、既にある複製の追従だけして新規には作らない。 */
+  function syncPat(src, dstId, create){
+    try{
+      if (!src || !src.parentNode) return null;
+      var sig = (src.getAttribute("data-w275") || "") + "|" + src.childNodes.length + "|" +
+        src.querySelectorAll("image").length + "|" + src.getAttribute("width") + "x" + src.getAttribute("height");
+      var dst = src.parentNode.querySelector("#" + dstId);
+      if (dst && dst.getAttribute("data-sync281") === sig) return dst;
+      if (!dst && !create) return null;
+      if (dst) dst.remove();
+      dst = src.cloneNode(true);
+      dst.setAttribute("id", dstId);
+      dst.setAttribute("patternTransform", "rotate(90)");
+      dst.setAttribute("data-sync281", sig);
+      src.parentNode.appendChild(dst);
+      return dst;
+    }catch(e){ return null; }
+  }
+
+  /* CAD-263 の matOf と同じ素材判定（間取りでも完成図とそろえる） */
+  function matOf281(nm){
+    nm = nm || "";
+    if (/浴/.test(nm)) return "Bt";
+    if (/トイレ|便所|WC/.test(nm)) return "Ti";
+    if (/洗面|脱衣|サニタリー/.test(nm)) return "Cf";
+    if (/玄関|土間|ポーチ/.test(nm)) return "Do";
+    if (/和|畳/.test(nm)) return "Ta";
+    if (/収納|クローゼット|物入|押入|納戸|C$/.test(nm)) return "Ply";
+    return "Fl";
+  }
+
+  function rectVert(r){
+    try { var bb = r.getBBox(); return isVert(bb.width, bb.height); } catch(e){ return false; }
+  }
+
+  /* ---- 間取り ---- */
+  function planFix(){
+    try{
+      var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
+      if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+      if (document.body.classList.contains("pz262")) return;
+      if (!svg.getBoundingClientRect().width) return; /* 間取りが表示されていない時は触らない */
+
+      /* 回転 pattern の追従は毎回行う（色切替で元が変わっても複製が古くならないように） */
+      var pFlTop = svg.querySelector("#pFl");
+      if (pFlTop) syncPat(pFlTop, "pFlV", true);
+      var pMkTop = svg.querySelector("#pMuku279");
+      if (pMkTop) syncPat(pMkTop, "pMuku279V", !!svg.querySelector("#pMuku279V") || !!svg.querySelector('rect[fill="url(#pMuku279)"]'));
+
+      /* 範囲・ゾーンの rect（無垢／フローリング）は rect 自身の縦横で判定 */
+      [["#pMuku279", "url(#pMuku279)", "pMuku279V", "url(#pMuku279V)"],
+       ["#pFl", "url(#pFl)", "pFlV", "url(#pFlV)"]].forEach(function(cfg){
+        var srcPat = svg.querySelector(cfg[0]); if (!srcPat) return;
+        var todo = [];
+        svg.querySelectorAll('rect[fill="' + cfg[1] + '"]').forEach(function(r){
+          if (r.getAttribute("data-dir281")) return;
+          if (r.closest("pattern") || r.closest("defs")) return;
+          if (r.getAttribute("stroke-dasharray") === "8 5") return; /* 囲みのプレビューは対象外 */
+          todo.push(r);
+        });
+        if (!todo.length) return;
+        syncPat(srcPat, cfg[2], true);
+        todo.forEach(function(r){
+          if (rectVert(r)) r.setAttribute("fill", cfg[3]);
+          r.setAttribute("data-dir281", "1");
+        });
+      });
+
+      /* 全面フローリング：縦長の部屋だけ回転 pattern で上描き */
+      var pFl = svg.querySelector("#pFl");
+      if (!pFl || typeof roomsCalc !== "function" || typeof toMM !== "function") return;
+      if (typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
+      var R = roomsCalc(); if (!R || !R.rooms || !R.rooms.length) return;
+      var NX = R.NX, st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0;
+      var vrooms = [];
+      R.rooms.forEach(function(r){
+        var nm = ""; try { nm = roomNm(r) || ""; } catch(e){}
+        if (!nm) nm = r.label || "";
+        if (matOf281(nm) !== "Fl") return;
+        var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+        r.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
+          if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
+        if (mxx < 0) return;
+        if (isVert((mxx - mnx + 1) * st, (mxy - mny + 1) * st)) vrooms.push({ r: r, mnx: mnx, mny: mny, mxx: mxx, mxy: mxy });
+      });
+      var sig = vrooms.map(function(v){ return [v.mnx, v.mny, v.mxx, v.mxy].join(","); }).join(";");
+      var old = svg.querySelector("#dir281");
+      if (!vrooms.length){ if (old) old.remove(); return; }
+      if (old && old.getAttribute("data-sig281") === sig) return;
+      syncPat(pFl, "pFlV", true);
+      if (old) old.remove();
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("id", "dir281"); g.setAttribute("pointer-events", "none");
+      g.setAttribute("data-sig281", sig);
+      var a0 = toMM([0, 0]), a1 = toMM([100, 100]);
+      var kx = (a1[0] - a0[0]) / 100, ky = (a1[1] - a0[1]) / 100;
+      if (!(kx > 0) || !(ky > 0)) return;
+      var toPx = function(mx, my){ return [(mx - a0[0]) / kx, (my - a0[1]) / ky]; };
+      vrooms.forEach(function(v){
+        var rows = {};
+        v.r.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX; (rows[y] = rows[y] || []).push(x); });
+        Object.keys(rows).forEach(function(y){
+          var xs = rows[y].sort(function(p, q){ return p - q; }), s0 = xs[0], pr = xs[0];
+          function flush(){
+            var A = toPx(bx0 + s0 * st, by0 + (+y) * st), B = toPx(bx0 + (pr + 1) * st, by0 + (+y + 1) * st);
+            var e = document.createElementNS(NS, "rect");
+            e.setAttribute("x", A[0]); e.setAttribute("y", A[1]);
+            e.setAttribute("width", B[0] - A[0] + 0.3); e.setAttribute("height", B[1] - A[1] + 0.3);
+            e.setAttribute("fill", "url(#pFlV)");
+            g.appendChild(e);
+          }
+          for (var k = 1; k < xs.length; k++){ if (xs[k] !== pr + 1){ flush(); s0 = xs[k]; } pr = xs[k]; }
+          flush();
+        });
+      });
+      var poly = svg.querySelector('polygon[fill="url(#pFl)"]') || svg.querySelector("polygon");
+      if (poly && poly.parentNode) poly.parentNode.insertBefore(g, poly.nextSibling);
+      else svg.appendChild(g);
+    }catch(e){}
+  }
+
+  /* ---- 完成図 ---- */
+  function pvFix(){
+    try{
+      var svg = document.getElementById("pvSvg"); if (!svg) return;
+      var defs = svg.querySelector("#d263"); if (!defs) return;
+      var pFl = defs.querySelector("#p263Fl");
+      var g = svg.querySelector("#g263");
+
+      /* 回転 pattern の追従は毎回行う（色切替で元が変わっても複製が古くならないように） */
+      if (pFl) syncPat(pFl, "p263FlV", !!svg.querySelector("#p263FlV") || !!(g && g.querySelector('rect[fill="url(#p263Fl)"]')));
+      var pMkTop = defs.querySelector("#p263Muku");
+      if (pMkTop) syncPat(pMkTop, "p263MukuV", !!svg.querySelector("#p263MukuV") || !!svg.querySelector("#g279Muku rect"));
+
+      /* 部屋の床（g263 のラン rect）：中心が入る部屋の縦横で判定 */
+      if (pFl && g && typeof roomsCalc === "function" && typeof bbox === "function" &&
+          typeof S !== "undefined" && S && S.edges && S.edges.length){
+        var targets = [];
+        g.querySelectorAll('rect[fill="url(#p263Fl)"]').forEach(function(r){
+          if (!r.getAttribute("data-dir281")) targets.push(r);
+        });
+        if (targets.length){
+          var R = roomsCalc();
+          if (R && R.rooms && R.rooms.length){
+            var b = bbox(), s = Math.min((360 - 68 - 42) / b.w, (470 - 68 - 38) / b.h);
+            var NX = R.NX, st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0;
+            var P = function(q){ return [68 + (q[0] - b.x0) * s, 68 + (q[1] - b.y0) * s]; };
+            var boxes = R.rooms.map(function(r){
+              var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+              r.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
+                if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
+              var A = P([bx0 + mnx * st, by0 + mny * st]), B = P([bx0 + (mxx + 1) * st, by0 + (mxy + 1) * st]);
+              return { x0: A[0], y0: A[1], x1: B[0], y1: B[1],
+                       area: Math.max(0, B[0] - A[0]) * Math.max(0, B[1] - A[1]),
+                       vert: isVert((mxx - mnx + 1) * st, (mxy - mny + 1) * st) };
+            });
+            if (boxes.some(function(bx){ return bx.vert; })) syncPat(pFl, "p263FlV", true);
+            targets.forEach(function(r){
+              var cx = parseFloat(r.getAttribute("x")) + parseFloat(r.getAttribute("width")) / 2;
+              var cy = parseFloat(r.getAttribute("y")) + parseFloat(r.getAttribute("height")) / 2;
+              var hit = null;
+              boxes.forEach(function(bx){
+                if (cx >= bx.x0 - 0.6 && cx <= bx.x1 + 0.6 && cy >= bx.y0 - 0.6 && cy <= bx.y1 + 0.6){
+                  if (!hit || bx.area < hit.area) hit = bx; /* 重なる時は小さい方（具体的な部屋）を優先 */
+                }
+              });
+              if (hit && hit.vert) r.setAttribute("fill", "url(#p263FlV)");
+              r.setAttribute("data-dir281", "1");
+            });
+          }
+        }
+      }
+
+      /* 無垢の範囲（g279Muku の rect）：rect 自身の縦横で判定 */
+      var gm = svg.querySelector("#g279Muku");
+      var pMk = defs.querySelector("#p263Muku");
+      if (gm && pMk){
+        var mrs = [];
+        gm.querySelectorAll('rect[fill="url(#p263Muku)"]').forEach(function(r){
+          if (!r.getAttribute("data-dir281")) mrs.push(r);
+        });
+        if (mrs.length){
+          syncPat(pMk, "p263MukuV", true);
+          mrs.forEach(function(r){
+            if (isVert(parseFloat(r.getAttribute("width")), parseFloat(r.getAttribute("height"))))
+              r.setAttribute("fill", "url(#p263MukuV)");
+            r.setAttribute("data-dir281", "1");
+          });
+        }
+      }
+    }catch(e){}
+  }
+
+  function both(){ planFix(); pvFix(); }
+  setInterval(both, 400); both();
+  var prev = window.tidyPlanLabels;
+  if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); both(); return r; }; }
+})();
+</script>
 </html>
