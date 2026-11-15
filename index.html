@@ -802,7 +802,7 @@ const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, k
   rfCeilMat: undefined, rfCur: undefined, rfWallMat: undefined, roofW: undefined,
   roomFin: undefined, roomNames: undefined, roomPt: undefined, roomRecs: undefined, roomView: undefined,
   tare: undefined, tatami: undefined, tenken: undefined, tfr: undefined, trSend: undefined, tsuboWant: undefined, zones: undefined,
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps", dan266: false, danNew266: false, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -1519,6 +1519,40 @@ function sheetPrice(cat, t, w, l){
   return {p: unitP(it) / (it.w * it.len) * (w * l), conv: true, avg: !!it.kari};
 }
 function simplePrice(cat){ const it = PR.items.find(x => x.cat === cat && !x.kari) || PR.items.find(x => x.cat === cat); return it ? {p: unitP(it), it, avg: !!it.kari} : AVG_SIMPLE[cat] ? {p: AVG_SIMPLE[cat], it: {qty: 1, price: AVG_SIMPLE[cat]}, avg: true} : null; }
+/* ===== CAD-266：断熱の厚さは地域区分で変わる（翔伍の承認 2026-11-15。根拠：国交省告示266号の仕様基準＝~/workspace/knowledge/断熱材-地域区分と厚さ-2026-11-15.md） =====
+   ・地域区分は端末に覚える（localStorage gosei-region-v1、初期値6＝山口・宇部）。
+   ・標準の厚さ [床 押出法PS, 壁 GW, 天井 GW]：1〜2地域 [95,140,220]（壁140は105角の柱への充填だけでは入らない目安。外張り併用が前提）、
+     3地域 [95,85,155]、4〜7地域 [65,85,155]、8地域 [45,105,30]（壁・床は基準値が無いので従来値を残す）。
+   ・266より前の現場（dan266 も danNew266 も無い）は従来の厚さ・単価・行名のまま＝見積は変わらない。
+     266で作った新築・増築（danNew266）は地域の標準が効く。厚さや材料を選ぶと dan266 が立ち、選んだ値が勝つ（地域を変えても上書きしない）。
+   ・仮単価は基準の厚さの現行値（床¥2,000@45mm・壁¥1,000@105mm・天井¥1,300@155mm）から厚さ比例で出す（材料費が厚さにほぼ比例する事を調査で確認。10円単位に丸め）。
+     自分の単価（PR.work）があれば、厚さに関係なくそちらが勝つ。
+   ・リフォームの床：フクフォーム（フクビ化学工業・ビーズ法ポリスチレンフォーム・λ=0.040・根太間用。規格の厚さは45mm＝根太45用。公式カタログで裏取り）も選べる。 */
+const DANSTD266 = {1: [95, 140, 220], 2: [95, 140, 220], 3: [95, 85, 155], 4: [65, 85, 155], 5: [65, 85, 155], 6: [65, 85, 155], 7: [65, 85, 155], 8: [45, 105, 30]};
+const DANLEG266 = {danF: 45, danW: 105, danC: 155};
+const DANBASE266 = {danF: [2000, 45], danW: [1000, 105], danC: [1300, 155]};
+function region266(){ try { const v = parseInt(localStorage.getItem("gosei-region-v1") || "6", 10); return v >= 1 && v <= 8 ? v : 6; } catch(e){ return 6; } }
+function danStd266(key){ const s = DANSTD266[region266()]; return key === "danF" ? s[0] : key === "danW" ? s[1] : s[2]; }
+function danActive266(){ return !!S.dan266 || (!!S.danNew266 && S.mode === "zo"); }
+function danT266(key){
+  if (S.dan266){ const v = key === "danF" ? S.danFT : key === "danW" ? S.danWT : S.danCT; if (v > 0) return v; }
+  if (S.danNew266 && S.mode === "zo") return danStd266(key);
+  return DANLEG266[key];
+}
+function danMat266(){ return S.dan266 && S.danFMat === "fuku" ? "fuku" : "xps"; }
+function danPrice266(key){
+  const w = workP(key);
+  if (!w.avg || !danActive266()) return w;
+  const b = DANBASE266[key];
+  return {p: Math.round(b[0] * danT266(key) / b[1] / 10) * 10, avg: true};
+}
+function danName266(key, name){
+  if (!danActive266()) return name;
+  const t = danT266(key);
+  if (key === "danF") return name + (danMat266() === "fuku" ? `（フクフォーム ${t}mm）` : `（押出法PS ${t}mm）`);
+  if (key === "danW") return name + `（GW ${t}mm）` + (region266() <= 2 && t === danStd266("danW") ? "・目安" : "");
+  return name + `（GW ${t}mm）`;
+}
 
 /* ---------- 手順 ---------- */
 const RF = () => S.mode === "rf";
@@ -1625,7 +1659,7 @@ function newProject(name){
   const keep = {sp: S.sp, margin: S.margin, gbW: S.gbW, gbC: S.gbC, tr: S.tr, precut: S.precut, flType: S.flType, shokei: S.shokei, mode: S.mode};
   const id = "p" + Date.now().toString(36);
   PJ.list.unshift({id, name: name || "新しい現場", upd: Date.now()});
-  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: [], genba: name || ""}); PJ.cur = id; save(); clearInk();
+  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: [], genba: name || "", dan266: false, danNew266: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps"}); PJ.cur = id; save(); clearInk();
 }
 /* ---------- 会社名・担当・電話（お客さんに送る文面に入る） ---------- */
 const CO_KEY = "yubi-company-v1";
@@ -6111,7 +6145,7 @@ function calc00(){
     lum("tenjo", "置き床 際根太", 36, 45, Array(Math.ceil(perim / 3900)).fill(4000), `36×45・壁ぎわ ${fmt(perim / 1000, 1)}m`, false);
     sheet("構造用合板", 12, "置き床 捨て貼り合板 12mm", 910, 1820, Math.ceil(a / 1.6562 * 1.05), `床 ${fmt(a, 1)}㎡`);
   }
-  function dan(key, name, a){ if (S[key] && a > 0){ work(key, name, a * 1.05, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(key).p)}円`); } }
+  function dan(key, name, a){ if (S[key] && a > 0){ const pr266 = danPrice266(key); rows.push({name: danName266(key, name), spec: `${fmt(a, 1)}㎡（5%増し） × ${fmt(pr266.p)}円`, qty: "", cost: pr266.p * a * 1.05, avg: pr266.avg, miss: !pr266.p, fix: {kind: "work", key}, q: a * 1.05}); } }   /* CAD-266: 厚さ・材料で単価と行名が変わる */
   function crew(name, nin){ const np = workP("ninku"); rows.push({name, spec: `${fmt(nin.n, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: nin.n * np.p, avg: nin.avg || np.avg, fix: {kind: "work", key: nin.key}}); }
   function domaRows(L, W, dt, e, pre){
     const dc = domaCalc(L, W, dt, e);
@@ -21894,6 +21928,125 @@ function arm(){
   mo.observe(s,{childList:true}); build(); setTimeout(fixVB,0);
 }
 arm();
+})();
+</script>
+<style id="dan266css">
+#danRegion266{margin:0 0 2px}
+.danCh266{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.danCh266 button{min-height:44px;padding:0 12px}
+.danNote266{grid-column:1/-1;font-size:12px;color:#5a6472;line-height:1.5;padding:2px 0}
+body.gold .danNote266{color:#b9c0cc}
+</style>
+<script id="dan266js">
+(function(){ "use strict";
+  /* ===== CAD-266：仕様の断熱の所に「地域区分」と「厚さ・材料」のチップを足す =====
+     ・地域区分は端末に覚える（gosei-region-v1）。選んでも、保存済み現場の見積は勝手に変わらない
+       （効くのは 266で作った新築・増築 と、厚さを自分で選んだ現場だけ。本体の danActive266 が判定）。
+     ・チップを押すと dan266 が立ち、今の効いている厚さを3部位とも取り込んでから押した所だけ変える。
+     ・単価表（WORK）の断熱の品目名と仮単価も、今の厚さに同期させる（自分の単価があればそちらが勝つ）。 */
+  var XPS_F = [30, 40, 45, 50, 65, 80, 90, 95, 100];
+  var XPS_RF = [20, 25, 30, 35, 40, 45];
+  var GW_W = [85, 100, 105, 110, 140, 155];
+  var GW_C = [30, 105, 155, 180, 220];
+  var LEGSM = {danF: "押出法ポリスチレン 45mm", danW: "グラスウール 105mm（壊した面にだけ入ります）", danC: "グラスウール 155mm"};
+  var LEGWK = {danF: ["断熱 床（押出法PS 45mm）", 2000], danW: ["断熱 壁（GW 105mm）", 1000], danC: ["断熱 天井（GW 155mm）", 1300]};
+  var BASENM = {danF: "断熱 床", danW: "断熱 壁", danC: "断熱 天井"};
+  var sig266 = "";
+  function rows266(){
+    return [].slice.call(document.querySelectorAll("#st4 .sprow")).filter(function(r){ return !!r.querySelector("[data-dan]"); });
+  }
+  function keyOf(r){ var b = r.querySelector("[data-dan]"); return b ? b.dataset.dan : null; }
+  function activate266(){
+    if (S.dan266) return;
+    S.danFT = danT266("danF"); S.danWT = danT266("danW"); S.danCT = danT266("danC");
+    if (S.danFMat !== "fuku") S.danFMat = "xps";
+    S.dan266 = true;
+  }
+  function after266(){ try { save(); } catch(e){} try { drawSpec(); } catch(e){} sig266 = ""; sync266(); }
+  function setT266(key, v){ activate266(); if (key === "danF") S.danFT = v; else if (key === "danW") S.danWT = v; else S.danCT = v; after266(); }
+  function setMat266(m){ activate266(); S.danFMat = m; if (m === "fuku") S.danFT = 45; else if (S.mode !== "zo" && S.danFT > 45) S.danFT = 45; after266(); }
+  function setRegion266(v){ try { localStorage.setItem("gosei-region-v1", String(v)); } catch(e){} sig266 = ""; sync266(); }
+  function syncWork266(){
+    try {
+      ["danF", "danW", "danC"].forEach(function(k){
+        var wk = null;
+        for (var i = 0; i < WORK.length; i++) if (WORK[i][0] === k){ wk = WORK[i]; break; }
+        if (!wk) return;
+        if (danActive266()){ wk[1] = danName266(k, BASENM[k]); var pr = danPrice266(k); if (pr.avg) wk[4] = pr.p; }
+        else { wk[1] = LEGWK[k][0]; wk[4] = LEGWK[k][1]; }
+      });
+    } catch(e){}
+  }
+  function regionBox266(){
+    var det = document.querySelector("#st4 details.rfAdv"); if (!det) return null;
+    var box = document.getElementById("danRegion266");
+    if (!box){
+      box = document.createElement("div"); box.id = "danRegion266";
+      var h2 = null;
+      det.querySelectorAll("h2").forEach(function(h){ if (!h2 && /断熱材/.test(h.textContent)) h2 = h; });
+      if (h2 && h2.nextSibling) det.insertBefore(box, h2.nextSibling); else if (h2) det.appendChild(box); else det.insertBefore(box, det.firstChild);
+    }
+    return box;
+  }
+  function renderRegion266(box){
+    var rg = region266(), zo = S.mode === "zo", std = DANSTD266[rg];
+    var html = '<div class="sub2">地域区分（断熱の標準の厚さを決めます）</div><div class="chips">' +
+      [1, 2, 3, 4, 5, 6, 7, 8].map(function(v){ return '<button type="button" data-rg="' + v + '" aria-pressed="' + (v === rg) + '">' + v + '地域</button>'; }).join("") + '</div>';
+    if (zo) html += '<p class="hint" style="margin-top:4px">' + rg + '地域の標準：床' + std[0] + 'mm・壁' + std[1] + 'mm・天井' + std[2] + 'mm' + (rg <= 2 ? '。壁は柱の中だけでは入らない厚さなので目安です（外張りの併用が前提）' : '') + (rg === 8 ? '。壁と床は基準が無いため、従来の厚さを残しています' : '') + '</p>';
+    else html += '<p class="hint" style="margin-top:4px">リフォームでは地域の標準は使いません（お客さんの予算に合わせて、床の材料と厚さを下で選べます）。</p>';
+    box.innerHTML = html;
+    box.querySelectorAll("[data-rg]").forEach(function(b){ b.onclick = function(){ setRegion266(+b.dataset.rg); }; });
+  }
+  function chipsHtml266(list, cur, stdV){
+    return list.map(function(v){ return '<button type="button" data-t="' + v + '" aria-pressed="' + (v === cur) + '">' + v + 'mm' + (v === stdV ? '（標準）' : '') + '</button>'; }).join("");
+  }
+  function renderRow266(r){
+    var key = keyOf(r); if (!key) return;
+    var act = danActive266(), t = danT266(key), mat = danMat266(), zo = S.mode === "zo";
+    var small = r.querySelector("div small");
+    var sm;
+    if (!act) sm = LEGSM[key];
+    else if (key === "danF") sm = mat === "fuku" ? "フクフォーム（ビーズ法ポリスチレン） " + t + "mm" : "押出法ポリスチレン " + t + "mm";
+    else if (key === "danW") sm = "グラスウール " + t + "mm（壊した面にだけ入ります）";
+    else sm = "グラスウール " + t + "mm";
+    if (small && small.textContent !== sm) small.textContent = sm;
+    var box = r.querySelector(":scope > .danCh266");
+    var need = (key === "danF") || zo;
+    if (!need){ if (box) box.remove(); var n0 = r.querySelector(":scope > .danNote266"); if (n0) n0.remove(); return; }
+    if (!box){ box = document.createElement("div"); box.className = "chips danCh266"; r.appendChild(box); }
+    var html = "";
+    if (key === "danF"){
+      if (!zo) html += '<button type="button" data-m="xps" aria-pressed="' + (mat === "xps") + '">押出法ポリスチレン</button><button type="button" data-m="fuku" aria-pressed="' + (mat === "fuku") + '">フクフォーム</button>';
+      var list = zo ? XPS_F : (mat === "fuku" ? [45] : XPS_RF);
+      html += chipsHtml266(list, t, zo ? danStd266("danF") : 0);
+    } else if (key === "danW") html = chipsHtml266(GW_W, t, danStd266("danW"));
+    else html = chipsHtml266(GW_C, t, danStd266("danC"));
+    if (box.getAttribute("data-h") !== html){
+      box.setAttribute("data-h", html); box.innerHTML = html;
+      box.querySelectorAll("[data-t]").forEach(function(b){ b.onclick = function(){ setT266(key, +b.dataset.t); }; });
+      box.querySelectorAll("[data-m]").forEach(function(b){ b.onclick = function(){ setMat266(b.dataset.m); }; });
+    }
+    var note = r.querySelector(":scope > .danNote266"), nt = "";
+    if (key === "danF" && !zo && mat === "fuku") nt = "フクフォームは根太の間に入れる床断熱材です。厚さは45mm（根太45用）です。";
+    if (key === "danW" && zo && region266() <= 2 && t === danStd266("danW")) nt = "1・2地域の壁は、柱の中だけでは入らない厚さです。外張りの併用が前提の目安として置いています。";
+    if (nt){ if (!note){ note = document.createElement("div"); note.className = "danNote266"; r.appendChild(note); } if (note.textContent !== nt) note.textContent = nt; }
+    else if (note) note.remove();
+  }
+  function sync266(){
+    try {
+      if (typeof S === "undefined" || !S || typeof danActive266 !== "function") return;
+      syncWork266();
+      var rows = rows266(); if (!rows.length) return;
+      var box = regionBox266(); if (!box) sig266 = "";
+      rows.forEach(function(r){ var k = keyOf(r); if ((k === "danF" || S.mode === "zo") && !r.querySelector(":scope > .danCh266")) sig266 = ""; });
+      var sig = [region266(), S.mode, danActive266() ? 1 : 0, danT266("danF"), danT266("danW"), danT266("danC"), danMat266()].join("|");
+      if (sig === sig266) return;
+      sig266 = sig;
+      if (box) renderRegion266(box);
+      rows.forEach(renderRow266);
+    } catch(e){}
+  }
+  setInterval(sync266, 500); sync266();
 })();
 </script>
 </html>
