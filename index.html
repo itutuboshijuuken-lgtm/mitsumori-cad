@@ -22049,4 +22049,191 @@ body.gold .danNote266{color:#b9c0cc}
   setInterval(sync266, 500); sync266();
 })();
 </script>
+
+<script>
+/* CAD-264: 描く画面の平面図の質感MAX（床を部屋ごとの素材に・洗面所はCF）。指で動かしている間は軽い表示、離すと質感が戻る */
+(function(){
+"use strict";
+var K=26.86, off=false;
+try{ off=localStorage.getItem("tex264")==="off" }catch(e){}
+function apply(){
+  try{
+    if(off)return; var svg=document.getElementById("plan"); if(!svg||!svg.firstChild)return;
+    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
+    if(document.body.classList.contains("pz262"))return;
+    if(svg.querySelector("#flDefs"))return;
+    var NS="http://www.w3.org/2000/svg"; var pl=150/K, L=1820/K;
+    const defs=document.createElementNS(NS,'defs'); defs.id='flDefs';
+
+
+defs.innerHTML=`
+<pattern id="pFl" patternUnits="userSpaceOnUse" width="${L}" height="${pl*4}">
+ <rect width="${L}" height="${pl*4}" fill="#EBD2A8"/>
+ <rect y="0" width="${L}" height="${pl}" fill="#EFD8B2"/><rect y="${pl*2}" width="${L}" height="${pl}" fill="#E7CC9F"/>
+ <path d="M0 0H${L}M0 ${pl}H${L}M0 ${pl*2}H${L}M0 ${pl*3}H${L}" stroke="#B99565" stroke-width=".45" opacity=".55"/>
+ <path d="M0 0V${pl}M${L*.4} ${pl}V${pl*2}M${L*.75} ${pl*2}V${pl*3}M${L*.15} ${pl*3}V${pl*4}" stroke="#B99565" stroke-width=".45" opacity=".55"/>
+ <path d="M4 ${pl*.5}q9 -1 20 0t22 0M${L*.45} ${pl*1.5}q10 1 22 0M8 ${pl*2.5}q12 -1 24 0M${L*.6} ${pl*3.5}q9 1 20 0" stroke="#D6B684" stroke-width=".5" fill="none" opacity=".8"/></pattern>
+<pattern id="pPly" patternUnits="userSpaceOnUse" width="${910/K}" height="${1820/K}"><rect width="${910/K}" height="${1820/K}" fill="#F0DBBC"/>
+ <path d="M0 0H${910/K}M0 0V${1820/K}" stroke="#C9AB7C" stroke-width=".5" opacity=".7"/><path d="M3 6q4 8 0 18M14 22q-3 8 0 16M22 4q3 9 0 17" stroke="#DDBF92" stroke-width=".5" fill="none"/></pattern>
+<pattern id="pTa" patternUnits="userSpaceOnUse" width="${910/K}" height="${1820/K}"><rect width="${910/K}" height="${1820/K}" fill="#DDE3B6"/>
+ <path d="${Array.from({length:30},(_,i)=>`M${1+i*1.1} 1.8V${1820/K-1.8}`).join('')}" stroke="#CAD39A" stroke-width=".3" opacity=".9"/>
+ <path d="M0 0H${910/K}M0 ${1820/K}H${910/K}" stroke="#5E6A33" stroke-width="1"/><path d="M0 1.6H${910/K}M0 ${1820/K-1.6}H${910/K}" stroke="#8F9A5A" stroke-width=".4"/><path d="M0 0V${1820/K}" stroke="#7F8C47" stroke-width=".35"/></pattern>
+<pattern id="pTi" patternUnits="userSpaceOnUse" width="${300/K}" height="${300/K}"><rect width="${300/K}" height="${300/K}" fill="#D3E9E3"/><path d="M0 0H${300/K}M0 0V${300/K}" stroke="#9FC9BE" stroke-width=".6"/><path d="M2 2L7 2" stroke="#EEF8F5" stroke-width=".8" opacity=".9"/></pattern>
+<pattern id="pBt" patternUnits="userSpaceOnUse" width="${200/K}" height="${200/K}"><rect width="${200/K}" height="${200/K}" fill="#C4DEEE"/><path d="M0 0H${200/K}M0 0V${200/K}" stroke="#93BCD6" stroke-width=".35"/><path d="M1 1.2L3 1.2" stroke="#E6F3FA" stroke-width=".6"/></pattern>
+<pattern id="pDo" patternUnits="userSpaceOnUse" width="${450/K}" height="${450/K}"><rect width="${450/K}" height="${450/K}" fill="#D2C3A5"/><path d="M0 0H${450/K}M0 0V${450/K}" stroke="#A8977A" stroke-width=".8"/>
+ <g fill="#B7A685"><circle cx="3" cy="5" r=".5"/><circle cx="11" cy="12" r=".6"/><circle cx="7" cy="15" r=".4"/><circle cx="14" cy="3" r=".4"/></g><g fill="#E2D6BC"><circle cx="5" cy="9" r=".5"/><circle cx="13" cy="8" r=".4"/></g></pattern>
+<pattern id="pCf" patternUnits="userSpaceOnUse" width="${600/K}" height="${600/K}"><rect width="${600/K}" height="${600/K}" fill="#E3DED6"/><path d="M0 0H${600/K}M0 0V${600/K}" stroke="#C4BCAE" stroke-width=".6"/>
+ <g fill="#CFC7B9"><circle cx="5" cy="7" r=".5"/><circle cx="14" cy="16" r=".6"/><circle cx="18" cy="5" r=".4"/><circle cx="9" cy="19" r=".5"/></g><g fill="#F2EEE8"><circle cx="8" cy="11" r=".5"/><circle cx="17" cy="12" r=".5"/></g></pattern>`;
+
+    svg.insertBefore(defs,svg.firstChild);
+    const MAP={'#EEF4FB':'pFl','#F2D9B8':'pPly','#E6DDF2':'pFl','#E4E9C4':'pTa','#DCE3B5':'pTa','#CFE8E0':'pTi','#D9BF98':'pDo','#BFDCEF':'pBt','#ABA29A':'pDo','#C9CED4':'pCf'};
+let n=0; svg.querySelectorAll('polygon,rect,path').forEach(e=>{const f=(e.getAttribute('fill')||'').toUpperCase();const k=Object.keys(MAP).find(c=>c===f); if(k){e.setAttribute('fill','url(#'+MAP[k]+')');e.setAttribute('fill-opacity','1');n++}});
+
+    const RC=roomsCalc(), NX=RC.NX, st=RC.st, g=document.createElementNS(NS,'g'); g.id='flOver'; g.setAttribute('pointer-events','none');
+const toPx=(mx,my)=>{const a=toMM([0,0]),b=toMM([100,100]);return [(mx-a[0])/((b[0]-a[0])/100),(my-a[1])/((b[1]-a[1])/100)]};
+(S.roomNames||[]).forEach(rn=>{ if(rn.name!=='洗面所')return; const i=Math.floor(rn.p[0]/st), j=Math.floor(rn.p[1]/st); const r=RC.rooms.find(r=>r.cells.includes(j*NX+i)); if(!r)return;
+  const rows={}; r.cells.forEach(c=>{const y=Math.floor(c/NX),x=c%NX;(rows[y]=rows[y]||[]).push(x)});
+  Object.keys(rows).forEach(y=>{const xs=rows[y].sort((a,b)=>a-b);let s=xs[0],p=s;const flush=()=>{const A=toPx(s*st,y*st),B=toPx((p+1)*st,(+y+1)*st);const e=document.createElementNS(NS,'rect');e.setAttribute('x',A[0]);e.setAttribute('y',A[1]);e.setAttribute('width',B[0]-A[0]+.3);e.setAttribute('height',B[1]-A[1]+.3);e.setAttribute('fill','url(#pCf)');g.appendChild(e)};
+   for(let k=1;k<xs.length;k++){if(xs[k]!==p+1){flush();s=xs[k]}p=xs[k]}flush()}); });
+const poly=svg.querySelector('polygon'); poly.parentNode.insertBefore(g,poly.nextSibling);
+
+  }catch(e){ try{console.warn("CAD-264",e)}catch(_){} }
+}
+var prev=window.tidyPlanLabels;
+if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
+})();
+</script>
+<script>
+/* CAD-265: 描く画面のとびらの見た目MAX（扉板を木色の2重線＋開く範囲をうすく塗り＋実線の弧＋吊元の点）。位置・向き・寸法は今のまま */
+(function(){
+"use strict";
+var NS="http://www.w3.org/2000/svg";
+function mk(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e}
+function apply(){
+  try{
+    var svg=document.getElementById("plan"); if(!svg)return;
+    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
+    if(document.body.classList.contains("pz262"))return;
+    var arcs=svg.querySelectorAll('path[stroke-dasharray="3 2"][stroke="#3E4A57"]');
+    arcs.forEach(function(ar){
+      if(ar.getAttribute("data-d265"))return;
+      var ln=ar.previousElementSibling; if(!ln||ln.tagName!=="line"||ln.getAttribute("stroke")!=="#3E4A57")return;
+      var d=ar.getAttribute("d"), m=/M\s*([-\d.]+)[ ,]([-\d.]+)\s*A\s*([-\d.]+)\s*([-\d.]+)\s*0\s*0\s*([01])\s*([-\d.]+)[ ,]([-\d.]+)/.exec(d); if(!m)return;
+      var hx=+ln.getAttribute("x1"),hy=+ln.getAttribute("y1"),tx=+ln.getAttribute("x2"),ty=+ln.getAttribute("y2");
+      var g=mk("g",{"data-d265":"1","pointer-events":"none"});
+      /* 開く範囲 */
+      g.appendChild(mk("path",{d:"M"+hx+","+hy+" L"+m[1]+","+m[2]+" A"+m[3]+" "+m[4]+" 0 0 "+m[5]+" "+m[6]+","+m[7]+" Z",fill:"#7FA3C7","fill-opacity":".13",stroke:"none"}));
+      /* 弧（点線のまま残す） */
+      g.appendChild(mk("path",{d:d,fill:"none",stroke:"#4F6683","stroke-width":"1.2","stroke-dasharray":"3 2"}));
+      /* 扉板 */
+      g.appendChild(mk("line",{x1:hx,y1:hy,x2:tx,y2:ty,stroke:"#4A3320","stroke-width":"3.6","stroke-linecap":"round"}));
+      g.appendChild(mk("line",{x1:hx,y1:hy,x2:tx,y2:ty,stroke:"#D9A66B","stroke-width":"1.7","stroke-linecap":"round"}));
+      /* 吊元 */
+      g.appendChild(mk("circle",{cx:hx,cy:hy,r:"2.3",fill:"#fff",stroke:"#3E4A57","stroke-width":"1.1"}));
+      ln.parentNode.insertBefore(g,ln); ln.style.display="none"; ar.style.display="none"; ar.setAttribute("data-d265","1");
+    });
+  }catch(e){ try{console.warn("CAD-265",e)}catch(_){} }
+}
+var prev=window.tidyPlanLabels;
+if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
+})();
+</script>
+<script>
+/* CAD-266: 描く画面の窓の見た目MAX（ガラス色・枠・ガラス2本線・引違いの中央召し合わせ）。位置・寸法は今のまま */
+(function(){
+"use strict";
+var NS="http://www.w3.org/2000/svg";
+function mk(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e}
+function lerp(a,b,t){return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}
+function ln(g,a,b,c,w,o){g.appendChild(mk("line",{x1:a[0].toFixed(2),y1:a[1].toFixed(2),x2:b[0].toFixed(2),y2:b[1].toFixed(2),stroke:c,"stroke-width":w,"stroke-linecap":"butt",opacity:o||1}))}
+function apply(){
+  try{
+    var svg=document.getElementById("plan"); if(!svg)return;
+    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
+    if(document.body.classList.contains("pz262"))return;
+    svg.querySelectorAll('polygon[fill="#5EEAD4"][stroke="#0F766E"]').forEach(function(pg){
+      if(pg.getAttribute("data-w266"))return;
+      var q=pg.getAttribute("points").trim().split(/\s+/).map(function(s){var a=s.split(",");return [+a[0],+a[1]]}); if(q.length!==4)return;
+      var c=pg.nextElementSibling; if(c&&c.tagName==="line"&&c.getAttribute("stroke")==="#0F766E")c.style.display="none";
+      pg.setAttribute("data-w266","1"); pg.setAttribute("fill","#DDF1F6"); pg.setAttribute("stroke","#1F5560"); pg.setAttribute("stroke-width","1.3");
+      var g=mk("g",{"pointer-events":"none","data-w266":"1"});
+      var len=Math.hypot(q[1][0]-q[0][0],q[1][1]-q[0][1]);
+      /* ガラス2本線 */
+      ln(g,lerp(q[0],q[3],.36),lerp(q[1],q[2],.36),"#3A8FA3",1);
+      ln(g,lerp(q[0],q[3],.64),lerp(q[1],q[2],.64),"#3A8FA3",1);
+      /* ガラスの反射 */
+      ln(g,lerp(lerp(q[0],q[3],.5),lerp(q[1],q[2],.5),.12),lerp(lerp(q[0],q[3],.5),lerp(q[1],q[2],.5),.3),"#fff",1.4,.9);
+      /* 両端の枠 */
+      ln(g,q[0],q[3],"#1F5560",2.4); ln(g,q[1],q[2],"#1F5560",2.4);
+      /* 引違い（幅があれば中央で2枚が重なる） */
+      if(len>14){ var m0=lerp(q[0],q[1],.5), m1=lerp(q[3],q[2],.5); ln(g,lerp(m0,m1,.08),lerp(m0,m1,.92),"#1F5560",1.6) }
+      pg.parentNode.insertBefore(g,pg.nextSibling);
+    });
+  }catch(e){ try{console.warn("CAD-266",e)}catch(_){} }
+}
+var prev=window.tidyPlanLabels;
+if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
+})();
+</script>
+<script>
+/* CAD-267: 描く画面の文字の重なり直し。①部屋名が他の部屋に飛び出す時は自分の部屋の中へ戻し、幅に合わせて小さく ②窓・ドアの番号丸が寸法文字に重なる時は外側へずらす。数字・寸法・見積は一切変えない */
+(function(){
+"use strict";
+function sv(e,a){return parseFloat(e.getAttribute(a))||0}
+function rooms(svg){
+  var R=roomsCalc(), K=toMM([0,0]), K2=toMM([100,100]), sx=(K2[0]-K[0])/100, sy=(K2[1]-K[1])/100; /* svg→mm の倍率 */
+  var toPx=function(mx,my){return [(mx-K[0])/sx,(my-K[1])/sy]};
+  var kids=[].slice.call(svg.children).filter(function(e){return e.tagName==="text"});
+  kids.forEach(function(t,i){
+    var nx=kids[i+1]; if(!nx||!/㎡\s*$/.test(nx.textContent||""))return;
+    var name=(t.textContent||"").trim(); if(!name)return;
+    var cx=sv(t,"x"), cy=sv(t,"y"), m=toMM([cx,cy]);
+    var ii=Math.floor((m[0]-R.b.x0)/R.st), jj=Math.floor((m[1]-R.b.y0)/R.st);
+    var cid=(ii>=0&&jj>=0&&ii<R.NX&&jj<R.NY)?R.comp[jj*R.NX+ii]:-1;
+    var own=null; R.rooms.forEach(function(r){ var nm=""; try{nm=roomNm(r)||""}catch(e){} if(!nm)nm=r.label||""; if(nm===name&&(!own||Math.hypot(r.cxm-m[0],r.cym-m[1])<Math.hypot(own.cxm-m[0],own.cym-m[1])))own=r });
+    if(!own)return;
+    var inside=(cid===own.cid);
+    /* 自分の部屋の、文字の行の幅 */
+    var pi=Math.floor((own.p[0]-R.b.x0)/R.st), pj=Math.floor((own.p[1]-R.b.y0)/R.st), s0=pi,s1=pi;
+    while(R.comp[pj*R.NX+s0-1]===own.cid&&s0>0)s0--; while(R.comp[pj*R.NX+s1+1]===own.cid&&s1<R.NX-1)s1++;
+    var wpx=Math.abs(toPx(R.b.x0+(s1+1)*R.st,0)[0]-toPx(R.b.x0+s0*R.st,0)[0])-3;
+    var tw=(function(){try{return t.getComputedTextLength()}catch(e){return 0}})(), fs=parseFloat(t.style.fontSize)||12;
+    var f=fs; if(tw>wpx&&wpx>8)f=Math.max(5.5,fs*wpx/tw);
+    if(!inside){
+      var p=toPx(own.p[0],own.p[1]), dy=sv(nx,"y")-cy;
+      t.setAttribute("x",p[0].toFixed(2)); t.setAttribute("y",p[1].toFixed(2)); nx.setAttribute("x",p[0].toFixed(2)); nx.setAttribute("y",(p[1]+dy*f/fs).toFixed(2));
+    } else if(f!==fs){ nx.setAttribute("y",(cy+(sv(nx,"y")-cy)*f/fs).toFixed(2)) }
+    if(f!==fs){ t.style.fontSize=f+"px"; nx.style.fontSize=Math.max(5,(parseFloat(nx.style.fontSize)||6.6)*f/fs)+"px" }
+  });
+}
+function badges(svg){
+  var obs=[];
+  [].slice.call(svg.querySelectorAll("text.halo")).forEach(function(t){ if(t.closest("g[data-sno]"))return; if(!(t.textContent||"").trim())return; var bb=t.getBBox(); if(bb.width&&bb.height)obs.push({x:bb.x,y:bb.y,w:bb.width,h:bb.height,t:t}) });
+  var hit=function(cx,cy,r,o){return cx+r>o.x&&cx-r<o.x+o.w&&cy+r>o.y&&cy-r<o.y+o.h};
+  svg.querySelectorAll("g[data-sno]").forEach(function(g){
+    if(g.getAttribute("data-b267"))return; g.setAttribute("data-b267","1");
+    var c=g.querySelector("circle"); if(!c)return;
+    var cx=sv(c,"cx"), cy=sv(c,"cy"), r=sv(c,"r")+1.2, first=null;
+    for(var i=0;i<obs.length;i++){ if(/^[\d,]+$/.test((obs[i].t.textContent||"").trim())&&hit(cx,cy,r,obs[i])){first=obs[i];break} }
+    var bad=function(x,y){ for(var i=0;i<obs.length;i++){ if(hit(x,y,r,obs[i]))return true } return false };
+    if(!bad(cx,cy)){ obs.push({x:cx-r,y:cy-r,w:2*r,h:2*r,t:c}); return }
+    var dx=0,dy=1; if(first){ dx=cx-(first.x+first.w/2); dy=cy-(first.y+first.h/2); var d=Math.hypot(dx,dy)||1; dx/=d; dy/=d }
+    var dirs=[[dx,dy],[-dx,-dy],[-dy,dx],[dy,-dx],[dx-dy,dy+dx],[dx+dy,dy-dx],[-dx-dy,-dy+dx],[-dx+dy,-dy-dx]].map(function(v){var l=Math.hypot(v[0],v[1])||1;return [v[0]/l,v[1]/l]});
+    var best=null;
+    for(var k=0.5;k<=44&&!best;k+=0.5){ for(var j=0;j<dirs.length;j++){ var x=cx+dirs[j][0]*k, y=cy+dirs[j][1]*k; if(!bad(x,y)){ best=[dirs[j][0]*k,dirs[j][1]*k]; break } } }
+    if(best){ g.setAttribute("transform","translate("+best[0].toFixed(2)+" "+best[1].toFixed(2)+")"); obs.push({x:cx+best[0]-r,y:cy+best[1]-r,w:2*r,h:2*r,t:c}) }
+  });
+}
+function apply(){
+  try{
+    var svg=document.getElementById("plan"); if(!svg||svg.getAttribute("data-r267"))return;
+    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
+    if(document.body.classList.contains("pz262"))return;
+    rooms(svg); badges(svg);
+  }catch(e){ try{console.warn("CAD-267",e)}catch(_){} }
+}
+var prev=window.tidyPlanLabels;
+if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
+})();
+</script>
 </html>
