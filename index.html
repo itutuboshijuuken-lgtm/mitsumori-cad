@@ -20443,6 +20443,149 @@ setInterval(gkSync208, 600);
 })();
 </script>
 
+
+<script id="doma287js">
+/* ===== CAD-287：土間の2件（大きさが変えられない／囲むと間仕切りができる） =====
+本人の実機指摘（2026-11-16）。原因と直しは build287.py の頭書き参照。
+既存ブロックは無変更。このブロックだけが足される。 */
+(function(){ "use strict";
+/* ---- 1. 囲みバーが開いた時に、構えた床を引き継ぐ（間仕切り防止） ---- */
+if (typeof drawEnclBar === "function" &&!drawEnclBar.__d287){
+var origBar287 = drawEnclBar;
+var wrappedBar287 = function(){
+var r = origBar287.apply(this, arguments);
+try {
+if (typeof encl!== "undefined" && encl && encl.r &&!encl.edit &&
+typeof HB!== "undefined" && HB.__floorArm && HB.__enclArmPend174){
+HB.__enclArmPend174();
+}
+} catch(e){}
+return r;
+};
+wrappedBar287.__d287 = true;
+drawEnclBar = wrappedBar287;
+}
+/* ---- 2. 囲みの決定で置いた床レコードに印（ec）を付ける ---- */
+if (typeof HB!== "undefined" && HB.__pushFloor &&!HB.__pushFloor.__d287){
+var origPush287 = HB.__pushFloor;
+var wrappedPush287 = function(rect, fk){
+var r = origPush287.apply(this, arguments);
+try {
+var T = (typeof S!== "undefined" && S && S.tatami) || [];
+var rec = T[T.length - 1];
+if (rec && rec.x0 === rect.x0 && rec.y0 === rect.y0 &&
+rec.x1 === rect.x1 && rec.y1 === rect.y1) rec.ec = 1;
+} catch(e){}
+return r;
+};
+wrappedPush287.__d287 = true;
+HB.__pushFloor = wrappedPush287;
+}
+/* ---- 3. 部屋いっぱいの「囲み床」をタップして直す入口（CAD-182 と同じ作法） ---- */
+var tap287 = null;
+function gates287(selAtDown){
+try {
+if (!HB.__pageM) return true;
+if (HB.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+if (HB.__armedAny && HB.__armedAny()) return true;
+if (selAtDown) return true;
+if (typeof ltTool!== "undefined" && ltTool) return true;
+if (HB.__put) return true;
+if (HB.__floorArm) return true;
+if (HB.__delMode || HB.__hgMode || HB.__partDraw) return true;
+if (typeof eraMode!== "undefined" && eraMode) return true;
+if (typeof tatMode!== "undefined" && tatMode) return true;
+if (typeof toolOpen!== "undefined" && toolOpen === "part") return true;
+if (typeof enclMode!== "undefined" && enclMode) return true;
+return false;
+} catch(e){ return true;}
+}
+function nearLight287(mm){
+try { return (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260;});}
+catch(e){ return false;}
+}
+function fillsRoom287(r, pt){
+try {
+var rr = roomRectAt(pt[0], pt[1]);
+if (!rr || rr.bad) return false;
+return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
+Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+} catch(e){ return false;}
+}
+function hit287(mm){
+var T = (typeof S!== "undefined" && S && S.tatami) || [];
+for (var i = T.length - 1; i >= 0; i--){
+var r = T[i];
+if (!r || r.rm ||!r.ec) continue;
+if (mm[0] < r.x0 || mm[0] > r.x1 || mm[1] < r.y0 || mm[1] > r.y1) continue;
+if (!fillsRoom287(r, mm)) continue;
+return { r: r, i: i};
+}
+return null;
+}
+function flName287(r){
+if (r.za){
+var m = r.det && r.det.m;
+return m === "age"? "小上がり": m === "pura"? "プラ束": m === "oki"? "置き床": "座上げ";
+}
+if (r.fk) return (HB.__FLN || {})[r.fk] || r.fk;
+return "畳";
+}
+function open287(hit){
+var r = hit.r;
+try { sel = null; drawSelBar();} catch(e){}
+if (HB.__closeRoom176){ try { HB.__closeRoom176();} catch(e){}}
+enclMode = true;
+try { document.body.classList.add("enclmode");} catch(e){}
+encl = { r: { x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, ax0: false, ax1: false, ay0: false, ay1: false},
+edit: { kind: "t", i: hit.i,
+type: r.fk === "flDoma"? "doma": (!r.fk &&!r.za)? "tatami": "room",
+st: "new", fl177: true, flName: flName287(r)},
+raw: null};
+try { drawEnclBar();} catch(e){}
+try { drawPlan();} catch(e){}
+}
+document.addEventListener("pointerdown", function(e){
+try {
+if (tap287 &&!tap287.up && e.pointerId!== tap287.pid){ tap287 = null; return;}
+if (e.isPrimary === false){ tap287 = null; return;}
+var t = e.target;
+if (!t ||!t.closest ||!t.closest("#plan")){ tap287 = null; return;}
+var mm = toMM(planPt(e));
+tap287 = { mm: [mm[0], mm[1]], cx: e.clientX, cy: e.clientY, t: Date.now(), used: false, up: false,
+pid: e.pointerId, maxDev: 0,
+selB: (typeof sel!== "undefined" && sel)? 1: 0};
+} catch(err){ tap287 = null;}
+}, true);
+document.addEventListener("pointercancel", function(){ tap287 = null;}, true);
+document.addEventListener("pointerup", function(e){
+var d = tap287;
+if (d && e.pointerId === d.pid) d.up = true;
+}, true);
+document.addEventListener("pointermove", function(e){
+var d = tap287;
+if (!d || e.pointerId!== d.pid) return;
+var dev = Math.hypot(e.clientX - d.cx, e.clientY - d.cy);
+if (dev > d.maxDev) d.maxDev = dev;
+}, true);
+var plan287 = document.getElementById("plan");
+if (plan287) plan287.addEventListener("pointerup", function(e){
+var d = tap287;
+if (!d || d.used) return;
+if (e.pointerId === d.pid) d.up = true;
+try {
+if (typeof encl!== "undefined" && encl && encl.edit) return; /* 177/182 が既に開いた */
+if (gates287(d.selB)) return;
+if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
+if (nearLight287(d.mm)) return;
+var hit = hit287(d.mm); if (!hit) return;
+d.used = true;
+open287(hit);
+} catch(err){}
+}, false);
+})();
+</script>
+
 </html>
 <script>
 /* ---------- CAD-231: 足場屋さん向け（住宅の足場を、本職の内訳で）----------
