@@ -802,7 +802,7 @@ const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, k
   rfCeilMat: undefined, rfCur: undefined, rfWallMat: undefined, roofW: undefined,
   roomFin: undefined, roomNames: undefined, roomPt: undefined, roomRecs: undefined, roomView: undefined,
   tare: undefined, tatami: undefined, tenken: undefined, tfr: undefined, trSend: undefined, tsuboWant: undefined, zones: undefined,
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps", dan266: false, danNew266: false, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps", dan266: false, danNew266: false, flSync270: false, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -906,6 +906,16 @@ function loadProject(id){
   /* CAD-203: DEF の具象配列（parts2D・wallLines・geya・sashes・extras）を参照共有のままにしない。
      共有したままだと、新規現場で間仕切りを足す push が DEF 自体を汚し、次の新規現場に前の間仕切りが残る（本人の実機指摘）。 */
   ["parts2D", "wallLines", "geya", "sashes", "extras"].forEach(k203 => { if (Array.isArray(S[k203])) S[k203] = S[k203].slice(); });
+  /* CAD-270: 230より前の保存では、間取りで階を足しても見積の2階建て判定（S.floors）が連動しておらず、
+     開いただけでは不足した見積のまま残った（直すには屋根画面で「2階建」を1回押す必要があった）。
+     270より前の保存（flSync270 が無い）だけ、読み込み時に1回だけ CAD-230 と同じ連動を効かせる。
+     対象は zo で階の図面が2つ以上あるのに floors が 2 でない物だけ。平屋・rf・pt・連動済みには触らない。
+     逆向き（図面が1階だけなのに floors=2）は、屋根画面で自分で選んだ総2階と見分けがつかないため触らない。
+     フラグは S に入れておくだけで、読み込み中は保存しない（次の通常の保存で一緒に残る）。 */
+  if (!S.flSync270){
+    S.flSync270 = true;
+    if (S.mode === "zo" && Array.isArray(S.fl) && S.fl.length >= 2 && S.floors !== 2) S.floors = 2;
+  }
   thinParts142();   // 10cmに満たない切れ端の壁は消す（建具の host も付け替える）
   PJ.cur = id; LSs("zochiku-projects-v1", PJ);
   /* --- 後段（旧 blk17）：旧「シートフロア」をフローリング（複合）に読み替える。fixFlSheet は blk17 が window に置く全局関数のため直接呼ぶ。
@@ -1659,7 +1669,7 @@ function newProject(name){
   const keep = {sp: S.sp, margin: S.margin, gbW: S.gbW, gbC: S.gbC, tr: S.tr, precut: S.precut, flType: S.flType, shokei: S.shokei, mode: S.mode};
   const id = "p" + Date.now().toString(36);
   PJ.list.unshift({id, name: name || "新しい現場", upd: Date.now()});
-  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: [], genba: name || "", dan266: false, danNew266: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps"}); PJ.cur = id; save(); clearInk();
+  S = Object.assign({}, DEF, keep, {sashes: [], extras: [], geya: [], parts2D: [], wallLines: [], genba: name || "", dan266: false, danNew266: true, flSync270: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps"}); PJ.cur = id; save(); clearInk();
 }
 /* ---------- 会社名・担当・電話（お客さんに送る文面に入る） ---------- */
 const CO_KEY = "yubi-company-v1";
