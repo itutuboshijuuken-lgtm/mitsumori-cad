@@ -20094,6 +20094,355 @@ setInterval(gkSync208, 600);
 })();
 </script>
 
+
+<script id="tat286js">
+/* ===== CAD-286：畳の縁（へり）を畳の境目に合わせる =====
+   本人の実機指摘（2026-11-16）：「1820と910の縁が模様来ないといけないのに。
+   継ぎ目ではないところに模様がある。」
+   原因：畳の写真は pattern（原点アンカー）で敷かれていて、縁の帯が畳の
+   レイアウトと無関係な位置に出ていた。畳の境目は tatLayout（祝儀敷き）が
+   決めているので、写真の方を畳1枚ごとに合わせる。
+   ・間取りの畳レコード：tatSvg が描いた畳 rect（stroke #7E8752）ごとに、
+     その畳の箱に写真1枚がちょうど入る pattern を作って fill を差し替える。
+     横畳＝そのまま／縦畳＝90°回転／半畳＝写真の左半分（縁は上下だけに出る）。
+     レコードの下地 rect は、い草の平色にする（隙間に帯の切れ端を出さない）。
+   ・部屋全体の畳（行ラン）と完成図：部屋・レコードごとに tatLayout で
+     割付し直し、畳ごとの rect を行ランの形でクリップして重ねる。
+   ・座上げ等の畳仕上げの範囲 rect は、その rect の角に起点を合わせる。
+   見積・数量・保存データは不変（見た目だけの変更）。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg", XL = "http://www.w3.org/1999/xlink";
+  var IGU = "#C9CFA3";   /* い草の平色（CAD-284 の pTat282 背景色と同じ） */
+
+  function tatUri(svg){
+    var T = window.__flTex275;
+    if (T && T.tatami) return T.tatami;
+    if (svg){
+      var im = svg.querySelector("#pTat282 image") || svg.querySelector("#p263Tat282 image") || svg.querySelector("#pTa image");
+      if (im) return im.getAttribute("href");
+    }
+    return null;
+  }
+  function defsOf(svg){
+    var d = svg.querySelector("defs");
+    if (!d){ d = document.createElementNS(NS, "defs"); svg.insertBefore(d, svg.firstChild); }
+    return d;
+  }
+  function imgEl(uri, w, h){
+    var i = document.createElementNS(NS, "image");
+    i.setAttribute("x", 0); i.setAttribute("y", 0);
+    i.setAttribute("width", w); i.setAttribute("height", h);
+    i.setAttribute("preserveAspectRatio", "none");
+    i.setAttribute("href", uri);
+    try { i.setAttributeNS(XL, "xlink:href", uri); } catch(e){}
+    return i;
+  }
+  /* 畳1枚分の pattern（W×H がタイル、tf が patternTransform）。同じ形は使い回す */
+  function patFor(svg, uri, W, H, tf){
+    var key = "pT286_" + Math.round(W * 4) + "_" + Math.round(H * 4) + "_" +
+              String(tf || "").replace(/[^0-9a-zA-Z]+/g, "_");
+    var d = defsOf(svg);
+    if (!d.querySelector("#" + key)){
+      var p = document.createElementNS(NS, "pattern");
+      p.setAttribute("id", key); p.setAttribute("patternUnits", "userSpaceOnUse");
+      p.setAttribute("width", W); p.setAttribute("height", H);
+      if (tf) p.setAttribute("patternTransform", tf);
+      var bg = document.createElementNS(NS, "rect");
+      bg.setAttribute("width", W); bg.setAttribute("height", H); bg.setAttribute("fill", IGU);
+      p.appendChild(bg); p.appendChild(imgEl(uri, W, H));
+      d.appendChild(p);
+    }
+    return key;
+  }
+  /* 畳の箱（px: x,y,w,h）に写真を合わせた fill を返す。縁は長辺だけに来る */
+  function matFill(svg, uri, x, y, w, h){
+    var W, H, tf, asp = w / h;
+    if (asp > 1.4){ W = w; H = h; tf = "translate(" + x + " " + y + ")"; }
+    else if (asp < 0.7){ W = h; H = w; tf = "translate(" + (x + w) + " " + y + ") rotate(90)"; }
+    else { W = 2 * w; H = h; tf = "translate(" + x + " " + y + ")"; }
+    return "url(#" + patFor(svg, uri, W, H, tf) + ")";
+  }
+  function prune(svg){
+    try {
+      var used = {};
+      svg.querySelectorAll("*").forEach(function(e){
+        var f = e.getAttribute("fill") || "";
+        var m = f.match(/pT286_[0-9A-Za-z_]+/); if (m) used[m[0]] = 1;
+        var cp = e.getAttribute("clip-path") || "";
+        var m2 = cp.match(/cT286_[0-9A-Za-z_]+/); if (m2) used[m2[0]] = 1;
+      });
+      svg.querySelectorAll("pattern[id^='pT286_'], clipPath[id^='cT286_']").forEach(function(p){
+        if (!used[p.getAttribute("id")]) p.remove();
+      });
+    } catch(e){}
+  }
+
+  /* ---- 1. 間取り：畳レコードの畳 rect ごと ---- */
+  var MAT_FILL = { "url(#pTa)": 1, "#DCE3B5": 1, "#D6DDAE": 1 };
+  function planMats(svg, uri){
+    svg.querySelectorAll('rect[stroke="#7E8752"]').forEach(function(r){
+      if (r.closest("pattern") || r.closest("defs")) return;
+      if (r.getAttribute("data-tat286")) return;
+      if (!MAT_FILL[r.getAttribute("fill")]) return;
+      var x = parseFloat(r.getAttribute("x")) - 1, y = parseFloat(r.getAttribute("y")) - 1;
+      var w = parseFloat(r.getAttribute("width")) + 2, h = parseFloat(r.getAttribute("height")) + 2;
+      if (!(w > 4) || !(h > 4)) return;
+      r.setAttribute("fill", matFill(svg, uri, x, y, w, h));
+      r.setAttribute("fill-opacity", "1");
+      r.setAttribute("data-tat286", "1");
+    });
+    /* レコードの下地（畳 rect でない url(#pTa)）は、い草の平色にする */
+    svg.querySelectorAll('rect[fill="url(#pTa)"]').forEach(function(r){
+      if (r.closest("pattern") || r.closest("defs")) return;
+      r.setAttribute("fill", IGU);
+    });
+  }
+
+  /* ---- 部屋の行ラン（mm）。flall282js の roomRuns282 と同じ計算 ---- */
+  function runsOf(room, R){
+    var NX = R.NX, st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0;
+    var rows = {};
+    room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX; (rows[y] = rows[y] || []).push(x); });
+    var out = [];
+    Object.keys(rows).forEach(function(y){
+      var xs = rows[y].sort(function(a, b){ return a - b; }), s0 = xs[0], pr = xs[0];
+      function flush(){ out.push([bx0 + s0 * st, by0 + (+y) * st, (pr - s0 + 1) * st, st]); }
+      for (var k = 1; k < xs.length; k++){ if (xs[k] !== pr + 1){ flush(); s0 = xs[k]; } pr = xs[k]; }
+      flush();
+    });
+    return out;
+  }
+  /* mm の箱 → tatLayout の割付 → px の畳箱リスト */
+  function matsForBox(bx0, by0, W, H, toPx){
+    var nx = Math.max(1, Math.round(W / 910)), ny = Math.max(1, Math.round(H / 910));
+    if (typeof tatLayout !== "function") return null;
+    var mats = tatLayout(nx, ny); if (!mats || !mats.length) return null;
+    var ux = W / nx, uy = H / ny;
+    return mats.map(function(m){
+      var mw = (m.t === "h" ? 2 : 1) * ux, mh = (m.t === "v" ? 2 : 1) * uy;
+      var A = toPx(bx0 + m.c * ux, by0 + m.r * uy), B = toPx(bx0 + m.c * ux + mw, by0 + m.r * uy + mh);
+      return { x: Math.min(A[0], B[0]), y: Math.min(A[1], B[1]), w: Math.abs(B[0] - A[0]), h: Math.abs(B[1] - A[1]) };
+    });
+  }
+  function geomKey(o){ return [o.x, o.y, o.w, o.h].map(function(v){ return Math.round(v * 2); }).join(","); }
+
+  /* 行ラン（px・+0.3 込み）と strip 要素の対応を取る */
+  function matchStrips(strips, usedSet, runPx, fillUrl){
+    for (var i = 0; i < strips.length; i++){
+      var r = strips[i];
+      if (usedSet.has(r)) continue;
+      if (r.getAttribute("fill") !== fillUrl && !r.getAttribute("data-tat286s")) continue;
+      if (Math.abs(parseFloat(r.getAttribute("x")) - runPx.x) < 1.0 &&
+          Math.abs(parseFloat(r.getAttribute("y")) - runPx.y) < 1.0 &&
+          Math.abs(parseFloat(r.getAttribute("width")) - runPx.w) < 1.0 &&
+          Math.abs(parseFloat(r.getAttribute("height")) - runPx.h) < 1.0) return r;
+    }
+    return null;
+  }
+
+  /* ---- 2/3. 行ラン・レコードの上に畳ごとの絵を重ねる（間取り・完成図 共通） ----
+     cfg: { svg, g0, groupId, fillUrl, toPx(mx,my)->[px,py], toMm(px,py)->[mx,my], recs: [{mm:[x0,y0,x1,y1]}] } */
+  function overlay(svg, uri, cfg){
+    var g0 = svg.querySelector("#" + cfg.g0id);
+    var old = svg.querySelector("#" + cfg.groupId);
+    if (!g0){ if (old) old.remove(); return; }
+    var strips = Array.from(g0.children);
+    var used = new Set();
+    var jobs = [];
+    /* レコード（完成図の単独 rect） */
+    (cfg.recs || []).forEach(function(rec){
+      var A = cfg.toPx(rec.mm[0], rec.mm[1]), B = cfg.toPx(rec.mm[2], rec.mm[3]);
+      var rp = { x: Math.min(A[0], B[0]), y: Math.min(A[1], B[1]), w: Math.abs(B[0] - A[0]) + 0.3, h: Math.abs(B[1] - A[1]) + 0.3 };
+      var el = matchStrips(strips, used, rp, cfg.fillUrl);
+      if (!el) return;
+      used.add(el);
+      var mats = matsForBox(rec.mm[0], rec.mm[1], rec.mm[2] - rec.mm[0], rec.mm[3] - rec.mm[1], cfg.toPx);
+      if (!mats) return;
+      jobs.push({ clip: [{ x: parseFloat(el.getAttribute("x")), y: parseFloat(el.getAttribute("y")),
+                           w: parseFloat(el.getAttribute("width")), h: parseFloat(el.getAttribute("height")) }],
+                  mats: mats, els: [el] });
+    });
+    /* 座上げ等の畳仕上げ rect：その rect の角に起点を合わせる */
+    (cfg.anchorRecs || []).forEach(function(rec){
+      var A = cfg.toPx(rec.mm[0], rec.mm[1]), B = cfg.toPx(rec.mm[2], rec.mm[3]);
+      var rp = { x: Math.min(A[0], B[0]), y: Math.min(A[1], B[1]), w: Math.abs(B[0] - A[0]) + 0.3, h: Math.abs(B[1] - A[1]) + 0.3 };
+      var el = matchStrips(strips, used, rp, cfg.fillUrl);
+      if (!el) return;
+      used.add(el);
+      var pat = svg.querySelector("#" + cfg.patId); if (!pat) return;
+      var tW = parseFloat(pat.getAttribute("width")), tH = parseFloat(pat.getAttribute("height"));
+      if (!(tW > 0) || !(tH > 0)) return;
+      var x = parseFloat(el.getAttribute("x")), y = parseFloat(el.getAttribute("y"));
+      var w = parseFloat(el.getAttribute("width")), h = parseFloat(el.getAttribute("height"));
+      var tf = (w >= h) ? "translate(" + x + " " + y + ")"
+                        : "translate(" + (x + tH) + " " + y + ") rotate(90)";
+      el.setAttribute("fill", "url(#" + patFor(svg, uri, tW, tH, tf) + ")");
+      el.setAttribute("fill-opacity", "1");
+      el.setAttribute("data-tat286", "1");
+    });
+    /* 部屋の行ラン */
+    if (typeof roomsCalc === "function"){
+      var R = null; try { R = roomsCalc(); } catch(e){}
+      if (R && R.rooms){
+        R.rooms.forEach(function(room){
+          var runs = runsOf(room, R); if (!runs.length) return;
+          var matched = [], ok = true;
+          var runPxList = runs.map(function(rn){
+            var A = cfg.toPx(rn[0], rn[1]), B = cfg.toPx(rn[0] + rn[2], rn[1] + rn[3]);
+            return { x: Math.min(A[0], B[0]), y: Math.min(A[1], B[1]), w: Math.abs(B[0] - A[0]) + 0.3, h: Math.abs(B[1] - A[1]) + 0.3 };
+          });
+          runPxList.forEach(function(rp){
+            var el = matchStrips(strips, used, rp, cfg.fillUrl);
+            if (el){ matched.push(el); used.add(el); }
+          });
+          if (!matched.length) return;
+          /* 畳の部屋か（1つでも畳 fill／処理済みの行ランがあるか） */
+          var isTat = matched.some(function(el){ return el.getAttribute("fill") === cfg.fillUrl || el.getAttribute("data-tat286s"); });
+          if (!isTat) return;
+          if (matched.length !== runPxList.length){ ok = false; }
+          if (!ok) return;   /* 行ランが揃わない回は飛ばす（次の回で揃う） */
+          var bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
+          runs.forEach(function(rn){
+            bx0 = Math.min(bx0, rn[0]); by0 = Math.min(by0, rn[1]);
+            bx1 = Math.max(bx1, rn[0] + rn[2]); by1 = Math.max(by1, rn[1] + rn[3]);
+          });
+          var mats = matsForBox(bx0, by0, bx1 - bx0, by1 - by0, cfg.toPx);
+          if (!mats) return;
+          jobs.push({ clip: matched.map(function(el){
+                        return { x: parseFloat(el.getAttribute("x")), y: parseFloat(el.getAttribute("y")),
+                                 w: parseFloat(el.getAttribute("width")), h: parseFloat(el.getAttribute("height")) };
+                      }), mats: mats, els: matched });
+        });
+      }
+    }
+    /* 元の行ラン・rect は、い草の平色に変える（毎回。作り直されても追随） */
+    jobs.forEach(function(j){
+      j.els.forEach(function(el){
+        if (el.getAttribute("fill") === cfg.fillUrl){ el.setAttribute("fill", IGU); }
+        el.setAttribute("data-tat286s", "1");
+      });
+    });
+    var sig = jobs.map(function(j){
+      return j.mats.map(geomKey).join(";") + "@" + j.clip.map(geomKey).join(";");
+    }).join("#");
+    var g = old;
+    if (g && g.getAttribute("data-sig286") === sig){
+      if (g.previousSibling !== g0) g0.parentNode.insertBefore(g, g0.nextSibling);
+      return;
+    }
+    if (g) g.remove();
+    if (!jobs.length) return;
+    g = document.createElementNS(NS, "g");
+    g.setAttribute("id", cfg.groupId); g.setAttribute("pointer-events", "none");
+    g.setAttribute("data-sig286", sig);
+    var d = defsOf(svg);
+    jobs.forEach(function(j, ji){
+      var cid = "cT286_" + cfg.groupId + "_" + ji + "_" + Math.round(sig.length) + "_" +
+                Math.round((j.clip[0] ? j.clip[0].x + j.clip[0].y : 0) * 2);
+      var cp = document.createElementNS(NS, "clipPath");
+      cp.setAttribute("id", cid);
+      j.clip.forEach(function(c){
+        var r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", c.x); r.setAttribute("y", c.y); r.setAttribute("width", c.w); r.setAttribute("height", c.h);
+        cp.appendChild(r);
+      });
+      d.appendChild(cp);
+      var gg = document.createElementNS(NS, "g");
+      gg.setAttribute("clip-path", "url(#" + cid + ")");
+      j.mats.forEach(function(m){
+        var r = document.createElementNS(NS, "rect");
+        r.setAttribute("x", m.x); r.setAttribute("y", m.y); r.setAttribute("width", m.w); r.setAttribute("height", m.h);
+        r.setAttribute("fill", matFill(svg, uri, m.x, m.y, m.w, m.h));
+        gg.appendChild(r);
+      });
+      g.appendChild(gg);
+    });
+    g0.parentNode.insertBefore(g, g0.nextSibling);
+  }
+
+  /* ---- 4. 範囲 rect の角に起点を合わせる ---- */
+  function anchorRects(svg, uri, patId, insideId){
+    var pat = svg.querySelector("#" + patId); if (!pat) return;
+    var tW = parseFloat(pat.getAttribute("width")), tH = parseFloat(pat.getAttribute("height"));
+    if (!(tW > 0) || !(tH > 0)) return;
+    svg.querySelectorAll('rect[fill="url(#' + patId + ')"]').forEach(function(r){
+      if (r.closest("pattern") || r.closest("defs")) return;
+      if (insideId && r.closest("#" + insideId)) return;
+      if (r.getAttribute("data-tat286")) return;
+      var x = parseFloat(r.getAttribute("x")), y = parseFloat(r.getAttribute("y"));
+      var w = parseFloat(r.getAttribute("width")), h = parseFloat(r.getAttribute("height"));
+      if (!(w > 0) || !(h > 0)) return;
+      var tf = (w >= h) ? "translate(" + x + " " + y + ")"
+                        : "translate(" + (x + tH) + " " + y + ") rotate(90)";
+      r.setAttribute("fill", "url(#" + patFor(svg, uri, tW, tH, tf) + ")");
+      r.setAttribute("fill-opacity", "1");
+      r.setAttribute("data-tat286", "1");
+    });
+  }
+
+  function fix286(){
+    try {
+      var off = false; try { off = localStorage.getItem("tex264") === "off"; } catch(e){}
+      if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+      if (document.body.classList.contains("pz262")) return;
+      /* 間取り */
+      var svg = document.getElementById("plan");
+      if (svg){
+        var onPlan = (typeof HB !== "undefined" && HB.__pageM);
+        if (off || !onPlan){
+          var g = svg.querySelector("#tat286plan"); if (g) g.remove();
+        } else if (svg.firstChild){
+          var uri = tatUri(svg);
+          if (uri){
+            planMats(svg, uri);
+            if (typeof toMM === "function"){
+              var a0 = toMM([0, 0]), a1 = toMM([100, 100]);
+              var kx = (a1[0] - a0[0]) / 100, ky = (a1[1] - a0[1]) / 100;
+              if (kx > 0 && ky > 0){
+                overlay(svg, uri, { g0id: "flAll282", groupId: "tat286plan", fillUrl: "url(#pTat282)",
+                  toPx: function(mx, my){ return [(mx - a0[0]) / kx, (my - a0[1]) / ky]; }, recs: [] });
+              }
+            }
+            anchorRects(svg, uri, "pTat282", "flAll282");
+            prune(svg);
+          }
+        }
+      }
+      /* 完成図 */
+      var pv = document.getElementById("pvSvg");
+      if (pv && !off && typeof bbox === "function"){
+        var uri2 = tatUri(pv);
+        if (uri2){
+          var b = bbox(), s = Math.min((360 - 68 - 42) / b.w, (470 - 68 - 38) / b.h);
+          if (s > 0){
+            var recs = [], arecs = [];
+            if (typeof S !== "undefined" && S && S.tatami){
+              S.tatami.forEach(function(r){
+                if (!r) return;
+                if (!r.fk && !r.za) recs.push({ mm: [r.x0, r.y0, r.x1, r.y1] });
+                else if (r.za && r.det && r.det.fin === "tatami") arecs.push({ mm: [r.x0, r.y0, r.x1, r.y1] });
+                else if ((r.fk === "flAge" || r.fk === "flOki" || r.fk === "flPura") && r.fin === "tatami") arecs.push({ mm: [r.x0, r.y0, r.x1, r.y1] });
+              });
+            }
+            overlay(pv, uri2, { g0id: "g282Fl", groupId: "tat286pv", fillUrl: "url(#p263Tat282)",
+              patId: "p263Tat282",
+              toPx: function(mx, my){ return [68 + (mx - b.x0) * s, 68 + (my - b.y0) * s]; }, recs: recs, anchorRecs: arecs });
+          }
+          anchorRects(pv, uri2, "p263Tat282", "g282Fl");
+          prune(pv);
+        }
+      }
+    } catch(e){}
+  }
+  setInterval(fix286, 500);
+  fix286();
+  var prev286 = window.tidyPlanLabels;
+  if (typeof prev286 === "function"){
+    window.tidyPlanLabels = function(){ var r = prev286.apply(this, arguments); fix286(); return r; };
+  }
+})();
+</script>
+
 </html>
 <script>
 /* ---------- CAD-231: 足場屋さん向け（住宅の足場を、本職の内訳で）----------
