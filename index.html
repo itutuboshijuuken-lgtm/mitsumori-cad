@@ -6073,7 +6073,9 @@ function calc00(){
     const autoH = (S.ch || 2400) + (S.dosa || 240);
     const by = {};
     st.forEach(o => { const t = (o.st || "s") === "N" ? "M" : (o.st || "s"), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });
-    Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190); work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段）`); });
+    Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190), R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
+      work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
+      if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)) work("kdRail", "階段 手すり（片側）", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`); });
   }
   function tenkenRows(){
     stairRows();
