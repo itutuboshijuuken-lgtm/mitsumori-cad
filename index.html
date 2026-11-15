@@ -1102,6 +1102,7 @@ const WORK = [
   ["tParts", "トイレ 部材（止水栓・フレキ・フランジ等）", "円/台", 0, 5000],
   ["tTear", "トイレ 既存撤去", "円/台", 0, 5000],
   ["tTearai", "トイレ 手洗い付きタンクにする差額", "円/台", 0, 8000],
+  ["doorGlass", "ドア ガラス入り差額", "円/枚", 0, 15000],   /* CAD-283：室内ドアのガラス入り差額（仮単価・単価表で変更可） */
   ["tRemodel", "トイレ リモデル排水（排水芯の調整）", "円/台", 0, 15000],
   ["tAcc", "紙巻器・タオル掛け 交換", "円/か所", 0, 6000],
   ["tTesuri", "手すり 取付", "円/か所", 0, 12000],
@@ -3015,7 +3016,9 @@ function planExtras(P, sc){
     if (ty === "door"){
       // 扉1枚ぶん：蝶番の側から開いた扉の線と、開く軌跡の弧
       const leaf = (hinge, other, len) => { const tip = [hinge[0] + n[0] * len, hinge[1] + n[1] * len], r = len * sc, sweep = (n[0] * (other[1] - hinge[1]) - n[1] * (other[0] - hinge[0])) > 0 ? 1 : 0;
-        return `<line x1="${P(hinge)[0]}" y1="${P(hinge)[1]}" x2="${P(tip)[0]}" y2="${P(tip)[1]}" stroke="#3E4A57" stroke-width="2"/><path d="M${X(tip)} A${r} ${r} 0 0 ${sweep} ${X(other)}" fill="none" stroke="#3E4A57" stroke-width="1.2" stroke-dasharray="3 2"/>`; };
+        const gp = f => [hinge[0] + n[0] * len * f, hinge[1] + n[1] * len * f];
+        const gl = (sa.glass && sa.cat === "室内ドア") ? `<line x1="${P(gp(0.3))[0]}" y1="${P(gp(0.3))[1]}" x2="${P(gp(0.72))[0]}" y2="${P(gp(0.72))[1]}" stroke="#7FB8DC" stroke-width="4" stroke-linecap="round"/>` : "";   /* CAD-283：ガラス入りは扉の線に水色 */
+        return `<line x1="${P(hinge)[0]}" y1="${P(hinge)[1]}" x2="${P(tip)[0]}" y2="${P(tip)[1]}" stroke="#3E4A57" stroke-width="2"/>${gl}<path d="M${X(tip)} A${r} ${r} 0 0 ${sweep} ${X(other)}" fill="none" stroke="#3E4A57" stroke-width="1.2" stroke-dasharray="3 2"/>`; };
       if (/親子/.test(sa.name || "")){
         // 親子ドア：両開きで、片方（子）が小さい。親は約7割・子は約3割。吊元反転で親と子が入れ替わる
         const fl = !!(sa.flip & 2), wp = Math.round(w * 0.7 / 5) * 5, HP = fl ? B : A, HC = fl ? A : B, sg = fl ? -1 : 1, M = [HP[0] + sg * u[0] * wp, HP[1] + sg * u[1] * wp];
@@ -3029,6 +3032,7 @@ function planExtras(P, sc){
       const s1 = [A[0] + n[0] * o1, A[1] + n[1] * o1], e1 = [s1[0] + u[0] * half, s1[1] + u[1] * half];
       g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
       if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += `<line x1="${P(s2)[0]}" y1="${P(s2)[1]}" x2="${P(e2)[0]}" y2="${P(e2)[1]}" stroke="#3E4A57" stroke-width="3"/>`; }
+      if (sa.glass && sa.cat === "室内ドア"){ const gm = (p1, p2) => { const q1 = [p1[0] + (p2[0] - p1[0]) * 0.22, p1[1] + (p2[1] - p1[1]) * 0.22], q2 = [p1[0] + (p2[0] - p1[0]) * 0.78, p1[1] + (p2[1] - p1[1]) * 0.78]; return `<line x1="${P(q1)[0]}" y1="${P(q1)[1]}" x2="${P(q2)[0]}" y2="${P(q2)[1]}" stroke="#7FB8DC" stroke-width="3.2" stroke-linecap="round"/>`; }; g += gm(s1, e1); if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += gm(s2, e2); } }   /* CAD-283：引戸のガラス */
     } else if (ty === "closet"){
       const k = sa.w > 1200 ? 4 : 2, d = w / k; let path = `M${X(A)}`;
       for (let j = 1; j <= k; j++){ const base = [A[0] + u[0] * d * j, A[1] + u[1] * d * j], peak = [A[0] + u[0] * d * (j - 0.5) + n[0] * d * 0.5, A[1] + u[1] * d * (j - 0.5) + n[1] * d * 0.5]; path += ` L${X(peak)} L${X(base)}`; }
@@ -4770,15 +4774,17 @@ function changeSheet(i){
   const sa = S.sashes[i]; if (!sa) return;
   const p = pickInit(sa);
   const render = () => {
-    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (sa.cat === "玄関" ? elockSeg248(sa) : "") + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
+    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (sa.cat === "玄関" ? elockSeg248(sa) : "") + (sa.cat === "室内ドア" ? glassSeg283(sa) : "") + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
     $("modal").hidden = false;
     $("csNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-cfl]").forEach(b => b.onclick = () => { pushUndo(); sa.flip = (sa.flip || 0) ^ +b.dataset.cfl; save(); drawPlan(); });
     $("mbox").querySelectorAll("[data-elk248]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.elk248) sa.elock = b.dataset.elk248; else delete sa.elock; save(); drawPlan(); render(); });   /* CAD-248：電子錠の選択 */
-    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sa.w}×${sa.h} にしました`); });
+    $("mbox").querySelectorAll("[data-gls283]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.gls283) sa.glass = 1; else delete sa.glass; save(); drawPlan(); render(); });   /* CAD-283：ガラスの選択 */
+    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (x.cat !== "室内ドア") delete sa.glass; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sa.w}×${sa.h} にしました`); });
   };
   render();
 }
+function glassSeg283(sa){ const cur = sa.glass ? "1" : ""; return `<div class="sub2" style="margin-top:8px">ガラス</div><div class="seg">${[["", "ガラスなし"], ["1", `ガラス入り（＋${fmt(workP("doorGlass").p)}円/枚）`]].map(([v, n]) => `<button data-gls283="${v}" aria-pressed="${cur === v}" type="button">${n}</button>`).join("")}</div>`; }   /* CAD-283：室内ドアのガラス有無を選ぶ段（電子錠と同じ作り・初期値はガラスなし） */
 function elockSeg248(sa){ const cur = sa.elock || ""; return `<div class="sub2" style="margin-top:8px">電子錠（任意）</div><div class="seg">${[["", "付けない"]].concat(ELOCK248.map(x => [x[0], x[1] + " ＋" + fmt(workP(x[2]).p) + "円"])).map(([v, n]) => `<button data-elk248="${v}" aria-pressed="${cur === v}" type="button">${n}</button>`).join("")}</div>`; }   /* CAD-248：電子錠を選ぶ段 */
 function sashLabel(s){ return s.cat === "室内ドア" ? (s.name === "片開き" ? "ドア 片開き" : s.name) + (s.frame === "outset" ? "（アウトセット）" : s.frame === "casing" ? "（ケーシング枠）" : "（固定枠）") : `${s.cat} ${s.name}`; }
 
@@ -6174,7 +6180,7 @@ function calc00(){
     }
   }
   function sash(){
-    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
   function floorFin(a, pre, ft){ const ty = ft || S.flType || "floorFin"; const nm275 = (ty === "flComp" || ty === "flSheet") && S.flColor === "light" ? "フローリング張り（明るい）" : (ty === "flComp" || ty === "flSheet") && S.flColor === "dark" ? "フローリング張り（濃い）" : null; work(ty, nm275 ? `${pre}${nm275}` : `${pre}床 ${FTN[ty] || "フロアタイル"}`, a, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(ty).p)}円`); rows[rows.length - 1].cost *= 1.05; }
@@ -7015,7 +7021,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two && !(S.tenken || []).some(o => o.k === "stair")) work("kaidan", "階段", 1, "か所");
-  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
   const np1 = workP("ninku");
   const note248 = `${S.precut ? "・プレカット加工費は別行" : "・刻み人工は別行"}・間仕切りは${rows.some(r => r.name === "大工手間（新設間仕切り）") ? "別行" : "この人工に含む"}`;   /* CAD-248：刻み・間仕切りの扱いを明示 */
@@ -13256,7 +13262,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
           const tip = [hinge[0] + n[0] * len, hinge[1] + n[1] * len];
           const PT = P(tip), PO = P(other), PH = P(hinge), r = len * s;
           const sweep = (n[0] * (other[1] - hinge[1]) - n[1] * (other[0] - hinge[0])) > 0 ? 1 : 0;
-          return `<line x1="${PH[0]}" y1="${PH[1]}" x2="${PT[0]}" y2="${PT[1]}" stroke="#111" stroke-width="1.6"/><path d="M${PT[0]} ${PT[1]} A${r} ${r} 0 0 ${sweep} ${PO[0]} ${PO[1]}" fill="none" stroke="#111" stroke-width="1"/>`;
+          const gp = f => [hinge[0] + n[0] * len * f, hinge[1] + n[1] * len * f], G1 = P(gp(0.3)), G2 = P(gp(0.72));
+          const gl = (sa.glass && sa.cat === "室内ドア") ? `<line x1="${G1[0]}" y1="${G1[1]}" x2="${G2[0]}" y2="${G2[1]}" stroke="#7FB8DC" stroke-width="2.8" stroke-linecap="round"/>` : "";   /* CAD-283：ガラス入りは扉の線に水色 */
+          return `<line x1="${PH[0]}" y1="${PH[1]}" x2="${PT[0]}" y2="${PT[1]}" stroke="#111" stroke-width="1.6"/>${gl}<path d="M${PT[0]} ${PT[1]} A${r} ${r} 0 0 ${sweep} ${PO[0]} ${PO[1]}" fill="none" stroke="#111" stroke-width="1"/>`;
         };
         if (/親子/.test(sa.name || "")){
           const fl = !!(sa.flip & 2), wp = Math.round(w * 0.7 / 5) * 5, HP = fl ? B : A, HC = fl ? A : B, sg = fl ? -1 : 1;
@@ -13276,6 +13284,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         };
         if (ty === "hiki") g += ln(A, 35, w, false);
         else g += ln(A, 35, w / 2 + 20, false) + ln(B, -35, w / 2 + 20, true);
+        if (sa.glass && sa.cat === "室内ドア"){ const gm = (from, o, len, back) => { const sg = back ? -1 : 1, q1 = [from[0] + n[0] * o + u[0] * len * sg * 0.22, from[1] + n[1] * o + u[1] * len * sg * 0.22], q2 = [from[0] + n[0] * o + u[0] * len * sg * 0.78, from[1] + n[1] * o + u[1] * len * sg * 0.78], Q1 = P(q1), Q2 = P(q2); return `<line x1="${Q1[0]}" y1="${Q1[1]}" x2="${Q2[0]}" y2="${Q2[1]}" stroke="#7FB8DC" stroke-width="2.6" stroke-linecap="round"/>`; }; if (ty === "hiki") g += gm(A, 35, w, false); else g += gm(A, 35, w / 2 + 20, false) + gm(B, -35, w / 2 + 20, true); }   /* CAD-283：引戸のガラス */
         g += jamb(PA) + jamb(PB); return;
       }
       if (ty === "closet"){
