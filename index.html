@@ -2635,7 +2635,7 @@ function drawSelBarK(bar){
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
-    <div class="sbw">${o.k === "dansa"
+    <div class="sbw${o.k === "stair" ? " stw272" : ""}">${o.k === "dansa"
       ? `<div class="sbL"><button id="sbStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button><button id="sbLen" type="button">長さ</button><button id="sbFit" type="button">壁まで</button></div>`
       : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : o.k === "stair" ? STN[o.st || "s"] + " ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmt(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" ? "<span></span>" : o.k === "stair" ? `<button id="sbKH" type="button">階高 ${fmt(o.kh || ((S.ch || 2400) + (S.dosa || 240)))}${o.kh ? "" : "（自動）"} ▸</button>` : isKS(o) ? "<span></span>" : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${o.k === "dansa" ? `<button id="sbRotK" class="rot" type="button">⟳<small>90°</small></button>` : isKS(o) ? `<button id="sbKK" class="rot" type="button">⟳<small>向き</small></button>` : ""}</div>
@@ -20365,8 +20365,10 @@ body{--ux-bot:76px}
     var tt=document.getElementById('toolTabs'),gs=document.getElementById('grpSub'),ch=document.getElementById('toolCh');
     if(!tt||!vis(tt))return;
     var bh=tt.offsetHeight;document.body.style.setProperty('--ux-bot',bh+'px');
-    if(ch&&vis(ch)){ch.style.bottom=bh+'px';if(gs&&vis(gs))gs.style.bottom=(bh+ch.offsetHeight)+'px'}
-    else if(gs&&vis(gs))gs.style.bottom=bh+'px';
+    if(ch&&vis(ch)){ch.style.bottom=bh+'px'}
+    /* CAD-272: grpSub の bottom はここでは書かない。sheet260 側が3シート（toolCh/toolCh2/toolCh3）の
+       最大高さで出す値に一本化する。両方で書くと toolCh2/toolCh3 表示時に値が食い違い、
+       カテゴリ行が上下に跳ね続けて、実機でシートが点滅して見えた。 */
   }catch(e){}}
   document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('button');if(!b)return;
     if(b.closest('#toolCh'))setTimeout(function(){document.body.classList.add('ux-sheet-off')},60);
@@ -20669,6 +20671,8 @@ function winWarn250(n0){
           try { sel = null; } catch(e){}
           HB.__put = null; HB.__sashAct = null; HB.__ltAct = null;
           try { ltTool = null; } catch(e){}
+          try { toolOpen = null; } catch(e){}   /* CAD-272: 「終了」でシートも閉じる。toolOpen が残っていると、ux-sheet-off が外れた途端に前のカテゴリのシートが開き直してしまった */
+          try { window.grp136 = null; } catch(e){}   /* CAD-272: 置く側の状態も落とす（残すと「置く」タブがトグルの閉じる側に倒れ、次に置く時に2度押しになった） */
           try { drawToolsUI(); } catch(e){}
           try { drawPlan(); } catch(e){}
           try { toast("終了しました"); } catch(e){}
@@ -22393,6 +22397,40 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", addBtn);
   else addBtn();
+})();
+</script>
+
+<style>
+/* ================= CAD-272: 実機動画の3件（シートの点滅／上のバーの二重／階段の文字） ================= */
+/* バグ1: シートは開いた瞬間から画面の下にいる。bottom が tick で入る前は置き場所が上の方になり、
+   一瞬上に描かれてから下へ跳んでいた（点滅の片方）。 */
+#toolCh,#toolCh2,#toolCh3{bottom:var(--ux-bot,76px)}
+/* バグ2: #partCh の中身が解体ボタンだけの時、ボタンが列いっぱいに広がって横幅いっぱいのバーになり、
+   上のボタン列（planBar）の上に重なって二重に見えた。チップ本来の幅に戻す。 */
+#partCh #hgBtn{justify-self:start;align-self:flex-start;width:auto}
+/* バグ3: 階段コントローラーの左列（1fr≒97px）が狭く、「階高 2,640（自動） ▸」が途中で切れていた。
+   階段の時だけ左列を 150px に広げ、右列（戻すボタン）から融通する。 */
+#selBar .sbw.stw272{grid-template-columns:150px auto 1fr;column-gap:8px}
+</style>
+<script>
+/* CAD-272 バグ1: シートの位置付けを「表示が切り替わった瞬間」にやる。
+   従来は 150ms/300ms の tick 任せで、切り替わってから次の tick まで位置が古く、
+   カテゴリ行（grpSub）が跳ねたり、開いた直後に一瞬上の方へ描かれたりした。
+   MutationObserver は描画の前に走るので、切り替わった最初の描画から正しい位置になる。
+   計算式は sheet260 の tick と同じ（下タブの高さ＋開いているシートの最大高さ）。 */
+(function(){ "use strict";
+  function vis(e){ return e && e.getClientRects().length > 0; }
+  function setB(el, v){ if (el.style.getPropertyValue("bottom") !== v || el.style.getPropertyPriority("bottom") !== "important") el.style.setProperty("bottom", v, "important"); }
+  function pos272(){ try {
+    var tt = document.getElementById("toolTabs"); if (!tt || !vis(tt)) return;
+    var bh = tt.offsetHeight, mh = 0, any = false;
+    ["toolCh","toolCh2","toolCh3"].forEach(function(id){ var sh = document.getElementById(id); if (sh && vis(sh)){ any = true; if (sh.offsetHeight > mh) mh = sh.offsetHeight; setB(sh, bh + "px"); } });
+    var gs = document.getElementById("grpSub");
+    if (gs && vis(gs)) setB(gs, (bh + (any ? mh : 0)) + "px");
+  } catch(e){} }
+  var mo = new MutationObserver(function(){ pos272(); });
+  ["toolCh","toolCh2","toolCh3","grpSub"].forEach(function(id){ var el = document.getElementById(id); if (el) mo.observe(el, { attributes: true, attributeFilter: ["hidden", "class"], childList: true }); });
+  pos272();
 })();
 </script>
 </html>
