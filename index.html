@@ -19876,6 +19876,224 @@ setInterval(gkSync208, 600);
 })();
 </script>
 
+
+<script id="bath285js">
+/* ===== CAD-285：浴槽の向き（突き抜け防止・4方向・立体図との一致） =====
+   Claude不具合メモ（2026-11-15）：「⟳向き」は実質2通りしか使えず、幅1,365mmの部屋で
+   横向きにすると仕切りを235mm突き抜けても置けてしまう。
+   実測（CAD-284）：回転は dir を4方向回すが位置は中心固定のまま。壁際で回すと
+   間仕切り・壁を突き抜けたまま確定できる。配置・移動も同様に突き抜けを止めない。
+   直しはこのブロックだけ（既存の作りは無変更）：
+   ・poke：浴槽の矩形が、家の輪郭の外に出る量と、間仕切りを跨ぐ量の最大値（0なら収まる）。
+   ・moveTenken を包み、浴槽は突き抜ける位置へ動かさない（矢印・ドラッグ共通）。
+   ・addTenken を包み、配置の結果が突き抜けていたら、収まる向き＋壁付け位置へ直す。
+     どの向きでも入らなければ置かずに知らせる。
+   ・選択バーの「⟳向き」（#sbKK）を浴槽の時だけ差し替え：次の向きから時計回りに試し、
+     突き抜けない向き＋壁付け位置を採用する。全滅なら変えずに知らせる。
+   ・既に突き抜けて保存された浴槽は消さない。平面図に赤枠＋「突き抜け ○○」を重ねて警告する。
+   ・蛇口側が分かるよう、平面図アイコンの蛇口に水色の丸を重ねる。
+   記録は従来通り o.dir（n/e/s/w＝背中をつける壁）。旧データの向きの意味は変えない。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var DIRS = ["n", "e", "s", "w"];
+  function ext(o, dir){ var d = o.d || 800; return (dir === "e" || dir === "w") ? [d / 2, (o.w || 0) / 2] : [(o.w || 0) / 2, d / 2]; }
+  function poke(o, dir, x, y){
+    try {
+      if (typeof S === "undefined" || !S || !o) return 0;
+      var e = ext(o, dir), x0 = x - e[0], y0 = y - e[1], x1 = x + e[0], y1 = y + e[1], worst = 0;
+      /* 輪郭：四隅と辺の中点が家の内側か。外なら、辺までの距離をはみ出し量とする */
+      if (typeof HB !== "undefined" && HB.__g148 && HB.__g148.in && typeof pts === "function"){
+        var P = pts();
+        var chk = [[x0, y0], [x1, y0], [x0, y1], [x1, y1], [(x0 + x1) / 2, y0], [(x0 + x1) / 2, y1], [x0, (y0 + y1) / 2], [x1, (y0 + y1) / 2]];
+        chk.forEach(function(pt){
+          if (!HB.__g148.in(pt[0], pt[1])){
+            var dmin = 1e9;
+            for (var i = 0; i < P.length; i++){
+              var a = P[i], c = P[(i + 1) % P.length];
+              if (typeof segDist === "function") dmin = Math.min(dmin, segDist(pt, a, c).d);
+            }
+            worst = Math.max(worst, dmin === 1e9 ? 1 : dmin);
+          }
+        });
+      }
+      /* 間仕切り：線が浴槽の矩形の内側を通る（跨ぐ）時は、その線から浅い側の端までの量 */
+      (S.parts2D || []).forEach(function(q){
+        if (typeof pState === "function" && pState(q) === "remove") return;
+        if (Math.abs(q.x1 - q.x2) < 1){
+          var c = q.x1, lo = Math.min(q.y1, q.y2), hi = Math.max(q.y1, q.y2);
+          if (c > x0 + 1 && c < x1 - 1 && Math.min(hi, y1) - Math.max(lo, y0) > 1) worst = Math.max(worst, Math.min(c - x0, x1 - c));
+        } else if (Math.abs(q.y1 - q.y2) < 1){
+          var c2 = q.y1, lo2 = Math.min(q.x1, q.x2), hi2 = Math.max(q.x1, q.x2);
+          if (c2 > y0 + 1 && c2 < y1 - 1 && Math.min(hi2, x1) - Math.max(lo2, x0) > 1) worst = Math.max(worst, Math.min(c2 - y0, y1 - c2));
+        }
+      });
+      return worst;
+    } catch(err){ return 0; }
+  }
+  function roomRectOf(o){
+    try {
+      if (typeof roomsCalc !== "function" || typeof areaMM !== "function") return null;
+      var R = roomsCalc(); if (!R || !R.rooms || !R.b) return null;
+      var i = Math.floor((o.x - R.b.x0) / R.st), j = Math.floor((o.y - R.b.y0) / R.st);
+      if (i < 0 || j < 0 || i >= R.NX || j >= R.NY) return null;
+      var cid = R.comp[j * R.NX + i], rm = null;
+      R.rooms.forEach(function(q){ if (q.cid === cid) rm = q; });
+      if (!rm) return null;
+      var i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1;
+      rm.cells.forEach(function(c){ var a = c % R.NX, b = (c - a) / R.NX; i0 = Math.min(i0, a); i1 = Math.max(i1, a); j0 = Math.min(j0, b); j1 = Math.max(j1, b); });
+      var rc = { x0: R.b.x0 + i0 * R.st, y0: R.b.y0 + j0 * R.st, x1: R.b.x0 + (i1 + 1) * R.st, y1: R.b.y0 + (j1 + 1) * R.st };
+      if ((rc.x1 - rc.x0) * (rc.y1 - rc.y0) > 0.7 * areaMM()) return null;   /* 部屋になっていない所では壁付けしない（blk34と同じ線引き） */
+      return rc;
+    } catch(err){ return null; }
+  }
+  function wallPos(o, dir, rc){   /* blk34 と同じ壁付けの式（gap=5） */
+    var e = ext(o, dir), gap = 5, cl = function(v, a, b){ return Math.max(a, Math.min(b, v)); };
+    if (dir === "n") return { x: cl(o.x, rc.x0 + e[0], rc.x1 - e[0]), y: rc.y0 + gap + e[1] };
+    if (dir === "s") return { x: cl(o.x, rc.x0 + e[0], rc.x1 - e[0]), y: rc.y1 - gap - e[1] };
+    if (dir === "w") return { x: rc.x0 + gap + e[0], y: cl(o.y, rc.y0 + e[1], rc.y1 - e[1]) };
+    return { x: rc.x1 - gap + e[0], y: cl(o.y, rc.y0 + e[1], rc.y1 - e[1]) };
+  }
+  function clampBBox(o, dir, p){   /* 部屋の矩形はセル単位で輪郭より外に出る事があるので、壁付け位置は家の内側へ寄せてから判定する */
+    try {
+      if (typeof bbox !== "function") return p;
+      var e = ext(o, dir), b = bbox();
+      return { x: Math.max(b.x0 + e[0], Math.min(b.x1 - e[0], p.x)), y: Math.max(b.y0 + e[1], Math.min(b.y1 - e[1], p.y)) };
+    } catch(err){ return p; }
+  }
+  function tryDirs(o, startDir){
+    var rc = roomRectOf(o), si = DIRS.indexOf(startDir || o.dir || "n"); if (si < 0) si = 0;
+    for (var k = 0; k < 4; k++){
+      var dir = DIRS[(si + k) % 4], cands = [];
+      if (rc) cands.push(clampBBox(o, dir, wallPos(o, dir, rc)));
+      cands.push(clampBBox(o, dir, { x: o.x, y: o.y }));
+      for (var m = 0; m < cands.length; m++){
+        if (poke(o, dir, cands[m].x, cands[m].y) <= 0) return { dir: dir, x: Math.round(cands[m].x / 5) * 5, y: Math.round(cands[m].y / 5) * 5 };
+      }
+    }
+    return null;
+  }
+  /* --- 移動：突き抜ける位置へは動かさない --- */
+  if (typeof moveTenken === "function" && !moveTenken.__b285){
+    var origMove = moveTenken;
+    var wrappedMove = function(o, dx, dy){
+      if (!o || o.k !== "bath") return origMove(o, dx, dy);
+      var ox = o.x, oy = o.y, r = origMove(o, dx, dy);
+      if (poke(o, o.dir || "n", o.x, o.y) > 0){ o.x = ox; o.y = oy; }
+      return r;
+    };
+    wrappedMove.__b285 = true;
+    moveTenken = wrappedMove;
+  }
+  /* --- 配置：突き抜けていたら直す／入らなければ置かない --- */
+  if (typeof addTenken === "function" && !addTenken.__b285){
+    var origAdd = addTenken;
+    var wrappedAdd = function(k){
+      var n0 = (typeof S !== "undefined" && S && S.tenken) ? S.tenken.length : 0;
+      var r = origAdd.apply(this, arguments);
+      try {
+        if (k === "bath" && typeof S !== "undefined" && S && S.tenken && S.tenken.length > n0){
+          var o = S.tenken[S.tenken.length - 1];
+          if (o && o.k === "bath" && poke(o, o.dir || "n", o.x, o.y) > 0){
+            var fix = tryDirs(o, o.dir || "n");
+            if (fix){ o.dir = fix.dir; o.x = fix.x; o.y = fix.y; try { save(); } catch(e){} try { drawPlan(); } catch(e){} }
+            else {
+              S.tenken.splice(S.tenken.length - 1, 1);
+              try { if (typeof sel !== "undefined" && sel && sel.t === "k" && sel.i >= S.tenken.length) sel = null; } catch(e){}
+              try { save(); } catch(e){}
+              try { drawPlan(); } catch(e){}
+              try { toast("浴槽が入りません（部屋が狭いです）"); } catch(e){}
+            }
+          }
+        }
+      } catch(err){}
+      return r;
+    };
+    wrappedAdd.__b285 = true;
+    addTenken = wrappedAdd;
+  }
+  /* --- 回転：浴槽の時だけ「⟳向き」を差し替える ---
+     バーは drawSelBarK が作る。その直後に差し替える事で、監視の合間に
+     素のハンドラ（中心固定で回すだけ）が走る窓を無くす。監視も保険に残す。 */
+  if (typeof drawSelBarK === "function" && !drawSelBarK.__b285){
+    var origBarK = drawSelBarK;
+    var wrappedBarK = function(bar){ var r = origBarK.apply(this, arguments); try { hookRotate(); } catch(e){} return r; };
+    wrappedBarK.__b285 = true;
+    drawSelBarK = wrappedBarK;
+  }
+  function selBath(){
+    try { return (typeof sel !== "undefined" && sel && sel.t === "k" && typeof S !== "undefined" && S && S.tenken && S.tenken[sel.i] && S.tenken[sel.i].k === "bath") ? S.tenken[sel.i] : null; } catch(e){ return null; }
+  }
+  function hookRotate(){
+    var o = selBath(); if (!o) return;
+    var b = document.getElementById("sbKK");
+    if (!b || b.dataset.b285) return;
+    b.dataset.b285 = "1";
+    b.onclick = function(){
+      var cur = DIRS.indexOf(o.dir || "n"); if (cur < 0) cur = 0;
+      var r = tryDirs(o, DIRS[(cur + 1) % 4]);
+      if (!r){ try { toast("ここでは向きを変えられません（壁に当たります）"); } catch(e){} return; }
+      try { pushUndo(); } catch(e){}
+      o.dir = r.dir; o.x = r.x; o.y = r.y;
+      try { save(); } catch(e){}
+      var bar = document.getElementById("selBar"); if (bar) bar.dataset.k = "";
+      try { drawPlan(); } catch(e){}
+      try { drawSelBar(); } catch(e){}
+    };
+  }
+  /* --- 平面図の後加工：突き抜け警告＋蛇口の強調 --- */
+  function planFix285(){
+    try {
+      var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
+      if (typeof S === "undefined" || !S || !S.tenken) return;
+      var baths = [];
+      S.tenken.forEach(function(o, i){ if (o && o.k === "bath") baths.push([o, i]); });
+      var old = document.getElementById("bathPoke285"); if (old) old.remove();
+      if (typeof HB !== "undefined" && HB.__planT && HB.__planT.s > 0){
+        var T = HB.__planT, marks = "";
+        baths.forEach(function(p){
+          var o = p[0], pk = poke(o, o.dir || "n", o.x, o.y);
+          if (pk <= 0) return;
+          var e = ext(o, o.dir || "n");
+          var x = (o.x - e[0]) * T.s + T.ox, y = (o.y - e[1]) * T.s + T.oy, w = e[0] * 2 * T.s, h = e[1] * 2 * T.s;
+          marks += "<rect x=\"" + x + "\" y=\"" + y + "\" width=\"" + w + "\" height=\"" + h + "\" fill=\"none\" stroke=\"#D32F2F\" stroke-width=\"2.5\" pointer-events=\"none\"/>"
+            + "<text x=\"" + (x + w + 4) + "\" y=\"" + (y + 13) + "\" style=\"font-size:13px;font-weight:900;fill:#D32F2F\" pointer-events=\"none\">突き抜け " + Math.round(pk) + "</text>";
+        });
+        if (marks){
+          var g = document.createElementNS(NS, "g"); g.id = "bathPoke285"; g.innerHTML = marks; svg.appendChild(g);
+        }
+      }
+      baths.forEach(function(p){
+        var g2 = svg.querySelector("g[data-tk2=\"" + p[1] + "\"]");
+        if (!g2 || g2.querySelector(".faucet285")) return;
+        var rects = g2.querySelectorAll("rect"); if (rects.length < 2) return;
+        var ow = 0, outer = null;
+        rects.forEach(function(rc){ var w = parseFloat(rc.getAttribute("width")) || 0; if (w > ow){ ow = w; outer = rc; } });
+        if (!outer || !(ow > 0)) return;
+        var f = null;
+        for (var j = 0; j < rects.length; j++){
+          if (rects[j] === outer) continue;
+          var rw = parseFloat(rects[j].getAttribute("width")) || 0;
+          if (rw > 0 && rw < ow * 0.2){ f = rects[j]; break; }
+        }
+        if (!f) return;
+        var cx = parseFloat(f.getAttribute("x")) + (parseFloat(f.getAttribute("width")) || 0) / 2;
+        var cy = parseFloat(f.getAttribute("y")) + (parseFloat(f.getAttribute("height")) || 0) / 2;
+        var c = document.createElementNS(NS, "circle");
+        c.setAttribute("class", "faucet285"); c.setAttribute("cx", cx); c.setAttribute("cy", cy);
+        c.setAttribute("r", Math.max(3.2, ow * 0.05));
+        c.setAttribute("fill", "#1F6FB5"); c.setAttribute("stroke", "#fff"); c.setAttribute("stroke-width", "1.2");
+        c.setAttribute("pointer-events", "none");
+        g2.appendChild(c);
+      });
+    } catch(e){}
+  }
+  setInterval(function(){ try { hookRotate(); } catch(e){} try { planFix285(); } catch(e){} }, 350);
+  var prevTidy = window.tidyPlanLabels;
+  if (typeof prevTidy === "function"){ window.tidyPlanLabels = function(){ var r = prevTidy.apply(this, arguments); try { planFix285(); } catch(e){} return r; }; }
+  window.__bath285 = { poke: poke, tryDirs: tryDirs };   /* 検証用 */
+})();
+</script>
+
 </html>
 <script>
 /* ---------- CAD-231: 足場屋さん向け（住宅の足場を、本職の内訳で）----------
@@ -20924,6 +21142,7 @@ function build(S,T,opt){
     const bar=cyl(.012,.9,mat.steel,12);PP(bar,Wx/2+.04,1.35,0,g);const bk=rrb(.05,.015,.05,.005,mat.steel);
     const head=cyl(.06,.025,mat.steel,24);head.rotation.z=Math.PI/2;PP(head,Wx/2+.1,1.55,0,g);
     const tapB=cyl(.02,.18,mat.steel,12);tapB.rotation.z=Math.PI/2;PP(tapB,Wx/2+.0,.95,Lz/2-.35,g);
+    g.rotation.y=({n:-Math.PI/2,e:Math.PI,s:Math.PI/2,w:0})[t.dir||"n"]||0;   /* CAD-285：平面図の向き（dir）と蛇口端をそろえる */
     g.position.set(cx,FL,cz);add(g)}
   else if(t.k==='wc'){const Lx=d,Wz=w;const g=new T.Group();
     const bowl=slab(ovalShape(.255,.18),.4,mat.porc,.02);PP(bowl,.05,0,0,g);
