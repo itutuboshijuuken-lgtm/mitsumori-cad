@@ -802,7 +802,7 @@ const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, k
   rfCeilMat: undefined, rfCur: undefined, rfWallMat: undefined, roofW: undefined,
   roomFin: undefined, roomNames: undefined, roomPt: undefined, roomRecs: undefined, roomView: undefined,
   tare: undefined, tatami: undefined, tenken: undefined, tfr: undefined, trSend: undefined, tsuboWant: undefined, zones: undefined,
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", danF: true, danW: true, danC: true, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -1323,7 +1323,7 @@ const WORK = [
 const AVG_M3 = {"ヒノキ": 103000, "スギ": 90000, "米松": 120000, "米ツガ": 90000, "ホワイトウッド": 85000, "レッドウッド": 95000, "集成材": 115000, "その他": 100000};
 // 合板・ボード：3×6 1枚の平均（仮）
 const AVG_SHEET = {"構造用合板": {9: 1100, 12: 1700, 15: 2300, 24: 3200, 28: 3200}, "石膏ボード": {9.5: 880, 12.5: 1100, 15: 1350}, "強化石膏ボード": {12.5: 1400, 15: 1750}, "ラミテン": {2: 2600, 3.2: 3000, 5.5: 3500}, "ケイカル板": {6: 2200}, "シージングボード": {9.5: 1050, 12.5: 1300}, "ラワン合板": {2.5: 900, 3: 1100, 4: 1300, 5.5: 1530, 9: 2100, 12: 2600, 15: 3100}, "ラスボード": {9.5: 950}, "Mクロス": {9.5: 1500, 12.5: 1800}};
-const AVG_SIMPLE = {"鋼製束": 400, "釘": 2};
+const AVG_SIMPLE = {"鋼製束": 400, "釘": 2, "断熱受けピン": 35};
 const MY_SASH = {"室内ドア": 45000};
 const SST = {new: ["新設", "#3E4A57"], keep: ["既存", "#8A96A3"], waku: ["窓枠交換", "#7A5226"], ip: ["インプラス", "#0F766E"], fusuma: ["襖 張替え", "#6B5233"], shoji: ["障子 張替え", "#6B5233"]};
 const wakuOK = s => s.cat === "クローゼット" || (s.cat === "室内ドア" && /引/.test(s.name));
@@ -1494,6 +1494,11 @@ if ((PR.fixVer || 0) < 4){
     if (!has) PR.items.push(n);
   });
   PR.fixVer = 4; try { localStorage.setItem("zochiku-price-v1", JSON.stringify(PR)); } catch(e){}
+}
+if ((PR.fixVer || 0) < 5){
+  // CAD-264: 床の断熱受けピン（オメガピン）の仮単価。17個入り約592円（税込）の実売から1本35円で仮置き。
+  if (!PR.items.some(it => it.cat === "断熱受けピン")) PR.items.push({name: "断熱受けピン（オメガピン）", cat: "断熱受けピン", sp: "", t: 0, w: 0, len: 0, unit: "本", qty: 1, price: 35, kari: true});
+  PR.fixVer = 5; try { localStorage.setItem("zochiku-price-v1", JSON.stringify(PR)); } catch(e){}
 }
 function lumberPrice(sp, a, b, len){
   const c0 = PR.items.filter(it => it.cat === "木材" && normSp(it.sp) === sp && secEq(it, a, b) && it.len > 0);
@@ -2179,6 +2184,27 @@ function joistRuns(alongX, P0, b0){
     }
   }
   return out;
+}
+/* CAD-264: 床組の格子を数えるための線分リスト。joistRuns と同じ流儀（輪郭の中だけ・間隔は pitch 以内）。
+   alongX=true なら横向き（y一定）の線。lines は {c: 線の位置, segs: [[始,終],...]}、pos は内側の線の位置の一覧。 */
+function gridLines264(alongX, pitch){
+  const P = pts(), b = bbox(), sw = p => alongX ? p : [p[1], p[0]];
+  const lo = alongX ? b.y0 : b.x0, hi = alongX ? b.y1 : b.x1;
+  const across = hi - lo, N = Math.max(1, Math.ceil(across / pitch - 1e-9));
+  const lines = [], pos = [];
+  for (let k = 1; k < N; k++){
+    const c = lo + k * across / N; pos.push(c);
+    const xs = [];
+    for (let i = 0; i < P.length; i++){
+      const a = sw(P[i]), d = sw(P[(i + 1) % P.length]);
+      if ((a[1] <= c && c < d[1]) || (d[1] <= c && c < a[1])) xs.push(a[0] + (c - a[1]) * (d[0] - a[0]) / (d[1] - a[1]));
+    }
+    xs.sort((p, q) => p - q);
+    const segs = [];
+    for (let j = 0; j + 1 < xs.length; j += 2){ if (xs[j + 1] - xs[j] > 0) segs.push([xs[j], xs[j + 1]]); }
+    if (segs.length) lines.push({c, segs});
+  }
+  return {lines, pos};
 }
 function tatCount(r){ const [nx, ny] = tatGrid(r); return nx * ny / 2; }
 const tatArea = () => (S.tatami || []).reduce((a, r) => a + (r.x1 - r.x0) * (r.y1 - r.y0), 0) / 1e6;
@@ -4459,7 +4485,7 @@ $("listBtn").addEventListener("click", () => { drawToolsUI(); $("mbox").innerHTM
 /* CAD-216: ②間取りの ＋・－・全体 ボタンは廃止（拡大はピンチだけ）。ボタンの配線も撤去 */
 $("slotM").addEventListener("scroll", () => {}, {passive: true});
 /* ---------- 階（1階・2階…）の切り替え。いま開いている階のデータは、これまでと同じ場所に入れ、ほかの階は別に保管する ---------- */
-const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfSakanBase", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
+const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfSakanBase", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "floorKoho", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
 const flClone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 function flEnsure(){ if (!Array.isArray(S.fl) || !S.fl.length){ S.fl = [{name: "1階", snap: null}]; S.fi = 0; } if (typeof S.fi !== "number" || S.fi < 0 || S.fi >= S.fl.length) S.fi = 0; }
 function flSnap(){ const o = {}; FLOOR_KEYS.forEach(k => { if (S[k] !== undefined) o[k] = flClone(S[k]); }); return o; }
@@ -5108,7 +5134,7 @@ const SASH = [
   {cat:"開口", name:"建具なし", w:1690, h:2030}, {cat:"開口", name:"建具なし", w:2560, h:2200}, {cat:"開口", name:"建具なし", w:910, h:1800}
 ];
 const MEMBERS = [
-  ["dodai", "土台", "105角"], ["obiki", "大引", "90角"], ["hashira", "柱", "105角"], ["mabashira", "間柱", ""], ["suji", "筋交い", "45×105"],
+  ["dodai", "土台", "105角"], ["obiki", "大引", "105角"], ["hashira", "柱", "105角"], ["mabashira", "間柱", ""], ["suji", "筋交い", "45×105"],
   ["keta", "桁・胴差", ""], ["hari", "小屋梁", ""], ["tsuka", "小屋束", ""], ["moya", "母屋・棟木", ""], ["taruki", "垂木", "45×60"], ["hafu", "破風・鼻隠し", "24×180"], ["sumigi", "隅木", "105×150"], ["yukabari", "2階床梁", ""], ["tenjo", "天井下地（野縁・野縁受け・吊木）", "36×45"]
 ];
 const GBW = ["石膏ボード 9.5", "石膏ボード 12.5", "石膏ボード 15", "強化石膏ボード 12.5", "シージングボード 9.5", "シージングボード 12.5", "ラワン合板 5.5", "ラワン合板 9", "ラワン合板 12"];
@@ -6662,6 +6688,24 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   const hanakakushi = []; for (let L = eaveLen; L > 0; L -= 3800) hanakakushi.push(Math.min(L, 3800) + 100);
   if (kata && S.parapet && eaveLen < D) hanakakushi.push(D + 100); // パラペットの下側（開けた辺）にも鼻隠し
   const b = R.b, sh = Math.min(b.w, b.h), lg = Math.max(b.w, b.h), JR2 = joistRuns(b.w >= b.h), obiki = JR2.n, tsukaF = JR2.posts;
+  /* CAD-264: 床の工法（翔伍の決定 2026-11-15）。剛床＝大引＋小つなぎの田の字（どちらも105角・芯々910ピッチ）、床合板24mm、鋼製束は格子の交点。
+     根太工法＝大引は一方向だけ、根太は大引と直交に土台の外面まで（線分＋105）、根太受けは新築・増築では拾わない。 */
+  const FKO264 = S.floorKoho === "neda" ? "neda" : "goushou", banT264 = FKO264 === "neda" ? 28 : 24;
+  let koNeeds264 = [], gridPosts264 = JR2.posts; const nedaNeeds264 = [];
+  if (wood && FKO264 === "goushou"){
+    const alongX264 = b.w >= b.h, A264 = gridLines264(alongX264, 910), B264 = gridLines264(!alongX264, 910);
+    gridPosts264 = 0;
+    B264.lines.forEach(L264 => L264.segs.forEach(sg => {
+      const cuts = A264.pos.filter(p => p > sg[0] + 1 && p < sg[1] - 1);
+      const pp = [sg[0], ...cuts, sg[1]];
+      for (let i = 0; i + 1 < pp.length; i++){ const len = pp[i + 1] - pp[i] - 105; if (len > 100) koNeeds264.push(Math.round(len)); }
+      gridPosts264 += cuts.length;
+    }));
+  }
+  if (wood && FKO264 === "neda"){
+    const B264 = gridLines264(!(b.w >= b.h), S.joistP === 455 ? 455 : 303);
+    B264.lines.forEach(L264 => L264.segs.forEach(sg => nedaNeeds264.push(Math.round(sg[1] - sg[0] + 105))));
+  }
   let wallLen = 0; S.edges.forEach((e, i) => { if (i !== S.house && i !== S.noWall) wallLen += e.v; });
   let wallA = wallLen * (Hk + 105) / 1e6, gableA = 0;
   if (isRect() && !yose){ const gable = kata ? W * W * t / 2 : R.mune ? (R.mp * R.mp + (W - R.mp) * (W - R.mp)) * t / 2 : W * (W / 2 * t) / 2; [kerA, kerB].forEach(k => { if (k > 0){ wallA += gable / 1e6; gableA += gable / 1e6; } }); }
@@ -6695,7 +6739,9 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
 
   grp("木材");
   lum("dodai", "土台", 105, 105, jtA(lensD, 150), "105角", true);
-  if (wood) lum("obiki", "大引", 90, 90, JR2.raw.map(L => L + 100), "90角・910間隔", true);
+  if (wood) lum("obiki", "大引", 105, 105, JR2.raw.map(L => L + 100), "105角・910間隔", true);
+  if (wood && FKO264 === "goushou" && koNeeds264.length) lum("obiki", "小つなぎ", 105, 105, koNeeds264, "105角・大引と大引の間・910ピッチ", false);
+  if (wood && FKO264 === "neda" && nedaNeeds264.length) lum("taruki", "床根太", 45, S.joistSec === "60" ? 60 : 45, nedaNeeds264, `45×${S.joistSec === "60" ? 60 : 45}・@${S.joistP === 455 ? 455 : 303}・土台の外面まで`, false);
   if (two){
     lum("hashira", "通し柱", 105, 105, Array(corners).fill(Lc + S.dosa + Lc2 + 120), `105角・長さ${fmt(Lc + S.dosa + Lc2)}`, true);
     lum("hashira", "1階 管柱", 105, 105, Array(colsEach - corners).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
@@ -6774,9 +6820,9 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   tenjo(area, two ? "1階 " : "", W, D); if (two) tenjo(area, "2階 ", W, D);
 
   grp("合板・ボード・金物");
-  if (wood) sheet("構造用合板", 28, "1階 床合板 28mm", 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
-  if (two) sheet("構造用合板", 28, "2階 床合板 28mm", 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
-  if (wood){ const p = simplePrice("鋼製束"); rows.push({name: "鋼製束", spec: "910間隔", qty: `${tsukaF}本`, ...ap(p, tsukaF), fix: {kind: "simple", cat: "鋼製束", name: "鋼製束"}}); }
+  if (wood) sheet("構造用合板", banT264, `1階 床合板 ${banT264}mm`, 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
+  if (two) sheet("構造用合板", banT264, `2階 床合板 ${banT264}mm`, 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
+  if (wood){ const p = simplePrice("鋼製束"); rows.push({name: "鋼製束", spec: "910間隔", qty: `${gridPosts264}本`, ...ap(p, gridPosts264), fix: {kind: "simple", cat: "鋼製束", name: "鋼製束"}}); }
   if (kata && S.parapet && !PT){
     const effH = paraEffH || Math.max(S.paraH || 1350, Math.round(R.topRise) + 300), len3 = D + 2 * W;
     const inA = Math.max(0, (D * (effH - R.topRise) + 2 * W * (effH - R.topRise / 2)) / 1e6);
@@ -6820,7 +6866,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("taruki", "下屋 垂木", 45, 60, Array(tn).fill(tl + 150), `45×60・長さ${fmt(tl)}・勾配${fmt(g.k, 1)}寸`, false);
     const ra = (g.L + 2 * S.keraba) * (g.d + S.noki) * g.n2 / 1e6;
     sheet("構造用合板", 12, "下屋 野地合板 12mm", 910, 1820, Math.ceil(ra / 1.6562 * 1.05), `屋根 ${fmt(ra, 1)}㎡`);
-    if (wood) sheet("構造用合板", 28, "下屋 床合板 28mm", 910, 1820, Math.ceil(g.L * g.d / 1e6 / 1.6562 * 1.05), `床 ${fmt(g.L * g.d / 1e6, 1)}㎡`);
+    if (wood) sheet("構造用合板", banT264, `下屋 床合板 ${banT264}mm`, 910, 1820, Math.ceil(g.L * g.d / 1e6 / 1.6562 * 1.05), `床 ${fmt(g.L * g.d / 1e6, 1)}㎡`);
     const [wc2, wt2] = gbParse(S.gbW), [cc2, ct2] = gbParse(S.gbC), iw = (g.L + 2 * g.d) * S.ch / 1e6;
     sheet(wc2, wt2, `下屋 壁 ${S.gbW}`, 910, S.ch <= 2420 ? 2420 : 2730, Math.ceil(iw / (0.91 * (S.ch <= 2420 ? 2.42 : 2.73)) * 1.05), `壁 ${fmt(iw, 1)}㎡`);
     sheet(cc2, ct2, `下屋 天井 ${S.gbC}`, 910, 1820, Math.ceil(g.L * g.d / 1e6 / 1.6562 * 1.05), `天井 ${fmt(g.L * g.d / 1e6, 1)}㎡`);
@@ -6833,6 +6879,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (S.danF || S.danW || S.danC){
     grp("断熱材");
     if (wood) dan("danF", "断熱 床", area);
+    if (wood && S.danF && area > 0){ const npin264 = Math.ceil(area / 0.8281 - 1e-9) * 4, pp264 = simplePrice("断熱受けピン"); rows.push({name: "断熱受けピン（オメガピン）", spec: "910×910のマスに4本", qty: `${npin264}本`, ...ap(pp264, npin264), fix: {kind: "simple", cat: "断熱受けピン", name: "断熱受けピン（オメガピン）"}}); }   /* CAD-264: 床の断熱がある時は受けピンも拾う（翔伍の決定） */
     dan("danW", "断熱 壁", inner1 + inner2);
     dan("danC", "断熱 天井", area);
   }
@@ -20327,6 +20374,30 @@ body{--ux-bot:76px}
     else { if(t)t.hidden=true; if(e)e.hidden=true; if(S.joistP===455){S.joistP=303;} }
   }
   setInterval(build,600); build();
+})();
+</script>
+<!-- CAD-264 床の工法チップ（新築・増築だけ）。t241のチップ群の近くに出す。zo では根太受けチップを隠す -->
+<style id="fkoho264css">#floorKoho264 button{min-height:44px}</style>
+<script id="fkoho264js">
+(function(){
+  function mk(){
+    var el=document.getElementById("floorKoho264");
+    if(!el){ var j=document.getElementById("joistUke")||document.getElementById("joistSec"); if(!j)return;
+      var t=document.createElement("div"); t.className="sub2"; t.id="floorKoho264T"; t.textContent="床の工法（新築・増築）";
+      el=document.createElement("div"); el.className="chips"; el.id="floorKoho264";
+      j.parentNode.insertBefore(t,j.nextSibling); j.parentNode.insertBefore(el,t.nextSibling); }
+    var zo = typeof S!=="undefined" && S.mode==="zo";
+    var t=document.getElementById("floorKoho264T");
+    if(t) t.hidden=!zo; el.hidden=!zo;
+    var uk=document.getElementById("joistUke"), ukt=document.getElementById("joistUkeT");
+    if(uk) uk.hidden=zo; if(ukt) ukt.hidden=zo;
+    if(!zo) return;
+    var cur=S.floorKoho==="neda"?"neda":"goushou";
+    if(el.getAttribute("data-s")===cur)return; el.setAttribute("data-s",cur);
+    el.innerHTML=[["goushou","剛床（標準）"],["neda","根太工法"]].map(function(p){return '<button data-v="'+p[0]+'" aria-pressed="'+(cur===p[0])+'" type="button">'+p[1]+'</button>';}).join("");
+    el.querySelectorAll("button").forEach(function(b){ b.onclick=function(){ S.floorKoho=b.dataset.v; save(); drawSpec(); }; });
+  }
+  setInterval(mk,600); mk();
 })();
 </script>
 <style id="tg246css">
