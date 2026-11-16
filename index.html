@@ -26129,141 +26129,12 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
 </script>
 
 <script id="len309js">
-/* ===== CAD-309：描く画面で、なぞっている辺の長さを大きくデジタル表示する =====
-   本人の発案（2026-11-16）「スピードメーターみたいな感じ」。
-   数字は吸着した後の実際に決まる長さ：fixInk と同じ物差し（最長辺を 5460 に換算し、
-   gLen でピッチに丸め、455 を下限にする）で、今なぞっている辺（最後の run）を出す。
-   run と角の作りは recognize() と同じ（中心線の交点）。閉じていない今の線に当てはめるため、
-   最後の run の終端だけ指先の位置を使う。短い段差の消去は recognize と同じ条件で、
-   最初と最後（今なぞっている）run は消さない。
-   更新は requestAnimationFrame で文字だけ（全体の再描画はしない）。 */
-(function(){ "use strict";
-  var NS = "http://www.w3.org/2000/svg";
-  var txt = null, rafPend = false, curVal = null, suppress = false;
-  var ptrs = new Set();
-  function $(id){ return document.getElementById(id); }
-  function build(){
-    var s = $("draw"); if (!s) return false;
-    if (txt && txt.parentNode === s) return true;
-    txt = document.createElementNS(NS, "text");
-    txt.id = "lenM309";
-    txt.setAttribute("x", "180"); txt.setAttribute("y", "60");
-    txt.setAttribute("text-anchor", "middle");
-    txt.setAttribute("pointer-events", "none");
-    txt.setAttribute("style", "font-size:48px;font-weight:900;fill:#0F2A4A;paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:8px;letter-spacing:1px");
-    txt.style.display = "none";
-    s.appendChild(txt);
-    return true;
-  }
-  function fmtV(v){
-    if (Number.isInteger(v)) return v.toLocaleString("ja-JP");
-    var p = v.toFixed(1).split(".");
-    return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + p[1];
-  }
-  function liveVal309(){
-    try {
-      if (typeof strokes === "undefined" || typeof cur === "undefined" || !cur) return null;
-      if (typeof rdp !== "function" || typeof gLen !== "function") return null;
-      var all = strokes.flat();
-      if (all.length < 8) return null;
-      var xs = all.map(function(p){ return p[0]; }), ys = all.map(function(p){ return p[1]; });
-      var diag = Math.hypot(Math.max.apply(null, xs) - Math.min.apply(null, xs), Math.max.apply(null, ys) - Math.min.apply(null, ys));
-      if (diag < 40) return null;
-      var pts = rdp(all, Math.max(10, diag * 0.05));
-      var runs = [], i, p, q, dx, dy, o, last;
-      for (i = 0; i < pts.length - 1; i++){
-        p = pts[i]; q = pts[i + 1]; dx = q[0] - p[0]; dy = q[1] - p[1];
-        if (Math.hypot(dx, dy) < diag * 0.04) continue;
-        o = Math.abs(dx) >= Math.abs(dy) ? "H" : "V";
-        last = runs[runs.length - 1];
-        if (last && last.o === o){ last.pts.push(p, q); last.len += Math.hypot(dx, dy); last.vi1 = i + 1; }
-        else runs.push({ o: o, pts: [p, q], len: Math.hypot(dx, dy), vi0: i, vi1: i + 1 });
-      }
-      if (!runs.length) return null;
-      var changed = true;
-      while (changed && runs.length > 4){
-        changed = false;
-        var mi = -1, ml = Infinity;
-        for (i = 1; i < runs.length - 1; i++){ if (runs[i].len < ml){ ml = runs[i].len; mi = i; } }
-        if (mi > 0 && ml < diag * 0.08){
-          runs[mi - 1].pts = runs[mi - 1].pts.concat(runs[mi + 1].pts);
-          runs[mi - 1].len += runs[mi + 1].len;
-          runs[mi - 1].vi1 = runs[mi + 1].vi1;
-          runs = runs.filter(function(_, j){ return j !== mi && j !== mi + 1; });
-          changed = true;
-        }
-      }
-      /* 中心線は、recognize() の頂点平均ではなく、その run の実点の中央値で取る。
-         開いた線では RDP の終端頂点が角の弧に引かれて中心線がずれるため（実測で確認）。
-         中央値なら弧の裾に引かれず、辺のまっすぐな部分の線に乗る。 */
-      function rawRange(r){
-        var a = all.indexOf(pts[r.vi0]), b = all.indexOf(pts[r.vi1]);
-        if (a < 0) a = 0; if (b < a) b = all.length - 1;
-        return all.slice(a, b + 1);
-      }
-      runs.forEach(function(r){
-        var cs = rawRange(r).map(function(p2){ return r.o === "H" ? p2[1] : p2[0]; }).sort(function(x, y){ return x - y; });
-        r.c = cs.length ? cs[Math.floor(cs.length / 2)] : 0;
-      });
-      function cornerAfter(i2){ var a = runs[i2], b = runs[i2 + 1]; return a.o === "H" ? [b.c, a.c] : [a.c, b.c]; }
-      var n = runs.length, pxs = [], j, r2, sA, eA, cA;
-      /* 今なぞっている run の終端：指が中心線から外れた（＝角に入った）部分があれば、
-         その部分の重心を次の辺の中心線の代わりに使う（recognize() は角を切り落として
-         中心線の交点で長さを決めるため、指先の極値で測ると行き過ぎる）。
-         外れていなければ直近3点の平均（指の動きにそのまま付いていく）。 */
-      var lr = runs[n - 1], lraw = rawRange(lr), thr = Math.max(4, diag * 0.018), tailN = 0;
-      for (i = lraw.length - 1; i >= 0; i--){
-        var pv = lr.o === "H" ? lraw[i][1] : lraw[i][0];
-        if (Math.abs(pv - lr.c) > thr) tailN++; else break;
-      }
-      if (tailN >= 2){
-        var tp = lraw.slice(lraw.length - tailN);
-        eA = tp.reduce(function(s, p2){ return s + (lr.o === "H" ? p2[0] : p2[1]); }, 0) / tp.length;
-      } else {
-        var t3 = all.slice(-3);
-        eA = t3.reduce(function(s, p2){ return s + (lr.o === "H" ? p2[0] : p2[1]); }, 0) / t3.length;
-      }
-      for (j = 0; j < n; j++){
-        r2 = runs[j];
-        if (j === 0) sA = r2.o === "H" ? pts[0][0] : pts[0][1];
-        else { cA = cornerAfter(j - 1); sA = r2.o === "H" ? cA[0] : cA[1]; }
-        if (j === n - 1) pxs.push(Math.abs(eA - sA));
-        else { cA = cornerAfter(j); pxs.push(Math.abs((r2.o === "H" ? cA[0] : cA[1]) - sA)); }
-      }
-      var mx = Math.max.apply(null, pxs);
-      if (!(mx > 0)) return null;
-      return Math.max(455, gLen(pxs[n - 1] / mx * 5460));
-    } catch(e){ return null; }
-  }
-  function hide309(){ curVal = null; if (txt) txt.style.display = "none"; }
-  function upd309(){
-    rafPend = false;
-    if (suppress || ptrs.size !== 1){ hide309(); return; }
-    var v = liveVal309();
-    if (v == null){ hide309(); return; }
-    if (!build()) return;
-    curVal = v;
-    var t = fmtV(v);
-    if (txt.textContent !== t) txt.textContent = t;
-    if (txt.style.display === "none") txt.style.display = "";
-  }
-  function queue309(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd309); } }
-  function attach309(){
-    var s = $("draw"); if (!s || s.__len309) return; s.__len309 = true;
-    s.addEventListener("pointerdown", function(e){
-      ptrs.add(e.pointerId);
-      if (ptrs.size >= 2){ suppress = true; hide309(); return; }
-      queue309();
-    });
-    s.addEventListener("pointermove", function(){ if (!suppress) queue309(); });
-    function up(e){ ptrs.delete(e.pointerId); if (!ptrs.size){ suppress = false; hide309(); } }
-    s.addEventListener("pointerup", up);
-    s.addEventListener("pointercancel", up);
-  }
-  attach309(); setInterval(attach309, 800);
-  window.__len309 = function(){ return (txt && txt.style.display !== "none") ? curVal : null; };
-  window.__len309txt = function(){ return (txt && txt.style.display !== "none") ? txt.textContent : null; };
-})();
+/* ===== CAD-314：描く画面の長さ表示は止めた（本人の決着 2026-11-16） =====
+   一番最初の外周を決める四角を描く時は基準が無いので、数字は出さない。
+   長さ表示は間取りで間仕切りをなぞる時へ移した（len314js）。
+   CAD-309 の liveVal309 一式は、ここでは読み込まない。 */
+window.__len309 = function(){ return null; };
+window.__len309txt = function(){ return null; };
 </script>
 
 <script id="lbl310js">
@@ -26355,6 +26226,358 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
       };
     }
   } catch(e){}
+})();
+</script>
+
+<script id="len314js">
+/* ===== CAD-314：間取りで間仕切りをなぞっている間、今の長さを大きく表示する =====
+   本人の決着（2026-11-16）：出すのは間取りの間仕切りなぞりだけ。
+   描く画面（最初の外周）は基準が無いので出さない（len309js は停止済み）。
+   数字は「指を離した時に決まる長さ」その物：CAD-127 の pdFinish が採用する
+   長さと同じ計算（pdRuns/pdSegment/pdJoinSegs/pdValidSeg/pdSplit/pdTrimSegs
+   の複製、下にそのまま入っている）で、今集まっている点列から出す。
+   なぞりの観察は #slotM の pointer イベントを横で見るだけ（本体の処理は
+   止めない）。点の集め方（2 SVG単位未満は足さない）も CAD-127 と同じにして、
+   本体の mm 点列と一致させる。更新は rAF で文字だけ（再描画なし）。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var txt = null, rafPend = false, curVal = null, suppress = false;
+  var trk = null;
+  var ptrs = new Set();
+  function $(id){ return document.getElementById(id); }
+  function fmtV314(v){
+    return Math.round(v).toLocaleString("ja-JP");
+  }
+  function liveVal314(mm){
+    try {
+      if (!mm || mm.length < 4) return null;
+      var travel = 0, i;
+      for (i = 1; i < mm.length; i++) travel += Math.hypot(mm[i][0] - mm[i - 1][0], mm[i][1] - mm[i - 1][1]);
+      if (travel < 150) return null;
+      var qs = null;
+      var bent = pdRuns314(mm);
+      if (bent){
+        var cand = [];
+        for (var r = 0; r < bent.runs.length; r++){
+          var sg = pdSegment314(bent.runs[r]);
+          if (!pdValidSeg314(sg)){ cand = null; break; }
+          cand.push(sg);
+        }
+        if (cand){
+          pdJoinSegs314(cand, bent.corners);
+          for (var v = 0; v < cand.length; v++) if (!pdValidSeg314(cand[v])){ cand = null; break; }
+          if (cand) qs = cand;
+        }
+      }
+      if (!qs){
+        var q = pdSegment314(mm);
+        if (!pdValidSeg314(q)) return null;
+        qs = [q];
+      }
+      var segs = [];
+      qs.forEach(function(s){ pdSplit314(s).forEach(function(p){ segs.push(p); }); });
+      segs = pdTrimSegs314(segs);
+      if (!segs.length) return null;
+      var L = 0;
+      segs.forEach(function(s){ L += Math.hypot(s.x2 - s.x1, s.y2 - s.y1); });
+      return Math.round(L);
+    } catch(e){ return null; }
+  }
+  function build314(){
+    var s = $("plan"); if (!s) return false;
+    if (txt && txt.parentNode === s) return true;
+    txt = document.createElementNS(NS, "text");
+    txt.id = "lenM314";
+    txt.setAttribute("text-anchor", "middle");
+    txt.setAttribute("pointer-events", "none");
+    txt.style.display = "none";
+    s.appendChild(txt);
+    return true;
+  }
+  function place314(){
+    var s = $("plan"); if (!s || !txt) return;
+    var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
+    var W = vb && vb.width > 0 ? vb.width : 360, X = vb ? vb.x : 0, Y = vb ? vb.y : 0;
+    var fs = W * 48 / 360;
+    txt.setAttribute("x", String(X + W / 2));
+    txt.setAttribute("y", String(Y + fs * 1.3));
+    txt.setAttribute("style", "font-size:" + fs + "px;font-weight:900;fill:#0F2A4A;paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:" + Math.max(2, fs / 6) + "px;letter-spacing:1px");
+    txt.removeAttribute("transform");
+  }
+  function hide314(){ curVal = null; if (txt) txt.style.display = "none"; }
+  function upd314(){
+    rafPend = false;
+    if (suppress || !trk || ptrs.size !== 1){ hide314(); return; }
+    var v = liveVal314(trk.mm);
+    if (v == null){ hide314(); return; }
+    if (!build314()) return;
+    place314();
+    curVal = v;
+    var t = fmtV314(v);
+    if (txt.textContent !== t) txt.textContent = t;
+    if (txt.style.display === "none") txt.style.display = "";
+  }
+  function queue314(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd314); } }
+  function attach314(){
+    var slot = $("slotM"); if (!slot || slot.__len314) return; slot.__len314 = true;
+    slot.addEventListener("pointerdown", function(e){
+      ptrs.add(e.pointerId);
+      if (e.isPrimary === false || ptrs.size >= 2){ suppress = true; hide314(); return; }
+      try {
+        if (!HB.__partDraw || !HB.__pageM || typeof S === "undefined" || !S.edges) return;
+        if (e.target.closest && e.target.closest("button")) return;
+        if (typeof enclMode !== "undefined" && enclMode) return;
+        if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
+        if (HB.__delMode) return;
+        var p = planPt(e);
+        trk = { id: e.pointerId, sv: [p], mm: [toMM(p)] };
+        queue314();
+      } catch(er){}
+    }, true);
+    slot.addEventListener("pointermove", function(e){
+      if (!trk || e.pointerId !== trk.id) return;
+      try {
+        var p = planPt(e), l = trk.sv[trk.sv.length - 1];
+        if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
+        trk.sv.push(p); trk.mm.push(toMM(p));
+        if (!suppress) queue314();
+      } catch(er){}
+    }, true);
+    function up314(e){
+      ptrs.delete(e.pointerId);
+      if (trk && e.pointerId === trk.id){ trk = null; hide314(); }
+      if (!ptrs.size) suppress = false;
+    }
+    slot.addEventListener("pointerup", up314, true);
+    slot.addEventListener("pointercancel", up314, true);
+    window.addEventListener("blur", function(){ ptrs.clear(); trk = null; suppress = false; hide314(); });
+  }
+  attach314(); setInterval(attach314, 800);
+  window.__len314 = function(){ return (txt && txt.parentNode && txt.style.display !== "none") ? curVal : null; };
+  window.__len314txt = function(){ return (txt && txt.parentNode && txt.style.display !== "none") ? txt.textContent : null; };
+  /* --- ここから下は CAD-127 の採用計算の複製（pdFinish と同じ物差し） --- */
+  function pdSplit314(q){
+    var horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
+    if (!horiz && !vert) return [q];
+    var cuts = [];
+    var test = function(x1, y1, x2, y2){
+      if (horiz){ if (Math.abs(x1 - x2) >= 1) return; var x = x1; if (x <= Math.min(q.x1, q.x2) + 1 || x >= Math.max(q.x1, q.x2) - 1) return; if (q.y1 >= Math.min(y1, y2) - 1 && q.y1 <= Math.max(y1, y2) + 1) cuts.push(x); }
+      else { if (Math.abs(y1 - y2) >= 1) return; var y = y1; if (y <= Math.min(q.y1, q.y2) + 1 || y >= Math.max(q.y1, q.y2) - 1) return; if (q.x1 >= Math.min(x1, x2) - 1 && q.x1 <= Math.max(x1, x2) + 1) cuts.push(y); }
+    };
+    var P = pts();
+    P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; test(a[0], a[1], c[0], c[1]); });
+    (S.parts2D || []).forEach(function(z){ if (pState(z) === "remove") return; test(z.x1, z.y1, z.x2, z.y2); });
+    if (!cuts.length) return [q];
+    cuts = cuts.filter(function(v, i){ return cuts.indexOf(v) === i; }).sort(function(a, b){ return a - b; });
+    var lo = horiz ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), hi = horiz ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2);
+    var B = [lo].concat(cuts, [hi]), out = [];
+    for (var k = 0; k < B.length - 1; k++){
+      if (B[k + 1] - B[k] < 100) continue;
+      out.push(horiz ? {x1: B[k], y1: q.y1, x2: B[k + 1], y2: q.y1} : {x1: q.x1, y1: B[k], x2: q.x1, y2: B[k + 1]});
+    }
+    return out.length ? out : [q];
+  }
+
+  // snapPart の作法を引き継ぐ専用の直線化：位置はモジュール吸着、端は近くの壁・間仕切りへ
+  // 450mm 以内で吸着（snapPart と同じ）。ただし両端が同じ壁に吸着して長さが消える時は、
+  // 遠い方の端をモジュール位置に戻す（壁際の短い線が潰れるのを防ぐ）。
+  function pdSegment314(mm){
+    var b = bbox(), xs = mm.map(function(p){ return p[0]; }), ys = mm.map(function(p){ return p[1]; });
+    var dx = Math.max.apply(null, xs) - Math.min.apply(null, xs), dy = Math.max.apply(null, ys) - Math.min.apply(null, ys);
+    var horiz = dx >= dy;
+    var lines = [];
+    var P = pts();
+    P.forEach(function(a, i){ lines.push([a, P[(i + 1) % P.length]]); });
+    (S.parts2D || []).forEach(function(z){ if (pState(z) !== "remove") lines.push([[z.x1, z.y1], [z.x2, z.y2]]); });
+    (S.tare || []).forEach(function(z){ lines.push([[z.x1, z.y1], [z.x2, z.y2]]); });
+    var snapEnd = function(v, fixed){
+      var best = null;
+      lines.forEach(function(L){
+        var a = L[0], c = L[1], vert = Math.abs(a[0] - c[0]) < 1, hor = Math.abs(a[1] - c[1]) < 1;
+        if (horiz && vert && fixed >= Math.min(a[1], c[1]) - 1 && fixed <= Math.max(a[1], c[1]) + 1){ var d = Math.abs(v - a[0]); if (d < 450 && (!best || d < best.d)) best = {d: d, val: a[0]}; }
+        if (!horiz && hor && fixed >= Math.min(a[0], c[0]) - 1 && fixed <= Math.max(a[0], c[0]) + 1){ var d2 = Math.abs(v - a[1]); if (d2 < 450 && (!best || d2 < best.d)) best = {d: d2, val: a[1]}; }
+      });
+      return best;
+    };
+    if (horiz){
+      var y = gSnap(ys.reduce(function(s2, v){ return s2 + v; }, 0) / ys.length, b.y0);
+      var r1 = Math.min.apply(null, xs), r2 = Math.max.apply(null, xs);
+      var s1 = snapEnd(r1, y), s2b = snapEnd(r2, y);
+      var x1 = s1 ? s1.val : gSnap(r1, b.x0), x2 = s2b ? s2b.val : gSnap(r2, b.x0);
+      if (x2 - x1 < 100){ if (s1 && s2b && s1.val === s2b.val){ if (s1.d <= s2b.d) x2 = gSnap(r2, b.x0); else x1 = gSnap(r1, b.x0); } }
+      if (x2 - x1 < 100) return null;
+      return {x1: x1, y1: y, x2: x2, y2: y};
+    }
+    var x = gSnap(xs.reduce(function(s2, v){ return s2 + v; }, 0) / xs.length, b.x0);
+    var t1 = Math.min.apply(null, ys), t2 = Math.max.apply(null, ys);
+    var u1 = snapEnd(t1, x), u2 = snapEnd(t2, x);
+    var y1 = u1 ? u1.val : gSnap(t1, b.y0), y2 = u2 ? u2.val : gSnap(t2, b.y0);
+    if (y2 - y1 < 100){ if (u1 && u2 && u1.val === u2.val){ if (u1.d <= u2.d) y2 = gSnap(t2, b.y0); else y1 = gSnap(t1, b.y0); } }
+    if (y2 - y1 < 100) return null;
+    return {x1: x, y1: y1, x2: x, y2: y2};
+  }
+
+  /* CAD-132 で入れた RDP 折れ線による角検出は、実機の指 (角が半径100〜300mm級の
+     円弧、点の位相が連続的) では単純化した辺が斜めになり検出が外れ、全体が
+     平均位置の1本に潰れた (2026-11-09 実機報告、drive135 の対照で再現)。
+     CAD-135: 検出を「歩行型」に作り直した (pdRuns314)。pdRdpIdx314 は旧検出の残骸で
+     現在は未使用。角ごとに区切った部分ストロークをそれぞれ pdSegment314 で
+     直線化し、隣り合う線同士は角の1点で正確に接合する作法は従来通り。 */
+  function pdRdpIdx314(pts, eps){
+    var keep = {0: true};
+    keep[pts.length - 1] = true;
+    (function rec(a, b){
+      if (b <= a + 1) return;
+      var ax = pts[a][0], ay = pts[a][1], bx = pts[b][0], by = pts[b][1];
+      var dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy), dmax = 0, idx = -1;
+      for (var i = a + 1; i < b; i++){
+        var d = len < 1e-9 ? Math.hypot(pts[i][0] - ax, pts[i][1] - ay)
+                           : Math.abs(dy * pts[i][0] - dx * pts[i][1] + bx * ay - by * ax) / len;
+        if (d > dmax){ dmax = d; idx = i; }
+      }
+      if (dmax > eps && idx > 0){ keep[idx] = true; rec(a, idx); rec(idx, b); }
+    })(0, pts.length - 1);
+    return Object.keys(keep).map(function(k){ return +k; }).sort(function(a, b){ return a - b; });
+  }
+
+  function pdRuns314(mm){
+    // 歩行型の角検出（CAD-135）。CAD-139 で感度を上げた（2026-11-10 実機報告
+    // 「L字の感度悪い」：速い・丸い角・短い腕で L が単独線に潰れた）。
+    // 実機の指に近いストローク（角 R100〜380・弓なり・斜めの入り・間隔90〜190mmの
+    // 疎な点列）で旧版を測ると、腕455mmのLは成功2割・動画の形は37/40だった。
+    // 落ちる仕組み：腕の確定を「分類できた点の間」だけで測っていたため、
+    // 先読み150mmと角の円弧に両端を食われた短い腕が 200mm に届かなかった。
+    // 直し方：(1) 先読みを 100mm に (2) 同じ軸のグループは「不明」区間の
+    // 経路長が 220mm 以下なら距離で結合 (3) 腕の確定は角の境界（隣との中点）
+    // まで広げた区間の軸方向移動で判定し、閾値 160mm (4) 同じ軸で線の位置の
+    // 差が 60mm 以内なら、円弧の出口で割れただけと見て1本に戻す。同条件で全形 40/40、
+    // 直線（弓なり含む）は従来通り単独線のまま（drive139 の対照で確認）。
+    var rs = [mm[0]], acc = 0;
+    for (var i = 1; i < mm.length; i++){
+      acc += Math.hypot(mm[i][0] - mm[i - 1][0], mm[i][1] - mm[i - 1][1]);
+      if (acc >= 30){ rs.push(mm[i]); acc = 0; }
+    }
+    if (rs[rs.length - 1] !== mm[mm.length - 1]) rs.push(mm[mm.length - 1]);
+    if (rs.length < 5) return null;
+    var cum = [0];
+    for (var s = 1; s < rs.length; s++) cum.push(cum[s - 1] + Math.hypot(rs[s][0] - rs[s - 1][0], rs[s][1] - rs[s - 1][1]));
+    var cls = [];
+    for (var a = 0; a < rs.length; a++){
+      var b = a;
+      while (b < rs.length - 1 && Math.hypot(rs[b][0] - rs[a][0], rs[b][1] - rs[a][1]) < 100) b++;
+      var dx = Math.abs(rs[b][0] - rs[a][0]), dy = Math.abs(rs[b][1] - rs[a][1]);
+      cls.push(dx >= dy * 1.6 ? "h" : dy >= dx * 1.6 ? "v" : "");
+    }
+    var groups = [];
+    for (var g = 0; g < rs.length; g++){
+      if (!cls[g]) continue;
+      var last = groups[groups.length - 1];
+      if (last && last.axis === cls[g] && cum[g] - cum[last.end] <= 220){ last.end = g; last.pts.push(rs[g]); }
+      else groups.push({axis: cls[g], start: g, end: g, pts: [rs[g]]});
+    }
+    if (groups.length < 2) return null;
+    var bounds0 = [0];
+    for (var k0 = 0; k0 < groups.length - 1; k0++) bounds0.push(Math.floor((groups[k0].end + groups[k0 + 1].start) / 2));
+    bounds0.push(rs.length - 1);
+    var conf = [];
+    groups.forEach(function(gr, gi){
+      var p0 = rs[bounds0[gi]], p1 = rs[bounds0[gi + 1]];
+      gr.travel = gr.axis === "h" ? Math.abs(p1[0] - p0[0]) : Math.abs(p1[1] - p0[1]);
+      if (gr.travel >= 160) conf.push(gr);
+    });
+    var merged = [];
+    conf.forEach(function(gr){
+      var l2 = merged[merged.length - 1];
+      if (l2 && l2.axis === gr.axis){ l2.end = gr.end; l2.pts = l2.pts.concat(gr.pts); }
+      else merged.push(gr);
+    });
+    if (merged.length < 2) return null;
+    var fitOf = function(gr){
+      var vals = gr.pts.map(function(p){ return gr.axis === "h" ? p[1] : p[0]; }).sort(function(x, y){ return x - y; });
+      return vals[Math.floor(vals.length / 2)];
+    };
+    var fits = merged.map(fitOf);
+    // 同じ軸で線の位置の差が 60mm 以内なら、大きな円弧の出口で割れただけと
+    // 見て1本に戻す（モジュール 227.5 より小さい差は本物の段違いにならない）
+    var col = [];
+    merged.forEach(function(gr, gi){
+      var l3 = col[col.length - 1];
+      if (l3 && l3.axis === gr.axis && Math.abs(fits[gi] - fitOf(l3)) <= 60){ l3.end = gr.end; l3.pts = l3.pts.concat(gr.pts); }
+      else col.push(gr);
+    });
+    merged = col;
+    if (merged.length < 2) return null;
+    fits = merged.map(fitOf);
+    var corners = [];
+    for (var c = 0; c < merged.length - 1; c++){
+      corners.push([
+        merged[c].axis === "v" ? fits[c] : fits[c + 1],
+        merged[c].axis === "h" ? fits[c] : fits[c + 1]
+      ]);
+    }
+    var bounds = [0];
+    for (var k = 0; k < merged.length - 1; k++) bounds.push(Math.floor((merged[k].end + merged[k + 1].start) / 2));
+    bounds.push(rs.length - 1);
+    var runs = [];
+    for (var n = 0; n < bounds.length - 1; n++) runs.push(rs.slice(bounds[n], bounds[n + 1] + 1));
+    return {runs: runs, corners: corners};
+  }
+
+  function pdJoinSegs314(segs, corners){
+    for (var k = 0; k < segs.length - 1; k++){
+      var a = segs[k], c = segs[k + 1], cp = corners[k];
+      var aH = Math.abs(a.y1 - a.y2) < 1, cH = Math.abs(c.y1 - c.y2) < 1;
+      if (aH === cH) continue;
+      if (aH){
+        if (Math.abs(cp[0] - a.x2) <= Math.abs(cp[0] - a.x1)) a.x2 = c.x1; else a.x1 = c.x1;
+        if (Math.abs(cp[1] - c.y2) <= Math.abs(cp[1] - c.y1)) c.y2 = a.y1; else c.y1 = a.y1;
+      } else {
+        if (Math.abs(cp[1] - a.y2) <= Math.abs(cp[1] - a.y1)) a.y2 = c.y1; else a.y1 = c.y1;
+        if (Math.abs(cp[0] - c.x2) <= Math.abs(cp[0] - c.x1)) c.x2 = a.x1; else c.x1 = a.x1;
+      }
+    }
+  }
+
+  function pdValidSeg314(q){
+    if (!q) return false;
+    var b = bbox(), horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
+    var L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
+    if ((!horiz && !vert) || L < 100) return false;
+    if (horiz && (q.y1 < b.y0 - 1 || q.y1 > b.y1 + 1)) return false;
+    if (vert && (q.x1 < b.x0 - 1 || q.x1 > b.x1 + 1)) return false;
+    return true;
+  }
+
+  // CAD-135: 分割後の断片のうち、中点が外形ポリゴンの外にある物を捨てる。
+  // 端が壁を越えてモジュール吸着された時に、壁の外に残る断片 (突き抜け) を消す。
+  // 内外判定はこのブロック内で自己完結させる (ファイル内に同名 inside が複数あるため)。
+  // 全部が外になる場合は元の断片を残す (安全側)。
+  function pdTrimSegs314(segs){
+    var P = pts();
+    var inPoly = function(x, y){
+      var c = false;
+      for (var i = 0, j = P.length - 1; i < P.length; j = i++){
+        var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1];
+        if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) c = !c;
+      }
+      return c;
+    };
+    // CAD-148: 全部が外の時も元の断片を残さない（凹みに間仕切りが残る元の作りを直す）。
+    // 中点が境界の線の上（2mm以内）にある断片は「外ではない」として残す。
+    var keep = segs.filter(function(q){
+      var mx = (q.x1 + q.x2) / 2, my = (q.y1 + q.y2) / 2;
+      if (inPoly(mx, my)) return true;
+      for (var i2 = 0; i2 < P.length; i2++){
+        var a2 = P[i2], c2 = P[(i2 + 1) % P.length], dx2 = c2[0] - a2[0], dy2 = c2[1] - a2[1], L22 = dx2 * dx2 + dy2 * dy2;
+        var t2 = L22 ? ((mx - a2[0]) * dx2 + (my - a2[1]) * dy2) / L22 : 0;
+        t2 = Math.max(0, Math.min(1, t2));
+        if (Math.hypot(mx - (a2[0] + dx2 * t2), my - (a2[1] + dy2 * t2)) <= 2) return true;
+      }
+      return false;
+    });
+    return keep;
+  }
+
 })();
 </script>
 
