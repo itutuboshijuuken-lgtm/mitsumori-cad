@@ -26122,4 +26122,142 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
 })();
 </script>
 
+<script id="len309js">
+/* ===== CAD-309：描く画面で、なぞっている辺の長さを大きくデジタル表示する =====
+   本人の発案（2026-11-16）「スピードメーターみたいな感じ」。
+   数字は吸着した後の実際に決まる長さ：fixInk と同じ物差し（最長辺を 5460 に換算し、
+   gLen でピッチに丸め、455 を下限にする）で、今なぞっている辺（最後の run）を出す。
+   run と角の作りは recognize() と同じ（中心線の交点）。閉じていない今の線に当てはめるため、
+   最後の run の終端だけ指先の位置を使う。短い段差の消去は recognize と同じ条件で、
+   最初と最後（今なぞっている）run は消さない。
+   更新は requestAnimationFrame で文字だけ（全体の再描画はしない）。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var txt = null, rafPend = false, curVal = null, suppress = false;
+  var ptrs = new Set();
+  function $(id){ return document.getElementById(id); }
+  function build(){
+    var s = $("draw"); if (!s) return false;
+    if (txt && txt.parentNode === s) return true;
+    txt = document.createElementNS(NS, "text");
+    txt.id = "lenM309";
+    txt.setAttribute("x", "180"); txt.setAttribute("y", "60");
+    txt.setAttribute("text-anchor", "middle");
+    txt.setAttribute("pointer-events", "none");
+    txt.setAttribute("style", "font-size:48px;font-weight:900;fill:#0F2A4A;paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:8px;letter-spacing:1px");
+    txt.style.display = "none";
+    s.appendChild(txt);
+    return true;
+  }
+  function fmtV(v){
+    if (Number.isInteger(v)) return v.toLocaleString("ja-JP");
+    var p = v.toFixed(1).split(".");
+    return p[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + p[1];
+  }
+  function liveVal309(){
+    try {
+      if (typeof strokes === "undefined" || typeof cur === "undefined" || !cur) return null;
+      if (typeof rdp !== "function" || typeof gLen !== "function") return null;
+      var all = strokes.flat();
+      if (all.length < 8) return null;
+      var xs = all.map(function(p){ return p[0]; }), ys = all.map(function(p){ return p[1]; });
+      var diag = Math.hypot(Math.max.apply(null, xs) - Math.min.apply(null, xs), Math.max.apply(null, ys) - Math.min.apply(null, ys));
+      if (diag < 40) return null;
+      var pts = rdp(all, Math.max(10, diag * 0.05));
+      var runs = [], i, p, q, dx, dy, o, last;
+      for (i = 0; i < pts.length - 1; i++){
+        p = pts[i]; q = pts[i + 1]; dx = q[0] - p[0]; dy = q[1] - p[1];
+        if (Math.hypot(dx, dy) < diag * 0.04) continue;
+        o = Math.abs(dx) >= Math.abs(dy) ? "H" : "V";
+        last = runs[runs.length - 1];
+        if (last && last.o === o){ last.pts.push(p, q); last.len += Math.hypot(dx, dy); last.vi1 = i + 1; }
+        else runs.push({ o: o, pts: [p, q], len: Math.hypot(dx, dy), vi0: i, vi1: i + 1 });
+      }
+      if (!runs.length) return null;
+      var changed = true;
+      while (changed && runs.length > 4){
+        changed = false;
+        var mi = -1, ml = Infinity;
+        for (i = 1; i < runs.length - 1; i++){ if (runs[i].len < ml){ ml = runs[i].len; mi = i; } }
+        if (mi > 0 && ml < diag * 0.08){
+          runs[mi - 1].pts = runs[mi - 1].pts.concat(runs[mi + 1].pts);
+          runs[mi - 1].len += runs[mi + 1].len;
+          runs[mi - 1].vi1 = runs[mi + 1].vi1;
+          runs = runs.filter(function(_, j){ return j !== mi && j !== mi + 1; });
+          changed = true;
+        }
+      }
+      /* 中心線は、recognize() の頂点平均ではなく、その run の実点の中央値で取る。
+         開いた線では RDP の終端頂点が角の弧に引かれて中心線がずれるため（実測で確認）。
+         中央値なら弧の裾に引かれず、辺のまっすぐな部分の線に乗る。 */
+      function rawRange(r){
+        var a = all.indexOf(pts[r.vi0]), b = all.indexOf(pts[r.vi1]);
+        if (a < 0) a = 0; if (b < a) b = all.length - 1;
+        return all.slice(a, b + 1);
+      }
+      runs.forEach(function(r){
+        var cs = rawRange(r).map(function(p2){ return r.o === "H" ? p2[1] : p2[0]; }).sort(function(x, y){ return x - y; });
+        r.c = cs.length ? cs[Math.floor(cs.length / 2)] : 0;
+      });
+      function cornerAfter(i2){ var a = runs[i2], b = runs[i2 + 1]; return a.o === "H" ? [b.c, a.c] : [a.c, b.c]; }
+      var n = runs.length, pxs = [], j, r2, sA, eA, cA;
+      /* 今なぞっている run の終端：指が中心線から外れた（＝角に入った）部分があれば、
+         その部分の重心を次の辺の中心線の代わりに使う（recognize() は角を切り落として
+         中心線の交点で長さを決めるため、指先の極値で測ると行き過ぎる）。
+         外れていなければ直近3点の平均（指の動きにそのまま付いていく）。 */
+      var lr = runs[n - 1], lraw = rawRange(lr), thr = Math.max(4, diag * 0.018), tailN = 0;
+      for (i = lraw.length - 1; i >= 0; i--){
+        var pv = lr.o === "H" ? lraw[i][1] : lraw[i][0];
+        if (Math.abs(pv - lr.c) > thr) tailN++; else break;
+      }
+      if (tailN >= 2){
+        var tp = lraw.slice(lraw.length - tailN);
+        eA = tp.reduce(function(s, p2){ return s + (lr.o === "H" ? p2[0] : p2[1]); }, 0) / tp.length;
+      } else {
+        var t3 = all.slice(-3);
+        eA = t3.reduce(function(s, p2){ return s + (lr.o === "H" ? p2[0] : p2[1]); }, 0) / t3.length;
+      }
+      for (j = 0; j < n; j++){
+        r2 = runs[j];
+        if (j === 0) sA = r2.o === "H" ? pts[0][0] : pts[0][1];
+        else { cA = cornerAfter(j - 1); sA = r2.o === "H" ? cA[0] : cA[1]; }
+        if (j === n - 1) pxs.push(Math.abs(eA - sA));
+        else { cA = cornerAfter(j); pxs.push(Math.abs((r2.o === "H" ? cA[0] : cA[1]) - sA)); }
+      }
+      var mx = Math.max.apply(null, pxs);
+      if (!(mx > 0)) return null;
+      return Math.max(455, gLen(pxs[n - 1] / mx * 5460));
+    } catch(e){ return null; }
+  }
+  function hide309(){ curVal = null; if (txt) txt.style.display = "none"; }
+  function upd309(){
+    rafPend = false;
+    if (suppress || ptrs.size !== 1){ hide309(); return; }
+    var v = liveVal309();
+    if (v == null){ hide309(); return; }
+    if (!build()) return;
+    curVal = v;
+    var t = fmtV(v);
+    if (txt.textContent !== t) txt.textContent = t;
+    if (txt.style.display === "none") txt.style.display = "";
+  }
+  function queue309(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd309); } }
+  function attach309(){
+    var s = $("draw"); if (!s || s.__len309) return; s.__len309 = true;
+    s.addEventListener("pointerdown", function(e){
+      ptrs.add(e.pointerId);
+      if (ptrs.size >= 2){ suppress = true; hide309(); return; }
+      queue309();
+    });
+    s.addEventListener("pointermove", function(){ if (!suppress) queue309(); });
+    function up(e){ ptrs.delete(e.pointerId); if (!ptrs.size){ suppress = false; hide309(); } }
+    s.addEventListener("pointerup", up);
+    s.addEventListener("pointercancel", up);
+  }
+  attach309(); setInterval(attach309, 800);
+  window.__len309 = function(){ return (txt && txt.style.display !== "none") ? curVal : null; };
+  window.__len309txt = function(){ return (txt && txt.style.display !== "none") ? txt.textContent : null; };
+})();
+</script>
+
 </html>
