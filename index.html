@@ -17194,41 +17194,74 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      後段の実体はこの IIFE の局所（roomSel176・roomRect176・roomAtPt176）を使うため、旧後段の本体そのままを
      HB 内部専用の口として登録だけ残す（registry の94種には含めない）。 */
   HB.__dpPost176 = function(){
+    /* CAD-301：選択表示は「輪郭の線だけ」。塗りは全廃（選んでも床の色は変わらない）。
+       四角でない部屋は、セルの境界をつないだ輪郭を描く（形に沿って枠が出る）。
+       点滅は他の選択表示と同じ selBlink。 */
     try {
         var old = document.getElementById("roomOut176"); if (old) old.remove();
         if (roomSel176 && HB.__pageM){
           var rr = roomRect176(roomSel176.pt), svg = $("plan"), T = HB.__planT;
-          if (rr && svg && T){
+          if (svg && T){
             var g = document.createElementNS("http://www.w3.org/2000/svg", "g");
             g.setAttribute("id", "roomOut176"); g.setAttribute("pointer-events", "none");
-            var mk = function(x, y, w, h, stroke){
+            var done = false;
+            if (rr && !rr.bad){
               var rc = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-              rc.setAttribute("x", x * T.s + T.ox); rc.setAttribute("y", y * T.s + T.oy);
-              rc.setAttribute("width", w * T.s); rc.setAttribute("height", h * T.s);
-              rc.setAttribute("fill", "rgba(255,0,200,.07)");
-              if (stroke){ rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "2"); rc.setAttribute("stroke-dasharray", "7 5"); }
-              g.appendChild(rc);
-            };
-            if (!rr.bad) mk(rr.x0, rr.y0, rr.x1 - rr.x0, rr.y1 - rr.y0, true);
-            else {
-              /* L字など四角でない部屋は、部屋のセル（roomsCalc の番号）を
-                 横の帯にまとめて薄く塗る */
+              rc.setAttribute("x", rr.x0 * T.s + T.ox); rc.setAttribute("y", rr.y0 * T.s + T.oy);
+              rc.setAttribute("width", (rr.x1 - rr.x0) * T.s); rc.setAttribute("height", (rr.y1 - rr.y0) * T.s);
+              rc.setAttribute("fill", "none");
+              rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "2"); rc.setAttribute("stroke-dasharray", "7 5");
+              rc.setAttribute("class", "selBlink");
+              g.appendChild(rc); done = true;
+            } else {
               var rm2 = roomAtPt176(roomSel176.pt);
-              if (rm2 && rm2.cells && typeof bbox === "function"){
-                var bb = bbox(), stp = (typeof RM_STEP !== "undefined" ? RM_STEP : 50);
-                var NX = Math.max(1, Math.ceil((bb.x1 - bb.x0) / stp)), rows = {};
-                rm2.cells.forEach(function(k){ var ci = k % NX, cj = (k - ci) / NX; (rows[cj] = rows[cj] || []).push(ci); });
-                Object.keys(rows).forEach(function(j){
-                  var xs = rows[j].sort(function(a, b){ return a - b; }), s0 = null, pv = null;
-                  xs.concat([Infinity]).forEach(function(ci){
-                    if (s0 === null){ s0 = ci; pv = ci; return; }
-                    if (ci === pv + 1){ pv = ci; return; }
-                    mk(bb.x0 + s0 * stp, bb.y0 + (+j) * stp, (pv - s0 + 1) * stp, stp, false); s0 = ci; pv = ci;
+              if (rm2 && rm2.cells && rm2.cells.length){
+                var R = roomsCalc(), NX = R.NX, stp = R.st, bx = R.b.x0, by = R.b.y0, set = {};
+                rm2.cells.forEach(function(k){ set[k] = 1; });
+                var hE = {}, vE = {};
+                rm2.cells.forEach(function(k){
+                  var ci = k % NX, cj = (k - ci) / NX;
+                  if (!set[k - NX]) (hE[cj] = hE[cj] || []).push(ci);
+                  if (!set[k + NX]) (hE[cj + 1] = hE[cj + 1] || []).push(ci);
+                  if (ci === 0 || !set[k - 1]) (vE[ci] = vE[ci] || []).push(cj);
+                  if (ci === NX - 1 || !set[k + 1]) (vE[ci + 1] = vE[ci + 1] || []).push(cj);
+                });
+                var runs = function(arr){
+                  arr.sort(function(a, b){ return a - b; });
+                  var out = [], s0 = null, pv = null;
+                  arr.concat([Infinity]).forEach(function(v){
+                    if (s0 === null){ s0 = v; pv = v; return; }
+                    if (v === pv + 1){ pv = v; return; }
+                    out.push([s0, pv]); s0 = v; pv = v;
+                  });
+                  return out;
+                };
+                var d = "";
+                Object.keys(hE).forEach(function(gy){
+                  var y = (by + (+gy) * stp) * T.s + T.oy;
+                  runs(hE[gy]).forEach(function(rn){
+                    var X0 = (bx + rn[0] * stp) * T.s + T.ox, X1 = (bx + (rn[1] + 1) * stp) * T.s + T.ox;
+                    d += "M" + X0 + " " + y + "L" + X1 + " " + y;
                   });
                 });
+                Object.keys(vE).forEach(function(gx){
+                  var x = (bx + (+gx) * stp) * T.s + T.ox;
+                  runs(vE[gx]).forEach(function(rn){
+                    var Y0 = (by + rn[0] * stp) * T.s + T.oy, Y1 = (by + (rn[1] + 1) * stp) * T.s + T.oy;
+                    d += "M" + x + " " + Y0 + "L" + x + " " + Y1;
+                  });
+                });
+                if (d){
+                  var pth = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                  pth.setAttribute("d", d);
+                  pth.setAttribute("fill", "none");
+                  pth.setAttribute("stroke", "#FF00C8"); pth.setAttribute("stroke-width", "2"); pth.setAttribute("stroke-dasharray", "7 5");
+                  pth.setAttribute("class", "selBlink");
+                  g.appendChild(pth); done = true;
+                }
               }
             }
-            svg.appendChild(g);
+            if (done) svg.appendChild(g);
           }
         }
     } catch(e){}
