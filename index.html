@@ -91,6 +91,9 @@ svg text{font-family:inherit}
 #padExtra{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
 #padExtra button{flex:1;min-height:40px;border:0;border-radius:8px;background:#fff;font-weight:700;font-size:14px}
 #padExtra button.on{background:#6B5233;color:#fff}
+#padNav316{display:flex;gap:6px;margin-bottom:6px}
+#padNav316[hidden]{display:none}
+#padNav316 button{flex:1;min-height:46px;border:2px solid var(--ai);border-radius:8px;background:#EAF0F8;color:var(--ai);font-weight:900;font-size:17px}
 .padgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .padgrid button{min-height:50px;border:0;border-radius:8px;background:#fff;font-size:24px;box-shadow:0 1px 0 rgba(0,0,0,.2)}
 .padgrid button:active{background:#E6EFFA}
@@ -755,6 +758,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="padval"><span id="padExpr"></span><b id="padRes">0</b><small id="padUnit">mm</small></div>
     <div id="padStd"></div>
     <div id="padExtra"></div>
+    <div id="padNav316" hidden><button id="padPrev316" type="button"></button><button id="padNext316" type="button"></button></div>
     <div class="padgrid">
       <button data-k="7" type="button">7</button><button data-k="8" type="button">8</button><button data-k="9" type="button">9</button><button data-k="bs" class="op" type="button" aria-label="1文字消す">⌫</button>
       <button data-k="4" type="button">4</button><button data-k="5" type="button">5</button><button data-k="6" type="button">6</button><button data-k="+" class="op" type="button">＋</button>
@@ -4942,7 +4946,7 @@ function drawPlan(){
   const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + (maxH152 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
   const sp = p.map(P);
-  HB.__planT = {s, ox, oy}; HB.__lbl = [];
+  HB.__planT = {s, ox, oy}; HB.__lbl = []; const lbl316 = [];   /* CAD-316: 寸法の札の材料（反発レイアウト用） */
   let h = `<polygon points="${sp.map(q => q.join(",")).join(" ")}" fill="#EEF4FB" stroke="#2563B0" stroke-width="3" stroke-linejoin="round"/>`;
   h += ((HB.__pageM || HB.__dimShowAll) ? planExtras(P, s) : "") + jointMarks(P);
   S.edges.forEach((e, i) => {
@@ -4957,23 +4961,62 @@ function drawPlan(){
     if (act) h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FFC400" stroke-width="9" stroke-linecap="round" opacity=".95" pointer-events="none"/>`;
     if (firstUnk) h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#E8742C" stroke-width="8" stroke-linecap="round" pointer-events="none"><animate attributeName="opacity" values=".15;.7;.15" dur="1.6s" repeatCount="indefinite"/></line>`;
     else if (unk) h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#E8742C" stroke-width="5" stroke-linecap="round" opacity=".45" pointer-events="none"/>`;
+    /* CAD-316: 札はその場で描かず、材料だけ集める（配置はループの後の反発レイアウトで決める） */
     const shortE = Math.hypot(c[0] - a[0], c[1] - a[1]) < 34;
-    if (shortE){ h += `<g data-edge="${i}" style="cursor:pointer"><circle cx="${m[0] + nx * 12}" cy="${m[1] + ny * 12}" r="9" fill="${e.set ? "#2563B0" : e.auto ? "#8A96A3" : "#E8742C"}"/><text x="${m[0] + nx * 12}" y="${m[1] + ny * 12 + 4}" text-anchor="middle" style="font-size:10px;font-weight:900;fill:#fff">${i + 1}</text></g>`; return; }
-    let off = i === S.house ? 30 : 20, lx = m[0] + nx * off, ly = m[1] + ny * off;
-    const wb = Math.max(54, String(e.set || e.auto ? fmt(e.v) : "？").length * 7.5 + 34);
-    for (let k = 0; k < 8 && (HB.__lbl || []).some(r => Math.abs(r[0] - lx) < (r[2] + wb) / 2 + 2 && Math.abs(r[1] - ly) < 26); k++){ off += 14; lx = m[0] + nx * off; ly = m[1] + ny * off; if (k === 3){ lx += (c[0] - a[0]) * 0.15; ly += (c[1] - a[1]) * 0.15; } }
-    (HB.__lbl = HB.__lbl || []).push([lx, ly, wb]);
-    const txt = e.set ? fmt(e.v) : e.auto ? fmt(e.v) : "？";
     const col = e.set ? "#2563B0" : e.auto ? "#8A96A3" : "#E8742C";
-    const wbox = wb + (act ? 16 : 0), lx0 = lx - wbox / 2, ph = act ? 28 : 20, fs = act ? 17 : 13, cr = act ? 11 : 7.5;
-    h += `<line x1="${m[0]}" y1="${m[1]}" x2="${lx}" y2="${ly}" stroke="${col}" stroke-width="1.2" stroke-dasharray="3 2" pointer-events="none"/><circle cx="${m[0]}" cy="${m[1]}" r="2.6" fill="${col}" pointer-events="none"/>`;
-    h += `<g data-edge="${i}" style="cursor:pointer"><rect x="${lx0 - 4}" y="${ly - ph / 2 - 5}" width="${wbox + 8}" height="${ph + 10}" fill="transparent"/><rect x="${lx0}" y="${ly - ph / 2}" width="${wbox}" height="${ph}" rx="7" fill="${act ? "#FFF3BF" : "#fff"}" stroke="${act ? "#FFC400" : col}" stroke-width="${act ? 3 : 1.6}"/>`
-       + `<circle cx="${lx0 + cr + 3}" cy="${ly}" r="${cr}" fill="${col}"/><text x="${lx0 + cr + 3}" y="${ly + (act ? 5 : 3.6)}" text-anchor="middle" style="font-size:${act ? 13 : 10}px;font-weight:900;fill:#fff">${i + 1}</text>`
-       + `<text x="${lx0 + 2 * cr + 8 + (wbox - 2 * cr - 12) / 2}" y="${ly + fs * 0.34}" text-anchor="middle" style="font-size:${fs}px;font-weight:900;fill:${col}">${txt}</text>`
-       + (i === S.house ? `<text x="${lx}" y="${ly - 16}" text-anchor="middle" style="font-size:11px;font-weight:900;fill:#6B5233">母屋側</text>` : "")
-       + `</g>`;
-    if (firstUnk) h += `<circle cx="${lx0 + cr + 3}" cy="${ly}" r="${cr + 5}" fill="none" stroke="#FF7A00" stroke-width="3" pointer-events="none"><animate attributeName="opacity" values="1;.15;1" dur="1s" repeatCount="indefinite"/><animate attributeName="r" values="${cr + 3};${cr + 9};${cr + 3}" dur="1s" repeatCount="indefinite"/></circle>`;
+    if (shortE){ lbl316.push({i, bx: 1, mx: m[0], my: m[1], ax: m[0] + nx * 12, ay: m[1] + ny * 12, w: 20, h: 20, col}); return; }
+    const wb = Math.max(54, String(e.set || e.auto ? fmt(e.v) : "？").length * 7.5 + 34);
+    lbl316.push({i, bx: 0, mx: m[0], my: m[1], ax: m[0] + nx * (i === S.house ? 30 : 20), ay: m[1] + ny * (i === S.house ? 30 : 20), w: wb + (act ? 16 : 0), h: act ? 28 : 20, wb, col, act, firstUnk, house: i === S.house, txt: e.set ? fmt(e.v) : e.auto ? fmt(e.v) : "？"});
   });
+  /* CAD-316: 札の反発レイアウト。札同士は磁石の反発の様に押し合って離れ、各札は
+     自分の辺の中点（ax, ay）へ引き寄せられる。札は辺の数しかないので軽い。
+     最後は反発だけの仕上げをして、重なりが残らない様にする。 */
+  {
+    const PADL316 = 5;
+    const sep316 = () => {
+      let hit = false;
+      for (let p = 0; p < lbl316.length; p++) for (let q = p + 1; q < lbl316.length; q++){
+        const A = lbl316[p], B = lbl316[q];
+        const dx = B.x - A.x, dy = B.y - A.y;
+        const ox = (A.w + B.w) / 2 + PADL316 - Math.abs(dx), oy = (A.h + B.h) / 2 + PADL316 - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) continue;
+        hit = true;
+        if (ox < oy){ const sg = dx >= 0 ? 1 : -1; A.x -= sg * ox / 2; B.x += sg * ox / 2; }
+        else { const sg = dy >= 0 ? 1 : -1; A.y -= sg * oy / 2; B.y += sg * oy / 2; }
+      }
+      return hit;
+    };
+    const clamp316 = () => lbl316.forEach(L => {
+      L.x = Math.max(L.w / 2 + 2, Math.min(W - L.w / 2 - 2, L.x));
+      L.y = Math.max(L.h / 2 + 2, Math.min(H - L.h / 2 - 2, L.y));
+    });
+    lbl316.forEach(L => { L.x = L.ax; L.y = L.ay; });
+    for (let it = 0; it < 60; it++){
+      lbl316.forEach(L => { L.x += (L.ax - L.x) * 0.15; L.y += (L.ay - L.y) * 0.15; });
+      clamp316();
+      let dirty = false;
+      for (let k = 0; k < 12 && sep316(); k++) dirty = true;
+      clamp316();
+      if (!dirty) break;
+    }
+    for (let k = 0; k < 60 && sep316(); k++) clamp316();
+    lbl316.forEach(L => {
+      const i = L.i, lx = L.x, ly = L.y;
+      (HB.__lbl = HB.__lbl || []).push([lx, ly, L.wb || L.w]);
+      h += `<line x1="${L.mx}" y1="${L.my}" x2="${lx}" y2="${ly}" stroke="${L.col}" stroke-width="1.2" stroke-dasharray="3 2" pointer-events="none"/><circle cx="${L.mx}" cy="${L.my}" r="2.6" fill="${L.col}" pointer-events="none"/>`;
+      if (L.bx){
+        h += `<g data-edge="${i}" style="cursor:pointer"><circle cx="${lx}" cy="${ly}" r="9" fill="${L.col}"/><text x="${lx}" y="${ly + 4}" text-anchor="middle" style="font-size:10px;font-weight:900;fill:#fff">${i + 1}</text></g>`;
+        return;
+      }
+      const wbox = L.w, lx0 = lx - wbox / 2, ph = L.h, fs = L.act ? 17 : 13, cr = L.act ? 11 : 7.5;
+      h += `<g data-edge="${i}" style="cursor:pointer"><rect x="${lx0 - 4}" y="${ly - ph / 2 - 5}" width="${wbox + 8}" height="${ph + 10}" fill="transparent"/><rect x="${lx0}" y="${ly - ph / 2}" width="${wbox}" height="${ph}" rx="7" fill="${L.act ? "#FFF3BF" : "#fff"}" stroke="${L.act ? "#FFC400" : L.col}" stroke-width="${L.act ? 3 : 1.6}"/>`
+         + `<circle cx="${lx0 + cr + 3}" cy="${ly}" r="${cr}" fill="${L.col}"/><text x="${lx0 + cr + 3}" y="${ly + (L.act ? 5 : 3.6)}" text-anchor="middle" style="font-size:${L.act ? 13 : 10}px;font-weight:900;fill:#fff">${i + 1}</text>`
+         + `<text x="${lx0 + 2 * cr + 8 + (wbox - 2 * cr - 12) / 2}" y="${ly + fs * 0.34}" text-anchor="middle" style="font-size:${fs}px;font-weight:900;fill:${L.col}">${L.txt}</text>`
+         + (L.house ? `<text x="${lx}" y="${ly - 16}" text-anchor="middle" style="font-size:11px;font-weight:900;fill:#6B5233">母屋側</text>` : "")
+         + `</g>`;
+      if (L.firstUnk) h += `<circle cx="${lx0 + cr + 3}" cy="${ly}" r="${cr + 5}" fill="none" stroke="#FF7A00" stroke-width="3" pointer-events="none"><animate attributeName="opacity" values="1;.15;1" dur="1s" repeatCount="indefinite"/><animate attributeName="r" values="${cr + 3};${cr + 9};${cr + 3}" dur="1s" repeatCount="indefinite"/></circle>`;
+    });
+  }
   PV.W = W; PV.H = H; if (PV.cx == null){ PV.cx = W / 2; PV.cy = H / 2; }
   if (HB.__pageM){ const sv = $("plan"); sv.setAttribute("viewBox", `0 0 ${W} ${H}`); if (!sv.style.width) applyPV(); else if (HB.__pinH) sv.style.height = (HB.__pinH * PV.z) + "px"; } else applyPV(); $("plan").innerHTML = h + tradeLayer(P, s) + `<g id="planInk" fill="none" stroke="#E8742C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>`;
   tidyPlanLabels();
@@ -4996,10 +5039,24 @@ function drawPlan(){
 function editEdge(i){
   const e = S.edges[i];
   HB.__edgeSel = i; drawPlan();
+  /* CAD-316: 選んだ辺だけをピンクに点滅させて、どの辺か分かる様にする（次の描き直しで消える一回物） */
+  try {
+    const pl316 = document.getElementById("plan"), T316 = HB.__planT, pp316 = pts();
+    if (pl316 && T316 && pp316[i] && pp316[(i + 1) % pp316.length]){
+      const A316 = pp316[i], C316 = pp316[(i + 1) % pp316.length];
+      const ln316 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      ln316.setAttribute("id", "edgeBlink316"); ln316.setAttribute("class", "selBlink");
+      ln316.setAttribute("x1", A316[0] * T316.s + T316.ox); ln316.setAttribute("y1", A316[1] * T316.s + T316.oy);
+      ln316.setAttribute("x2", C316[0] * T316.s + T316.ox); ln316.setAttribute("y2", C316[1] * T316.s + T316.oy);
+      ln316.setAttribute("stroke", "#FF00C8"); ln316.setAttribute("stroke-width", "6"); ln316.setAttribute("stroke-linecap", "round"); ln316.setAttribute("pointer-events", "none");
+      pl316.appendChild(ln316);
+    }
+  } catch(e316){}
   HB.__padEdgeUI = true; setTimeout(() => { const pl = document.getElementById("plan"); if (!pl || !HB.__padEdgeUI) return; pl.style.maxHeight = "250px"; pl.style.margin = "0 auto"; const card = pl.parentNode; window.scrollTo(0, window.scrollY + card.getBoundingClientRect().top - 154); }, 60);
   openPad({
     title: `${i + 1}　${wallLabel(i).split(" ")[0]}（${DIRNAME[e.d]}）の長さ`, sub: e.set ? "芯々の寸法を入れてください" : e.auto ? "今は自動で出ています。入れるとこの辺が優先になります。" : `芯々の寸法を入れてください。なぞった長さは、約${fmt(e.v)}mmです`,
     value: e.set ? (e.v || "") : "",
+    nav316: {prev: ((i - 1 + S.edges.length) % S.edges.length) + 1, next: ((i + 1) % S.edges.length) + 1, prevI: (i - 1 + S.edges.length) % S.edges.length, nextI: (i + 1) % S.edges.length},   /* CAD-316: 前へ・次へ（行き先の番号） */
     extra: RF() ? [] : [{label: i === S.house ? "母屋側をやめる" : "この辺を母屋側にする", on: i === S.house, fn: () => { pushUndo(); S.house = i === S.house ? -1 : i; save(); drawPlan(); closePad(); }   /* CAD-259 */}],
     done: v => {
       if (v === null){ if (HB.__nbtut) e.set = false; }
@@ -5020,7 +5077,7 @@ function editEdge(i){
         }
       }
       solve(); save(); HB.__edgeSel = null; drawPlan();
-      if (v !== null){
+      if (v !== null && !HB.__padNav316){
         const nx = S.edges.findIndex((x, j) => j !== i && !x.set && !x.auto);
         if (nx >= 0 && HB.__nbtut) setTimeout(() => editEdge(nx), 250);
         else if (!unknown()) toast("寸法がそろいました。「次へ」で間取りへ");
@@ -9328,10 +9385,27 @@ function openPad(cfg){
   $("padTitle").textContent = cfg.title; $("padSub").textContent = cfg.sub || ""; $("padUnit").textContent = cfg.unit || "mm";
   $("padExtra").innerHTML = ""; padStdBuild(cfg);
   (cfg.extra || []).forEach(x => { const b = document.createElement("button"); b.type = "button"; b.textContent = x.label; if (x.on) b.className = "on"; b.onclick = x.fn; $("padExtra").appendChild(b); });
+  const nv316 = $("padNav316");   /* CAD-316: 寸法パッドの前へ・次へ（行き先の番号つき）。寸法の時だけ出す */
+  if (cfg.nav316){ nv316.hidden = false; $("padPrev316").textContent = "◀ " + cfg.nav316.prev; $("padNext316").textContent = cfg.nav316.next + " ▶"; }
+  else nv316.hidden = true;
   $("pad").hidden = false; document.body.classList.add("padon"); padShow(); padFresh = true;
 }
 let padFresh = false;
 function closePad(){ $("pad").hidden = true; document.body.classList.remove("padon"); padCfg = null; }
+/* CAD-316: 前へ・次へ。今の入力を OK と同じに確定して、行き先の番号の辺のパッドをそのまま開く */
+function padNavGo316(d){
+  const cfg = padCfg; if (!cfg || !cfg.nav316) return;
+  const v = evalExpr(padStr);
+  const val = padStr === "" ? null : isFinite(v) && v > 0 ? v : null;
+  const to = d < 0 ? cfg.nav316.prevI : cfg.nav316.nextI;
+  HB.__padNav316 = true;
+  closePad();
+  cfg.done(val);
+  HB.__padNav316 = false;
+  editEdge(to);
+}
+$("padPrev316").addEventListener("click", () => padNavGo316(-1));
+$("padNext316").addEventListener("click", () => padNavGo316(1));
 $("padClose").addEventListener("click", closePad);
 document.querySelectorAll("[data-k]").forEach(b => b.addEventListener("click", () => {
   const k = b.dataset.k;
@@ -18372,6 +18446,7 @@ body.gold .padval{background:#0B0D10;color:#E3C777}
 body.gold .padhead button{background:#14171C;color:#F4EEDD}
 body.gold #padExtra button{background:#14171C;color:#F4EEDD}
 body.gold #padExtra button.on{background:var(--gold);color:#1B1405}
+body.gold #padNav316 button{background:#1D1A12;color:#E3C777;border-color:#E3C777}
 body.gold #padStd button{background:#14171C;color:#F4EEDD}
 body.gold #padStd button.op{background:#1D1A12;color:#E3C777}
 /* ===== 入力・その他 ===== */
