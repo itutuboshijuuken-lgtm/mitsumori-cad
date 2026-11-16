@@ -25348,4 +25348,231 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 </script>
 
 
+
+<script id="guard298js">
+/* ===== CAD-298：突き抜け防止の一般化＋起点の角（本人の決め 2026-11-16） =====
+突き抜けは後から直す形をやめ、置く・動かす・大きさを変える時に壁からはみ出せない
+作りにする。判定（poke298）は CAD-285 の浴槽と同じ物差しを全ての設備に広げた物。
+数字入力の経路は止めない（段差をあえて作る逃げ道）。起点の角は囲みバーの行と
+enclEdit の包みで入れる。詳細は build298.py の冒頭コメント。 */
+(function(){ "use strict";
+/* 段差解消は出入口で壁の上に乗る物、天井コンセントは天井の点なので対象外 */
+var EXEMPT = { dansa: 1, acout: 1};
+
+function rectOf298(o){
+try {
+if (o.k === "counter" && typeof ctPoly === "function"){
+var ps = ctPoly(o), xs = ps.map(function(q){ return q[0];}), ys = ps.map(function(q){ return q[1];});
+return { x0: Math.min.apply(null, xs), x1: Math.max.apply(null, xs), y0: Math.min.apply(null, ys), y1: Math.max.apply(null, ys)};
+}
+var e = (typeof tkExt === "function")? tkExt(o): [(o.w || 0) / 2, (o.w || 0) / 2];
+return { x0: o.x - e[0], x1: o.x + e[0], y0: o.y - e[1], y1: o.y + e[1]};
+} catch(err){ return null;}
+}
+/* 壁（家の輪郭・間仕切り）を突き抜けている量。0 なら収まっている */
+function poke298(o){
+try {
+if (typeof S === "undefined" ||!S ||!o) return 0;
+var r = rectOf298(o); if (!r) return 0;
+var worst = 0;
+if (typeof HB!== "undefined" && HB.__g148 && HB.__g148.in && typeof pts === "function"){
+var P = pts();
+var chk = [[r.x0, r.y0], [r.x1, r.y0], [r.x0, r.y1], [r.x1, r.y1], [(r.x0 + r.x1) / 2, r.y0], [(r.x0 + r.x1) / 2, r.y1], [r.x0, (r.y0 + r.y1) / 2], [r.x1, (r.y0 + r.y1) / 2]];
+chk.forEach(function(pt){
+if (!HB.__g148.in(pt[0], pt[1])){
+var dmin = 1e9;
+for (var i = 0; i < P.length; i++){ var a = P[i], c = P[(i + 1) % P.length]; if (typeof segDist === "function") dmin = Math.min(dmin, segDist(pt, a, c).d);}
+worst = Math.max(worst, dmin === 1e9? 1: dmin);
+}
+});
+}
+(S.parts2D || []).forEach(function(q){
+if (typeof pState === "function" && pState(q) === "remove") return;
+if (Math.abs(q.x1 - q.x2) < 1){
+var c = q.x1, lo = Math.min(q.y1, q.y2), hi = Math.max(q.y1, q.y2);
+if (c > r.x0 + 1 && c < r.x1 - 1 && Math.min(hi, r.y1) - Math.max(lo, r.y0) > 1) worst = Math.max(worst, Math.min(c - r.x0, r.x1 - c));
+} else if (Math.abs(q.y1 - q.y2) < 1){
+var c2 = q.y1, lo2 = Math.min(q.x1, q.x2), hi2 = Math.max(q.x1, q.x2);
+if (c2 > r.y0 + 1 && c2 < r.y1 - 1 && Math.min(hi2, r.x1) - Math.max(lo2, r.x0) > 1) worst = Math.max(worst, Math.min(c2 - r.y0, r.y1 - c2));
+}
+});
+return worst;
+} catch(err){ return 0;}
+}
+function fits298(o, x, y){ var ox = o.x, oy = o.y; o.x = x; o.y = y; var p = poke298(o); o.x = ox; o.y = oy; return p <= 0;}
+/* 収まる位置を探す：外周に寄せる→部屋の壁に寄せる→周りを少しずつ探す。見つからなければ false */
+function slideIn298(o){
+try {
+if (poke298(o) <= 0) return true;
+var r = rectOf298(o); if (!r) return false;
+var hx = (r.x1 - r.x0) / 2, hy = (r.y1 - r.y0) / 2, x0 = o.x, y0 = o.y, cand = [];
+var push = function(x, y){ cand.push([Math.round(x / 2.5) * 2.5, Math.round(y / 2.5) * 2.5]);};
+try { var b = bbox(); push(Math.max(b.x0 + hx, Math.min(b.x1 - hx, x0)), Math.max(b.y0 + hy, Math.min(b.y1 - hy, y0)));} catch(e){}
+try {
+var rc = (typeof tkRoomRect === "function")? tkRoomRect(x0, y0): null;
+if (rc){
+var cx = Math.max(rc.x0 + hx, Math.min(rc.x1 - hx, x0)), cy = Math.max(rc.y0 + hy, Math.min(rc.y1 - hy, y0));
+push(cx, cy); push(cx, y0); push(x0, cy);
+}
+} catch(e){}
+var R = Math.max(hx, hy) + 135;
+for (var d = 45; d <= R; d += 45){ push(x0 + d, y0); push(x0 - d, y0); push(x0, y0 + d); push(x0, y0 - d); push(x0 + d, y0 + d); push(x0 - d, y0 + d); push(x0 + d, y0 - d); push(x0 - d, y0 - d);}
+for (var i = 0; i < cand.length; i++){ if (fits298(o, cand[i][0], cand[i][1])){ o.x = cand[i][0]; o.y = cand[i][1]; return true;}}
+o.x = x0; o.y = y0; return false;
+} catch(err){ return false;}
+}
+
+/* --- 移動：突き抜ける位置へは動かさない（入る軸だけ滑る） --- */
+if (typeof moveTenken === "function" &&!moveTenken.__g298){
+var origMove298 = moveTenken;
+var wrappedMove298 = function(o, dx, dy){
+if (!o || EXEMPT[o.k]) return origMove298(o, dx, dy);
+var ox = o.x, oy = o.y, r = origMove298(o, dx, dy);
+try {
+if (poke298(o) > 0){
+var tries = Math.abs(dx) >= Math.abs(dy)? [[dx, 0], [0, dy]]: [[0, dy], [dx, 0]];
+var done = false;
+for (var i = 0; i < tries.length; i++){
+if (!tries[i][0] &&!tries[i][1]) continue;
+o.x = ox; o.y = oy; origMove298(o, tries[i][0], tries[i][1]);
+if (poke298(o) <= 0){ done = true; break;}
+}
+if (!done){ o.x = ox; o.y = oy;}
+}
+} catch(e){}
+return r;
+};
+wrappedMove298.__g298 = true;
+moveTenken = wrappedMove298;
+}
+
+/* --- 配置：突き抜けていたら寄せる。どこにも入らなければ置かない --- */
+if (typeof addTenken === "function" &&!addTenken.__g298){
+var origAdd298 = addTenken;
+var wrappedAdd298 = function(k){
+var n0 = (typeof S!== "undefined" && S && S.tenken)? S.tenken.length: 0;
+var r = origAdd298.apply(this, arguments);
+try {
+if (!EXEMPT[k] && typeof S!== "undefined" && S && S.tenken && S.tenken.length > n0){
+var o = S.tenken[S.tenken.length - 1];
+if (o && o.k === k && poke298(o) > 0){
+if (slideIn298(o)){ try { save();} catch(e){} try { drawPlan();} catch(e){}}
+else {
+S.tenken.splice(S.tenken.length - 1, 1);
+if (typeof sel!== "undefined" && sel && sel.t === "k") sel = null;
+try { save();} catch(e){} try { drawPlan();} catch(e){}
+try { toast("壁に当たるため置けませんでした");} catch(e){}
+}
+}
+}
+} catch(e){}
+return r;
+};
+wrappedAdd298.__g298 = true;
+addTenken = wrappedAdd298;
+}
+
+/* --- 回転・大きさのサイクル：変えた結果が突き抜けたら寄せる／元に戻す --- */
+function snapOf298(o){ return { k: o.k, w: o.w, d: o.d, dir: o.dir, st: o.st, sh: o.sh, l2: o.l2, e: o.e, x: o.x, y: o.y};}
+function changed298(o, s){ return o.k!== s.k || o.w!== s.w || o.d!== s.d || o.dir!== s.dir || o.st!== s.st || o.sh!== s.sh || o.l2!== s.l2 || o.e!== s.e || o.x!== s.x || o.y!== s.y;}
+function guardBtn298(o, id){
+var b = document.getElementById(id);
+if (!b || b.dataset.g298 || typeof b.onclick!== "function") return;
+b.dataset.g298 = "1";
+var orig = b.onclick;
+b.onclick = function(){
+var s = snapOf298(o);
+var r = orig.apply(this, arguments);
+try {
+if (changed298(o, s) && poke298(o) > 0){
+if (slideIn298(o)){ try { save();} catch(e){}}
+else { Object.assign(o, s); try { save();} catch(e){} try { toast("壁に当たるため変えられませんでした");} catch(e){}}
+try { drawPlan();} catch(e){}
+try { var bar = document.getElementById("selBar"); if (bar) bar.dataset.k = ""; drawSelBar();} catch(e){}
+}
+} catch(e){}
+return r;
+};
+}
+function hookBar298(){
+try {
+if (typeof sel === "undefined" ||!sel || sel.t!== "k" || typeof S === "undefined" ||!S ||!S.tenken) return;
+var o = S.tenken[sel.i]; if (!o || EXEMPT[o.k] || o.k === "bath") return; /* 浴槽は CAD-285 の専用処理 */
+guardBtn298(o, "sbKK"); guardBtn298(o, "sbKS"); guardBtn298(o, "sbCK"); guardBtn298(o, "sbCF");
+} catch(e){}
+}
+if (typeof drawSelBarK === "function" &&!drawSelBarK.__g298){
+var origBarK298 = drawSelBarK;
+var wrappedBarK298 = function(bar){ var r = origBarK298.apply(this, arguments); hookBar298(); return r;};
+wrappedBarK298.__g298 = true;
+drawSelBarK = wrappedBarK298;
+}
+if (typeof drawSelBarC === "function" &&!drawSelBarC.__g298){
+var origBarC298 = drawSelBarC;
+var wrappedBarC298 = function(bar){ var r = origBarC298.apply(this, arguments); hookBar298(); return r;};
+wrappedBarC298.__g298 = true;
+drawSelBarC = wrappedBarC298;
+}
+
+/* ===== 起点の角 =====
+囲みバーに「起点 左上／右上／左下／右下」の行を足す。選んだ角は encl.anchor298
+（その場の編集だけ・保存には入れない）。初期表示は従来の動き（ax の印）から
+決まる角で、選ばなければ enclEdit の従来動作がそのまま効く。 */
+function anchorKey298(){
+try {
+if (typeof encl === "undefined" ||!encl ||!encl.r) return "nw";
+if (encl.anchor298) return encl.anchor298;
+var r = encl.r;
+return ((r.ay1 &&!r.ay0)? "s": "n") + ((r.ax1 &&!r.ax0)? "e": "w");
+} catch(e){ return "nw";}
+}
+if (typeof enclEdit === "function" &&!enclEdit.__g298){
+var origEdit298 = enclEdit;
+var wrappedEdit298 = function(k, v){
+try {
+if ((k === "w" || k === "h") && typeof encl!== "undefined" && encl && encl.r && encl.anchor298){
+var r = encl.r, a = encl.anchor298;
+var sv = { ax0: r.ax0, ax1: r.ax1, ay0: r.ay0, ay1: r.ay1};
+if (k === "w"){ if (a.charAt(1) === "e"){ r.ax1 = true; r.ax0 = false;} else { r.ax0 = true; r.ax1 = false;}}
+else { if (a.charAt(0) === "s"){ r.ay1 = true; r.ay0 = false;} else { r.ay0 = true; r.ay1 = false;}}
+try { return origEdit298(k, v);} finally { r.ax0 = sv.ax0; r.ax1 = sv.ax1; r.ay0 = sv.ay0; r.ay1 = sv.ay1;}
+}
+} catch(e){}
+return origEdit298(k, v);
+};
+wrappedEdit298.__g298 = true;
+enclEdit = wrappedEdit298;
+}
+function anchorRow298(){
+try {
+var bar = document.getElementById("enclBar");
+if (!bar || bar.hidden || typeof encl === "undefined" ||!encl ||!encl.r) return;
+if (bar.querySelector("[data-anch298]")) return;
+var eff = anchorKey298();
+var row = document.createElement("div");
+row.className = "ecd"; row.setAttribute("data-anch298", "1");
+row.innerHTML = [["nw", "左上"], ["ne", "右上"], ["sw", "左下"], ["se", "右下"]].map(function(kv){
+var on = kv[0] === eff;
+return "<button type=\"button\" data-anch=\"" + kv[0] + "\" aria-pressed=\"" + (on? "true": "false") + "\" style=\"" + (on? "background:var(--ai);color:#fff;border-color:var(--ai)": "") + "\"><small" + (on? " style=\"color:#fff\"": "") + ">起点</small><b>" + kv[1] + "</b></button>";
+}).join("");
+var exRow = null, rows = bar.querySelectorAll(".ecd");
+for (var i = 0; i < rows.length; i++){ if (rows[i].querySelector("[data-ex]")){ exRow = rows[i]; break;}}
+if (exRow) bar.insertBefore(row, exRow); else bar.appendChild(row);
+var btns = row.querySelectorAll("[data-anch]");
+for (var j = 0; j < btns.length; j++){
+(function(b){ b.onclick = function(){ try { encl.anchor298 = b.getAttribute("data-anch");} catch(e){} try { drawEnclBar();} catch(e){} try { drawPlan();} catch(e){}};})(btns[j]);
+}
+} catch(e){}
+}
+if (typeof drawEnclBar === "function" &&!drawEnclBar.__g298){
+var origBar298 = drawEnclBar;
+var wrappedBar298 = function(){ var r = origBar298.apply(this, arguments); anchorRow298(); return r;};
+wrappedBar298.__g298 = true;
+drawEnclBar = wrappedBar298;
+}
+
+window.__guard298 = { poke: poke298, slide: slideIn298, rectOf: rectOf298, anchorKey: anchorKey298}; /* 検証用 */
+})();
+</script>
+
 </html>
