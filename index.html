@@ -25640,18 +25640,21 @@ window.__guard298 = { poke: poke298, slide: slideIn298, rectOf: rectOf298, ancho
 </script>
 
 
-<script id="stair299js">
-/* ===== CAD-299：階段の形の作り直し（本人の決め 2026-11-16） =====
-形は5つ（直階段／かね折れ／下回り／上回り／上下回り）。回り系は形の後に段数
-（1段＝踊り場／2段／3段）を選ぶ。上下回りは下と上を別々に選べる。
-旧データの読み替え：L＝かね折れ1段、M＝かね折れ3段、N＝かね折れ2段、s＝直階段。
-描画は HB.__tenkenBranch32 の連鎖で階段だけ差し替え（旧形の絵は従来コードの複製で不変）、
-選択バーは drawSelBarK を包んで後処理する。詳細は build299.py の冒頭コメント。 */
+
+
+<script id="stair306js">
+/* ===== CAD-306：階段の作り直し第2段（メーカーの決め方の順・2026-11-16夜 本人の決定） =====
+階段は下から順に「直（段数）／廻り（910×910、種類：踊り場・2段・3段、向き：上がる人から見た左廻り／右廻り）」
+の並び（o.parts）で持つ。5つの形はプリセット。大きさは並びから自動計算する。
+絵は並びから描く（直部は227.5間隔の段線、廻り部は角の中心から放射の扇、踊り場は線なし、矢印は歩行線）。
+o.parts も o.sf も無い旧データは CAD-299 の描画（stairSvg299）をそのまま使う。
+見積（stairRows）は無変更：o.sf/o.tn/o.t2/o.st は同期して書き続ける。詳細は build306.py の冒頭コメント。 */
 (function(){ "use strict";
-var SHAPES299 = [["s", "直階段"], ["k", "かね折れ"], ["d", "下回り"], ["u", "上回り"], ["b", "上下回り"]];
-function shapeName299(sf){ for (var i = 0; i < SHAPES299.length; i++) if (SHAPES299[i][0] === sf) return SHAPES299[i][1]; return "直階段"; }
-function tnName299(tn){ return tn === 1 ? "踊り場" : tn + "段"; }
-function shapeOf299(o){
+var SHAPES306 = [["s", "直階段"], ["k", "かね折れ"], ["d", "下回り"], ["u", "上回り"], ["b", "上下回り"]];
+var TD = 227.5, MW = 910;
+function shapeName306(sf){ for (var i = 0; i < SHAPES306.length; i++) if (SHAPES306[i][0] === sf) return SHAPES306[i][1]; return "直階段"; }
+function tnName306(tn){ return tn === 1 ? "踊り場" : tn + "段"; }
+function shapeOf306(o){
   if (!o) return { sf: "s", tn: 3, t2: 3 };
   if (o.sf){
     var tn = (o.tn === 1 || o.tn === 2 || o.tn === 3) ? o.tn : (o.sf === "k" ? (o.st === "L" ? 1 : o.st === "N" ? 2 : 3) : 3);
@@ -25663,64 +25666,206 @@ function shapeOf299(o){
   if (o.st === "N") return { sf: "k", tn: 2, t2: 3 };
   return { sf: "s", tn: 3, t2: 3 };
 }
+function effSt306(sf, tn){ if (sf === "s") return "s"; if (sf === "k") return tn === 1 ? "L" : tn === 2 ? "N" : "M"; return "M"; }
+/* CAD-299 の名前（旧データの描画・ラベル用に残す） */
+function shapeOf299(o){ return shapeOf306(o); }
+function tnName299(tn){ return tnName306(tn); }
 function fullName299(o){
-  var s = shapeOf299(o);
+  var s = shapeOf306(o);
   if (s.sf === "s") return "直階段";
-  if (s.sf === "b") return "上下回り・下" + tnName299(s.tn) + "／上" + tnName299(s.t2);
-  return shapeName299(s.sf) + "・" + tnName299(s.tn);
+  if (s.sf === "b") return "上下回り・下" + tnName306(s.tn) + "／上" + tnName306(s.t2);
+  return shapeName306(s.sf) + "・" + tnName306(s.tn);
 }
-function effSt299(s){
-  if (s.sf === "s") return "s";
-  if (s.sf === "k") return s.tn === 1 ? "L" : s.tn === 2 ? "N" : "M";
-  return "M";
-}
-function dims299(s){
-  if (s.sf === "s") return [910, 2730];
-  if (s.sf === "k" && s.tn === 1) return [1820, 2730];
-  return [1820, 1820];
-}
-window.__st299 = { shapeOf: shapeOf299, name: fullName299, shapeName: shapeName299, tnName: tnName299 };
 
-/* ---- 描画：HB.__tenkenBranch32 の連鎖で階段だけ自前描画（他は従来へ委譲） ---- */
+/* ---- 部分の並び（o.parts） ---- */
+function clampN306(n, lo, hi){ n = Math.round(+n || 0); return Math.max(lo, Math.min(hi, n)); }
+function normParts306(p){
+  if (!Array.isArray(p) || !p.length || p.length > 5) return null;
+  var out = [];
+  for (var i = 0; i < p.length; i++){
+    var q = p[i]; if (!q || typeof q !== "object") return null;
+    if (q.t === "m") out.push({t: "m", kind: (q.kind === 1 || q.kind === 2 || q.kind === 3) ? q.kind : 3, dir: q.dir === "R" ? "R" : "L"});
+    else if (q.t === "s") out.push({t: "s", n: clampN306(q.n, 0, 40)});
+    else return null;
+  }
+  return out;
+}
+function sfOfParts306(parts){
+  var p = parts.map(function(q){ return q.t; }).join("");
+  return p === "s" ? "s" : p === "ms" ? "d" : p === "sm" ? "u" : p === "msm" ? "b" : p === "sms" ? "k" : null;
+}
+function partsOf306(o){
+  var p = normParts306(o && o.parts); if (p && sfOfParts306(p)) return p;
+  var sh = shapeOf306(o), len = Math.max(0, +o.d || 0), wid = Math.max(0, +o.w || 0);
+  var sn = function(v){ return clampN306(v / TD, 0, 40); };
+  if (sh.sf === "d") return [{t: "m", kind: sh.tn, dir: "L"}, {t: "s", n: sn(len - MW)}];
+  if (sh.sf === "u") return [{t: "s", n: sn(len - MW)}, {t: "m", kind: sh.tn, dir: "L"}];
+  if (sh.sf === "b") return [{t: "m", kind: sh.tn, dir: "L"}, {t: "s", n: sn(len - 2 * MW)}, {t: "m", kind: sh.t2, dir: "L"}];
+  if (sh.sf === "k") return [{t: "s", n: sn(len - MW)}, {t: "m", kind: sh.tn, dir: "L"}, {t: "s", n: sn(wid - MW)}];
+  return [{t: "s", n: Math.max(1, sn(len))}];
+}
+function dimsOf306(parts){
+  if (sfOfParts306(parts) === "k") return [MW + TD * parts[2].n, MW + TD * parts[0].n];
+  var L = 0; parts.forEach(function(q){ L += q.t === "m" ? MW : TD * q.n; });
+  return [MW, L];
+}
+function nameOf306(o){
+  var parts = partsOf306(o), sf = sfOfParts306(parts), kn = tnName306;
+  var ms = parts.filter(function(q){ return q.t === "m"; }), ss = parts.filter(function(q){ return q.t === "s"; });
+  if (sf === "s") return "直階段";
+  if (sf === "k") return "かね折れ・" + kn(ms[0].kind);
+  if (sf === "d") return "下回り・" + kn(ms[0].kind) + "／直" + ss[0].n + "段";
+  if (sf === "u") return "上回り・直" + ss[0].n + "段／" + kn(ms[0].kind);
+  return "上下回り・下" + kn(ms[0].kind) + "／直" + ss[0].n + "段／上" + kn(ms[1].kind);
+}
+window.__st306 = { partsOf: partsOf306, dimsOf: dimsOf306, name: nameOf306, shapeOf: shapeOf306, sfOfParts: sfOfParts306 };
+window.__st299 = { shapeOf: shapeOf306, name: fullName299, shapeName: shapeName306, tnName: tnName306 };
+
+/* ---- 絵の組み立て（mm・上が下端＝入口、下から上へ上がる向きで作り、dir で回す） ---- */
+function fanLines306(C, d0, d1, kind, rect){
+  if (kind <= 1) return [];
+  var perp = [-d0[1], d0[0]]; if (perp[0] * d1[0] + perp[1] * d1[1] < 0) perp = [d0[1], -d0[0]];
+  var out = [];
+  for (var k = 1; k < kind; k++){
+    var a = Math.PI / 2 * k / kind, ca = Math.cos(a), sa = Math.sin(a);
+    var u = [d0[0] * ca + perp[0] * sa, d0[1] * ca + perp[1] * sa], best = Infinity, t, py, px;
+    if (u[0] < -1e-9){ t = (rect.x - C[0]) / u[0]; py = C[1] + t * u[1]; if (t > 0 && py >= rect.y - .01 && py <= rect.y + rect.h + .01) best = Math.min(best, t); }
+    if (u[0] > 1e-9){ t = (rect.x + rect.w - C[0]) / u[0]; py = C[1] + t * u[1]; if (t > 0 && py >= rect.y - .01 && py <= rect.y + rect.h + .01) best = Math.min(best, t); }
+    if (u[1] < -1e-9){ t = (rect.y - C[1]) / u[1]; px = C[0] + t * u[0]; if (t > 0 && px >= rect.x - .01 && px <= rect.x + rect.w + .01) best = Math.min(best, t); }
+    if (u[1] > 1e-9){ t = (rect.y + rect.h - C[1]) / u[1]; px = C[0] + t * u[0]; if (t > 0 && px >= rect.x - .01 && px <= rect.x + rect.w + .01) best = Math.min(best, t); }
+    if (best < Infinity) out.push([C[0], C[1], C[0] + best * u[0], C[1] + best * u[1], .9]);
+  }
+  return out;
+}
+function arcPts306(C, d0, d1){
+  var perp = [-d0[1], d0[0]]; if (perp[0] * d1[0] + perp[1] * d1[1] < 0) perp = [d0[1], -d0[0]];
+  var pts = [];
+  for (var a = 0; a <= 6; a++){ var t = Math.PI / 2 * a / 6, ca = Math.cos(t), sa = Math.sin(t);
+    pts.push([C[0] + 455 * (d0[0] * ca + perp[0] * sa), C[1] + 455 * (d0[1] * ca + perp[1] * sa)]); }
+  return pts;
+}
+function layout306(parts){
+  var sf = sfOfParts306(parts), lines = [], walk = [], head = null, fw, fd;
+  var pushW = function(pts){ pts.forEach(function(p){ var l = walk[walk.length - 1]; if (!l || Math.abs(l[0] - p[0]) > .01 || Math.abs(l[1] - p[1]) > .01) walk.push(p); }); };
+  if (sf === "s"){
+    var n0 = parts[0].n; fw = MW; fd = TD * n0;
+    for (var k = 1; k < n0; k++) lines.push([0, fd - TD * k, MW, fd - TD * k, .9]);
+    walk = [[455, fd * .94], [455, fd * .08]]; head = [455, fd * .08, 0, -1];
+  } else if (sf === "d" || sf === "u" || sf === "b"){
+    fw = MW;
+    var mB = sf !== "u" ? parts[0] : null;
+    var mT = sf === "u" ? parts[1] : sf === "b" ? parts[2] : null;
+    var nS = sf === "u" ? parts[0].n : parts[1].n;
+    fd = (mB ? MW : 0) + TD * nS + (mT ? MW : 0);
+    var runTop = mT ? MW : 0, runBot = fd - (mB ? MW : 0);
+    for (var k2 = 1; k2 < nS; k2++) lines.push([0, runBot - TD * k2, MW, runBot - TD * k2, .9]);
+    var CB = null, CT = null;
+    if (mB){
+      lines.push([0, runBot, MW, runBot, 1.3]);
+      CB = mB.dir === "L" ? [0, runBot] : [MW, runBot];
+      lines = lines.concat(fanLines306(CB, [0, 1], mB.dir === "L" ? [1, 0] : [-1, 0], mB.kind, {x: 0, y: runBot, w: MW, h: MW}));
+    }
+    if (mT){
+      if (!mB || runBot !== MW) lines.push([0, MW, MW, MW, 1.3]);
+      CT = mT.dir === "L" ? [0, MW] : [MW, MW];
+      lines = lines.concat(fanLines306(CT, mT.dir === "L" ? [1, 0] : [-1, 0], [0, -1], mT.kind, {x: 0, y: 0, w: MW, h: MW}));
+    }
+    if (mB) pushW(arcPts306(CB, [0, 1], mB.dir === "L" ? [1, 0] : [-1, 0]));
+    else pushW([[455, runBot - (runBot - runTop) * .06]]);
+    if (mT){
+      pushW([[455, MW]]);
+      pushW(arcPts306(CT, mT.dir === "L" ? [1, 0] : [-1, 0], [0, -1]).slice(1));
+      var eT = walk[walk.length - 1];
+      head = [eT[0], eT[1], mT.dir === "L" ? -1 : 1, 0];
+    } else {
+      pushW([[455, runBot * .08 + runTop * .92]]);
+      head = [455, runBot * .08 + runTop * .92, 0, -1];
+    }
+  } else {   /* かね折れ */
+    var nA = parts[0].n, m = parts[1], nB = parts[2].n;
+    fw = MW + TD * nB; fd = MW + TD * nA;
+    var Lft = m.dir === "L", bx = Lft ? fw - MW : 0;
+    var C = [Lft ? fw - MW : MW, MW], d0 = Lft ? [1, 0] : [-1, 0];
+    lines.push([C[0], 0, C[0], fd, 1.3]);
+    lines.push([0, MW, fw, MW, 1.3]);
+    lines = lines.concat(fanLines306(C, d0, [0, -1], m.kind, {x: bx, y: 0, w: MW, h: MW}));
+    for (var k3 = 1; k3 < nA; k3++) lines.push([bx, fd - TD * k3, bx + MW, fd - TD * k3, .9]);
+    for (var k4 = 1; k4 < nB; k4++){ var x4 = Lft ? (fw - MW) - TD * k4 : MW + TD * k4; lines.push([x4, 0, x4, MW, .9]); }
+    var sxC = Lft ? fw - 455 : 455;
+    walk = [[sxC, MW + (fd - MW) * .92], [sxC, MW]];
+    pushW(arcPts306(C, d0, [0, -1]).slice(1));
+    if (nB > 0) pushW([[Lft ? (fw - MW) * .08 : fw - (fw - MW) * .08, MW - 455]]);
+    var eK = walk[walk.length - 1];
+    head = [eK[0], eK[1], Lft ? -1 : 1, 0];
+  }
+  return { fw: fw, fd: fd, lines: lines, walk: walk, head: head };
+}
+window.__st306.layout = layout306;
+
+function arrow306(x, y, dx, dy, lw, lh){
+  var a2 = Math.atan2(dy, dx), r = Math.max(5, Math.min(lw, lh) * .07), C = "#5B6B7A";
+  return `<path d="M${x + Math.cos(a2 + 2.6) * r} ${y + Math.sin(a2 + 2.6) * r} L${x} ${y} L${x + Math.cos(a2 - 2.6) * r} ${y + Math.sin(a2 - 2.6) * r}" fill="none" stroke="${C}" stroke-width="1.5"/>`;
+}
+function stairSvg306(o, i, P){
+  var parts = partsOf306(o), lay = layout306(parts), fw = lay.fw, fd = lay.fd;
+  var ew = o.dir === "e" || o.dir === "w";
+  var hx = ew ? fd / 2 : fw / 2, hy = ew ? fw / 2 : fd / 2;
+  var a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]);
+  var x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]);
+  var isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2;
+  var lw = ew ? H2 : W2, lh = ew ? W2 : H2, rot = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, C = "#5B6B7A";
+  var sx = lw / fw, sy = lh / fd;
+  var X = function(v){ return v * sx; }, Y = function(v){ return v * sy; };
+  var L = "";
+  lay.lines.forEach(function(q){ L += `<line x1="${X(q[0])}" y1="${Y(q[1])}" x2="${X(q[2])}" y2="${Y(q[3])}" stroke="${C}" stroke-width="${q[4]}"/>`; });
+  if (lay.walk.length > 1) L += `<path d="M${lay.walk.map(function(p){ return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); }).join(" L")}" fill="none" stroke="${C}" stroke-width="1.5"/>`;
+  if (lay.head) L += arrow306(X(lay.head[0]), Y(lay.head[1]), lay.head[2], lay.head[3], lw, lh);
+  var g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+  g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${nameOf306(o)}）</text></g>`;
+  if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
+  return g;
+}
+
+/* ---- CAD-299 の描画（o.parts も o.sf も無い旧データ専用・絵は従来のまま） ---- */
 function stairSvg299(o, i, P){
   const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2;
   const ew = o.dir === "e" || o.dir === "w", lw = ew ? H2 : W2, lh = ew ? W2 : H2, rot = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, C = "#5B6B7A";
   const ln = (x1, y1, x2, y2, w) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${C}" stroke-width="${w || .9}"/>`, hw = lw / 2, hh = lh / 2;
   let L = "";
-  const sx = lw / o.w, sy = lh / o.d, TD = 227.5;   /* 踏み面は、上りも下りも同じ227.5mmにそろえる */
+  const sx = lw / o.w, sy = lh / o.d, TD = 227.5;
   const arrow = (x, y, dx, dy) => { const a2 = Math.atan2(dy, dx), r = Math.max(5, Math.min(lw, lh) * .07); return `<path d="M${x + Math.cos(a2 + 2.6) * r} ${y + Math.sin(a2 + 2.6) * r} L${x} ${y} L${x + Math.cos(a2 - 2.6) * r} ${y + Math.sin(a2 - 2.6) * r}" fill="none" stroke="${C}" stroke-width="1.5"/>`; };
-  const sh = shapeOf299(o);
+  const sh = shapeOf306(o);
   const mode = sh.sf === "s" ? "s" : sh.sf === "k" ? (sh.tn === 1 ? "L" : sh.tn === 2 ? "N" : "M") : sh.sf;
   if (mode === "s"){
     const n = Math.max(4, Math.round(o.d / TD)); for (let k = 1; k < n; k++){ const y = lh * k / n; L += ln(0, y, lw, y); }
     L += ln(hw, lh * .94, hw, lh * .08, 1.5) + arrow(hw, lh * .08, 0, -1);
-  } else if (mode === "L"){   /* かね折れ1段（踊り場）：従来の L の描画そのまま */
+  } else if (mode === "L"){
     const ly = Math.min(lh * .5, 910 * sy), n = Math.max(3, Math.round((o.d - 910) / TD));
     L += ln(0, ly, lw, ly, 1.3) + ln(hw, ly, hw, lh, 1.3);
     for (let k = 1; k < n; k++){ const y = ly + (lh - ly) * k / n; L += ln(0, y, lw, y); }
     L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${ly * .5} L${lw * .25} ${ly * .5} L${lw * .25} ${lh * .9}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .25, lh * .9, 0, 1);
-  } else if (mode === "M" || mode === "N"){   /* かね折れ3段／2段：従来の回り階段の描画そのまま */
+  } else if (mode === "M" || mode === "N"){
     const na = Math.max(3, Math.round((o.d / 2) / TD)), nw = mode === "N" ? 2 : 3;
     L += ln(hw, hh, lw, hh, 1.3) + ln(hw, 0, hw, hh, 1.3) + ln(hw, hh, hw, lh, 1.3);
     for (let k = 1; k < na; k++){ const y = lh - hh * k / na; L += ln(hw, y, lw, y); }
     for (let k = 1; k < na; k++){ const x = hw - hw * k / na; L += ln(x, 0, x, hh); }
     for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, tn = Math.tan(th); const ex = tn <= 1 ? lw : hw + hh / tn, ey = tn <= 1 ? hh - hw * tn : 0; L += ln(hw, hh, ex, ey); }
     L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
-  } else {   /* 新形：下回り／上回り／上下回り（1820×1820 の象限の物差し） */
+  } else {
     const na = Math.max(3, Math.round((o.d / 2) / TD));
-    const fanB = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? hw + hh * t : lw, ey = t <= 1 ? lh : hh + hw / t; s2 += ln(hw, hh, ex, ey); } return s2; };   /* 下の象限の回り：中心（hw,hh）から下辺と右辺へ */
-    const fanT = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? lw : hw + hh / t, ey = t <= 1 ? hh - hw * t : 0; s2 += ln(hw, hh, ex, ey); } return s2; };   /* 上の象限の回り：従来の回り階段と同じ */
-    if (mode === "d"){   /* 下回り：下で回って、右列をまっすぐ上がる。入口は下の行から */
+    const fanB = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? hw + hh * t : lw, ey = t <= 1 ? lh : hh + hw / t; s2 += ln(hw, hh, ex, ey); } return s2; };
+    const fanT = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? lw : hw + hh / t, ey = t <= 1 ? hh - hw * t : 0; s2 += ln(hw, hh, ex, ey); } return s2; };
+    if (mode === "d"){
       L += ln(hw, 0, hw, lh, 1.3) + ln(hw, hh, lw, hh, 1.3);
       for (let k = 1; k < na; k++){ const y = hh - hh * k / na; L += ln(hw, y, lw, y); }
       if (sh.tn > 1) L += fanB(sh.tn);
       L += `<path d="M${lw * .08} ${lh * .93} L${lw * .68} ${lh * .93} Q${lw * .77} ${lh * .93} ${lw * .75} ${lh * .8} L${lw * .75} ${lh * .08}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .75, lh * .08, 0, -1);
-    } else if (mode === "u"){   /* 上回り：右列をまっすぐ上がって、上で回って到着（上の行に段線は引かない） */
+    } else if (mode === "u"){
       L += ln(hw, hh, lw, hh, 1.3) + ln(hw, 0, hw, hh, 1.3) + ln(hw, hh, hw, lh, 1.3);
       for (let k = 1; k < na; k++){ const y = lh - hh * k / na; L += ln(hw, y, lw, y); }
       if (sh.tn > 1) L += fanT(sh.tn);
       L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
-    } else {   /* 上下回り：下と上の両方で回る（下・上は別々に選べる） */
+    } else {
       L += ln(hw, 0, hw, lh, 1.3) + ln(hw, hh, lw, hh, 1.3);
       if (sh.tn > 1) L += fanB(sh.tn);
       if (sh.t2 > 1) L += fanT(sh.t2);
@@ -25733,85 +25878,167 @@ function stairSvg299(o, i, P){
   return g;
 }
 if (typeof HB !== "undefined"){
-  var prevBranch299 = HB.__tenkenBranch32 || null;
+  var prevBranch306 = HB.__tenkenBranch32 || null;
   HB.__tenkenBranch32 = function(o, i, P){
-    if (!o || o.k !== "stair") return prevBranch299 ? prevBranch299(o, i, P) : null;
+    if (!o || o.k !== "stair") return prevBranch306 ? prevBranch306(o, i, P) : null;
+    if (o.parts || o.sf) return stairSvg306(o, i, P);
     return stairSvg299(o, i, P);
   };
 }
 
-/* ---- 形・段数の変更（突き抜けは CAD-298 の公開口で寄せる／戻す） ---- */
-function applyStair299(o, bar, ns){
+/* ---- 変更の適用（突き抜けは CAD-298 の公開口で寄せる／戻す） ---- */
+function applyStair306(o, bar, parts){
   pushUndo();
-  var snap = { sf: o.sf, tn: o.tn, t2: o.t2, st: o.st, w: o.w, d: o.d, x: o.x, y: o.y };
-  o.sf = ns.sf; o.tn = ns.tn; o.t2 = ns.t2; o.st = effSt299(ns);
-  var dm = dims299(ns); o.w = dm[0]; o.d = dm[1];
+  var snap = { parts: o.parts ? JSON.parse(JSON.stringify(o.parts)) : undefined, sf: o.sf, tn: o.tn, t2: o.t2, st: o.st, w: o.w, d: o.d, x: o.x, y: o.y };
+  var sf = sfOfParts306(parts);
+  var ms = parts.filter(function(q){ return q.t === "m"; });
+  o.parts = JSON.parse(JSON.stringify(parts));
+  o.sf = sf;
+  o.tn = ms.length ? ms[0].kind : 3;
+  o.t2 = sf === "b" && ms[1] ? ms[1].kind : (snap.t2 || 3);
+  o.st = effSt306(sf, o.tn);
+  var dm = dimsOf306(parts); o.w = dm[0]; o.d = dm[1];
   moveTenken(o, 0, 0);
   try {
     if (window.__guard298 && window.__guard298.poke(o) > 0){
-      if (!window.__guard298.slide(o)){ Object.assign(o, snap); toast("壁に当たるため変えられませんでした"); }
+      if (!window.__guard298.slide(o)){
+        Object.keys(snap).forEach(function(k){ if (snap[k] === undefined) delete o[k]; else o[k] = snap[k]; });
+        toast("壁に当たるため変えられませんでした");
+      }
     }
   } catch(e){}
   save(); if (bar) bar.dataset.k = ""; drawPlan();
 }
-function closeShapeSheet299(){ var ov = document.getElementById("stShapeSheet299"); if (ov) ov.remove(); }
-function openShapeSheet299(o, bar){
-  closeShapeSheet299();
-  var cur = shapeOf299(o).sf;
+window.__st306.apply = applyStair306;
+function presetParts306(o, sf){
+  var cur = partsOf306(o), sh = shapeOf306(o);
+  var cms = cur.filter(function(q){ return q.t === "m"; }), css = cur.filter(function(q){ return q.t === "s"; });
+  var kindAt = function(j, fb){ return cms[j] ? cms[j].kind : fb; };
+  var dirAt = function(j){ return cms[j] ? cms[j].dir : "L"; };
+  var nC = css.length ? css[0].n : 4;
+  if (sf === "s") return [{t: "s", n: css.length ? css[0].n : 12}];
+  if (sf === "d") return [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: nC}];
+  if (sf === "u") return [{t: "s", n: nC}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}];
+  if (sf === "b") return [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: nC}, {t: "m", kind: kindAt(1, sh.t2), dir: dirAt(1)}];
+  return [{t: "s", n: nC}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: css.length > 1 ? css[1].n : nC}];
+}
+window.__st306.preset = presetParts306;
+
+/* ---- 形シート ---- */
+function closeShapeSheet306(){ var ov = document.getElementById("stShapeSheet306"); if (ov) ov.remove(); }
+function openShapeSheet306(o, bar){
+  closeShapeSheet306();
+  var cur = sfOfParts306(partsOf306(o));
   var ov = document.createElement("div");
-  ov.id = "stShapeSheet299";
+  ov.id = "stShapeSheet306";
   ov.style.cssText = "position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center";
   ov.innerHTML = `<div style="background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.3)">
     <div style="font-weight:800;font-size:15px;margin:2px 2px 10px">階段の形</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${SHAPES299.map(([v, n]) => `<button type="button" data-sf299="${v}" style="min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid ${v === cur ? "#2563B0" : "#C9D2DC"};background:${v === cur ? "#E8F1FB" : "#fff"};color:#1B2430">${n}</button>`).join("")}</div>
-    <button type="button" data-sf299="" style="width:100%;min-height:44px;margin-top:10px;font-size:14px;border-radius:10px;border:1px solid #C9D2DC;background:#F2F5F8;color:#1B2430">やめる</button></div>`;
-  ov.addEventListener("click", e => { if (e.target === ov) closeShapeSheet299(); });
-  ov.querySelectorAll("[data-sf299]").forEach(b => b.onclick = () => {
-    var v = b.dataset.sf299; closeShapeSheet299(); if (!v || v === cur) return;
-    var ns = shapeOf299(o); ns.sf = v;
-    applyStair299(o, bar, ns);
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${SHAPES306.map(([v, n]) => `<button type="button" data-sf306="${v}" style="min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid ${v === cur ? "#2563B0" : "#C9D2DC"};background:${v === cur ? "#E8F1FB" : "#fff"};color:#1B2430">${n}</button>`).join("")}</div>
+    <button type="button" data-sf306="" style="width:100%;min-height:44px;margin-top:10px;font-size:14px;border-radius:10px;border:1px solid #C9D2DC;background:#F2F5F8;color:#1B2430">やめる</button></div>`;
+  ov.addEventListener("click", e => { if (e.target === ov) closeShapeSheet306(); });
+  ov.querySelectorAll("[data-sf306]").forEach(b => b.onclick = () => {
+    var v = b.dataset.sf306; closeShapeSheet306(); if (!v || v === cur) return;
+    applyStair306(o, bar, presetParts306(o, v));
   });
   document.body.appendChild(ov);
 }
 
-/* ---- 選択バーの後処理：題名・形ボタン・段数ボタン ---- */
-function fixBar299(bar){
+/* ---- 廻りのシート（種類と向きを、その場所ごとに決める） ---- */
+function closeMwSheet306(){ var ov = document.getElementById("stMwSheet306"); if (ov) ov.remove(); }
+function openMwSheet306(o, bar, j){
+  closeMwSheet306();
+  var parts = partsOf306(o), sf = sfOfParts306(parts);
+  var idxs = []; parts.forEach(function(q, i2){ if (q.t === "m") idxs.push(i2); });
+  var pi = idxs[j]; if (pi == null) return;
+  var cur = parts[pi];
+  var ttl = sf === "b" ? (j === 0 ? "下の廻り" : "上の廻り") : sf === "d" ? "下の廻り" : sf === "u" ? "上の廻り" : "廻り";
+  var btn = function(kind, v, label, on){ return `<button type="button" data-mw306="${kind}" data-v306="${v}" style="min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid ${on ? "#2563B0" : "#C9D2DC"};background:${on ? "#E8F1FB" : "#fff"};color:#1B2430">${label}</button>`; };
+  var ov = document.createElement("div");
+  ov.id = "stMwSheet306";
+  ov.style.cssText = "position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center";
+  ov.innerHTML = `<div style="background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.3)">
+    <div style="font-weight:800;font-size:15px;margin:2px 2px 10px">${ttl}</div>
+    <div style="font-size:12px;color:#5B6B7A;margin:0 2px 4px">種類</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">${[1, 2, 3].map(k => btn("kind", k, tnName306(k), cur.kind === k)).join("")}</div>
+    <div style="font-size:12px;color:#5B6B7A;margin:10px 2px 4px">向き（上がる人から見た向き）</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${btn("dir", "L", "左廻り", cur.dir === "L")}${btn("dir", "R", "右廻り", cur.dir === "R")}</div>
+    <button type="button" data-mw306="" style="width:100%;min-height:44px;margin-top:10px;font-size:14px;border-radius:10px;border:1px solid #C9D2DC;background:#F2F5F8;color:#1B2430">やめる</button></div>`;
+  ov.addEventListener("click", e => { if (e.target === ov) closeMwSheet306(); });
+  ov.querySelectorAll("[data-mw306]").forEach(b => b.onclick = () => {
+    var k2 = b.dataset.mw306; closeMwSheet306(); if (!k2) return;
+    var np = partsOf306(o); if (!np[pi]) return;
+    if (k2 === "kind") np[pi].kind = +b.dataset.v306; else np[pi].dir = b.dataset.v306;
+    applyStair306(o, bar, np);
+  });
+  document.body.appendChild(ov);
+}
+
+/* ---- 長さ（直の段数で吸収する） ---- */
+function openLenPad306(o, bar, axis){
+  var parts = partsOf306(o), sf = sfOfParts306(parts), dm = dimsOf306(parts);
+  var isW = axis === "wid";
+  var pr = isW ? [2, MW] : ({s: [0, 0], d: [1, MW], u: [0, MW], b: [1, 2 * MW], k: [0, MW]})[sf];
+  var si = pr[0], base = pr[1], minN = sf === "s" && !isW ? 4 : 0;
+  var apply = function(v){
+    var n = clampN306((v - base) / TD, minN, 30);
+    var np = partsOf306(o); np[si].n = n;
+    applyStair306(o, bar, np);
+    var applied = base + TD * n, now = partsOf306(o);
+    if (now[si] && now[si].n === n && Math.abs(applied - Math.round(v)) > 1) toast("長さは " + fmt(applied) + " になりました");
+  };
+  openPad({ title: isW ? "階段の横の長さ" : "階段の長さ",
+    sub: isW ? "上の直の段数が変わります" : sf === "k" ? "下の直の段数が変わります" : "直の段数が変わります",
+    value: Math.round(isW ? dm[0] : dm[1]),
+    extra: (isW ? [1365, 1820, 2730] : [2730, 3640, 4550]).filter(function(v){ return v >= base + TD * minN; }).map(function(v){ return { label: fmt(v), fn: function(){ closePad(); apply(v); } }; }),
+    done: function(v){ if (v) apply(v); } });
+}
+
+/* ---- 選択バーの後処理：題名・形ボタン・廻りボタン・長さボタン ---- */
+function fixBar306(bar){
   try {
     if (!bar || typeof sel === "undefined" || !sel || sel.t !== "k" || typeof S === "undefined" || !S || !S.tenken) return;
     var o = S.tenken[sel.i]; if (!o || o.k !== "stair") return;
-    var sh = shapeOf299(o);
+    var parts = partsOf306(o), sf = sfOfParts306(parts), dm = dimsOf306(parts);
     var t = bar.querySelector(".r1 > span");
-    if (t) t.textContent = `階段（${fullName299(o)}）${fmt(o.w)}×${fmt(o.d)}　向きは下のボタン`;
+    if (t) t.textContent = `階段（${nameOf306(o)}）${fmt(dm[0])}×${fmt(dm[1])}　向きは下のボタン`;
     var ks = document.getElementById("sbKS"); if (!ks) return;
-    if (!ks.dataset.st299){
-      var cl = ks.cloneNode(true); cl.dataset.st299 = "1"; ks.replaceWith(cl); ks = cl;
-      ks.onclick = function(){ openShapeSheet299(o, bar); };
+    if (!ks.dataset.st306){
+      var cl = ks.cloneNode(true); cl.dataset.st306 = "1"; ks.replaceWith(cl); ks = cl;
+      ks.onclick = function(){ openShapeSheet306(o, bar); };
     }
-    ks.textContent = shapeName299(sh.sf) + " ▸";
+    ks.textContent = shapeName306(sf) + " ▸";
     var sbL = bar.querySelector(".sbL"); if (!sbL) return;
-    var need = sh.sf === "s" ? [] : sh.sf === "b" ? ["d", "u"] : ["d"];
-    sbL.querySelectorAll("[data-tn299]").forEach(bn => { if (need.indexOf(bn.dataset.tn299) < 0) bn.remove(); });
     var kh = document.getElementById("sbKH");
-    need.forEach(which => {
-      var bn = sbL.querySelector(`[data-tn299="${which}"]`);
+    var specs = [];
+    var midx = []; parts.forEach(function(q, i2){ if (q.t === "m") midx.push(i2); });
+    midx.forEach(function(pi, j){
+      var pre = sf === "b" ? (j === 0 ? "下" : "上") : sf === "d" ? "下" : sf === "u" ? "上" : "廻り";
+      specs.push({ attr: "mwbtn306", val: String(j), label: pre + " " + tnName306(parts[pi].kind) + "・" + (parts[pi].dir === "R" ? "右" : "左") + " ▸", fn: function(){ openMwSheet306(o, bar, j); } });
+    });
+    specs.push({ attr: "len306", val: "len", label: "長さ " + fmt(dm[1]) + " ▸", fn: function(){ openLenPad306(o, bar, "len"); } });
+    if (sf === "k") specs.push({ attr: "len306", val: "wid", label: "横 " + fmt(dm[0]) + " ▸", fn: function(){ openLenPad306(o, bar, "wid"); } });
+    var want = {};
+    specs.forEach(function(sp){ want[sp.attr + "=" + sp.val] = sp; });
+    sbL.querySelectorAll("[data-mwbtn306],[data-len306]").forEach(function(bn){
+      var key = (bn.dataset.mwbtn306 != null ? "mwbtn306=" + bn.dataset.mwbtn306 : "len306=" + bn.dataset.len306);
+      if (!want[key]) bn.remove();
+    });
+    specs.forEach(function(sp){
+      var bn = sp.attr === "mwbtn306" ? sbL.querySelector(`[data-mwbtn306="${sp.val}"]`) : sbL.querySelector(`[data-len306="${sp.val}"]`);
       if (!bn){
-        bn = document.createElement("button"); bn.type = "button"; bn.dataset.tn299 = which;
-        bn.onclick = function(){
-          var ns = shapeOf299(o);
-          if (which === "d") ns.tn = ns.tn % 3 + 1; else ns.t2 = ns.t2 % 3 + 1;
-          applyStair299(o, bar, ns);
-        };
+        bn = document.createElement("button"); bn.type = "button"; bn.dataset[sp.attr] = sp.val; bn.onclick = sp.fn;
         if (kh && kh.parentNode === sbL) sbL.insertBefore(bn, kh); else sbL.appendChild(bn);
       }
-      bn.textContent = (sh.sf === "b" ? (which === "d" ? "下 " : "上 ") : "段数 ") + tnName299(which === "d" ? sh.tn : sh.t2) + " ▸";
+      bn.textContent = sp.label;
     });
   } catch(e){}
 }
-if (typeof drawSelBarK === "function" && !drawSelBarK.__st299){
-  var origBarK299 = drawSelBarK;
-  var wrappedBarK299 = function(bar){ var r = origBarK299.apply(this, arguments); fixBar299(bar || document.getElementById("selBar")); return r; };
-  wrappedBarK299.__st299 = true;
-  drawSelBarK = wrappedBarK299;
+if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
+  var origBarK306 = drawSelBarK;
+  var wrappedBarK306 = function(bar){ var r = origBarK306.apply(this, arguments); fixBar306(bar || document.getElementById("selBar")); return r; };
+  wrappedBarK306.__st306 = true;
+  drawSelBarK = wrappedBarK306;
 }
 })();
 </script>
