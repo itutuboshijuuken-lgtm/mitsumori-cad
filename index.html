@@ -21757,6 +21757,7 @@ function makeTex(T){
  X.floor=ctex(T,1024,1024,(g,w,h,r)=>{const rows=8,rh=h/rows;for(let i=0;i<rows;i++){let x=-r()*w/2;while(x<w){const L=w/2+r()*w/4;const b=.88+r()*.2;g.fillStyle=`rgb(${200*b|0},${150*b|0},${96*b|0})`;g.fillRect(x,i*rh,L,rh);for(let k=0;k<26;k++){g.fillStyle=`rgba(${100+r()*40|0},${60+r()*30|0},20,${.04+r()*.1})`;g.fillRect(x+r()*L,i*rh+r()*rh,20+r()*140,1+r()*1.5)}g.fillStyle='rgba(60,35,12,.55)';g.fillRect(x,i*rh,2,rh);x+=L}g.fillStyle='rgba(50,30,10,.55)';g.fillRect(0,i*rh,w,2)}});
  X.tatami=ctex(T,1024,1024,(g,w,h,r)=>{const mw=w/2;for(let m=0;m<2;m++){const x0=m*mw;g.fillStyle='#bfb577';g.fillRect(x0,0,mw,h);for(let k=0;k<420;k++){const x=x0+r()*mw;g.fillStyle=`rgba(${120+r()*50|0},${110+r()*40|0},50,${.1+r()*.16})`;g.fillRect(x,0,1+r()*1.4,h)}g.fillStyle='#1d1a14';g.fillRect(x0,0,14,h);g.fillRect(x0+mw-14,0,14,h);g.fillStyle='rgba(0,0,0,.3)';g.fillRect(x0+mw-16,0,2,h)}});
  X.tileW=ctex(T,256,256,(g,w,h)=>{g.fillStyle='#e9ecee';g.fillRect(0,0,w,h);g.strokeStyle='#9aa1a6';g.lineWidth=3;for(let i=0;i<=2;i++){g.beginPath();g.moveTo(i*w/2,0);g.lineTo(i*w/2,h);g.stroke();g.beginPath();g.moveTo(0,i*h/2);g.lineTo(w,i*h/2);g.stroke()}});
+ X.tileB=ctex(T,256,256,(g,w,h,r)=>{g.fillStyle='#a9b4b8';g.fillRect(0,0,w,h);const n=4,ph=h/n,pw=w/n;for(let i=0;i<n;i++)for(let j=0;j<n;j++){const b=.94+r()*.1;g.fillStyle=`rgb(${226*b|0},${233*b|0},${236*b|0})`;g.fillRect(j*pw+2,i*ph+2,pw-4,ph-4);g.fillStyle='rgba(255,255,255,.35)';g.fillRect(j*pw+2,i*ph+2,pw-4,3)}}); /* CAD-312：浴室の床タイル（薄い青灰＋目地） */
  X.cloth=ctex(T,256,256,(g,w,h,r)=>{g.fillStyle='#f1eee8';g.fillRect(0,0,w,h);for(let k=0;k<6000;k++){g.fillStyle=`rgba(${r()>.5?255:150},${r()>.5?255:150},${r()>.5?250:140},.05)`;g.fillRect(r()*w,r()*h,1.5,1.5)}for(let i=0;i<w;i+=4){g.fillStyle='rgba(120,110,90,.05)';g.fillRect(i,0,1,h)}});
  X.conc=ctex(T,256,256,(g,w,h,r)=>{g.fillStyle='#b4b6b8';g.fillRect(0,0,w,h);for(let k=0;k<7000;k++){const v=70+r()*150|0;g.fillStyle=`rgba(${v},${v},${v},.1)`;g.fillRect(r()*w,r()*h,2,2)}});
  X.ground=ctex(T,512,512,(g,w,h,r)=>{g.fillStyle='#cfccc4';g.fillRect(0,0,w,h);for(let k=0;k<12000;k++){const v=90+r()*140|0;g.fillStyle=`rgba(${v},${v-4},${v-10},.14)`;g.fillRect(r()*w,r()*h,2,2)}});
@@ -21782,6 +21783,8 @@ function build(S,T,opt){
   floor:M({map:X.floor,roughness:.42,envMapIntensity:.7}),
   tatami:M({map:X.tatami,roughness:.95}),
   cf:M({color:0xd9d4c8,roughness:.5}),
+  tileB:M({map:X.tileB,roughness:.3,envMapIntensity:.8}),
+  wcF:M({color:0xb9beb9,roughness:.55}),
   tileF:M({color:0x8e9498,roughness:.35,metalness:.05}),
   panel:M({map:X.panel,roughness:.35}),
   roof:M({map:X.tile,roughness:.85,envMapIntensity:.3}),
@@ -21817,10 +21820,10 @@ function build(S,T,opt){
  const clipR297=r=>{const q={x0:Math.max(0,r.x0),x1:Math.min(W,r.x1),z0:Math.max(0,r.z0),z1:Math.min(D,r.z1)};return (q.x1-q.x0>1e-4&&q.z1-q.z0>1e-4)?q:null};
  /* CAD-297（同・取り込み1）：床の範囲は fk に応じた材料で描く（全部を畳にしない）。座上げは上の仕上げ（fin）で描く */
  const flMat297=t=>{const f=t.fk||'tatami';if(f==='tatami')return mat.tatami;if(f==='flCF')return mat.cf;if(f==='flDoma')return mat.conc;if(f==='floorFin')return mat.tileF;if(f==='flAge'){const g=t.fin||'tatami';return g==='flCF'?mat.cf:(g==='tatami'?mat.tatami:mat.floor)}return mat.floor};
- (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileF:z.k==='toilet'?mat.cf:z.k==='doma'?mat.conc:mat.floor;if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-.0:.004),m,z.k==='doma'?1:1))});
+ (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileB:z.k==='toilet'?mat.wcF:z.k==='doma'?mat.conc:mat.floor; /* CAD-312：浴室の床はタイル調、トイレの床は便器の白と区別できる色に */if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-.0:.004),m,z.k==='ub'?.6:1))});
  (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,FL+.012,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,FL,r.z0,r.x1,FL+.012,r.z1,six(m)),0)});
  /* 洗面所(2枚目のroomRecs)はCF */
- (S.roomRecs||[]).forEach(r0=>{const nm=(S.roomNames||[]).find(n=>n.p[0]>=Math.min(r0.x0,r0.x1)&&n.p[0]<=Math.max(r0.x0,r0.x1)&&n.p[1]>=Math.min(r0.y0,r0.y1)&&n.p[1]<=Math.max(r0.y0,r0.y1));if(nm&&nm.name==='洗面所'){const r=clipR297(R(r0));if(r)add(flat(r.x0,r.z0,r.x1,r.z1,FL+.004,mat.cf,1))}});
+ (S.roomRecs||[]).forEach(r0=>{const nm=(S.roomNames||[]).find(n=>n.p[0]>=Math.min(r0.x0,r0.x1)&&n.p[0]<=Math.max(r0.x0,r0.x1)&&n.p[1]>=Math.min(r0.y0,r0.y1)&&n.p[1]<=Math.max(r0.y0,r0.y1));if(nm&&(nm.name==='洗面所'||nm.name==='浴室'||nm.name==='トイレ')){const r=clipR297(R(r0));if(r)add(flat(r.x0,r.z0,r.x1,r.z1,FL+.004,nm.name==='浴室'?mat.tileB:(nm.name==='トイレ'?mat.wcF:mat.cf),nm.name==='浴室'?.6:1))} /* CAD-312：浴室・トイレの床も（従来は洗面所のCFだけ描いていた） */});
  /* 壁（開口つき） */
  const wallsOpenings=[];
  const SILL={'腰窓':900,'小窓':1200,'掃き出し':0,'FIX':900,'玄関':0,'室内ドア':0,'クローゼット':0,'勝手口':0};
@@ -21901,9 +21904,10 @@ function build(S,T,opt){
   if(t.k==='bath'){/* 浴槽：長手(w)=z方向。洗い場側の面は低く、奥に水栓・シャワー */
     const g=new T.Group();const Lz=w,Wx=d;
     const shell=rrb(Wx,.58,Lz,.12,mat.porc,.012);PP(shell,0,0,0,g);
+    const rim=rrb(Wx+.03,.035,Lz+.03,.13,M({color:0xd3dde1,roughness:.35}),.008);PP(rim,0,.545,0,g); /* CAD-312：浴槽の上縁に薄い灰青の帯を付け、白い壁・床から輪郭が読めるように */
     const inner=rrb(Wx-.14,.50,Lz-.14,.1,M({color:0xeef3f5,roughness:.2}),.01);inner.position.set(0,.09,0);inner.scale.set(1,1,1);g.add(inner);
     const wt=new T.Mesh(new T.PlaneGeometry(Wx-.17,Lz-.17),water);wt.rotation.x=-Math.PI/2;wt.position.y=.46;g.add(wt);
-    const ap=rrb(Wx+.02,.52,.025,.01,mat.porc);PP(ap,0,0,-Lz/2-.014,g);
+    const ap=rrb(Wx+.02,.52,.025,.01,M({color:0xe6ecee,roughness:.3}));PP(ap,0,0,-Lz/2-.014,g); /* CAD-312：エプロンは本体より僅かに濃く */
     /* 壁側(+x)にシャワーバーと水栓 */
     const bar=cyl(.012,.9,mat.steel,12);PP(bar,Wx/2+.04,1.35,0,g);const bk=rrb(.05,.015,.05,.005,mat.steel);
     const head=cyl(.06,.025,mat.steel,24);head.rotation.z=Math.PI/2;PP(head,Wx/2+.1,1.55,0,g);
@@ -21913,8 +21917,8 @@ function build(S,T,opt){
   else if(t.k==='wc'){const Lx=d,Wz=w;const g=new T.Group();
     const bowl=slab(ovalShape(.255,.18),.4,mat.porc,.02);PP(bowl,.05,0,0,g);
     const hole=slab(ovalShape(.17,.11),.01,M({color:0x6e8793,roughness:.05}),0);PP(hole,.05,.40,0,g);
-    const seat=slab((()=>{const s=ovalShape(.255,.185);const h=new T.Path();h.absellipse(0,0,.165,.105,0,Math.PI*2,true,0);s.holes.push(h);return s})(),.028,M({color:0xf3f2ee,roughness:.35}),.006);PP(seat,.05,.405,0,g);
-    const lid=slab(ovalShape(.245,.175),.022,M({color:0xf3f2ee,roughness:.35}),.006);lid.rotation.z=-.0;PP(lid,.05,.455,0,g);
+    const seat=slab((()=>{const s=ovalShape(.255,.185);const h=new T.Path();h.absellipse(0,0,.165,.105,0,Math.PI*2,true,0);s.holes.push(h);return s})(),.028,M({color:0xe9e5da,roughness:.4}),.006);PP(seat,.05,.405,0,g); /* CAD-312：便座は本体の白より僅かに濃く */
+    const lid=slab(ovalShape(.245,.175),.022,M({color:0xe9e5da,roughness:.4}),.006); /* CAD-312：蓋も便座と同色 */lid.rotation.z=-.0;PP(lid,.05,.455,0,g);
     const tank=rrb(.2,.36,.4,.04,mat.porc,.01);PP(tank,-Lx/2+.14,.4,0,g);
     const lidT=rrb(.21,.025,.41,.04,mat.porc);PP(lidT,-Lx/2+.14,.76,0,g);
     const bt=cyl(.022,.014,mat.steel,20);PP(bt,-Lx/2+.14,.785,0,g);
