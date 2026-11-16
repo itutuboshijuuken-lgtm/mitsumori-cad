@@ -2079,6 +2079,19 @@ function nearestHost(pt){
 // CAD-167: 解体で「撤去」にする壁・間仕切りには、新しい窓・建具は置けない（状態「撤去」の間仕切りと同じ扱い。第2ラウンドで直されていた物の移植）
 function hgRemHost(h){ const o = h.t === "e" ? (S.edges || [])[h.i] : (S.parts2D || [])[h.i]; return !!(o && o.hg && o.hgD === "rem"); }
 const pState = q => q.state || (q.isNew ? "new" : "keep");
+/* CAD-292: 間仕切りの形（普通の壁／垂れ壁／腰壁／開放）。記録は q.wf（無い＝普通の壁）。
+   腰壁は従来の高さ指定 q.top（床からの高さ）も同じ形として扱う（互換）。垂れ壁は
+   q.wfh が天井からの下がり。開放は壁として拾わないが、線の区切りは従来通り効く。 */
+const PFN292 = {full: "普通の壁", tare: "垂れ壁", koshi: "腰壁", open: "開放"};
+const partForm292 = q => { if (!q) return "full"; if (q.wf === "open" || q.wf === "tare" || q.wf === "koshi") return q.wf; return q.top ? "koshi" : "full"; };
+const partHq292 = (q, ch) => { const f = partForm292(q), c = ch || 2400; if (f === "open") return 0; if (f === "tare") return Math.max(0, c - (q.wfh || 600)); return Math.min(q.top || c, c); };
+function setPartForm292(q, f, h){
+  const ch = (typeof S !== "undefined" && S && +S.ch) || 2400;
+  if (f === "open"){ q.wf = "open"; delete q.wfh; delete q.top; }
+  else if (f === "tare"){ q.wf = "tare"; q.wfh = Math.max(50, Math.min(Math.round(h || q.wfh || 600), Math.max(50, ch - 50))); delete q.top; }
+  else if (f === "koshi"){ const v = Math.max(50, Math.min(Math.round(h || q.top || q.wfh || 900), ch)); q.wf = "koshi"; q.wfh = v; q.top = v; }
+  else { delete q.wf; delete q.wfh; delete q.top; }
+}
 const PST = {keep: ["既存", "#2563B0"], new: ["新設", "#E8742C"], remove: ["撤去", "#C62828"]};
 // 壁の撤去：910以上なら柱や梁を受けていることが多いので、梁補強を提案する（q.beam：true＝入れる／false＝入れない／未回答＝要確認として入れる）
 const BEAM_MIN = 910;
@@ -2993,8 +3006,8 @@ function planExtras(P, sc){
       const A2 = sp.al ? P(sp.vert ? [q.x1, sp.lo] : [sp.lo, q.y1]) : P([cl(q.x1 - ux * ex, bb.x0, bb.x1), cl(q.y1 - uy * ex, bb.y0, bb.y1)]), B2 = sp.al ? P(sp.vert ? [q.x1, sp.hi] : [sp.hi, q.y1]) : P([cl(q.x2 + ux * ex, bb.x0, bb.x1), cl(q.y2 + uy * ex, bb.y0, bb.y1)]);
       h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#E8742C" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#E8742C"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#E8742C"/></g>`;
     }
-    h += `<g data-pt="${i}" style="cursor:grab"><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""}/><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
-      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${q.top ? "・パーティション " + fmt(q.top) : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
+    h += `<g data-pt="${i}" style="cursor:grab"><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${partForm292(q) === "open" && pState(q) !== "remove" ? "#8A96A3" : PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : partForm292(q) === "open" ? 'stroke-dasharray="4 4"' : ""}/><line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
+      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmt(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmt(beamLen(q)) + "×" + beamH(q) : ""}${partForm292(q) === "koshi" ? "・腰壁 " + fmt(q.top || q.wfh || 900) : partForm292(q) === "tare" ? "・垂れ壁 " + fmt(q.wfh || 600) : partForm292(q) === "open" ? "・開放" : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
     const q = S.parts2D[sel.i], a = P([q.x1, q.y1]), c = P([q.x2, q.y2]);
@@ -3049,7 +3062,7 @@ function planExtras(P, sc){
     h += `<g data-op="${i}" style="cursor:grab"${stt === "keep" ? ' opacity=".5"' : ""}>${g}${(() => { const d = ty === "door" ? w : 260, m0 = 120; const q = [[A[0] - n[0] * m0, A[1] - n[1] * m0], [B[0] - n[0] * m0, B[1] - n[1] * m0], [B[0] + n[0] * d, B[1] + n[1] * d], [A[0] + n[0] * d, A[1] + n[1] * d]]; return `<polygon points="${q.map(X).join(" ")}" fill="transparent"/>`; })()}<rect x="${Math.min(P(A)[0], P(B)[0]) - 6}" y="${Math.min(P(A)[1], P(B)[1]) - 6}" width="${Math.abs(P(B)[0] - P(A)[0]) + 12}" height="${Math.abs(P(B)[1] - P(A)[1]) + 12}" fill="transparent"/><text x="${cm[0]}" y="${cm[1] + 4}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:700;fill:${SST[stt][1]}">${sa.w}${stt === "keep" ? " 既存" : stt === "ip" ? " 内窓" : stt === "fusuma" ? " 襖張替" : stt === "shoji" ? " 障子張替" : ""}</text></g>`;
   });
   // パーティション：天井まで行かないことが分かるように、白い破線を上に重ねる
-  (S.parts2D || []).forEach(q => { if (q.top && pState(q) !== "remove"){ const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]); h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#fff" stroke-width="2" stroke-dasharray="12 7" pointer-events="none"/>`; } });
+  (S.parts2D || []).forEach(q => { const f292 = partForm292(q); if ((f292 === "koshi" || f292 === "tare") && pState(q) !== "remove"){ const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]); h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#fff" stroke-width="2" stroke-dasharray="${f292 === "tare" ? "2 4" : "12 7"}" pointer-events="none"/>`; } });   /* CAD-292：腰壁＝白破線、垂れ壁＝白の点線 */
   // 部屋の名前・面積は、いちばん上に描く（間仕切りや建具に隠れないように）
   h += roomLabelsSvg(P, "all");
   if (HB.__peStage07) h += HB.__peStage07(P, sc);
@@ -3109,7 +3122,7 @@ function drawToolsUICore(){
   $("undoBtn").disabled = !undoStack.length; if ($("redoBtn")) $("redoBtn").disabled = !redoStack.length;
   // 描いた物の一覧
   const it = [];
-  (S.parts2D || []).forEach((q, i) => it.push(`<div class="sprow"><div>${q.top ? "パーティション" : "間仕切り"}（${PST[pState(q)][0]}）<small>長さ ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}・${q.y1 === q.y2 ? "横" : "縦"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ep="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dp="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
+  (S.parts2D || []).forEach((q, i) => it.push(`<div class="sprow"><div>${partForm292(q) === "full" ? "間仕切り" : PFN292[partForm292(q)]}（${PST[pState(q)][0]}）<small>長さ ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}・${q.y1 === q.y2 ? "横" : "縦"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ep="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dp="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
   S.sashes.forEach((sa, i) => { if (sa.drawn) it.push(`<div class="sprow"><div style="display:flex;gap:6px;align-items:center">${sashIcon(sa.cat, sa.name)}<span>${sa.cat} ${sa.name}<small>${sa.w}×${sa.h}</small></span></div><div style="display:flex;gap:4px"><button class="btn" data-eo="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-do="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`); });
   (S.tatami || []).forEach((r, i) => it.push(`<div class="sprow"><div>${r.fk ? (r.fk === "flAge" && HB.__ageLabel ? HB.__ageLabel(r) : "床 " + ((HB.__FLN || {})[r.fk] || r.fk)) : `畳 ${fmt(tatCount(r), 1)}帖（${TST[r.st || "new"][0]}）`}<small>${fmt(r.x1 - r.x0)}×${fmt(r.y1 - r.y0)}</small></div><div style="display:flex;gap:4px"><button class="btn" data-et="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">変える</button><button class="btn sub" data-dt="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
   (S.tenken || []).forEach((o, i) => it.push(`<div class="sprow"><div>${TKN[o.k]}<small>${o.k === "dansa" ? "幅" + o.w : (o.k === "geta" || o.k === "senpan" || o.k === "stair" || o.k === "yukaten") ? fmt(o.w) + "×" + fmt(o.d) : o.w + "角"}</small></div><div style="display:flex;gap:4px"><button class="btn" data-ek="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px">選ぶ</button><button class="btn sub" data-dk="${i}" type="button" style="min-height:38px;padding:0 10px;font-size:14px;color:var(--ng)">消す</button></div></div>`));
@@ -4493,7 +4506,7 @@ function drawSelBar0(){
   const was = !bar.hidden; bar.hidden = !on; if (!on) holdStop(); if (was !== !!on) setTimeout(() => { if (HB.__pageM) drawPlan(); }, 0); if (!on) return;
   if (sel.t === "k") return drawSelBarK(bar);
   const isP = sel.t === "p", q = isP ? S.parts2D[sel.i] : null, sa = isP ? null : S.sashes[sel.i];
-  const title = isP ? `間仕切り ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}（${q.y1 === q.y2 ? "横" : "縦"}）・${PST[pState(q)][0]}　${q.y1 === q.y2 ? "上から" + fmt(Math.round(q.y1 - bbox().y0)) : "左から" + fmt(Math.round(q.x1 - bbox().x0))}` : `${sel.i + 1}番 ${sashLabel(sa)}（${sa.w}）・${SST[sState(sa)][0]}　壁の端から${fmt(Math.round(sa.pos))} ▸`;
+  const title = isP ? `間仕切り ${fmt(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}（${q.y1 === q.y2 ? "横" : "縦"}）・${PST[pState(q)][0]}${partForm292(q) !== "full" ? "・" + PFN292[partForm292(q)] : ""}　${q.y1 === q.y2 ? "上から" + fmt(Math.round(q.y1 - bbox().y0)) : "左から" + fmt(Math.round(q.x1 - bbox().x0))}` : `${sel.i + 1}番 ${sashLabel(sa)}（${sa.w}）・${SST[sState(sa)][0]}　壁の端から${fmt(Math.round(sa.pos))} ▸`;
   // 十字キーを押している間はボタンを作り直さない（指を離したのが届かなくなるため）
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
@@ -4501,7 +4514,7 @@ function drawSelBar0(){
   const okTxt217 = (!isP && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了" : "OK";   /* CAD-217：ドア・窓の配置の流れの中では終わるボタンは「終了」 */
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">${okTxt217}</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${isP ? "" : " o"}">${isP
-      ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button>` : `<button id="sbTop" type="button">高さ寸法</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
+      ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmt(beamLen(q)) + "×" + beamH(q) : "なし"} ▸</button><button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>` : `<button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
       : `<button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbSt" type="button" style="color:${SST[sState(sa)][1]}">${SST[sState(sa)][0]} ▸</button><button id="sbSize" type="button">大きさ・種類</button>`}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${isP ? `<button id="sbRot" class="rot" type="button">⟳<small>90°</small></button>` : `<button id="sbFlip" class="rot" type="button">⟳<small>向き</small></button>`}</div>
     <div class="sbR">${isP ? `<button id="sbStep" class="stp" type="button">${selStep}mm</button>` : "<span></span>"}<button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
@@ -4532,7 +4545,7 @@ if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText
       movePart(q, 0, 0); try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
     $("sbLen").onclick = () => openPad({title: "間仕切りの長さ", value: Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), extra: [455, 910, 1820, 2730, 3640].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); setLen(q, v); save(); drawPlan(); }})), done: v => { if (v){ pushUndo(); setLen(q, v); save(); drawPlan(); } }});
     $("sbFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
-    if ($("sbTop")) $("sbTop").onclick = () => openPad({title: "間仕切りの高さ", sub: "数字は床からの高さ。垂れ壁は天井から下がります", unit: "mm", std: false, value: q.top || "", extra: [{label: "天井まで", fn: () => { closePad(); pushUndo(); delete q.top; save(); drawPlan(); }}, {label: "垂れ壁（天井から）", fn: () => { closePad(); pushUndo(); const ix = S.parts2D.indexOf(q); if (ix >= 0) S.parts2D.splice(ix, 1); sel = null; S.tare = S.tare || []; const tt = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2, h: 400}; S.tare.push(tt); save(); drawPlan(); tareAsk(tt); }}, {label: "腰壁（床から900）", fn: () => { closePad(); pushUndo(); q.top = 900; save(); drawPlan(); }}].concat([1800, 2000, 2100].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); q.top = v; save(); drawPlan(); }}))), done: v => { if (v){ pushUndo(); q.top = Math.min(v, S.ch); save(); drawPlan(); } }});
+    if ($("sbForm292")) $("sbForm292").onclick = () => partFormSheet292(sel.i);   /* CAD-292：間仕切りの形の選択シート（旧「高さ寸法」＝sbTop の置き換え。垂れ壁の別記録への変換は置く道具の垂れ壁モードが担う） */
     $("sbNew").onclick = () => { pushUndo(); setPState(q, (S.mode === "zo" ? {keep: "new", new: "keep", remove: "keep"} : {keep: "new", new: "remove", remove: "keep"})[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
     if ($("sbBeam")) $("sbBeam").onclick = () => beamAsk(q);
   } else {
@@ -4814,6 +4827,9 @@ function partSheet(i){
   $("mbox").innerHTML = `<h3>間仕切り</h3>
     <div class="seg">${(S.mode === "zo" ? ["keep", "new"] : ["keep", "new", "remove"]).map(k => `<button data-nw="${k}" aria-pressed="${pState(q) === k}" type="button">${PST[k][0]}</button>`).join("")}</div>
     <div class="seg" style="margin-top:6px"><button data-or="h" aria-pressed="${horiz}" type="button">横向き</button><button data-or="v" aria-pressed="${!horiz}" type="button">縦向き</button></div>
+    <div class="sub2" style="margin-top:10px">壁の形</div>
+    <div class="seg">${["full", "tare", "koshi", "open"].map(f => `<button data-wf="${f}" aria-pressed="${partForm292(q) === f}" type="button">${PFN292[f]}</button>`).join("")}</div>
+    ${partForm292(q) === "tare" ? row("pf", "天井からの下がり", q.wfh || 600) : partForm292(q) === "koshi" ? row("pf", "床からの高さ", q.top || q.wfh || 900) : ""}
     ${row("po", horiz ? "上の壁からの位置" : "左の壁からの位置", off)}${row("ps", horiz ? "始まり（左の壁から）" : "始まり（上の壁から）", st)}${row("pl", "長さ", L)}
     <div class="row"><button class="btn sub" id="psFit" type="button">壁から壁まで伸ばす</button></div>
     <div class="row"><button class="btn sub" id="psDel" type="button" style="color:var(--ng)">消す</button><button class="btn pri" id="psOk" type="button">OK</button></div>`;
@@ -4823,6 +4839,8 @@ function partSheet(i){
   bind("po", v => apply(v, st, L), "位置", off); bind("ps", v => apply(off, v, L), "始まり", st); bind("pl", v => apply(off, st, v), "長さ", L);
   $("mbox").querySelectorAll("[data-nw]").forEach(x => x.onclick = () => { setPState(q, x.dataset.nw); save(); drawPlan(); partSheet(i); });
   $("mbox").querySelectorAll("[data-or]").forEach(x => x.onclick = () => { if ((x.dataset.or === "h") === horiz) return; pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; const cx = (q.x1 + q.x2) / 2, cy = (q.y1 + q.y2) / 2; if (horiz){ q.x1 = q.x2 = Math.round(cx); q.y1 = cy - 10; q.y2 = cy + 10; q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } else { q.y1 = q.y2 = Math.round(cy); q.x1 = cx - 10; q.x2 = cx + 10; q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); });
+  $("mbox").querySelectorAll("[data-wf]").forEach(x => x.onclick = () => { pushUndo(); setPartForm292(q, x.dataset.wf); save(); drawPlan(); partSheet(i); drawSelBar(); });   /* CAD-292 */
+  if (partForm292(q) === "tare" || partForm292(q) === "koshi") bind("pf", v => { pushUndo(); setPartForm292(q, partForm292(q), v); save(); drawPlan(); partSheet(i); drawSelBar(); }, partForm292(q) === "tare" ? "天井からの下がり" : "床からの高さ", partForm292(q) === "tare" ? (q.wfh || 600) : (q.top || q.wfh || 900));   /* CAD-292 */
   $("psFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (horiz){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); partSheet(i); };
   $("psOk").onclick = () => { $("modal").hidden = true; drawPlan(); };
   $("psDel").onclick = () => { pushUndo(); delPart(i); $("modal").hidden = true; drawPlan(); };
@@ -5926,7 +5944,7 @@ function calc0(...a){
    ・910/455 はモジュール MOD（227.5）の倍数から導く（将来の1000モジュール対応のため直書きしない）。
    ・袖壁（wallLines）は実物の型が未確認のため対象外。 */
 function framePos(){
-  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0, jambN: 0, ukeFull: 0, ukeShorts: [], ukePts: []};
+  const Z = {posts: [], studs: [], runs: [], frameN: 0, partPostN: 0, studN: 0, thick: 0, thin: 0, partStudN: 0, partThick: 0, partThin: 0, partPostLens: [], partThickLens: [], partThinLens: [], opStuds: [], opDnN: 0, opUpN: 0, opPosN: 0, jambN: 0, ukeFull: 0, ukeShorts: [], ukePts: []};
   try {
     if (!S.edges || !S.edges.length) return Z;
     const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
@@ -5938,7 +5956,7 @@ function framePos(){
     };
     const byKey = {};
     S.edges.forEach((e, i) => { if (i === S.noWall) return; const r = addRun(pv[i], pv[(i + 1) % pv.length], "e", false); if (r) byKey["e" + i] = r; });
-    (S.parts2D || []).forEach((q, j) => { const st = pState(q); if (st === "remove") return; const r = addRun([q.x1, q.y1], [q.x2, q.y2], "p", st === "new"); if (r) byKey["p" + j] = r; });
+    (S.parts2D || []).forEach((q, j) => { const st = pState(q); if (st === "remove") return; const r = addRun([q.x1, q.y1], [q.x2, q.y2], "p", st === "new"); if (r){ byKey["p" + j] = r; r.q = q; } });
     if (!runs.length) return Z;
     // 開口: サッシのホスト先のランに pos〜pos+w（pvSashes と同じクランプ）
     (S.sashes || []).forEach(sa => {
@@ -6068,7 +6086,7 @@ function framePos(){
          角の柱に近い枠（家の端から105mm以内）は、角の受けで足りるので足さない。 */
     {
       const pk2 = (x, y) => Math.round(x * 2) + "," + Math.round(y * 2);
-      const eruns = runs.filter(r => r.kind === "e"), pruns2 = runs.filter(r => r.kind === "p");
+      const eruns = runs.filter(r => r.kind === "e"), pruns2 = runs.filter(r => r.kind === "p" && partForm292(r.q) !== "open");   /* CAD-292: 開放の間仕切りにはボードが無いので受けも数えない */
       const onSeg2 = (r, x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy, px = r.ax + r.ux * t, py = r.ay + r.uy * t; return {t, d: Math.hypot(x - px, y - py)}; };
       for (let i = 0; i < pv.length; i++){
         const pe = (i - 1 + pv.length) % pv.length;
@@ -6109,18 +6127,24 @@ function framePos(){
         });
       });
     }
-    const cls = (x, y) => ({f: runs.some(r => r.kind === "e" && onRun(r, x, y)), p: runs.some(r => r.kind === "p" && r.isNew && onRun(r, x, y))});
+    const chF292 = +S.ch || 2400;
+    const cls = (x, y) => {   /* CAD-292: 開放の間仕切りは柱・間柱を数えない。柱・間柱の長さは形（壁のある高さ）に合わせる */
+      const prs = runs.filter(r => r.kind === "p" && r.isNew && onRun(r, x, y));
+      const live = prs.filter(r => partForm292(r.q) !== "open");
+      return {f: runs.some(r => r.kind === "e" && onRun(r, x, y)), p: live.length > 0, hq: live.length ? Math.max.apply(null, live.map(r => partHq292(r.q, chF292))) : chF292, op: prs.length > 0 && !live.length};
+    };
     postMap.forEach(P0 => {
       const c = cls(P0.x, P0.y);
-      Z.posts.push({x: P0.x, y: P0.y, k: c.f ? "f" : (c.p ? "p" : "")});
-      if (c.f) Z.frameN++; else if (c.p) Z.partPostN++;
+      Z.posts.push({x: P0.x, y: P0.y, k: c.f ? "f" : (c.p ? "p" : ""), op: (!c.f && c.op) ? 1 : 0});
+      if (c.f) Z.frameN++; else if (c.p){ Z.partPostN++; Z.partPostLens.push(c.hq + 100); }
     });
     studMap.forEach(S0 => {
       const c = cls(S0.x, S0.y);
       S0.k = c.f ? "f" : (c.p ? "p" : "");
+      S0.op = (!c.f && c.op) ? 1 : 0;
       Z.studs.push(S0);
       if (c.f){ Z.studN++; if (S0.thick) Z.thick++; else Z.thin++; }
-      else if (c.p){ Z.partStudN++; if (S0.thick) Z.partThick++; else Z.partThin++; }
+      else if (c.p){ Z.partStudN++; if (S0.thick){ Z.partThick++; Z.partThickLens.push(c.hq + 100); } else { Z.partThin++; Z.partThinLens.push(c.hq + 100); } }
     });
     Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind}));
     return Z;
@@ -6283,9 +6307,10 @@ function calc00(){
     const P2 = S.parts2D || []; let len = 0, newLen = 0;
     let remLen = 0;
     let hA = 0, nA = 0;
-    P2.forEach(q => { const L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), st = pState(q), hq = Math.min(q.top || ch, ch); if (st === "remove"){ remLen += L; return; } len += L; hA += L * hq; if (st === "new"){ newLen += L; nA += L * hq; } });
+    let lenEff = 0, newLenEff = 0, lenFloor = 0;   /* CAD-292: 形に合わせた実効長さ（高さ割合）と、床に届く形の長さ（幅木・見切り用） */
+    P2.forEach(q => { const L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), st = pState(q), hq = partHq292(q, ch), f292 = ch > 0 ? hq / ch : 0, fm292 = partForm292(q); if (st === "remove"){ remLen += L; return; } len += L; hA += L * hq; lenEff += L * f292; if (fm292 !== "tare" && fm292 !== "open") lenFloor += L; if (st === "new"){ newLen += L; nA += L * hq; newLenEff += L * f292; } });
     const opP = S.sashes.filter(sa => sa.host && sa.host.t === "p").reduce((a, sa) => a + sa.w * sa.h * (sa.n || 1), 0) / 1e6;
-    return {len, newLen, remLen, area: Math.max(0, hA / 1e6 * 2 - opP * 2), newArea: nA / 1e6 * 2};
+    return {len, newLen, remLen, lenEff, newLenEff, lenFloor, area: Math.max(0, hA / 1e6 * 2 - opP * 2), newArea: nA / 1e6 * 2};
   }
   function partNewRows(ch){
     const pi = partInfo(ch);
@@ -6303,12 +6328,13 @@ function calc00(){
     if (!(pi.newLen > 0)) return;
     const L = pi.newLen;
     { const F6 = framePos(), nP = F6.partPostN, nTh = F6.partThick, nTn = F6.partThin, nAll = nTh + nTn; const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP();
-      if (nP > 0) lum("hashira", "新設間仕切り 柱", 105, 105, Array(nP).fill(ch + 100), `105角・壁の端と交点・壁 ${fmt(L / 1000, 2)}m`, false);
-      if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nTh).fill(ch + 100), `${ta}×${tb}・910の位置（継目）${F6.jambN ? "と開口の両脇" : ""}・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, Array(nTn).fill(ch + 100), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
-      else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, Array(nAll).fill(ch + 100), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
-    lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(L * 2 / 3900)).fill(4000), "45×105", false);
-    const w = workP("ninku"), nin = Math.ceil(L / 1000 * 0.4 * 2) / 2;
-    if (!(S.mode === "zo" && !zoAttached())) rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
+      const lens292 = (arr, n) => (arr && arr.length === n) ? arr : Array(n).fill(ch + 100);   /* CAD-292: 柱・間柱の長さは形（壁のある高さ）に合わせる */
+      if (nP > 0) lum("hashira", "新設間仕切り 柱", 105, 105, lens292(F6.partPostLens, nP), `105角・壁の端と交点・壁 ${fmt(L / 1000, 2)}m`, false);
+      if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, lens292(F6.partThickLens, nTh), `${ta}×${tb}・910の位置（継目）${F6.jambN ? "と開口の両脇" : ""}・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, lens292(F6.partThinLens, nTn), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
+      else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, lens292((F6.partThickLens || []).concat(F6.partThinLens || []), nAll), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
+    lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(pi.newLenEff * 2 / 3900)).fill(4000), "45×105", false);   /* CAD-292: 上下枠は高さ割合 */
+    const w = workP("ninku"), nin = Math.ceil(pi.newLenEff / 1000 * 0.4 * 2) / 2;   /* CAD-292: 大工手間も高さ割合 */
+    if (nin > 0 && !(S.mode === "zo" && !zoAttached())) rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
   }
   function exRows(){
     S.extras.forEach(normEx);
@@ -6654,7 +6680,7 @@ function calc00(){
     } catch (e198) { /* 引く量が取れない時は従来どおり引かない */ }
     if (!rmMode){
       const fw0 = S.rfWall, wallN0 = Math.max(0, per * ch / 1e6 - openArea()) + (fw0 === "none" ? 0 : PI.area);
-      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), ecu: cuts198.houseFloor, ccW: cuts198.houseW, ccC: cuts198.houseC, perOki: per, perHab: per + PI.len * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
+      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), ecu: cuts198.houseFloor, ccW: cuts198.houseW, ccC: cuts198.houseC, perOki: per, perHab: per + PI.lenFloor * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
     } else {
       roomStats(ch).forEach(m => {
         const poly = [[m.bb.x0, m.bb.y0], [m.bb.x1, m.bb.y0], [m.bb.x1, m.bb.y1], [m.bb.x0, m.bb.y1]];
@@ -7039,7 +7065,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
   else { work("domaCon", "土間コンクリート", area, "㎡"); if (S.floor === "oki"){ okiRows(area, per); floorFin(Math.max(0, area - tatArea()), "1階 "); } else work("domaFin", "土間仕上げ", area, "㎡"); if (two) floorFin(area, "2階 "); }
   if (HB.__floorRows) HB.__floorRows(floorFin); if (HB.__trimRows) HB.__trimRows(work); tatamiRows(); tenkenRows(); HB.__sheetFx = sheet; fxRows(work, sheet);
-  habakiMikiri((per * (S.floor === "doma" ? F - 1 : F) || 0) + PI1.len * 2, F);
+  habakiMikiri((per * (S.floor === "doma" ? F - 1 : F) || 0) + PI1.lenFloor * 2, F);   /* CAD-292: 幅木・見切りは床に届く形だけ */
   partNewRows(S.ch);
   if (S.gaiheki !== "nuri") work("sheet", "透湿防水シート・胴縁" + gaiSfx, wallNet, "㎡");
   { const gaiTate = S.gaiheki !== "nuri" && (S.gaiDir || (S.gaiheki === "yakisugi" ? "tate" : "yoko")) === "tate", on = (i, f) => !(S.gaiMode === "pick" && S.gaiFace && S.gaiFace[i + "-" + f] === false);
@@ -7562,7 +7588,7 @@ function fxBacks(g){
 }
 // 壁のキー：0以上は部屋の壁、100+番号は間仕切り（パーティション）
 function fxWall(g, i){
-  if (i >= 100){ const q = S.parts2D[i - 100], a = [q.x1, q.y1], c = [q.x2, q.y2], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1; return {a, L, H: Math.min(q.top || chEff(), chEff()), ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L}; }
+  if (i >= 100){ const q = S.parts2D[i - 100], a = [q.x1, q.y1], c = [q.x2, q.y2], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1; return {a, L, H: partHq292(q, chEff()), ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, tp: partForm292(q) === "tare" ? 1 : 0}; }   /* CAD-292: 高さは形に合わせる（垂れ壁は天井側） */
   const a = g.p[i], c = g.p[(i + 1) % g.p.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1; return {a, L, H: g.H, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L};
 }
 // 画面の点 → 壁の面の (壁の端からの距離, 高さ)。描かれている壁だけ
@@ -7579,7 +7605,7 @@ function fxHit(sx, sy){
     const t = (r0 * dZ[1] - dZ[0] * r1) / det, z = (dT[0] * r1 - dT[1] * r0) / det;
     if (t < -20 || t > w.L + 20 || z < -20 || z > w.H + 20) continue;
     const [mx, myb] = g.W2((w.a[0] + w.ux * w.L / 2), (w.a[1] + w.uy * w.L / 2)), d = myb - mx * 0.3;
-    if (!best || d < best.d){ let sd = 0; if (i >= 100){ const vn = partVisibleNormal(i - 100); sd = (vn[0] * -w.uy + vn[1] * w.ux) >= 0 ? 1 : -1; } best = {w: i, u: Math.max(0, Math.min(w.L, t)), z: Math.max(0, Math.min(w.H, z)), d, sd}; }
+    if (!best || d < best.d){ let sd = 0; if (i >= 100){ const vn = partVisibleNormal(i - 100); sd = (vn[0] * -w.uy + vn[1] * w.ux) >= 0 ? 1 : -1; } best = {w: i, u: Math.max(0, Math.min(w.L, t)), z: Math.max(w.tp ? Math.max(0, chEff() - w.H) : 0, Math.min(w.tp ? chEff() : w.H, z)), d, sd};   /* CAD-292: 垂れ壁は天井側に吸着 */ }
   }
   return best;
 }
@@ -8126,7 +8152,7 @@ function roomFaces(){
       const x0 = pr(P0) - po, x1 = pr(P1) - po, fw = fxWall(g, w.k);
       // 間仕切りは、この部屋側の面（＋1／−1）。壁の向き（右へ進むか）も覚える
       const side = w.k >= 100 ? ((-sd.n[0] * -fw.uy + -sd.n[1] * fw.ux) >= 0 ? 1 : -1) : 0;
-      return {k: w.k, x0: Math.min(x0, x1), x1: Math.max(x0, x1), H: fw.H, side, sgn: (fw.ux * r[0] + fw.uy * r[1]) >= 0 ? 1 : -1};
+      return {k: w.k, x0: Math.min(x0, x1), x1: Math.max(x0, x1), H: fw.H, tp: fw.tp || 0, side, sgn: (fw.ux * r[0] + fw.uy * r[1]) >= 0 ? 1 : -1};
     });
     return {n: sd.n, r, o, len: sd.hi - sd.lo, name: posWord(sd.n), pieces};
   });
@@ -8187,7 +8213,7 @@ function faceSvg(F, fi){
   let h = `<rect x="0" y="0" width="${L}" height="${Hc}" fill="#EEF0F3" stroke="#B9C0C9" stroke-width="${U * 1.2}" stroke-dasharray="${U * 6} ${U * 4}"/>`;
   F.pieces.forEach(pc => {
     const ac = accOf189(pc.k, pc.side), fill = ac ? ACC[ac][1] : (HB.__trade === "cross" && crossWallOn() ? "#FFF3B0" : "#F7F4EE");
-    h += `<rect x="${pc.x0}" y="${Hc - pc.H}" width="${pc.x1 - pc.x0}" height="${pc.H}" fill="${fill}" stroke="#7C7266" stroke-width="${U * 1.5}"/>`;
+    if (pc.H > 0) h += `<rect x="${pc.x0}" y="${pc.tp ? 0 : Hc - pc.H}" width="${pc.x1 - pc.x0}" height="${pc.H}" fill="${fill}" stroke="#7C7266" stroke-width="${U * 1.5}"/>`;   /* CAD-292: 垂れ壁は天井側に描く。開放（高さ0）は壁面なし */
     if (ac) h += `<text x="${(pc.x0 + pc.x1) / 2}" y="${Hc - pc.H + U * 16}" text-anchor="middle" class="halo" style="font-size:${U * 8}px;font-weight:900;fill:#5A4A2A">アクセント ${ACC[ac][0]}</text>`;
   });
   // 窓・ドア（平面図で置いた位置のとおり）
@@ -12071,7 +12097,7 @@ HB.__dskSeg32 = true;
     if (sel.t === "p"){
       L.push("長さ：間仕切りの長さを、数字で決めます。");
       L.push("壁まで：両端を、いちばん近い壁・間仕切りまで伸ばします。");
-      if (has("sbTop")) L.push("高さ：天井までか、パーティション（途中までの高さ）か、垂れ壁かを選びます。");
+      if (has("sbForm292")) L.push("形：普通の壁・垂れ壁（天井から下がる）・腰壁（床から途中まで）・開放（壁なし）を選びます。見積も形に合わせて変わります。");
       if (has("sbBeam")) L.push("梁補強：撤去する壁に、梁の補強が要るかを選びます。");
       if (has("sbNew")) L.push("状態のボタン：新設・既存のまま・撤去を切り替えます。");
       L.push("⟳90°：縦と横を入れ替えます。");
@@ -13118,7 +13144,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     // zo は従来通り全部。rf は新設間仕切りだけ（見積の partNewRows が数える分。既存の家の
     // 柱・間柱は見積に入らないので出さない）。pt は見積が柱・間柱を数えないので無し。
     // 切り分けは framePos が付けた k（f=外壁まわり／p=新設間仕切り）を使う。
-    const cntK = q => S.mode === "zo" ? true : S.mode === "rf" ? q.k === "p" : false;
+    const cntK = q => q.op ? false : (S.mode === "zo" ? true : S.mode === "rf" ? q.k === "p" : false);   /* CAD-292: 開放の間仕切りの柱・間柱は数えていないので描かない */
     const posts = F6.posts.filter(cntK).map(q => ({x: q.x, y: q.y}));
     const studs = F6.studs.filter(cntK).map(q => ({x: q.x, y: q.y, thick: q.thick, ux: q.ux, uy: q.uy}));
     // CAD-161: 開口まわりの短い間柱も、間柱として同じ細長い長方形で描く（位置は下・上で同じ1か所）
@@ -13267,6 +13293,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     const partSegs = [];
     (S.parts2D || []).forEach(q => {
       if (pState(q) === "remove") return;
+      if (partForm292(q) === "open") return;   /* CAD-292: 開放は完成図でも壁として描かない */
       const Lh = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (Lh < 30) return;
       const ux = (q.x2 - q.x1) / Lh, uy = (q.y2 - q.y1) / Lh, ext = 40;
       partSegs.push([[q.x1 - ux * ext, q.y1 - uy * ext], [q.x2 + ux * ext, q.y2 + uy * ext]]);
@@ -14762,6 +14789,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var p = pts(), lwO = 1.7, lwP = 1.3, black = "", white = "", partSegs = [];
     (S.parts2D || []).forEach(function(q){
       if (pState(q) === "new") return;
+      if (partForm292(q) === "open") return;   /* CAD-292: 開放は完成図でも壁として描かない */
       var Lh = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (Lh < 30) return;
       var ux = (q.x2 - q.x1) / Lh, uy = (q.y2 - q.y1) / Lh, ext = 40;
       partSegs.push([[q.x1 - ux * ext, q.y1 - uy * ext], [q.x2 + ux * ext, q.y2 + uy * ext]]);
@@ -20646,6 +20674,34 @@ open287(hit);
    合計から1行だけ、プレカット運搬費は1行だけに直した。本体は calc() の
    多階合算分岐の中（CAD-291 の印のある所）。このブロックは印だけ。 */
 window.__bldg291 = true;
+</script>
+
+
+<script id="form292js">
+/* ===== CAD-292：間仕切りの形の選択シート =====
+   コントローラーの「形：○○」ボタンと、編集画面（partSheet）の「壁の形」の段から使う。
+   形は q.wf に記録（無い＝普通の壁）。垂れ壁・腰壁は高さを数字で入れられる。
+   仮の初期値：腰壁＝床から900mm、垂れ壁＝天井から600mm下がり。 */
+function partFormSheet292(i){
+  const q = (typeof S !== "undefined" && S && S.parts2D) ? S.parts2D[i] : null; if (!q) return;
+  const f = partForm292(q);
+  const hv = f === "tare" ? (q.wfh || 600) : f === "koshi" ? (q.top || q.wfh || 900) : 0;
+  const desc = {full: "天井まで届く、今まで通りの壁です。", tare: "天井から下の途中まで下がる壁です。下は開いています。", koshi: "床から上の途中まで立つ壁です。上は開いています。", open: "壁はありません。部屋の分かれと床の境だけが残り、壁としては見積に入りません。"}[f];
+  $("mbox").innerHTML = `<h3>間仕切りの形</h3>
+    <div class="seg">${["full", "tare", "koshi", "open"].map(k => `<button data-wf292="${k}" aria-pressed="${f === k}" type="button">${PFN292[k]}</button>`).join("")}</div>
+    <p class="hint" style="margin-top:8px">${desc}</p>
+    ${f === "tare" || f === "koshi" ? `<div class="sub2" style="margin-top:8px">${f === "tare" ? "天井からの下がり" : "床からの高さ"}：<b>${fmt(hv)}</b>mm</div><div class="chips"><button data-h292="-100" type="button">−100</button><button data-h292="-10" type="button">−10</button><button data-h292="10" type="button">＋10</button><button data-h292="100" type="button">＋100</button><button data-h292="pad" type="button">数字で</button></div>` : ""}
+    <div class="row"><button class="btn pri" id="pfOk292" type="button">OK</button></div>`;
+  $("modal").hidden = false;
+  $("mbox").querySelectorAll("[data-wf292]").forEach(x => x.onclick = () => { if (x.dataset.wf292 === f) return; pushUndo(); setPartForm292(q, x.dataset.wf292); save(); drawPlan(); partFormSheet292(i); });
+  $("mbox").querySelectorAll("[data-h292]").forEach(x => x.onclick = () => {
+    const v = x.dataset.h292;
+    if (v === "pad"){ $("modal").hidden = true; openPad({title: f === "tare" ? "天井からの下がり" : "床からの高さ", unit: "mm", std: false, value: hv, done: nv => { if (nv != null && nv > 0){ pushUndo(); setPartForm292(q, f, nv); save(); drawPlan(); } partFormSheet292(i); }});
+    } else { pushUndo(); setPartForm292(q, f, hv + (+v)); save(); drawPlan(); partFormSheet292(i); }
+  });
+  $("pfOk292").onclick = () => { $("modal").hidden = true; drawPlan(); };
+}
+window.__form292 = true;
 </script>
 
 </html>
