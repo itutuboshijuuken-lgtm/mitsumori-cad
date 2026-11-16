@@ -2065,6 +2065,14 @@ let drawMode = false, pInk = null;
 const DOOR_TYPES = [["part", "間仕切り"], ["door", "片開きドア"], ["hiki", "引戸"], ["chigai", "引違い戸"], ["closet", "クローゼット"], ["win", "窓"]];
 const TYPE_CATS = {door: s2 => s2.cat === "室内ドア" && s2.name === "片開き", hiki: s2 => s2.cat === "室内ドア" && s2.name === "片引き戸", chigai: s2 => s2.cat === "室内ドア" && s2.name === "引違い戸", tsuri: s2 => s2.cat === "室内ドア" && /上吊り/.test(s2.name), closet: s2 => s2.cat === "クローゼット", win: s2 => /腰窓|小窓|FIX|掃き出し/.test(s2.cat), winK: s2 => s2.cat === "腰窓", winS: s2 => s2.cat === "小窓", winH: s2 => s2.cat === "掃き出し", winF: s2 => s2.cat === "FIX", genS: s2 => s2.cat === "玄関" && /シングル/.test(s2.name), genO: s2 => s2.cat === "玄関" && /親子/.test(s2.name), genK: s2 => s2.cat === "玄関" && /片引き/.test(s2.name), genH: s2 => s2.cat === "玄関" && /2枚建/.test(s2.name), genD: s2 => s2.cat === "勝手口"};
 function typeOf(sa){ if (sa.cat === "クローゼット") return "closet"; if (/玄関|勝手口/.test(sa.cat)) return /引/.test(sa.name || "") ? "hiki" : "door"; if (sa.cat === "室内ドア") return (sa.name === "片引き戸" || /上吊り/.test(sa.name || "")) ? "hiki" : sa.name === "引違い戸" ? "chigai" : "door"; return "win"; }
+/* CAD-308：片引き戸（室内ドア）の戸袋の型。対象は cat が室内ドアで typeOf が "hiki" の物だけ（片引き戸・片引き戸（上吊り））。引違い・玄関の引き戸は対象外。
+   枠は「開口の半分＋中方立＋戸袋の半分」で扉は枠幅の約半分（ウッドワン納まり図・LIXIL の寸法式 DW=(W−12)/2 で裏取り。study-katabiki-2026-11-16.md）。
+   戸袋の向きは flip のビット2（片引きでは従来未使用。吊元ボタン・種類シートの反転ボタンは typeOf==="door" の時だけ出る）を使う：
+   0＝戸袋は B 側（pos から遠い半分）で、閉じた扉の位置（A 側の半分）が従来の描き方と一致する。1＝戸袋は A 側。
+   frame が "outset" の時は戸袋なし（扉が壁の面の外側を走る）。 */
+function kata308(sa){ if (!sa || sa.cat !== "室内ドア" || typeof typeOf !== "function" || typeOf(sa) !== "hiki") return null; return {out: sa.frame === "outset", pk: !!((sa.flip || 0) & 2)}; }
+/* CAD-308：見積で開口として壁から抜く幅。戸袋ありの片引きは開口の半分だけを抜き、戸袋の半分は壁として拾う。アウトセット・対象外は従来通り枠幅全部 */
+function opW308(sa){ const k = kata308(sa); return k && !k.out ? (sa.w || 0) / 2 : (sa.w || 0); }
 function hostSeg(h){
   if (h.t === "e"){ const p = pts(); return [p[h.i], p[(h.i + 1) % p.length]]; }
   const q = (S.parts2D || [])[h.i]; return q ? [[q.x1, q.y1], [q.x2, q.y2]] : null;
@@ -3026,7 +3034,8 @@ function planExtras(P, sc){
     const p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L);
     const A = [a[0] + u[0] * p0, a[1] + u[1] * p0], B = [A[0] + u[0] * w, A[1] + u[1] * w];
     const ty = typeOf(sa), X = q => P(q).join(",");
-    let g = `<line x1="${P(A)[0]}" y1="${P(A)[1]}" x2="${P(B)[0]}" y2="${P(B)[1]}" stroke="#fff" stroke-width="6"/>`;
+    const k308 = kata308(sa), M308 = [A[0] + u[0] * w / 2, A[1] + u[1] * w / 2], OA308 = k308 && k308.pk ? M308 : A, OB308 = k308 && k308.pk ? B : M308, PKA308 = k308 && k308.pk ? A : M308;   /* CAD-308：片引きは開口の半分（OA308〜OB308）だけ壁を抜く。戸袋は PKA308 から半分 */
+    let g = `<line x1="${P(k308 ? OA308 : A)[0]}" y1="${P(k308 ? OA308 : A)[1]}" x2="${P(k308 ? OB308 : B)[0]}" y2="${P(k308 ? OB308 : B)[1]}" stroke="#fff" stroke-width="6"/>`;
     if (ty === "door"){
       // 扉1枚ぶん：蝶番の側から開いた扉の線と、開く軌跡の弧
       const leaf = (hinge, other, len) => { const tip = [hinge[0] + n[0] * len, hinge[1] + n[1] * len], r = len * sc, sweep = (n[0] * (other[1] - hinge[1]) - n[1] * (other[0] - hinge[0])) > 0 ? 1 : 0;
@@ -3043,10 +3052,27 @@ function planExtras(P, sc){
       }
     } else if (ty === "hiki" || ty === "chigai"){
       const o1 = 35, o2 = -35, half = ty === "chigai" ? w / 2 + 20 : w;
-      const s1 = [A[0] + n[0] * o1, A[1] + n[1] * o1], e1 = [s1[0] + u[0] * half, s1[1] + u[1] * half];
-      g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
-      if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += `<line x1="${P(s2)[0]}" y1="${P(s2)[1]}" x2="${P(e2)[0]}" y2="${P(e2)[1]}" stroke="#3E4A57" stroke-width="3"/>`; }
-      if (sa.glass && sa.cat === "室内ドア"){ const gm = (p1, p2) => { const q1 = [p1[0] + (p2[0] - p1[0]) * 0.22, p1[1] + (p2[1] - p1[1]) * 0.22], q2 = [p1[0] + (p2[0] - p1[0]) * 0.78, p1[1] + (p2[1] - p1[1]) * 0.78]; return `<line x1="${P(q1)[0]}" y1="${P(q1)[1]}" x2="${P(q2)[0]}" y2="${P(q2)[1]}" stroke="#7FB8DC" stroke-width="3.2" stroke-linecap="round"/>`; }; g += gm(s1, e1); if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += gm(s2, e2); } }   /* CAD-283：引戸のガラス */
+      if (ty === "hiki" && k308){
+        /* CAD-308：片引きの型。戸袋あり＝開口の半分に閉じた扉（実線・長さ半分）、戸袋の半分は壁を抜かず壁の中に開けた扉を破線で描く。アウトセット＝扉は壁の面の外側（+110）を走る。真ん中は中方立の短線 */
+        const tkA = [M308[0] - n[0] * 55, M308[1] - n[1] * 55], tkB = [M308[0] + n[0] * 55, M308[1] + n[1] * 55];
+        g += `<line x1="${P(tkA)[0]}" y1="${P(tkA)[1]}" x2="${P(tkB)[0]}" y2="${P(tkB)[1]}" stroke="#3E4A57" stroke-width="2"/>`;
+        if (k308.out){
+          const s1 = [A[0] + n[0] * 110, A[1] + n[1] * 110], e1 = [s1[0] + u[0] * w, s1[1] + u[1] * w];
+          g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
+          if (sa.glass && sa.cat === "室内ドア"){ const gm = (p1, p2) => { const q1 = [p1[0] + (p2[0] - p1[0]) * 0.22, p1[1] + (p2[1] - p1[1]) * 0.22], q2 = [p1[0] + (p2[0] - p1[0]) * 0.78, p1[1] + (p2[1] - p1[1]) * 0.78]; return `<line x1="${P(q1)[0]}" y1="${P(q1)[1]}" x2="${P(q2)[0]}" y2="${P(q2)[1]}" stroke="#7FB8DC" stroke-width="3.2" stroke-linecap="round"/>`; }; g += gm(s1, e1); }
+        } else {
+          const s1 = [OA308[0] + n[0] * o1, OA308[1] + n[1] * o1], e1 = [s1[0] + u[0] * (w / 2), s1[1] + u[1] * (w / 2)];
+          const s2 = [PKA308[0] + n[0] * o1, PKA308[1] + n[1] * o1], e2 = [s2[0] + u[0] * (w / 2), s2[1] + u[1] * (w / 2)];
+          g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
+          g += `<line x1="${P(s2)[0]}" y1="${P(s2)[1]}" x2="${P(e2)[0]}" y2="${P(e2)[1]}" stroke="#3E4A57" stroke-width="3" stroke-dasharray="4 3"/>`;
+          if (sa.glass && sa.cat === "室内ドア"){ const gm = (p1, p2) => { const q1 = [p1[0] + (p2[0] - p1[0]) * 0.22, p1[1] + (p2[1] - p1[1]) * 0.22], q2 = [p1[0] + (p2[0] - p1[0]) * 0.78, p1[1] + (p2[1] - p1[1]) * 0.78]; return `<line x1="${P(q1)[0]}" y1="${P(q1)[1]}" x2="${P(q2)[0]}" y2="${P(q2)[1]}" stroke="#7FB8DC" stroke-width="3.2" stroke-linecap="round"/>`; }; g += gm(s1, e1); }
+        }
+      } else {
+        const s1 = [A[0] + n[0] * o1, A[1] + n[1] * o1], e1 = [s1[0] + u[0] * half, s1[1] + u[1] * half];
+        g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
+        if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += `<line x1="${P(s2)[0]}" y1="${P(s2)[1]}" x2="${P(e2)[0]}" y2="${P(e2)[1]}" stroke="#3E4A57" stroke-width="3"/>`; }
+        if (sa.glass && sa.cat === "室内ドア"){ const gm = (p1, p2) => { const q1 = [p1[0] + (p2[0] - p1[0]) * 0.22, p1[1] + (p2[1] - p1[1]) * 0.22], q2 = [p1[0] + (p2[0] - p1[0]) * 0.78, p1[1] + (p2[1] - p1[1]) * 0.78]; return `<line x1="${P(q1)[0]}" y1="${P(q1)[1]}" x2="${P(q2)[0]}" y2="${P(q2)[1]}" stroke="#7FB8DC" stroke-width="3.2" stroke-linecap="round"/>`; }; g += gm(s1, e1); if (ty === "chigai"){ const s2 = [B[0] + n[0] * o2, B[1] + n[1] * o2], e2 = [s2[0] - u[0] * half, s2[1] - u[1] * half]; g += gm(s2, e2); } }   /* CAD-283：引戸のガラス */
+      }
     } else if (ty === "closet"){
       const k = sa.w > 1200 ? 4 : 2, d = w / k; let path = `M${X(A)}`;
       for (let j = 1; j <= k; j++){ const base = [A[0] + u[0] * d * j, A[1] + u[1] * d * j], peak = [A[0] + u[0] * d * (j - 0.5) + n[0] * d * 0.5, A[1] + u[1] * d * (j - 0.5) + n[1] * d * 0.5]; path += ` L${X(peak)} L${X(base)}`; }
@@ -4468,6 +4494,7 @@ function drawSelBar(){
   /* --- 後段（内側→外側） --- */
   try { if (HB.__dsbPost07) HB.__dsbPost07(); } catch(e){}   /* 旧 blk07（dsb）後段：外のサッシに庇ボタンを足す addBtn（実体は blk07 で登録） */
   try { if (HB.__dsbPost08) HB.__dsbPost08(); } catch(e){}   /* 旧 blk08（dsb2）後段：ドア系に吊元ボタンを足す addHinge（実体は blk08 で登録。addHinge は関数宣言で巻き上げられるため登録位置で参照できる） */
+  try { if (HB.__dsbPost308) HB.__dsbPost308(); } catch(e){}   /* CAD-308：片引きに戸袋の向きボタンを足す addTobukuro308（実体は CAD-308 ブロックで登録） */
   try { if (HB.__upd46) HB.__upd46(); } catch(e){}   /* 旧 blk46（_sb）後段：案内文・ボタンの説明の更新（実体 upd は blk46 で登録済みの HB.__upd46 に統一） */
   if (HB.__dsbPost54) HB.__dsbPost54();   /* 旧 blk54（_dsb96）後段：バーの下の余白調整＋rAF で panSel96。元のラッパーでも rAF 行は try の外にあり例外は伝播して外側の後段を止める形だったため、ここも try で包まない（実体は blk54 で登録） */
   if (HB.__dsbPost67) HB.__dsbPost67();   /* 旧 blk67（dsb139）後段：間仕切り選択時のバー書き換え（新築・増築で sbTop/sbNew を消す＋部屋の幅・奥行き行。try は実体側。実体は blk67 で登録） */
@@ -5738,7 +5765,7 @@ function packStock(needs, pool){
 const STOCK = [3000, 4000], STOCK_T = [3000, 4000, 6000];
 function stocks(needs, allow6){ const m = {}, ST = allow6 ? STOCK_T : STOCK; needs.forEach(n => { const s = ST.find(x => n <= x); if (s) m[s] = (m[s] || 0) + 1; else { const k = Math.floor(n / 4000), r = n - k * 4000; m[4000] = (m[4000] || 0) + k; if (r > 0.5){ const s2 = ST.find(x => x <= 4000 && r <= x) || 4000; m[s2] = (m[s2] || 0) + 1; } } }); return m; }
 const stockTxt = m => Object.keys(m).sort((a, b) => b - a).map(k => `${k / 1000}m×${m[k]}`).join("、");
-function openArea(){ return S.sashes.reduce((a, s) => a + s.w * s.h * s.n, 0) / 1e6; }
+function openArea(){ return S.sashes.reduce((a, s) => a + opW308(s) * s.h * s.n, 0) / 1e6; }   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
 const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","eLockB","eLockS","eLockE","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
 ["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
@@ -6346,7 +6373,7 @@ function calc00(){
     let hA = 0, nA = 0;
     let lenEff = 0, newLenEff = 0, lenFloor = 0;   /* CAD-292: 形に合わせた実効長さ（高さ割合）と、床に届く形の長さ（幅木・見切り用） */
     P2.forEach(q => { const L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), st = pState(q), hq = partHq292(q, ch), f292 = ch > 0 ? hq / ch : 0, fm292 = partForm292(q); if (st === "remove"){ remLen += L; return; } len += L; hA += L * hq; lenEff += L * f292; if (fm292 !== "tare" && fm292 !== "open") lenFloor += L; if (st === "new"){ newLen += L; nA += L * hq; newLenEff += L * f292; } });
-    const opP = S.sashes.filter(sa => sa.host && sa.host.t === "p").reduce((a, sa) => a + sa.w * sa.h * (sa.n || 1), 0) / 1e6;
+    const opP = S.sashes.filter(sa => sa.host && sa.host.t === "p").reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
     return {len, newLen, remLen, lenEff, newLenEff, lenFloor, area: Math.max(0, hA / 1e6 * 2 - opP * 2), newArea: nA / 1e6 * 2};
   }
   function partNewRows(ch){
@@ -6924,11 +6951,11 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     let a = 0, o = 0, n = 0, tot = 0;
     S.edges.forEach((e, i) => { if (i === S.house) return;
       [1, 2].forEach(f => { if (f === 2 && !two) return; tot++; if (S.gaiFace && S.gaiFace[i + "-" + f] === false) return; n++; a += e.v * (f === 1 ? h1 : h2) / 1e6;
-        o += S.sashes.filter(q => q.wall === i && (q.fl || 1) === f).reduce((x, q) => x + q.w * q.h * q.n, 0) / 1e6; }); });
+        o += S.sashes.filter(q => q.wall === i && (q.fl || 1) === f).reduce((x, q) => x + opW308(q) * q.h * q.n, 0) / 1e6;   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */ }); });
     if (S.gaiGable) a += gableA;
     wallNet = Math.max(0, a - o); gaiSfx = `（${n}/${tot}面）`;
   }
-  const opF = f => S.sashes.filter(s => (s.fl || 1) === f).reduce((a, s) => a + s.w * s.h * s.n, 0) / 1e6;
+  const opF = f => S.sashes.filter(s => (s.fl || 1) === f).reduce((a, s) => a + opW308(s) * s.h * s.n, 0) / 1e6;   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
   const perI = S.noWall >= 0 && S.edges[S.noWall] ? per - S.edges[S.noWall].v : per;   // CAD-121: 開放辺の内側に壁はないので内壁ボード・断熱の周長から除く
   const PI1 = partInfo(S.ch), inner1 = Math.max(0, perI * S.ch / 1e6 - opF(1)) + PI1.area, inner2 = two ? Math.max(0, perI * S.ch2 / 1e6 - opF(2)) : 0;
   const topGL = Hk + R.topRise + 60 * n + 105 + S.kiso;
@@ -10016,6 +10043,32 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
 })();
 </script>
 <script>
+/* ---------- CAD-308: コントローラーに「戸袋の向き」ボタン（片引き戸を選んでいる時） ---------- */
+(function(){
+  /* 旧 drawSelBar ラッパーの後段と同じ作法：統合側が HB 経由で呼ぶ登録だけ置く（実体 addTobukuro308 はこの IIFE の局所関数）。
+     吊元ボタン（blk08・dsbPost08）と同じ位置（.sbL.o）・同じ操作感。ボタンには戸袋の位置の小さい絵を出し、
+     左／右の文字では選ばせない（メーカーで左右の呼び方が食い違うため。study-katabiki-2026-11-16.md）。 */
+  HB.__dsbPost308 = addTobukuro308;
+  function pic308(pk){
+    /* 小さい絵（模式図）：上の太線＝壁、下の線＝扉。戸袋の半分は灰色の地＋破線の扉、開口の半分は実線の扉。
+       pk=true（flip ビット2）で戸袋は右半分（B 側）。絵の左右はサッシの A→B の向きに対応する */
+    const op = pk ? [2, 19] : [20, 37], pb = pk ? [20, 37] : [2, 19];
+    return `<svg width="40" height="15" viewBox="0 0 40 15" aria-hidden="true"><rect x="${pb[0]}" y="1" width="17" height="13" fill="#C9D2DC"/><line x1="2" y1="5" x2="38" y2="5" stroke="#3E4A57" stroke-width="2.4"/><line x1="${op[0] + 1}" y1="10.5" x2="${op[1] - 1}" y2="10.5" stroke="#3E4A57" stroke-width="2"/><line x1="${pb[0] + 1}" y1="10.5" x2="${pb[1] - 1}" y2="10.5" stroke="#3E4A57" stroke-width="2" stroke-dasharray="3 2"/></svg>`;
+  }
+  function addTobukuro308(){
+    const bar = document.getElementById("selBar"); if (!bar || bar.hidden || !sel || sel.t !== "o") return;
+    const s = S.sashes[sel.i]; if (!s) return;
+    const k = kata308(s); if (!k || k.out) return;   /* 対象は戸袋ありの片引きだけ（アウトセットには戸袋が無い） */
+    const box = bar.querySelector(".sbL.o"); if (!box || box.querySelector("#sbTob308")) return;
+    const b = document.createElement("button"); b.type = "button"; b.id = "sbTob308";
+    b.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px">${pic308(k.pk)}<span>戸袋</span></span>`;
+    box.appendChild(b);
+    box.style.gridTemplateRows = "repeat(" + box.querySelectorAll("button").length + ",34px)";
+    b.onclick = () => { pushUndo(); s.flip = (s.flip || 0) ^ 2; save(); drawPlan(); };
+  }
+})();
+</script>
+<script>
 /* ---------- ①の寸法：入力中も図が見える／光を消す／「寸法を入れる」ボタン／中の物の表示切り替え ---------- */
 (function(){
   // 数字パッドが閉じたら（×でも決定でも）、図の大きさと光を元に戻す
@@ -10113,7 +10166,7 @@ HB.__padStdSeg12 = true;
     const H = S.ch || 2400, D = {fin: {a: 0, n: 0, plen: 0}, sub: {a: 0, n: 0, plen: 0}, rem: {a: 0, n: 0, plen: 0}};
     hgList().forEach(w => {
       const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
-      const op = (S.sashes || []).filter(sa => sa.host && sa.host.t === w.t && sa.host.i === w.i).reduce((x, sa) => x + sa.w * sa.h * (sa.n || 1), 0);
+      const op = (S.sashes || []).filter(sa => sa.host && sa.host.t === w.t && sa.host.i === w.i).reduce((x, sa) => x + opW308(sa) * sa.h * (sa.n || 1), 0);   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
       const g = D[w.d]; g.a += Math.max(0, (L * H - op) * w.n) / 1e6; g.n += w.n; if (w.t === "p") g.plen += L / 1000;
     });
     return D;
@@ -10122,7 +10175,7 @@ HB.__padStdSeg12 = true;
     const H = S.ch || 2400; let a = 0, n = 0;
     hgList().forEach(w => {
       const L = Math.hypot(w.b[0] - w.a[0], w.b[1] - w.a[1]);
-      const op = (S.sashes || []).filter(sa => sa.host && sa.host.t === w.t && sa.host.i === w.i).reduce((x, sa) => x + sa.w * sa.h * (sa.n || 1), 0);
+      const op = (S.sashes || []).filter(sa => sa.host && sa.host.t === w.t && sa.host.i === w.i).reduce((x, sa) => x + opW308(sa) * sa.h * (sa.n || 1), 0);   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
       a += Math.max(0, (L * H - op) * w.n) / 1e6; n += w.n;
     });
     return {a, n};
@@ -13361,9 +13414,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       const A = [a[0] + u[0] * p0, a[1] + u[1] * p0], B = [A[0] + u[0] * w, A[1] + u[1] * w];
       const band = sa.host.t === "e" ? bandO : bandP;
       const PA = P(A), PB = P(B), np = [n[0], n[1]];
+      const k308 = kata308(sa), M308 = [A[0] + u[0] * w / 2, A[1] + u[1] * w / 2], OA308 = k308 && k308.pk ? M308 : A, OB308 = k308 && k308.pk ? B : M308, PKA308 = k308 && k308.pk ? A : M308, PM308 = P(M308), PWA = P(k308 ? OA308 : A), PWB = P(k308 ? OB308 : B);   /* CAD-308：片引きは開口の半分（OA308〜OB308）だけ壁を抜く。戸袋は PKA308 から半分 */
       const off = (Pt, px) => [Pt[0] + np[0] * px, Pt[1] + np[1] * px];
       const half = band / 2 + 1.5;
-      g += `<polygon points="${off(PA, half).join(",")} ${off(PB, half).join(",")} ${off(PB, -half).join(",")} ${off(PA, -half).join(",")}" fill="#fff"/>`;
+      g += `<polygon points="${off(PWA, half).join(",")} ${off(PWB, half).join(",")} ${off(PWB, -half).join(",")} ${off(PWA, -half).join(",")}" fill="#fff"/>`;
       const jamb = Pt => `<line x1="${Pt[0] - np[0] * band / 2}" y1="${Pt[1] - np[1] * band / 2}" x2="${Pt[0] + np[0] * band / 2}" y2="${Pt[1] + np[1] * band / 2}" stroke="#111" stroke-width="1.3"/>`;
       const kind = kindOf(sa), ty = typeOf(sa);
       if (kind === "open"){ g += jamb(PA) + jamb(PB); return; }
@@ -13398,9 +13452,21 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
           const Q1 = P(q1), Q2 = P(q2);
           return `<line x1="${Q1[0]}" y1="${Q1[1]}" x2="${Q2[0]}" y2="${Q2[1]}" stroke="#111" stroke-width="1.8"/>`;
         };
+        const lnD = (from, o, len, back) => {
+          const q1 = [from[0] + n[0] * o, from[1] + n[1] * o], q2 = [q1[0] + u[0] * len * (back ? -1 : 1), q1[1] + u[1] * len * (back ? -1 : 1)];
+          const Q1 = P(q1), Q2 = P(q2);
+          return `<line x1="${Q1[0]}" y1="${Q1[1]}" x2="${Q2[0]}" y2="${Q2[1]}" stroke="#111" stroke-width="1.8" stroke-dasharray="4 3"/>`;
+        };   /* CAD-308：戸袋の中の開けた扉（破線） */
+        const gm = (from, o, len, back) => { const sg = back ? -1 : 1, q1 = [from[0] + n[0] * o + u[0] * len * sg * 0.22, from[1] + n[1] * o + u[1] * len * sg * 0.22], q2 = [from[0] + n[0] * o + u[0] * len * sg * 0.78, from[1] + n[1] * o + u[1] * len * sg * 0.78], Q1 = P(q1), Q2 = P(q2); return `<line x1="${Q1[0]}" y1="${Q1[1]}" x2="${Q2[0]}" y2="${Q2[1]}" stroke="#7FB8DC" stroke-width="2.6" stroke-linecap="round"/>`; };   /* CAD-283 の gm を分岐の先頭へ移した（中身は不変） */
+        if (ty === "hiki" && k308){
+          /* CAD-308：片引きの型。戸袋あり＝開口の半分に実線・戸袋の半分は壁の中に破線／アウトセット＝壁の面の外側を走る実線。中方立の短線（jamb）も足す */
+          if (k308.out){ const oo = band / s / 2 + 35; g += ln(A, oo, w, false); if (sa.glass && sa.cat === "室内ドア") g += gm(A, oo, w, false); }
+          else { g += ln(OA308, 35, w / 2, false) + lnD(PKA308, 35, w / 2, false); if (sa.glass && sa.cat === "室内ドア") g += gm(OA308, 35, w / 2, false); }
+          g += jamb(PA) + jamb(PB) + jamb(PM308); return;
+        }
         if (ty === "hiki") g += ln(A, 35, w, false);
         else g += ln(A, 35, w / 2 + 20, false) + ln(B, -35, w / 2 + 20, true);
-        if (sa.glass && sa.cat === "室内ドア"){ const gm = (from, o, len, back) => { const sg = back ? -1 : 1, q1 = [from[0] + n[0] * o + u[0] * len * sg * 0.22, from[1] + n[1] * o + u[1] * len * sg * 0.22], q2 = [from[0] + n[0] * o + u[0] * len * sg * 0.78, from[1] + n[1] * o + u[1] * len * sg * 0.78], Q1 = P(q1), Q2 = P(q2); return `<line x1="${Q1[0]}" y1="${Q1[1]}" x2="${Q2[0]}" y2="${Q2[1]}" stroke="#7FB8DC" stroke-width="2.6" stroke-linecap="round"/>`; }; if (ty === "hiki") g += gm(A, 35, w, false); else g += gm(A, 35, w / 2 + 20, false) + gm(B, -35, w / 2 + 20, true); }   /* CAD-283：引戸のガラス */
+        if (sa.glass && sa.cat === "室内ドア"){ if (ty === "hiki") g += gm(A, 35, w, false); else g += gm(A, 35, w / 2 + 20, false) + gm(B, -35, w / 2 + 20, true); }   /* CAD-283：引戸のガラス */
         g += jamb(PA) + jamb(PB); return;
       }
       if (ty === "closet"){
@@ -14862,9 +14928,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var A = [a[0] + u[0] * p0, a[1] + u[1] * p0], B = [A[0] + u[0] * w, A[1] + u[1] * w];
       var band = sa.host.t === "e" ? bandO : bandP;
       var PA = P(A), PB = P(B), np = [n[0], n[1]];
+      var k308 = kata308(sa), M308 = [A[0] + u[0] * w / 2, A[1] + u[1] * w / 2], OA308 = k308 && k308.pk ? M308 : A, OB308 = k308 && k308.pk ? B : M308, PKA308 = k308 && k308.pk ? A : M308, PM308 = P(M308), PWA = P(k308 ? OA308 : A), PWB = P(k308 ? OB308 : B);   /* CAD-308：片引きは開口の半分（OA308〜OB308）だけ壁を抜く。戸袋は PKA308 から半分 */
       var off = function(Pt, px){ return [Pt[0] + np[0] * px, Pt[1] + np[1] * px]; };
       var half = band / 2 + 1.5;
-      g += "<polygon points=\"" + off(PA, half).join(",") + " " + off(PB, half).join(",") + " " + off(PB, -half).join(",") + " " + off(PA, -half).join(",") + "\" fill=\"#fff\"/>";
+      g += "<polygon points=\"" + off(PWA, half).join(",") + " " + off(PWB, half).join(",") + " " + off(PWB, -half).join(",") + " " + off(PWA, -half).join(",") + "\" fill=\"#fff\"/>";
       var jamb = function(Pt){ return "<line x1=\"" + (Pt[0] - np[0] * band / 2) + "\" y1=\"" + (Pt[1] - np[1] * band / 2) + "\" x2=\"" + (Pt[0] + np[0] * band / 2) + "\" y2=\"" + (Pt[1] + np[1] * band / 2) + "\" stroke=\"#111\" stroke-width=\"1.3\"/>"; };
       var kind = kindOf(sa), ty = typeOf(sa);
       if (kind === "open"){ g += jamb(PA) + jamb(PB); return; }
@@ -14897,6 +14964,17 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
           var Q1 = P(q1), Q2 = P(q2);
           return "<line x1=\"" + Q1[0] + "\" y1=\"" + Q1[1] + "\" x2=\"" + Q2[0] + "\" y2=\"" + Q2[1] + "\" stroke=\"#111\" stroke-width=\"1.8\"/>";
         };
+        var lnD = function(from, o, len, back){
+          var q1 = [from[0] + n[0] * o, from[1] + n[1] * o], q2 = [q1[0] + u[0] * len * (back ? -1 : 1), q1[1] + u[1] * len * (back ? -1 : 1)];
+          var Q1 = P(q1), Q2 = P(q2);
+          return "<line x1=\"" + Q1[0] + "\" y1=\"" + Q1[1] + "\" x2=\"" + Q2[0] + "\" y2=\"" + Q2[1] + "\" stroke=\"#111\" stroke-width=\"1.8\" stroke-dasharray=\"4 3\"/>";
+        };   /* CAD-308：戸袋の中の開けた扉（破線） */
+        if (ty === "hiki" && k308){
+          /* CAD-308：片引きの型（pvSashes と同じ）。戸袋あり＝開口の半分に実線・戸袋の半分は壁の中に破線／アウトセット＝壁の面の外側を走る実線 */
+          if (k308.out) g += ln(A, band / s / 2 + 35, w, false);
+          else g += ln(OA308, 35, w / 2, false) + lnD(PKA308, 35, w / 2, false);
+          g += jamb(PA) + jamb(PB) + jamb(PM308); return;
+        }
         if (ty === "hiki") g += ln(A, 35, w, false);
         else g += ln(A, 35, w / 2 + 20, false) + ln(B, -35, w / 2 + 20, true);
         g += jamb(PA) + jamb(PB); return;
@@ -18910,7 +18988,7 @@ try {
         DF.remParts.forEach(function(e){
           var q = e.q, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), idx = (g.parts2D || []).indexOf(q);
           var op = (g.sashes || []).filter(function(sa){ return sa.host && sa.host.t === "p" && sa.host.i === idx; })
-            .reduce(function(x, sa){ return x + sa.w * sa.h * (sa.n || 1); }, 0);
+            .reduce(function(x, sa){ return x + opW308(sa) * sa.h * (sa.n || 1); }, 0);   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
           var bk = D[e.depth]; if (!bk) return;
           bk.a += Math.max(0, (L * H - op) * 2) / 1e6; bk.n += 2; bk.plen += L / 1000;
         });
@@ -18927,7 +19005,7 @@ try {
         DF.remParts.forEach(function(e){
           var q = e.q, L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), idx = (g.parts2D || []).indexOf(q);
           var op = (g.sashes || []).filter(function(sa){ return sa.host && sa.host.t === "p" && sa.host.i === idx; })
-            .reduce(function(x, sa){ return x + sa.w * sa.h * (sa.n || 1); }, 0);
+            .reduce(function(x, sa){ return x + opW308(sa) * sa.h * (sa.n || 1); }, 0);   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
           D.a += Math.max(0, (L * H - op) * 2) / 1e6; D.n += 2;
         });
       } catch(er){}
