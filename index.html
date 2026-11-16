@@ -5760,14 +5760,25 @@ function calc(){
     }
   }
   const cur = S.fi, keep = flSnap(), parts = [], fl0 = S.floors; if (S.mode === "zo") S.floors = 1;   // 増築：階ごとに1階建として数え、下の仕分けで、基礎・土台は1階だけ、屋根は最上階だけにする
-  try { S.fl.forEach((f, i) => { flLoad(i === cur ? keep : f.snap); try { parts.push(S.edges ? calc0() : null); } catch(e){ parts.push(null); } }); }
+  const ashWL291 = [], ashPick291 = [];   /* CAD-291: 足場を建物全体で拾い直すため、階ごとの外周と（面ごとに選ぶ場合の）選んだ面の長さ・区間の数を控える */
+  try { S.fl.forEach((f, i) => { flLoad(i === cur ? keep : f.snap);
+    try { ashWL291[i] = S.edges ? S.edges.reduce((a, e, j) => a + (j !== S.house && j !== S.noWall ? e.v : 0), 0) : 0; } catch(e){ ashWL291[i] = 0; }
+    try { if (S.gaiMode === "pick" && S.edges){ const nE = S.edges.length, on291 = j => j !== S.house && !(S.gaiFace && S.gaiFace[j + "-1"] === false); let L = 0, runs = 0; S.edges.forEach((e, j) => { if (!on291(j)) return; L += e.v; if (!on291((j + nE - 1) % nE)) runs++; }); ashPick291[i] = {L, runs}; } } catch(e){}
+    try { parts.push(S.edges ? calc0() : null); } catch(e){ parts.push(null); } }); }
   finally { flLoad(keep); S.floors = fl0; }
   const rows = [], gomi = {}, num = k => parts.reduce((a, p) => a + (p ? +p[k] || 0 : 0), 0);
+  let ashAt291 = -1, ashFl291 = 0, ashSeq291 = 0, labAt291 = -1, labFl291 = 0, labSeq291 = 0, seq291 = 0; const labKind291 = {}; let unpSeen291 = false;   /* CAD-291: 建物に1つしかない物の差し込み位置と順番 */
   parts.forEach((p, i) => {
     if (!p) return;
     rows.push({grp: "■ " + S.fl[i].name, flHead: i});
-    const GROUND = /^(土台|大引|鋼製束|基礎|断熱 床)/, ROOF = /^(小屋梁|小屋束|母屋|垂木|破風板|鼻隠し|野地合板|屋根|軒天|雨樋)/, last = parts.reduce((a, q, k) => q ? k : a, -1);
+    const GROUND = /^(土台|大引|鋼製束|基礎|断熱 床|内部の基礎|断熱受けピン)/, ROOF = /^(小屋梁|小屋束|母屋|垂木|破風板|鼻隠し|野地合板|屋根|軒天|雨樋)/, last = parts.reduce((a, q, k) => q ? k : a, -1);
     p.rows.forEach(r => {
+      /* CAD-291: 足場は建物全体で1回だけ（階ごと分は全部落とし、合算の後で建物全体の行を差し込む） */
+      if (r.ash || /^足場/.test(r.name || "")){ if (ashAt291 < 0){ ashAt291 = rows.length; ashFl291 = i; ashSeq291 = ++seq291; } return; }
+      /* CAD-291: 延床で決まる人工（刻み・プレカット加工費・大工手間）は階ごと分を落とし、合算の後で延床の合計から作り直す */
+      if (S.mode === "zo" && (r.name === "刻み人工" || r.name === "プレカット加工費" || r.name === "大工手間")){ if (labAt291 < 0){ labAt291 = rows.length; labFl291 = i; labSeq291 = ++seq291; } labKind291[r.name] = true; return; }
+      /* CAD-291: プレカット運搬費（1式）は最初の1行だけ残す */
+      if (r.name === "プレカット運搬費"){ if (unpSeen291) return; unpSeen291 = true; }
       if (!r.grp){
         if (S.mode === "zo" && i > 0 && GROUND.test(r.name || "")) return;
         if (S.mode === "zo" && i < last && ROOF.test(r.name || "")) return;
@@ -5778,6 +5789,47 @@ function calc(){
     });
     Object.keys(p.gomi || {}).forEach(k => { const g = gomi[k] = gomi[k] || {m3: 0, kg: 0}; g.m3 += p.gomi[k].m3; g.kg += p.gomi[k].kg; });
   });
+  /* ===== CAD-291: 建物に1つしかない物を、建物全体で1回だけ拾い直す ===== */
+  if (S.mode === "zo" && labAt291 >= 0){
+    const nobeT291 = num("nobeT"), labRows291 = [];
+    if (labKind291["プレカット加工費"]){ const w = workP("precut"), wm = workP("precutMin"), raw = w.p * nobeT291; labRows291.push({name: "プレカット加工費", spec: raw < wm.p ? `最低額 ${fmt(wm.p)}円（${fmt(w.p)}円/坪 × ${fmt(nobeT291, 2)}坪 ＝ ${fmt(Math.round(raw))}円のため）` : `${fmt(w.p)}円/坪 × ${fmt(nobeT291, 2)}坪`, qty: `${fmt(nobeT291, 2)}坪`, cost: Math.max(raw, wm.p), avg: w.avg || wm.avg, fix: {kind: "work", key: "precut"}}); }
+    if (labKind291["刻み人工"]){ const wk = workP("kizami"), wn = workP("ninku"), kRate291 = wk.avg && nobeT291 <= 15 ? 2 : wk.p, nk291 = kRate291 * nobeT291; labRows291.push({name: "刻み人工", spec: `${fmt(nk291, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate291, 1)}人工/坪 × ${fmt(nobeT291, 2)}坪${kRate291 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk291 * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }
+    if (labKind291["大工手間"]){ const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT291 * w.p * 2) / 2, avg: true}; })();
+      const np1 = workP("ninku"), note291 = `${S.precut ? "・プレカット加工費は別行" : "・刻み人工は別行"}・間仕切りは${rows.some(r => r.name === "大工手間（新設間仕切り）") ? "別行" : "この人工に含む"}`;
+      labRows291.push({name: "大工手間", spec: `${fmt(nk.n, 1)}人工 × ${fmt(np1.p)}円${nk.avg ? `（坪${fmt(workP("ninkuT").p, 1)}人工で計算）` : ""}${note291}`, qty: "", cost: nk.n * np1.p, avg: nk.avg, fix: {kind: "ninku"}}); }
+    labRows291.forEach(r => { r.fl = labFl291; });
+    rows.splice(labAt291, 0, ...labRows291);
+    if (ashAt291 > labAt291 || (ashAt291 === labAt291 && ashSeq291 > labSeq291)) ashAt291 += labRows291.length;
+  }
+  if (ashAt291 >= 0){
+    try {
+      const lastF291 = parts.reduce((a, q, k) => q ? k : a, -1);
+      let wallLen291 = 0; parts.forEach((p, i) => { if (p && (ashWL291[i] || 0) > wallLen291) wallLen291 = ashWL291[i]; });
+      /* 建物全体の高さ: 最上階の屋根の上り（topRise）と、1階の状態で2階建として読んだ桁の高さ（Hk）から、calc00 と同じ topGL を作る */
+      const keep291 = flSnap(), fl291 = S.floors; let Hk291 = 0, Rt291 = null, gable291 = 0;
+      try {
+        try { flLoad(lastF291 === cur ? keep291 : S.fl[lastF291].snap); S.floors = 2; Rt291 = roof();
+          if (isRect() && S.roof !== "yose"){ const W291 = Rt291.W, t291 = Rt291.t, gb291 = S.roof === "kata" ? W291 * W291 * t291 / 2 : Rt291.mune ? (Rt291.mp * Rt291.mp + (W291 - Rt291.mp) * (W291 - Rt291.mp)) * t291 / 2 : W291 * (W291 / 2 * t291) / 2; [Rt291.kerA, Rt291.kerB].forEach(k => { if (k > 0) gable291 += gb291 / 1e6; }); }
+        } catch(e){ Rt291 = null; }
+        try { flLoad(0 === cur ? keep291 : S.fl[0].snap); S.floors = 2; Hk291 = roof().Hk; } catch(e){ Hk291 = 0; }
+      } finally { try { flLoad(keep291); } catch(e){} S.floors = fl291; }
+      if (!Rt291 && parts[lastF291]) Rt291 = parts[lastF291].R;
+      if (!Hk291){ const ch0291 = (S.fl[0] && S.fl[0].snap && S.fl[0].snap.ch) || S.ch; Hk291 = (S.dfl + ch0291 + S.fuko) + S.dosa + (40 + S.ch2 + S.fuko) + S.keta; }
+      const topGL291 = Hk291 + Rt291.topRise + 60 * Rt291.n + 105 + S.kiso;
+      let ashG291 = null;
+      if (S.gaiMode === "pick"){ let pk291 = null; parts.forEach((p, i) => { if (p && ashPick291[i] && (!pk291 || ashPick291[i].L > pk291.L)) pk291 = ashPick291[i]; }); if (pk291 && pk291.L > 0) ashG291 = {L: pk291.L, runs: pk291.runs, hh: topGL291, full: false}; }
+      if (!ashG291) ashG291 = {L: wallLen291, runs: 0, hh: topGL291, full: true};
+      let ashibaA291 = ashG291.full ? (ashG291.L + 2000) * (topGL291 + 1000) / 1e6 : (ashG291.L > 0 ? (ashG291.L + 2000 * Math.max(1, ashG291.runs)) * (topGL291 + 1000) / 1e6 : 0);
+      const ashRows291 = [];
+      const work291 = (key, name, qty, unit, spec) => { const w = workP(key); ashRows291.push({name, spec: spec || `${fmt(qty, 1)}${unit} × ${fmt(w.p)}円`, qty: "", cost: w.p * qty, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: qty}); };
+      let ashPro291 = null; try { if (S.ashPro && window.ASH230P) ashPro291 = window.ASH230P(ashG291, {Hk: Hk291, R: Rt291, kata: S.roof === "kata", topGL: topGL291, D: Rt291.D, gableA: (ashG291.full || S.gaiGable) ? gable291 : 0}); } catch(e){}
+      if (ashPro291){ ashibaA291 = ashPro291.A; ashRows291.push({grp: "足場工事", ash: true}); }
+      work291(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）"), ashibaA291, "㎡", ashPro291 ? `${ashPro291.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
+      try { if (window.ASH230) window.ASH230(ashRows291, work291, ashibaA291, ashG291.L, topGL291, true, ashPro291); } catch(e){}
+      ashRows291.forEach(r => { r.fl = ashFl291; });
+      rows.splice(ashAt291, 0, ...ashRows291);
+    } catch(e){}
+  }
   if (!rows.length) return calcFloor();
   const C = calcFloor({rows, fields: {genka: num("genka"), area: num("area"), tsubo: num("tsubo"), nobe: num("nobe"), nobeT: num("nobeT"), wallA: num("wallA"), roofA: num("roofA"), gomi}});
   const sums = {}; C.rows.forEach(r => { if (r.fl != null && r.cost) sums[r.fl] = (sums[r.fl] || 0) + r.cost * (r.mk || 1); });
@@ -20584,6 +20636,16 @@ open287(hit);
 } catch(err){}
 }, false);
 })();
+</script>
+
+
+<script id="bldg291js">
+/* ===== CAD-291: 階で輪郭が違う家の「建物に1つしかない物」の二重取り修正 =====
+   内部の基礎・断熱受けピンは1階分だけにし、足場は建物全体（最大の輪郭×
+   全体の高さ）で1回だけ、刻み人工・プレカット加工費・大工手間は延床の
+   合計から1行だけ、プレカット運搬費は1行だけに直した。本体は calc() の
+   多階合算分岐の中（CAD-291 の印のある所）。このブロックは印だけ。 */
+window.__bldg291 = true;
 </script>
 
 </html>
