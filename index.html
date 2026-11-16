@@ -14497,7 +14497,23 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     e.preventDefault(); e.stopPropagation();
     var p = planPt(e), l = pdInk.sv[pdInk.sv.length - 1];
     if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
-    pdInk.sv.push(p); pdInk.mm.push(toMM(p));
+    /* CAD-318: 指を来た道に戻すと、なぞりの線も巻き戻る。頭の進む向き
+       （4点前→頭）と逆向きに動いた時だけ、近くにある昔の点まで点列を
+       切り詰める。角を曲がる動きは直角までなので、この判定には
+       引っかからない。表示側（len318js）も同じ物差しで巻き戻る。 */
+    var cut318 = -1, n318 = pdInk.sv.length;
+    if (n318 >= 5){
+      var hd318 = pdInk.sv[n318 - 1], bk318 = pdInk.sv[n318 - 5];
+      var hx318 = hd318[0] - bk318[0], hy318 = hd318[1] - bk318[1], hl318 = Math.hypot(hx318, hy318);
+      var mx318 = p[0] - hd318[0], my318 = p[1] - hd318[1], ml318 = Math.hypot(mx318, my318);
+      if (hl318 > 3 && ml318 > 1 && (mx318 * hx318 + my318 * hy318) < -0.5 * ml318 * hl318){
+        for (var i318 = n318 - 2; i318 >= 0; i318--){
+          if (Math.hypot(p[0] - pdInk.sv[i318][0], p[1] - pdInk.sv[i318][1]) <= 10){ cut318 = i318; break; }
+        }
+      }
+    }
+    if (cut318 >= 0){ pdInk.sv.length = cut318 + 1; pdInk.mm.length = cut318 + 1; }
+    else { pdInk.sv.push(p); pdInk.mm.push(toMM(p)); }
     pdInk.el.setAttribute("points", pdInk.sv.map(function(q){ return q.join(","); }).join(" "));
   }, true);
   var end = function(e){
@@ -26201,7 +26217,7 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
 <script id="len309js">
 /* ===== CAD-314：描く画面の長さ表示は止めた（本人の決着 2026-11-16） =====
    一番最初の外周を決める四角を描く時は基準が無いので、数字は出さない。
-   長さ表示は間取りで間仕切りをなぞる時へ移した（len314js）。
+   長さ表示は間取りで間仕切りをなぞる時へ移した（len314js→CAD-318で len318js）。
    CAD-309 の liveVal309 一式は、ここでは読み込まない。 */
 window.__len309 = function(){ return null; };
 window.__len309txt = function(){ return null; };
@@ -26299,38 +26315,67 @@ window.__len309txt = function(){ return null; };
 })();
 </script>
 
-<script id="len314js">
-/* ===== CAD-314：間取りで間仕切りをなぞっている間、今の長さを大きく表示する =====
-   本人の決着（2026-11-16）：出すのは間取りの間仕切りなぞりだけ。
-   描く画面（最初の外周）は基準が無いので出さない（len309js は停止済み）。
-   数字は「指を離した時に決まる長さ」その物：CAD-127 の pdFinish が採用する
-   長さと同じ計算（pdRuns/pdSegment/pdJoinSegs/pdValidSeg/pdSplit/pdTrimSegs
-   の複製、下にそのまま入っている）で、今集まっている点列から出す。
+<script id="len318js">
+/* ===== CAD-318：間取りで間仕切りをなぞっている間の長さ表示（近未来HUD風） =====
+   本人の決定（2026-11-16）：見た目はゲーム風候補4「近未来HUD風」（水色の
+   ホログラム調・角のある細い枠＋小さな装飾）。出すのは間取りの間仕切り
+   なぞりだけ（描く画面は基準が無いので出さない＝CAD-314 の決着のまま）。
+   数字は「今なぞっている一辺」の長さだけ：CAD-127 の pdFinish の採用計算
+   （複製、下記）で断片に元の辺の番号を付け、最後の辺に属する断片の合計を
+   出す。角を曲がると数字は新しい辺の長さに切り替わる。
+   一辺が 455 の倍数にぴったりなった時だけ数字の色を金色（#FFB300）に変える。
+   枠の下には同じ長さを尺で小さく出す（1尺＝910/3mm・「7尺5寸」の形）。
    なぞりの観察は #slotM の pointer イベントを横で見るだけ（本体の処理は
-   止めない）。点の集め方（2 SVG単位未満は足さない）も CAD-127 と同じにして、
-   本体の mm 点列と一致させる。更新は rAF で文字だけ（再描画なし）。 */
+   止めない）。点の集め方（2 SVG単位未満は足さない）と巻き戻し（CAD-318 で
+   本体に入れた物と同じ物差し）も本体に合わせ、本体の mm 点列と一致させる。
+   なぞっている間だけ 910 ピッチのドット（外形の基準に揃えた物）を出す。
+   CAD-315 の見張り（MutationObserver＋タイマー＋ピンチ判定との照合）も維持。 */
 (function(){ "use strict";
   var NS = "http://www.w3.org/2000/svg";
-  var txt = null, rafPend = false, curVal = null, suppress = false;
+  var hud = null, digT = null, shkT = null, dotsG = null, dotsKey = "";
+  var builtU = 0, placeKey = "", lastHot = false;
+  var rafPend = false, curVal = null, suppress = false;
   var trk = null;
   var ptrs = new Set();
   var planObs = null, obsFor = null;
   /* CAD-315: ピンチ判定（CAD-153）の公開状態。{mode: idle/one/pinch/dead, n: 指の数} */
-  function gate314(){
+  function gate318(){
     try { return (typeof HB !== "undefined" && HB.__pinch153State) ? HB.__pinch153State() : null; }
     catch(e){ return null; }
   }
-  /* なぞりが実際は終わっている（ピンチで指の離脱を知らない等）と分かった時に状態を揃える */
-  function resync314(){ ptrs.clear(); trk = null; suppress = false; wdStop314(); hide314(); }
-  /* なぞり中だけの見張り：DOM 変化を伴わない状態変化（ピンチ開始・指の離脱）でも upd314 を定期的に呼ぶ */
+  function resync318(){ ptrs.clear(); trk = null; suppress = false; wdStop318(); hideAll318(); }
   var wd = null;
-  function wdStart314(){ if (wd) return; wd = setInterval(function(){ if (!trk){ wdStop314(); return; } queue314(); }, 150); }
-  function wdStop314(){ if (wd){ clearInterval(wd); wd = null; } }
+  function wdStart318(){ if (wd) return; wd = setInterval(function(){ if (!trk){ wdStop318(); return; } queue318(); }, 150); }
+  function wdStop318(){ if (wd){ clearInterval(wd); wd = null; } }
   function $(id){ return document.getElementById(id); }
-  function fmtV314(v){
-    return Math.round(v).toLocaleString("ja-JP");
+  function fmtV318(v){ return Math.round(v).toLocaleString("ja-JP"); }
+  /* 尺表示：1尺＝910/3mm（910mm＝3尺のモジュール）。分まで出し、0の位は省く */
+  function shaku318(v){
+    var bun = Math.round(v * 300 / 910);
+    if (bun <= 0) return "0";
+    var sk = Math.floor(bun / 100), sn = Math.floor((bun % 100) / 10), bu = bun % 10, s = "";
+    if (sk) s += sk + "尺";
+    if (sn) s += sn + "寸";
+    if (bu) s += bu + "分";
+    return s || "0";
   }
-  function liveVal314(mm){
+  /* 本体（CAD-127）の巻き戻しと同じ物差し：逆向きに動いた時、近くにある
+     昔の点の添字を返す（無ければ -1） */
+  function rewindIdx318(sv, p){
+    var n = sv.length;
+    if (n < 5) return -1;
+    var hd = sv[n - 1], bk = sv[n - 5];
+    var hx = hd[0] - bk[0], hy = hd[1] - bk[1], hl = Math.hypot(hx, hy);
+    var mx = p[0] - hd[0], my = p[1] - hd[1], ml = Math.hypot(mx, my);
+    if (!(hl > 3 && ml > 1 && (mx * hx + my * hy) < -0.5 * ml * hl)) return -1;
+    for (var i = n - 2; i >= 0; i--){
+      if (Math.hypot(p[0] - sv[i][0], p[1] - sv[i][1]) <= 10) return i;
+    }
+    return -1;
+  }
+  /* 「今なぞっている一辺」の長さ：採用計算（複製）で断片に元の辺の番号を
+     付け、最後の辺に属する断片だけを合計する */
+  function curSegVal318(mm){
     try {
       if (!mm || mm.length < 4) return null;
       var travel = 0, i;
@@ -26356,59 +26401,125 @@ window.__len309txt = function(){ return null; };
         if (!pdValidSeg314(q)) return null;
         qs = [q];
       }
-      var segs = [];
-      qs.forEach(function(s){ pdSplit314(s).forEach(function(p){ segs.push(p); }); });
-      segs = pdTrimSegs314(segs);
-      if (!segs.length) return null;
-      var L = 0;
-      segs.forEach(function(s){ L += Math.hypot(s.x2 - s.x1, s.y2 - s.y1); });
-      return Math.round(L);
+      var pieces = [];
+      qs.forEach(function(s, j){ pdSplit314(s).forEach(function(p){ p.__s318 = j; pieces.push(p); }); });
+      pieces = pdTrimSegs314(pieces);
+      if (!pieces.length) return null;
+      var last = qs.length - 1, cur = 0, any = false;
+      pieces.forEach(function(p){ if (p.__s318 === last){ cur += Math.hypot(p.x2 - p.x1, p.y2 - p.y1); any = true; } });
+      if (!any) return null;
+      return Math.round(cur);
     } catch(e){ return null; }
   }
-  function build314(){
+  function el318(name, attrs){
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  /* HUD の組み立て（候補4のモック：濃紺パネル・角カット・水色の細枠と数字） */
+  function build318(){
     var s = $("plan"); if (!s) return false;
-    if (txt && txt.parentNode === s) return true;
-    txt = document.createElementNS(NS, "text");
-    txt.id = "lenM314";
-    txt.setAttribute("text-anchor", "middle");
-    txt.setAttribute("pointer-events", "none");
-    txt.style.display = "none";
-    s.appendChild(txt);
+    if (hud && hud.parentNode === s && digT) return true;
+    var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
+    var W = vb && vb.width > 0 ? vb.width : 360, u = W / 360;
+    var PW = 292 * u, PH = 108 * u, C = 13 * u;
+    hud = el318("g", {id: "hud318", "pointer-events": "none"});
+    hud.style.display = "none";
+    var panel = el318("path", {
+      d: "M " + C + " 0 H " + PW + " V " + (PH - C) + " L " + (PW - C) + " " + PH + " H 0 V " + C + " Z",
+      fill: "rgba(4,28,42,.88)", stroke: "#3EC6EA", "stroke-width": Math.max(0.8, 1.1 * u)
+    });
+    hud.appendChild(panel);
+    var lab = function(x, y, anchor, str){
+      var t = el318("text", {x: x, y: y, "text-anchor": anchor, fill: "#57C8E8"});
+      t.setAttribute("style", "font-size:" + (10 * u) + "px;font-weight:700;letter-spacing:" + (2.5 * u) + "px");
+      t.textContent = str;
+      return t;
+    };
+    hud.appendChild(lab(16 * u, 19 * u, "start", "WALL-LENGTH"));
+    hud.appendChild(lab(PW - 16 * u, 19 * u, "end", "SYS // MEASURE"));
+    var dt = el318("text", {x: PW / 2, y: 64 * u, "text-anchor": "middle"});
+    dt.setAttribute("style", "font-size:" + (44 * u) + "px;font-weight:900;letter-spacing:" + (1 * u) + "px");
+    digT = el318("tspan", {id: "lenM314", fill: "#D8F7FF", stroke: "rgba(62,198,234,.5)", "stroke-width": Math.max(0.7, 1.1 * u), "paint-order": "stroke"});
+    dt.appendChild(digT);
+    var mmT = el318("tspan", {fill: "#7FD8F2", dx: 5 * u});
+    mmT.setAttribute("style", "font-size:" + (17 * u) + "px;font-weight:700");
+    mmT.textContent = "mm";
+    dt.appendChild(mmT);
+    hud.appendChild(dt);
+    hud.appendChild(el318("line", {x1: 16 * u, y1: 78 * u, x2: PW - 16 * u, y2: 78 * u, stroke: "#2FA8CC", "stroke-width": Math.max(0.7, 1 * u)}));
+    [16 * u, PW / 2, PW - 16 * u].forEach(function(cx){
+      hud.appendChild(el318("rect", {x: cx - 2.3 * u, y: 78 * u - 2.3 * u, width: 4.6 * u, height: 4.6 * u, fill: "#3EC6EA"}));
+    });
+    shkT = el318("text", {id: "lenS318", x: PW / 2, y: 97 * u, "text-anchor": "middle", fill: "#7FD8F2"});
+    shkT.setAttribute("style", "font-size:" + (15.5 * u) + "px;font-weight:700;letter-spacing:" + (3 * u) + "px");
+    hud.appendChild(shkT);
+    s.appendChild(hud);
+    builtU = u; placeKey = ""; lastHot = false;
     return true;
   }
-  function place314(){
-    var s = $("plan"); if (!s || !txt) return;
+  function place318(){
+    var s = $("plan"); if (!s || !hud) return;
     var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
     var W = vb && vb.width > 0 ? vb.width : 360, X = vb ? vb.x : 0, Y = vb ? vb.y : 0;
-    var fs = W * 48 / 360;
-    txt.setAttribute("x", String(X + W / 2));
-    txt.setAttribute("y", String(Y + fs * 1.3));
-    txt.setAttribute("style", "font-size:" + fs + "px;font-weight:900;fill:#0F2A4A;paint-order:stroke;stroke:rgba(255,255,255,.92);stroke-width:" + Math.max(2, fs / 6) + "px;letter-spacing:1px");
-    txt.removeAttribute("transform");
-  }
-  function hide314(){ curVal = null; if (txt) txt.style.display = "none"; }
-  function upd314(){
-    rafPend = false;
-    if (suppress || !trk || ptrs.size !== 1){ hide314(); return; }
-    if (trk.touch && trk.gSeen){
-      var gs = gate314();
-      if (gs && (gs.mode === "pinch" || gs.mode === "dead" || gs.n !== 1)){ resync314(); return; }
+    var u = W / 360;
+    if (Math.abs(u - builtU) > 0.01){ hud = null; if (!build318()) return; }
+    var key = X + "|" + Y + "|" + W;
+    if (key !== placeKey){
+      placeKey = key;
+      hud.setAttribute("transform", "translate(" + (X + (W - 292 * u) / 2) + "," + (Y + 76 * u) + ")");
     }
-    var v = liveVal314(trk.mm);
-    if (v == null){ hide314(); return; }
-    if (!build314()) return;
-    place314();
-    curVal = v;
-    var t = fmtV314(v);
-    if (txt.textContent !== t) txt.textContent = t;
-    if (txt.style.display === "none") txt.style.display = "";
   }
-  function queue314(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd314); } }
-  /* CAD-315: なぞりの最中に #plan が描き直されると（置いた直後の知らせの輪を
-     消すための 2600ms 後の drawPlan 等）、表示の文字 #lenM314 ごと消えてしまう。
-     指を止めていると pointermove が来ないので作り直せず、数字が消えたままに
-     なっていた。#plan の子要素の変化を見て、消えていたら付け直す。 */
-  function watch314(){
+  /* 910 ピッチのドット（外形の基準 x0/y0 から 910mm 間隔・1本の path） */
+  function dotsShow318(){
+    var s = $("plan"); if (!s) return;
+    try {
+      var T = (typeof HB !== "undefined") ? HB.__planT : null; if (!T) return;
+      var b = bbox();
+      var key = [T.ox, T.oy, T.s, b.x0, b.y0, b.x1, b.y1].join("|");
+      if (dotsG && dotsG.parentNode === s && dotsKey === key){ dotsG.style.display = ""; return; }
+      if (dotsG && dotsG.parentNode) dotsG.remove();
+      var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
+      var W = vb && vb.width > 0 ? vb.width : 360;
+      var r = Math.max(0.9, 1.15 * W / 360), dstr = "";
+      for (var gx = b.x0; gx <= b.x1 + 1; gx += 910){
+        for (var gy = b.y0; gy <= b.y1 + 1; gy += 910){
+          var cx = gx * T.s + T.ox, cy = gy * T.s + T.oy;
+          dstr += "M " + cx.toFixed(2) + " " + cy.toFixed(2) + " m " + (-r).toFixed(2) + " 0 a " + r.toFixed(2) + " " + r.toFixed(2) + " 0 1 0 " + (2 * r).toFixed(2) + " 0 a " + r.toFixed(2) + " " + r.toFixed(2) + " 0 1 0 " + (-2 * r).toFixed(2) + " 0 ";
+        }
+      }
+      dotsG = el318("path", {id: "dots318", d: dstr, fill: "rgba(46,96,140,.5)", "pointer-events": "none"});
+      if (hud && hud.parentNode === s) s.insertBefore(dotsG, hud); else s.appendChild(dotsG);
+      dotsKey = key;
+    } catch(e){}
+  }
+  function dotsHide318(){ if (dotsG) dotsG.style.display = "none"; }
+  function hide318(){ curVal = null; if (hud) hud.style.display = "none"; }
+  function hideAll318(){ hide318(); dotsHide318(); }
+  function upd318(){
+    rafPend = false;
+    if (suppress || !trk || ptrs.size !== 1){ hideAll318(); return; }
+    if (trk.touch && trk.gSeen){
+      var gs = gate318();
+      if (gs && (gs.mode === "pinch" || gs.mode === "dead" || gs.n !== 1)){ resync318(); return; }
+    }
+    var v = curSegVal318(trk.mm);
+    if (v == null){ hide318(); return; }
+    if (!build318()) return;
+    place318();
+    curVal = v;
+    var t = fmtV318(v);
+    if (digT.textContent !== t) digT.textContent = t;
+    var hot = (v > 0 && v % 455 === 0);
+    if (hot !== lastHot){ lastHot = hot; digT.setAttribute("fill", hot ? "#FFB300" : "#D8F7FF"); }
+    var st = shaku318(v);
+    if (shkT.textContent !== st) shkT.textContent = st;
+    if (hud.style.display === "none") hud.style.display = "";
+  }
+  function queue318(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd318); } }
+  /* CAD-315 の見張り：なぞり中に #plan が描き直されると HUD・ドットごと
+     消えるので、子要素の変化を見て付け直す */
+  function watch318(){
     var s = $("plan"); if (!s) return;
     if (obsFor === s && planObs) return;
     if (planObs){ try { planObs.disconnect(); } catch(e){} }
@@ -26416,19 +26527,20 @@ window.__len309txt = function(){ return null; };
     try {
       planObs = new MutationObserver(function(){
         if (!trk || suppress) return;
-        if (!txt || txt.parentNode !== s) queue314();
+        if (!hud || hud.parentNode !== s) queue318();
+        if (!dotsG || dotsG.parentNode !== s) dotsShow318();
       });
       planObs.observe(s, { childList: true, subtree: true });
     } catch(e){ planObs = null; }
   }
-  function attach314(){
-    watch314();
-    var slot = $("slotM"); if (!slot || slot.__len314) return; slot.__len314 = true;
+  function attach318(){
+    watch318();
+    var slot = $("slotM"); if (!slot || slot.__len318) return; slot.__len318 = true;
     slot.addEventListener("pointerdown", function(e){
-      var gst = (e.pointerType === "touch") ? gate314() : null;
+      var gst = (e.pointerType === "touch") ? gate318() : null;
       if (gst && gst.n === 1){ ptrs.clear(); suppress = false; }
       ptrs.add(e.pointerId);
-      if (e.isPrimary === false || ptrs.size >= 2){ suppress = true; hide314(); return; }
+      if (e.isPrimary === false || ptrs.size >= 2){ suppress = true; hideAll318(); return; }
       try {
         if (!HB.__partDraw || !HB.__pageM || typeof S === "undefined" || !S.edges) return;
         if (e.target.closest && e.target.closest("button")) return;
@@ -26436,8 +26548,10 @@ window.__len309txt = function(){ return null; };
         if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
         if (HB.__delMode) return;
         var p = planPt(e);
-        trk = { id: e.pointerId, sv: [p], mm: [toMM(p)], touch: e.pointerType === "touch", gSeen: !!(gst && gst.n >= 1) }; wdStart314();
-        queue314();
+        trk = { id: e.pointerId, sv: [p], mm: [toMM(p)], touch: e.pointerType === "touch", gSeen: !!(gst && gst.n >= 1) };
+        dotsShow318();
+        wdStart318();
+        queue318();
       } catch(er){}
     }, true);
     slot.addEventListener("pointermove", function(e){
@@ -26445,22 +26559,25 @@ window.__len309txt = function(){ return null; };
       try {
         var p = planPt(e), l = trk.sv[trk.sv.length - 1];
         if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
-        trk.sv.push(p); trk.mm.push(toMM(p));
-        if (!suppress) queue314();
+        var cut = rewindIdx318(trk.sv, p);
+        if (cut >= 0){ trk.sv.length = cut + 1; trk.mm.length = cut + 1; }
+        else { trk.sv.push(p); trk.mm.push(toMM(p)); }
+        if (!suppress) queue318();
       } catch(er){}
     }, true);
-    function up314(e){
+    function up318(e){
       ptrs.delete(e.pointerId);
-      if (trk && e.pointerId === trk.id){ trk = null; wdStop314(); hide314(); }
+      if (trk && e.pointerId === trk.id){ trk = null; wdStop318(); hideAll318(); }
       if (!ptrs.size) suppress = false;
     }
-    slot.addEventListener("pointerup", up314, true);
-    slot.addEventListener("pointercancel", up314, true);
-    window.addEventListener("blur", function(){ ptrs.clear(); trk = null; suppress = false; wdStop314(); hide314(); });
+    slot.addEventListener("pointerup", up318, true);
+    slot.addEventListener("pointercancel", up318, true);
+    window.addEventListener("blur", function(){ ptrs.clear(); trk = null; suppress = false; wdStop318(); hideAll318(); });
   }
-  attach314(); setInterval(attach314, 800);
-  window.__len314 = function(){ return (txt && txt.parentNode && txt.style.display !== "none") ? curVal : null; };
-  window.__len314txt = function(){ return (txt && txt.parentNode && txt.style.display !== "none") ? txt.textContent : null; };
+  attach318(); setInterval(attach318, 800);
+  window.__len314 = function(){ return (hud && hud.parentNode && hud.style.display !== "none") ? curVal : null; };
+  window.__len314txt = function(){ return (hud && hud.parentNode && hud.style.display !== "none" && digT) ? digT.textContent : null; };
+
   /* --- ここから下は CAD-127 の採用計算の複製（pdFinish と同じ物差し） --- */
   function pdSplit314(q){
     var horiz = Math.abs(q.y1 - q.y2) < 1, vert = Math.abs(q.x1 - q.x2) < 1;
