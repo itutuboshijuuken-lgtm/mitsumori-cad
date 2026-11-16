@@ -802,7 +802,7 @@ const DEF = { edges: null, house: -1, ch: 2400, dfl: 40, fuko: 100, kiso: 400, k
   rfCeilMat: undefined, rfCur: undefined, rfWallMat: undefined, roofW: undefined,
   roomFin: undefined, roomNames: undefined, roomPt: undefined, roomRecs: undefined, roomView: undefined,
   tare: undefined, tatami: undefined, tenken: undefined, tfr: undefined, trSend: undefined, tsuboWant: undefined, zones: undefined,
-  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", flColor: "natural", danF: true, danW: true, danC: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps", dan266: false, danNew266: false, flSync270: false, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
+  sashes: [], bisou: true, margin: 30, marginEq: 15, parts2D: [], aisatsu: 0, ninkuN: null, shobun: 0, rot: 0, floors: 1, ch2: 2400, dosa: 240, gaiheki: "siding", mode: "rf", flType: "floorFin", flColor: "light", danF: true, danW: true, danC: true, danFT: 0, danWT: 0, danCT: 0, danFMat: "xps", dan266: false, danNew266: false, flSync270: false, extras: [], rfFloor: "fin", rfWall: "cloth", rfCeil: "cloth", rfCeilCur: "board", rfFloorBaseT: 12, lamiT: 5.5, rfMawari: false, tenjoSec: 36, ceilFrame: "wood", ceilFirst: "ceil", mabaSec: "45x105", mabaKata: "all", joistSec: "45", floorKoho: "goushou", underMat: "gohan", kPanelG: "std", parapet: false, paraH: 1350, noWall: -1, wallLines: [], ceilKata: (() => { try { return localStorage.getItem("gosei-ceilkata-v1") || "tante"; } catch(e){ return "tante"; } })() };
 let S;
 const LSg = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch(e){ return null; } };
 const LSs = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch(e){ return false; } };
@@ -15679,8 +15679,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       return Math.max(0, areaMM() / 1e6 * F - tatArea() - zoneFinCut());   // CAD-192: 土間・浴室ゾーンの足元も引く（見積の calc00 と一致させる）
     } catch(e){ return 0; }
   }
-  /* CAD-275: フローリングの色（家全体で1色・S.flColor。旧データに無い場合はナチュラル扱い） */
-  function flc275(){ var c = S.flColor; return (c === "light" || c === "dark") ? c : "natural"; }
+  /* CAD-275: フローリングの色（家全体で1色・S.flColor）。CAD-304: 標準は明るい（ホワイトオーク）。旧データに無い場合は標準（明るい）扱い */
+  function flc275(){ var c = S.flColor; return (c === "dark" || c === "natural") ? c : "light"; }
   function flcChips275(){
     return [["light", "ホワイトオーク"], ["natural", "グレージュ"], ["dark", "ウォールナット"]].map(function(x){
       return "<button type='button' data-flc275='" + x[0] + "' aria-pressed='" + (flc275() === x[0]) + "'>" + x[1] + "</button>";
@@ -23455,8 +23455,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   window.__flTex275 = URIS;  /* CAD-276: ボタンの背景にも同じ木目を使うため公開 */
   var NS = "http://www.w3.org/2000/svg", XL = "http://www.w3.org/1999/xlink";
   function cur(){
-    try { var c = (typeof S !== "undefined" && S) ? S.flColor : null; return (c === "light" || c === "dark") ? c : "natural"; }
-    catch(e){ return "natural"; }
+    try { var c = (typeof S !== "undefined" && S) ? S.flColor : null; return (c === "dark" || c === "natural") ? c : "light"; }
+    catch(e){ return "light"; }
   }
   function patch(pat){
     try{
@@ -23553,8 +23553,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   ];
   var VEIL = "linear-gradient(rgba(26,15,3,.44), rgba(26,15,3,.44))";
   function cur(){
-    try { var c = (typeof S !== "undefined" && S) ? S.flColor : null; return (c === "light" || c === "dark") ? c : "natural"; }
-    catch(e){ return "natural"; }
+    try { var c = (typeof S !== "undefined" && S) ? S.flColor : null; return (c === "dark" || c === "natural") ? c : "light"; }
+    catch(e){ return "light"; }
   }
   function apply(){
     try{
