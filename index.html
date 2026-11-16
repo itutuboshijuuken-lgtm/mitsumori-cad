@@ -24521,4 +24521,60 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 })();
 </script>
 
+
+<script id="fix288js">
+/* ===== CAD-288：描く画面で床の絵がちかちかする件 =====
+   原因と直しは build288.py の頭書き参照。既存ブロックは無変更。 */
+(function(){ "use strict";
+  function onDraw(){
+    try {
+      if (typeof HB !== "undefined" && HB.__pageM) return false;
+      var stp = null; try { stp = step; } catch(e){}
+      return stp === 1 || stp === 2;
+    } catch(e){ return false; }
+  }
+  var svg = document.getElementById("plan");
+  if (!svg) return;
+  var GIDS = ["dir281", "flOver", "flAll282"];
+  function sweep(){
+    for (var i = 0; i < GIDS.length; i++){
+      var g = svg.querySelector("#" + GIDS[i]);
+      if (g) g.remove();
+    }
+  }
+  var mo = new MutationObserver(function(muts){
+    if (!onDraw()) return;
+    var reverted = null, i, m, t, nv;
+    for (i = 0; i < muts.length; i++){
+      m = muts[i];
+      if (m.type === "childList"){
+        if (m.addedNodes && m.addedNodes.length) sweep();
+      } else if (m.type === "attributes" && m.attributeName === "fill"){
+        t = m.target;
+        if (!t || !t.getAttribute) continue;
+        if (t.closest && (t.closest("pattern") || t.closest("defs"))) continue;
+        nv = t.getAttribute("fill") || "";
+        if (nv.indexOf("url(") === 0 && m.oldValue != null && m.oldValue.indexOf("url(") !== 0){
+          t.setAttribute("fill", m.oldValue);
+          (reverted = reverted || new Set()).add(t);
+        }
+      }
+    }
+    if (reverted){
+      for (i = 0; i < muts.length; i++){
+        m = muts[i];
+        if (m.type === "attributes" && m.attributeName === "fill-opacity" &&
+            reverted.has(m.target) && m.oldValue != null){
+          m.target.setAttribute("fill-opacity", m.oldValue);
+        }
+      }
+    }
+  });
+  mo.observe(svg, { childList: true, subtree: true, attributes: true,
+                    attributeFilter: ["fill", "fill-opacity"], attributeOldValue: true });
+  setInterval(function(){ try { if (onDraw()) sweep(); } catch(e){} }, 150);
+  if (onDraw()) sweep();
+})();
+</script>
+
 </html>
