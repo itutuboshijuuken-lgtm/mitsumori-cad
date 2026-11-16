@@ -2608,11 +2608,13 @@ function tenkenSvg(o, i, P){
     else if (o.dir === "e"){ c1 = [x0, y0]; c2 = [x0, y0 + H2]; }
     else if (o.dir === "w"){ c1 = [x0 + W2, y0]; c2 = [x0 + W2, y0 + H2]; }
     else { c1 = [x0, y0 + H2]; c2 = [x0 + W2, y0 + H2]; }
-    const L = Math.hypot(c2[0] - c1[0], c2[1] - c1[1]), u = [(c2[0] - c1[0]) / L, (c2[1] - c1[1]) / L], r = L / 2, dep = (o.dir === "e" || o.dir === "w") ? W2 : H2, ins = Math.max(1.5, dep * 0.16);
-    const door = (H, s) => { const uu = [u[0] * s, u[1] * s], ct = [H[0] + uu[0] * r, H[1] + uu[1] * r], ot = [H[0] + F[0] * r, H[1] + F[1] * r], sw = (F[0] * uu[1] - F[1] * uu[0]) > 0 ? 1 : 0; return `<line x1="${H[0]}" y1="${H[1]}" x2="${ot[0]}" y2="${ot[1]}" stroke="${C}" stroke-width="1.3"/><path d="M${ot[0]} ${ot[1]} A${r} ${r} 0 0 ${sw} ${ct[0]} ${ct[1]}" fill="none" stroke="${C}" stroke-width="0.9" stroke-dasharray="3 2"/>`; };
+    const L = Math.hypot(c2[0] - c1[0], c2[1] - c1[1]), u = [(c2[0] - c1[0]) / L, (c2[1] - c1[1]) / L], dep = (o.dir === "e" || o.dir === "w") ? W2 : H2, ins = Math.max(1.5, dep * 0.16);
+    /* CAD-313：扉は1枚600mmまで。枚数＝幅÷600の切り上げ、幅を均等に割る（両開きの組を並べ、端数は片開き）。保存データは変えず、描く時にこの割りで描く */
+    const nd = Math.max(1, Math.ceil(o.w / 600)), rl = L / nd;
+    const door = (H, s, rr) => { const uu = [u[0] * s, u[1] * s], ct = [H[0] + uu[0] * rr, H[1] + uu[1] * rr], ot = [H[0] + F[0] * rr, H[1] + F[1] * rr], sw = (F[0] * uu[1] - F[1] * uu[0]) > 0 ? 1 : 0; return `<line x1="${H[0]}" y1="${H[1]}" x2="${ot[0]}" y2="${ot[1]}" stroke="${C}" stroke-width="1.3"/><path d="M${ot[0]} ${ot[1]} A${rr} ${rr} 0 0 ${sw} ${ct[0]} ${ct[1]}" fill="none" stroke="${C}" stroke-width="0.9" stroke-dasharray="3 2"/>`; };
     let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/>`;
     g += `<line x1="${c1[0] - F[0] * ins}" y1="${c1[1] - F[1] * ins}" x2="${c2[0] - F[0] * ins}" y2="${c2[1] - F[1] * ins}" stroke="${C}" stroke-width="0.9"/>`;
-    g += door(c1, 1) + door(c2, -1);
+    for (let j = 0; j < nd; j++){ const pa = [c1[0] + u[0] * rl * j, c1[1] + u[1] * rl * j], pb = [c1[0] + u[0] * rl * (j + 1), c1[1] + u[1] * rl * (j + 1)]; g += j % 2 === 0 ? door(pa, 1, rl) : door(pb, -1, rl); }
     /* ラベル：前面が下（dir=n）の時は開き弧が下へ出るので、重ならない様に箱の中へ出す */
     g += (o.dir || "n") === "n" ? `<text x="${cx}" y="${cy + 3}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">下駄箱</text></g>` : `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">下駄箱</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
