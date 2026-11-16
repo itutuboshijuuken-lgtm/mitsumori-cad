@@ -26244,6 +26244,18 @@ window.__len309txt = function(){ return null; };
   var txt = null, rafPend = false, curVal = null, suppress = false;
   var trk = null;
   var ptrs = new Set();
+  var planObs = null, obsFor = null;
+  /* CAD-315: ピンチ判定（CAD-153）の公開状態。{mode: idle/one/pinch/dead, n: 指の数} */
+  function gate314(){
+    try { return (typeof HB !== "undefined" && HB.__pinch153State) ? HB.__pinch153State() : null; }
+    catch(e){ return null; }
+  }
+  /* なぞりが実際は終わっている（ピンチで指の離脱を知らない等）と分かった時に状態を揃える */
+  function resync314(){ ptrs.clear(); trk = null; suppress = false; wdStop314(); hide314(); }
+  /* なぞり中だけの見張り：DOM 変化を伴わない状態変化（ピンチ開始・指の離脱）でも upd314 を定期的に呼ぶ */
+  var wd = null;
+  function wdStart314(){ if (wd) return; wd = setInterval(function(){ if (!trk){ wdStop314(); return; } queue314(); }, 150); }
+  function wdStop314(){ if (wd){ clearInterval(wd); wd = null; } }
   function $(id){ return document.getElementById(id); }
   function fmtV314(v){
     return Math.round(v).toLocaleString("ja-JP");
@@ -26308,6 +26320,10 @@ window.__len309txt = function(){ return null; };
   function upd314(){
     rafPend = false;
     if (suppress || !trk || ptrs.size !== 1){ hide314(); return; }
+    if (trk.touch && trk.gSeen){
+      var gs = gate314();
+      if (gs && (gs.mode === "pinch" || gs.mode === "dead" || gs.n !== 1)){ resync314(); return; }
+    }
     var v = liveVal314(trk.mm);
     if (v == null){ hide314(); return; }
     if (!build314()) return;
@@ -26318,9 +26334,29 @@ window.__len309txt = function(){ return null; };
     if (txt.style.display === "none") txt.style.display = "";
   }
   function queue314(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd314); } }
+  /* CAD-315: なぞりの最中に #plan が描き直されると（置いた直後の知らせの輪を
+     消すための 2600ms 後の drawPlan 等）、表示の文字 #lenM314 ごと消えてしまう。
+     指を止めていると pointermove が来ないので作り直せず、数字が消えたままに
+     なっていた。#plan の子要素の変化を見て、消えていたら付け直す。 */
+  function watch314(){
+    var s = $("plan"); if (!s) return;
+    if (obsFor === s && planObs) return;
+    if (planObs){ try { planObs.disconnect(); } catch(e){} }
+    obsFor = s;
+    try {
+      planObs = new MutationObserver(function(){
+        if (!trk || suppress) return;
+        if (!txt || txt.parentNode !== s) queue314();
+      });
+      planObs.observe(s, { childList: true, subtree: true });
+    } catch(e){ planObs = null; }
+  }
   function attach314(){
+    watch314();
     var slot = $("slotM"); if (!slot || slot.__len314) return; slot.__len314 = true;
     slot.addEventListener("pointerdown", function(e){
+      var gst = (e.pointerType === "touch") ? gate314() : null;
+      if (gst && gst.n === 1){ ptrs.clear(); suppress = false; }
       ptrs.add(e.pointerId);
       if (e.isPrimary === false || ptrs.size >= 2){ suppress = true; hide314(); return; }
       try {
@@ -26330,7 +26366,7 @@ window.__len309txt = function(){ return null; };
         if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
         if (HB.__delMode) return;
         var p = planPt(e);
-        trk = { id: e.pointerId, sv: [p], mm: [toMM(p)] };
+        trk = { id: e.pointerId, sv: [p], mm: [toMM(p)], touch: e.pointerType === "touch", gSeen: !!(gst && gst.n >= 1) }; wdStart314();
         queue314();
       } catch(er){}
     }, true);
@@ -26345,12 +26381,12 @@ window.__len309txt = function(){ return null; };
     }, true);
     function up314(e){
       ptrs.delete(e.pointerId);
-      if (trk && e.pointerId === trk.id){ trk = null; hide314(); }
+      if (trk && e.pointerId === trk.id){ trk = null; wdStop314(); hide314(); }
       if (!ptrs.size) suppress = false;
     }
     slot.addEventListener("pointerup", up314, true);
     slot.addEventListener("pointercancel", up314, true);
-    window.addEventListener("blur", function(){ ptrs.clear(); trk = null; suppress = false; hide314(); });
+    window.addEventListener("blur", function(){ ptrs.clear(); trk = null; suppress = false; wdStop314(); hide314(); });
   }
   attach314(); setInterval(attach314, 800);
   window.__len314 = function(){ return (txt && txt.parentNode && txt.style.display !== "none") ? curVal : null; };
