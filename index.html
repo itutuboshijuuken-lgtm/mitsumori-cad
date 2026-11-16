@@ -21792,6 +21792,9 @@ function build(S,T,opt){
  /* 間仕切り */
  (S.parts2D||[]).forEach((p,i)=>{const cl=(x,z)=>({x:x<=.001?TH_O:x>=W-.001?W-TH_O:x,z:z<=.001?TH_O:z>=D-.001?D-TH_O:z});
   let A=cl(mm(p.x1),mm(p.y1)),B=cl(mm(p.x2),mm(p.y2));const horiz=Math.abs(mm(p.y1)-mm(p.y2))<1e-6;if(horiz){A.z=B.z=mm(p.y1)}else{A.x=B.x=mm(p.x1)}
+  /* CAD-303（同・取り込み3）：端と外壁の内面の隙間が50cm以内なら、立体図の中だけ壁の内面まで伸ばす（軸方向だけ。2D・見積・保存データは不変） */
+  const ext303=(v,hi)=>{if(v>TH_O&&v-TH_O<=.5)return TH_O;if(v<hi-TH_O&&(hi-TH_O)-v<=.5)return hi-TH_O;return v};
+  if(horiz){A.x=ext303(A.x,W);B.x=ext303(B.x,W)}else{A.z=ext303(A.z,D);B.z=ext303(B.z,D)}
   const P1={x:mm(p.x1),z:mm(p.y1)};const dirS=horiz?Math.sign(B.x-A.x):Math.sign(B.z-A.z);const off=horiz?(A.x-P1.x)*dirS:(A.z-P1.z)*dirS;
   wall(A,B,TH_P,H,{t:'p',i},null,off)});
  /* 屋根（片流れ・北が高い） */
@@ -21885,6 +21888,26 @@ function build(S,T,opt){
    else{const cx=mm(n.p[0]),cz=mm(n.p[1]);L.push({name:n.name,at:[cx+(cx<W/2?1.8:-1.8),cz-1.1],cam:[cx<W/2?.6:W-.6,Math.min(D-.7,cz+1.3)],fov:72,ctr:[cx,cz]})}});
   (S.zones||[]).forEach(z=>{if(z.k==='ub'&&!L.some(l=>l.name==='浴室')){const q=R(z);{const fx=(S.tenken||[]).find(t=>t.k==='bath');const q2=q;const IN2=TH_O+.3;const cs=[[q2.x0+.3,q2.z0+.3],[q2.x1-.3,q2.z0+.3],[q2.x0+.3,q2.z1-.3],[q2.x1-.3,q2.z1-.3]].map(c=>[Math.min(W-IN2,Math.max(IN2,c[0])),Math.min(D-IN2,Math.max(IN2,c[1]))]);const tg=fx?[mm(fx.x),mm(fx.y)]:[(q2.x0+q2.x1)/2,(q2.z0+q2.z1)/2];const c=cs.sort((a,b)=>Math.hypot(b[0]-tg[0],b[1]-tg[1])-Math.hypot(a[0]-tg[0],a[1]-tg[1]))[0];L.push({name:'浴室',at:tg,cam:c,fov:88,ctr:[(q2.x0+q2.x1)/2,(q2.z0+q2.z1)/2]})}}
    if(z.k==='toilet'&&!L.some(l=>l.name==='トイレ')){const q=R(z);{const fx=(S.tenken||[]).find(t=>t.k==='wc');const q2=q;const IN2=TH_O+.3;const cs=[[q2.x0+.3,q2.z0+.3],[q2.x1-.3,q2.z0+.3],[q2.x0+.3,q2.z1-.3],[q2.x1-.3,q2.z1-.3]].map(c=>[Math.min(W-IN2,Math.max(IN2,c[0])),Math.min(D-IN2,Math.max(IN2,c[1]))]);const tg=fx?[mm(fx.x),mm(fx.y)]:[(q2.x0+q2.x1)/2,(q2.z0+q2.z1)/2];const c=cs.sort((a,b)=>Math.hypot(b[0]-tg[0],b[1]-tg[1])-Math.hypot(a[0]-tg[0],a[1]-tg[1]))[0];L.push({name:'トイレ',at:tg,cam:c,fov:88,ctr:[(q2.x0+q2.x1)/2,(q2.z0+q2.z1)/2]})}}});
+  /* CAD-303（Claude CAD-286メモの取り込み1）：名前の無い部屋（A・B・C…）も一覧に入れる。
+     roomsCalc の全部屋のうち、名前付きの部屋（名前の点がその部屋に入る物）と、
+     浴室・トイレのゾーンに重なる物（ゾーン側に入口がある）は除く */
+  try{const RC=(typeof roomsCalc==='function')?roomsCalc():null;
+   if(RC&&RC.rooms&&RC.comp){const inRC=(rm,x,y)=>{const i=Math.floor((x-RC.b.x0)/RC.st),j=Math.floor((y-RC.b.y0)/RC.st);return i>=0&&j>=0&&i<RC.NX&&j<RC.NY&&RC.comp[j*RC.NX+i]===rm.cid};
+    const zRects=(S.zones||[]).filter(z=>z.k==='ub'||z.k==='toilet');
+    RC.rooms.forEach(rm=>{
+     if(!rm.label||L.some(l=>l.name===rm.label))return;
+     if(names.some(n=>inRC(rm,n.p[0],n.p[1])))return;
+     let ov=0;rm.cells.forEach(c=>{const i=c%RC.NX,j=(c-i)/RC.NX,x=RC.b.x0+(i+.5)*RC.st,y=RC.b.y0+(j+.5)*RC.st;if(zRects.some(z=>x>=Math.min(z.x0,z.x1)&&x<=Math.max(z.x0,z.x1)&&y>=Math.min(z.y0,z.y1)&&y<=Math.max(z.y0,z.y1)))ov++});
+     if(rm.cells.length&&ov/rm.cells.length>.3)return;
+     let mnI=1e9,mxI=-1,mnJ=1e9,mxJ=-1;rm.cells.forEach(c=>{const i=c%RC.NX,j=(c-i)/RC.NX;if(i<mnI)mnI=i;if(i>mxI)mxI=i;if(j<mnJ)mnJ=j;if(j>mxJ)mxJ=j});
+     const q={x0:mm(RC.b.x0+mnI*RC.st),x1:mm(RC.b.x0+(mxI+1)*RC.st),z0:mm(RC.b.y0+mnJ*RC.st),z1:mm(RC.b.y0+(mxJ+1)*RC.st)};
+     const fx=(S.tenken||[]).find(t=>/bath|wc|senmen|tearai|kitchen/.test(t.k)&&inRC(rm,t.x,t.y));const IN2=TH_O+.3;
+     const cs=[[q.x0+.3,q.z0+.3],[q.x1-.3,q.z0+.3],[q.x0+.3,q.z1-.3],[q.x1-.3,q.z1-.3]].map(c=>[Math.min(W-IN2,Math.max(IN2,c[0])),Math.min(D-IN2,Math.max(IN2,c[1]))]);
+     const tg=fx?[mm(fx.x),mm(fx.y)]:[(q.x0+q.x1)/2,(q.z0+q.z1)/2];
+     const c=cs.sort((a,b)=>Math.hypot(b[0]-tg[0],b[1]-tg[1])-Math.hypot(a[0]-tg[0],a[1]-tg[1]))[0];
+     L.push({name:rm.label,at:tg,cam:c,fov:88,ctr:[(q.x0+q.x1)/2,(q.z0+q.z1)/2]});
+    });}
+  }catch(e){}
   if(!L.length)L.push({name:'室内',at:[W*.6,D*.3],cam:[1.0,D-1.0],fov:66,ctr:[W/2,D/2]});const IN=TH_O+.3;L.forEach(l=>{l.cam=[Math.min(W-IN,Math.max(IN,l.cam[0])),Math.min(D-IN,Math.max(IN,l.cam[1]))];l.at=[Math.min(W-.2,Math.max(.2,l.at[0])),Math.min(D-.2,Math.max(.2,l.at[1]))]});return L}
 
  /* ---- 電気・造作（S.fx）：壁にくっつく物 ---- */
@@ -21955,13 +21978,16 @@ function build(S,T,opt){
  if(mode!=='in'&&!opt.cam){try{const bb=new T.Box3().setFromObject(root),ctr=bb.getCenter(new T.Vector3()),sz=bb.getSize(new T.Vector3()),R=.5*Math.hypot(sz.x,sz.y,sz.z)+Math.hypot(ctr.x-tgt[0],ctr.y-tgt[1],ctr.z-tgt[2]),vf=cam.fov*Math.PI/180,hf=2*Math.atan(Math.tan(vf/2)*cam.aspect),need=R/Math.sin(Math.min(vf,hf)/2)*1.03,dx=cam.position.x-tgt[0],dy=cam.position.y-tgt[1],dz=cam.position.z-tgt[2],cur=Math.hypot(dx,dy,dz);if(cur<need&&cur>0){const k=need/cur;cam.position.set(tgt[0]+dx*k,tgt[1]+dy*k,tgt[2]+dz*k);cam.lookAt(tgt[0],tgt[1],tgt[2]);}}catch(e){}}
  if(opt.cam){cam.fov=opt.cam.fov||50;cam.position.set(...opt.cam.p);cam.lookAt(...opt.cam.t)}
  cam.updateProjectionMatrix();
+ /* CAD-303（同・取り込み2）：外壁の外面（+8cm）で全ての物を切る。屋根（ceilG）と地面（sc直下）は除く */
+ try{const pl303=[new T.Plane(new T.Vector3(1,0,0),.08),new T.Plane(new T.Vector3(-1,0,0),W+.08),new T.Plane(new T.Vector3(0,0,1),.08),new T.Plane(new T.Vector3(0,0,-1),D+.08)];
+  root.traverse(o=>{if(!o.isMesh)return;let p=o,ex=false;while(p){if(p===ceilG){ex=true;break}p=p.parent}if(ex)return;[].concat(o.material).forEach(m=>{if(m){m.clippingPlanes=pl303;m.clipShadows=true}})})}catch(e){}
  return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name)};
 }
  function supported(S){try{const E=S.edges||[];return E.length===4&&(S.floors||1)===1&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
  /* render: canvasに描く。ハンドル {rotate(n), view(v), dispose(), ms} を返す。静止画（動かす時だけ再描画）なので軽い。 */
  function render(canvas,S,o){o=o||{};const T=o.THREE||window.THREE;if(!T||!supported(S))return null;
   const w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height;
-  const r=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});r.setPixelRatio(Math.min(window.devicePixelRatio||1,o.maxDpr||2));r.setSize(w,h,false);r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.outputColorSpace=T.SRGBColorSpace;
+  const r=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});r.localClippingEnabled=true;/* CAD-303：取り込み2の clippingPlanes を効かせる */r.setPixelRatio(Math.min(window.devicePixelRatio||1,o.maxDpr||2));r.setSize(w,h,false);r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.outputColorSpace=T.SRGBColorSpace;
   const st={view:o.view||'out',rot:o.rot||0,room:o.room||0,obj:null,ms:0};
   function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow});r.render(st.obj.scene,st.obj.camera);st.ms=performance.now()-t0}
   function disposeScene(sc){sc.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material){[].concat(x.material).forEach(m=>{m.map&&m.map.dispose();m.dispose()})}})}
