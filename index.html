@@ -26260,4 +26260,96 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
 })();
 </script>
 
+<script id="lbl310js">
+/* ===== CAD-310：部屋のラベル（名前＋㎡を1つに・部屋の真ん中・うっすら） =====
+   本人の実機指摘（2026-11-16）：㎡の数字が壁に隠れたり部屋の端に寄ったりして、
+   どの部屋の数字か分からない。同じ部屋に数字が2つ出る事もある。
+   直し方（本人の確認済み）：部屋の名前と㎡を1つのラベルにまとめて部屋の真ん中に置く。
+   文字は濃く表示せず、うっすら出す（本人の追加指示）。
+   置き場所は roomsCalc の「壁から一番離れた点」r.p を土台に、その行・列の部屋の
+   セル範囲（L字でも部屋の内側）に収める。名前と面積は同じ x の1組で描き、
+   tidyPlanLabels が個別に動かしても組が離れないよう後段で transform をそろえる。
+   床の範囲のラベルからは ㎡ を外し、部屋の面積は部屋ラベルの1つだけにする。 */
+(function(){ "use strict";
+  var origRLS = roomLabelsSvg;
+  roomLabelsSvg = function(P, top){
+    if (top === "tint") return origRLS(P, top);
+    try { return lbl310(P); } catch(e){ return origRLS(P, top); }
+  };
+  function lbl310(P){
+    var R = roomsCalc(), sr = selRoom(); var h = ""; R._hd = 0;
+    var st = R.st, b = R.b;
+    R.rooms.forEach(function(r){
+      var on = !!sr && sr.cid === r.cid;
+      var nm = ""; try { nm = roomShort(r, R, P); } catch(e){}
+      var c = rlAvoid(P(r.p), P, on);
+      var ai = Math.round((r.p[0] - b.x0) / st - 0.5), aj = Math.round((r.p[1] - b.y0) / st - 0.5);
+      var inRoom = function(i, j){ return i >= 0 && j >= 0 && i < R.NX && j < R.NY && R.comp[j * R.NX + i] === r.cid; };
+      if (!inRoom(ai, aj) && r.cells.length){ var f0 = r.cells[0]; ai = f0 % R.NX; aj = (f0 - ai) / R.NX; }
+      function runX(j){ var i0 = ai, i1 = ai; while (inRoom(i0 - 1, j)) i0--; while (inRoom(i1 + 1, j)) i1++; var pa = P([b.x0 + i0 * st, b.y0 + j * st]), pb = P([b.x0 + (i1 + 1) * st, b.y0 + (j + 1) * st]); return [Math.min(pa[0], pb[0]) + 2, Math.max(pa[0], pb[0]) - 2]; }
+      function runY(i){ var j0 = aj, j1 = aj; while (inRoom(i, j0 - 1)) j0--; while (inRoom(i, j1 + 1)) j1++; var pa = P([b.x0 + i * st, b.y0 + j0 * st]), pb = P([b.x0 + (i + 1) * st, b.y0 + (j1 + 1) * st]); return [Math.min(pa[1], pb[1]) + 2, Math.max(pa[1], pb[1]) - 2]; }
+      var xr = runX(aj);
+      var ky = Math.abs(P([0, 1000])[1] - P([0, 0])[1]) / 1000; if (!(ky > 0)) ky = 1;
+      var aj2 = Math.floor((r.p[1] + 16 / ky - b.y0) / st);
+      if (aj2 !== aj && inRoom(ai, aj2)){ var xr2 = runX(aj2), nxr = [Math.max(xr[0], xr2[0]), Math.min(xr[1], xr2[1])]; if (nxr[1] > nxr[0]) xr = nxr; }
+      var yr = runY(ai);
+      var fs = 20;
+      if (nm){ var wAt = function(f){ return [...nm].length * f * 0.98 + 4; }; if (wAt(fs) > xr[1] - xr[0]) fs = Math.max(11, Math.floor(fs * (xr[1] - xr[0]) / wAt(fs))); }
+      var areaTxt = fmt(r.area, 1) + "㎡";
+      var wMax = Math.max(nm ? [...nm].length * fs * 0.98 + 4 : 0, [...areaTxt].length * 11 * 0.62 + 4);
+      var cx = (xr[1] - xr[0] >= wMax) ? Math.max(xr[0] + wMax / 2, Math.min(xr[1] - wMax / 2, c[0])) : (xr[0] + xr[1]) / 2;
+      var f1 = null; try { f1 = roomFinOf(r); } catch(e){}
+      var noWork = !!(f1 && !f1.auto && f1.f === "none" && f1.w === "none" && f1.c === "none");
+      var flTxt = (f1 && f1.t && f1.f !== "none" && !(f1.f === "none" && f1.w === "none" && f1.c === "none")) ? "床 " + (FT_LABEL[f1.t] || "") : "";
+      var extra = noWork || !!flTxt;
+      var g = "";
+      if (noWork){ try { g += roomHatch(r, R, P); } catch(e){} }
+      g += '<g data-lbl310="' + r.cid + '">';
+      if (nm){
+        var yMin = yr[0] + fs * 0.8, yMax = yr[1] - (extra ? 36 : 20);
+        var cy = yMax >= yMin ? Math.max(yMin, Math.min(yMax, c[1])) : (yr[0] + yr[1]) / 2 - 3;
+        g += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" style="font-size:' + fs + 'px;font-weight:800;fill:' + (on ? "#C2571A" : "#2563B0") + ';fill-opacity:' + (on ? ".9" : ".62") + ';pointer-events:none">' + nm + '</text>';
+        g += '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
+        if (noWork) g += '<text x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
+        else if (flTxt) g += '<text x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#2F6B5F;fill-opacity:.75;pointer-events:none">' + flTxt + '</text>';
+      } else {
+        var cyA = (yr[0] + yr[1]) / 2 + 4;
+        g += '<text x="' + cx + '" y="' + cyA + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
+        if (noWork) g += '<text x="' + cx + '" y="' + (cyA + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
+      }
+      g += "</g>";
+      h += g;
+    });
+    return h;
+  }
+  /* tidyPlanLabels が名前と面積を個別に動かしても、組が離れないようにする */
+  var prevTidy310 = window.tidyPlanLabels;
+  if (typeof prevTidy310 === "function"){
+    window.tidyPlanLabels = function(){
+      var r = prevTidy310.apply(this, arguments);
+      try {
+        var svg = document.getElementById("plan"); if (!svg) return r;
+        svg.querySelectorAll("g[data-lbl310]").forEach(function(g){
+          var ts = g.querySelectorAll("text"); if (ts.length < 2) return;
+          var tr = ts[0].getAttribute("transform");
+          for (var i = 1; i < ts.length; i++){ if (tr) ts[i].setAttribute("transform", tr); else ts[i].removeAttribute("transform"); }
+        });
+      } catch(e){}
+      return r;
+    };
+  }
+  /* 床の範囲のラベルから ㎡ を外す（部屋の面積は部屋ラベルの1つだけにする） */
+  try {
+    if (window.HB && HB.__tatBranch50){
+      var origTB310 = HB.__tatBranch50;
+      HB.__tatBranch50 = function(r, P){
+        var out = origTB310(r, P);
+        if (typeof out === "string") out = out.replace(/[0-9][0-9,]*(\.[0-9])?㎡/g, "");
+        return out;
+      };
+    }
+  } catch(e){}
+})();
+</script>
+
 </html>
