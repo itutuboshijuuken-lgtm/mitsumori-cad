@@ -6233,10 +6233,10 @@ function calc00(){
   }
   function stairRows(){
     const st = (S.tenken || []).filter(o => o.k === "stair"); if (!st.length) return;
-    const nm = {s: ["kaidan", "階段（直階段）"], L: ["kaidanL", "階段（かね折れ）"], M: ["kaidanM", "階段（回り階段）"]};
+    const nm = {s: ["kaidan", "階段（直階段）"], L: ["kaidanL", "階段（かね折れ）"], M: ["kaidanM", "階段（回り階段）"], D: ["kaidanM", "階段（下回り）"], U: ["kaidanM", "階段（上回り）"], B: ["kaidanM", "階段（上下回り）"]};   /* CAD-299：新形（下回り・上回り・上下回り）は回り系の単価 kaidanM に寄せ、行名だけ形の名前にする */
     const autoH = (S.ch || 2400) + (S.dosa || 240);
     const by = {};
-    st.forEach(o => { const t = (o.st || "s") === "N" ? "M" : (o.st || "s"), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });
+    st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
     Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190), R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
       work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
       if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)) work("kdRail", "階段 手すり（片側）", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`); });
@@ -25572,6 +25572,183 @@ drawEnclBar = wrappedBar298;
 }
 
 window.__guard298 = { poke: poke298, slide: slideIn298, rectOf: rectOf298, anchorKey: anchorKey298}; /* 検証用 */
+})();
+</script>
+
+
+<script id="stair299js">
+/* ===== CAD-299：階段の形の作り直し（本人の決め 2026-11-16） =====
+形は5つ（直階段／かね折れ／下回り／上回り／上下回り）。回り系は形の後に段数
+（1段＝踊り場／2段／3段）を選ぶ。上下回りは下と上を別々に選べる。
+旧データの読み替え：L＝かね折れ1段、M＝かね折れ3段、N＝かね折れ2段、s＝直階段。
+描画は HB.__tenkenBranch32 の連鎖で階段だけ差し替え（旧形の絵は従来コードの複製で不変）、
+選択バーは drawSelBarK を包んで後処理する。詳細は build299.py の冒頭コメント。 */
+(function(){ "use strict";
+var SHAPES299 = [["s", "直階段"], ["k", "かね折れ"], ["d", "下回り"], ["u", "上回り"], ["b", "上下回り"]];
+function shapeName299(sf){ for (var i = 0; i < SHAPES299.length; i++) if (SHAPES299[i][0] === sf) return SHAPES299[i][1]; return "直階段"; }
+function tnName299(tn){ return tn === 1 ? "踊り場" : tn + "段"; }
+function shapeOf299(o){
+  if (!o) return { sf: "s", tn: 3, t2: 3 };
+  if (o.sf){
+    var tn = (o.tn === 1 || o.tn === 2 || o.tn === 3) ? o.tn : (o.sf === "k" ? (o.st === "L" ? 1 : o.st === "N" ? 2 : 3) : 3);
+    var t2 = (o.t2 === 1 || o.t2 === 2 || o.t2 === 3) ? o.t2 : 3;
+    return { sf: o.sf, tn: tn, t2: t2 };
+  }
+  if (o.st === "L") return { sf: "k", tn: 1, t2: 3 };
+  if (o.st === "M") return { sf: "k", tn: 3, t2: 3 };
+  if (o.st === "N") return { sf: "k", tn: 2, t2: 3 };
+  return { sf: "s", tn: 3, t2: 3 };
+}
+function fullName299(o){
+  var s = shapeOf299(o);
+  if (s.sf === "s") return "直階段";
+  if (s.sf === "b") return "上下回り・下" + tnName299(s.tn) + "／上" + tnName299(s.t2);
+  return shapeName299(s.sf) + "・" + tnName299(s.tn);
+}
+function effSt299(s){
+  if (s.sf === "s") return "s";
+  if (s.sf === "k") return s.tn === 1 ? "L" : s.tn === 2 ? "N" : "M";
+  return "M";
+}
+function dims299(s){
+  if (s.sf === "s") return [910, 2730];
+  if (s.sf === "k" && s.tn === 1) return [1820, 2730];
+  return [1820, 1820];
+}
+window.__st299 = { shapeOf: shapeOf299, name: fullName299, shapeName: shapeName299, tnName: tnName299 };
+
+/* ---- 描画：HB.__tenkenBranch32 の連鎖で階段だけ自前描画（他は従来へ委譲） ---- */
+function stairSvg299(o, i, P){
+  const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2;
+  const ew = o.dir === "e" || o.dir === "w", lw = ew ? H2 : W2, lh = ew ? W2 : H2, rot = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, C = "#5B6B7A";
+  const ln = (x1, y1, x2, y2, w) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${C}" stroke-width="${w || .9}"/>`, hw = lw / 2, hh = lh / 2;
+  let L = "";
+  const sx = lw / o.w, sy = lh / o.d, TD = 227.5;   /* 踏み面は、上りも下りも同じ227.5mmにそろえる */
+  const arrow = (x, y, dx, dy) => { const a2 = Math.atan2(dy, dx), r = Math.max(5, Math.min(lw, lh) * .07); return `<path d="M${x + Math.cos(a2 + 2.6) * r} ${y + Math.sin(a2 + 2.6) * r} L${x} ${y} L${x + Math.cos(a2 - 2.6) * r} ${y + Math.sin(a2 - 2.6) * r}" fill="none" stroke="${C}" stroke-width="1.5"/>`; };
+  const sh = shapeOf299(o);
+  const mode = sh.sf === "s" ? "s" : sh.sf === "k" ? (sh.tn === 1 ? "L" : sh.tn === 2 ? "N" : "M") : sh.sf;
+  if (mode === "s"){
+    const n = Math.max(4, Math.round(o.d / TD)); for (let k = 1; k < n; k++){ const y = lh * k / n; L += ln(0, y, lw, y); }
+    L += ln(hw, lh * .94, hw, lh * .08, 1.5) + arrow(hw, lh * .08, 0, -1);
+  } else if (mode === "L"){   /* かね折れ1段（踊り場）：従来の L の描画そのまま */
+    const ly = Math.min(lh * .5, 910 * sy), n = Math.max(3, Math.round((o.d - 910) / TD));
+    L += ln(0, ly, lw, ly, 1.3) + ln(hw, ly, hw, lh, 1.3);
+    for (let k = 1; k < n; k++){ const y = ly + (lh - ly) * k / n; L += ln(0, y, lw, y); }
+    L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${ly * .5} L${lw * .25} ${ly * .5} L${lw * .25} ${lh * .9}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .25, lh * .9, 0, 1);
+  } else if (mode === "M" || mode === "N"){   /* かね折れ3段／2段：従来の回り階段の描画そのまま */
+    const na = Math.max(3, Math.round((o.d / 2) / TD)), nw = mode === "N" ? 2 : 3;
+    L += ln(hw, hh, lw, hh, 1.3) + ln(hw, 0, hw, hh, 1.3) + ln(hw, hh, hw, lh, 1.3);
+    for (let k = 1; k < na; k++){ const y = lh - hh * k / na; L += ln(hw, y, lw, y); }
+    for (let k = 1; k < na; k++){ const x = hw - hw * k / na; L += ln(x, 0, x, hh); }
+    for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, tn = Math.tan(th); const ex = tn <= 1 ? lw : hw + hh / tn, ey = tn <= 1 ? hh - hw * tn : 0; L += ln(hw, hh, ex, ey); }
+    L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
+  } else {   /* 新形：下回り／上回り／上下回り（1820×1820 の象限の物差し） */
+    const na = Math.max(3, Math.round((o.d / 2) / TD));
+    const fanB = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? hw + hh * t : lw, ey = t <= 1 ? lh : hh + hw / t; s2 += ln(hw, hh, ex, ey); } return s2; };   /* 下の象限の回り：中心（hw,hh）から下辺と右辺へ */
+    const fanT = nw => { let s2 = ""; for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, t = Math.tan(th); const ex = t <= 1 ? lw : hw + hh / t, ey = t <= 1 ? hh - hw * t : 0; s2 += ln(hw, hh, ex, ey); } return s2; };   /* 上の象限の回り：従来の回り階段と同じ */
+    if (mode === "d"){   /* 下回り：下で回って、右列をまっすぐ上がる。入口は下の行から */
+      L += ln(hw, 0, hw, lh, 1.3) + ln(hw, hh, lw, hh, 1.3);
+      for (let k = 1; k < na; k++){ const y = hh - hh * k / na; L += ln(hw, y, lw, y); }
+      if (sh.tn > 1) L += fanB(sh.tn);
+      L += `<path d="M${lw * .08} ${lh * .93} L${lw * .68} ${lh * .93} Q${lw * .77} ${lh * .93} ${lw * .75} ${lh * .8} L${lw * .75} ${lh * .08}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .75, lh * .08, 0, -1);
+    } else if (mode === "u"){   /* 上回り：右列をまっすぐ上がって、上で回って到着（上の行に段線は引かない） */
+      L += ln(hw, hh, lw, hh, 1.3) + ln(hw, 0, hw, hh, 1.3) + ln(hw, hh, hw, lh, 1.3);
+      for (let k = 1; k < na; k++){ const y = lh - hh * k / na; L += ln(hw, y, lw, y); }
+      if (sh.tn > 1) L += fanT(sh.tn);
+      L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
+    } else {   /* 上下回り：下と上の両方で回る（下・上は別々に選べる） */
+      L += ln(hw, 0, hw, lh, 1.3) + ln(hw, hh, lw, hh, 1.3);
+      if (sh.tn > 1) L += fanB(sh.tn);
+      if (sh.t2 > 1) L += fanT(sh.t2);
+      L += `<path d="M${lw * .08} ${lh * .93} L${lw * .68} ${lh * .93} Q${lw * .77} ${lh * .93} ${lw * .75} ${lh * .8} L${lw * .75} ${hh * .66} Q${lw * .75} ${hh * .48} ${lw * .58} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
+    }
+  }
+  let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+  g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${fullName299(o)}）</text></g>`;
+  if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
+  return g;
+}
+if (typeof HB !== "undefined"){
+  var prevBranch299 = HB.__tenkenBranch32 || null;
+  HB.__tenkenBranch32 = function(o, i, P){
+    if (!o || o.k !== "stair") return prevBranch299 ? prevBranch299(o, i, P) : null;
+    return stairSvg299(o, i, P);
+  };
+}
+
+/* ---- 形・段数の変更（突き抜けは CAD-298 の公開口で寄せる／戻す） ---- */
+function applyStair299(o, bar, ns){
+  pushUndo();
+  var snap = { sf: o.sf, tn: o.tn, t2: o.t2, st: o.st, w: o.w, d: o.d, x: o.x, y: o.y };
+  o.sf = ns.sf; o.tn = ns.tn; o.t2 = ns.t2; o.st = effSt299(ns);
+  var dm = dims299(ns); o.w = dm[0]; o.d = dm[1];
+  moveTenken(o, 0, 0);
+  try {
+    if (window.__guard298 && window.__guard298.poke(o) > 0){
+      if (!window.__guard298.slide(o)){ Object.assign(o, snap); toast("壁に当たるため変えられませんでした"); }
+    }
+  } catch(e){}
+  save(); if (bar) bar.dataset.k = ""; drawPlan();
+}
+function closeShapeSheet299(){ var ov = document.getElementById("stShapeSheet299"); if (ov) ov.remove(); }
+function openShapeSheet299(o, bar){
+  closeShapeSheet299();
+  var cur = shapeOf299(o).sf;
+  var ov = document.createElement("div");
+  ov.id = "stShapeSheet299";
+  ov.style.cssText = "position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center";
+  ov.innerHTML = `<div style="background:#fff;width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.3)">
+    <div style="font-weight:800;font-size:15px;margin:2px 2px 10px">階段の形</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${SHAPES299.map(([v, n]) => `<button type="button" data-sf299="${v}" style="min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid ${v === cur ? "#2563B0" : "#C9D2DC"};background:${v === cur ? "#E8F1FB" : "#fff"};color:#1B2430">${n}</button>`).join("")}</div>
+    <button type="button" data-sf299="" style="width:100%;min-height:44px;margin-top:10px;font-size:14px;border-radius:10px;border:1px solid #C9D2DC;background:#F2F5F8;color:#1B2430">やめる</button></div>`;
+  ov.addEventListener("click", e => { if (e.target === ov) closeShapeSheet299(); });
+  ov.querySelectorAll("[data-sf299]").forEach(b => b.onclick = () => {
+    var v = b.dataset.sf299; closeShapeSheet299(); if (!v || v === cur) return;
+    var ns = shapeOf299(o); ns.sf = v;
+    applyStair299(o, bar, ns);
+  });
+  document.body.appendChild(ov);
+}
+
+/* ---- 選択バーの後処理：題名・形ボタン・段数ボタン ---- */
+function fixBar299(bar){
+  try {
+    if (!bar || typeof sel === "undefined" || !sel || sel.t !== "k" || typeof S === "undefined" || !S || !S.tenken) return;
+    var o = S.tenken[sel.i]; if (!o || o.k !== "stair") return;
+    var sh = shapeOf299(o);
+    var t = bar.querySelector(".r1 > span");
+    if (t) t.textContent = `階段（${fullName299(o)}）${fmt(o.w)}×${fmt(o.d)}　向きは下のボタン`;
+    var ks = document.getElementById("sbKS"); if (!ks) return;
+    if (!ks.dataset.st299){
+      var cl = ks.cloneNode(true); cl.dataset.st299 = "1"; ks.replaceWith(cl); ks = cl;
+      ks.onclick = function(){ openShapeSheet299(o, bar); };
+    }
+    ks.textContent = shapeName299(sh.sf) + " ▸";
+    var sbL = bar.querySelector(".sbL"); if (!sbL) return;
+    var need = sh.sf === "s" ? [] : sh.sf === "b" ? ["d", "u"] : ["d"];
+    sbL.querySelectorAll("[data-tn299]").forEach(bn => { if (need.indexOf(bn.dataset.tn299) < 0) bn.remove(); });
+    var kh = document.getElementById("sbKH");
+    need.forEach(which => {
+      var bn = sbL.querySelector(`[data-tn299="${which}"]`);
+      if (!bn){
+        bn = document.createElement("button"); bn.type = "button"; bn.dataset.tn299 = which;
+        bn.onclick = function(){
+          var ns = shapeOf299(o);
+          if (which === "d") ns.tn = ns.tn % 3 + 1; else ns.t2 = ns.t2 % 3 + 1;
+          applyStair299(o, bar, ns);
+        };
+        if (kh && kh.parentNode === sbL) sbL.insertBefore(bn, kh); else sbL.appendChild(bn);
+      }
+      bn.textContent = (sh.sf === "b" ? (which === "d" ? "下 " : "上 ") : "段数 ") + tnName299(which === "d" ? sh.tn : sh.t2) + " ▸";
+    });
+  } catch(e){}
+}
+if (typeof drawSelBarK === "function" && !drawSelBarK.__st299){
+  var origBarK299 = drawSelBarK;
+  var wrappedBarK299 = function(bar){ var r = origBarK299.apply(this, arguments); fixBar299(bar || document.getElementById("selBar")); return r; };
+  wrappedBarK299.__st299 = true;
+  drawSelBarK = wrappedBarK299;
+}
 })();
 </script>
 
