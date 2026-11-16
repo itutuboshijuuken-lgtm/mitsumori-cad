@@ -24577,4 +24577,153 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 })();
 </script>
 
+
+<script id="fix289js">
+/* ===== CAD-289：線で作った部屋がタップで選べない件 =====
+   原因と直しは build289.py の頭書き参照。既存ブロックは無変更。 */
+(function(){ "use strict";
+  var rec289 = null;        // 実タップの記録
+  var replaying289 = false; // 流し直しの最中
+
+  function mmPx289(){
+    try {
+      var r = document.getElementById("plan").getBoundingClientRect();
+      return (PV.W / r.width) / HB.__planT.s;
+    } catch(e){ return 10; }
+  }
+  function tight289(){ return 14 * mmPx289(); }   /* 「線の上」の幅（画面14px分） */
+  function nearestPart289(mm){
+    var best = Infinity;
+    (S.parts2D || []).forEach(function(q){
+      var d = segDist(mm, [q.x1, q.y1], [q.x2, q.y2]).d;
+      if (d < best) best = d;
+    });
+    return best;
+  }
+  function nearLight289(mm){
+    try { return (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); }
+    catch(e){ return false; }
+  }
+  function roomBarOpen289(){
+    var b = document.getElementById("roomBar176");
+    return !!(b && !b.hidden);
+  }
+  /* 門：CAD-176 の門から partDraw / toolOpen==="part" だけを外した物。
+     その2つは「線を引いた直後」の状態で、ここが直す対象のため。 */
+  function gates289(){
+    try {
+      if (!HB.__pageM) return true;
+      if (HB.__nbtut || (document.body && document.body.classList.contains("nbtutRun"))) return true;
+      if (HB.__armedAny && HB.__armedAny()) return true;
+      if (HB.__put || HB.__floorArm) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (typeof enclMode !== "undefined" && enclMode) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (HB.__delMode || HB.__hgMode) return true;
+      if (typeof encl !== "undefined" && encl && encl.edit) return true;
+      return false;
+    } catch(e){ return true; }
+  }
+
+  /* pickCands を包む：流し直しの間だけ、間仕切り候補を「線の上」だけに絞る。
+     実タップの判定（太い当たり）は従来通り一切変えない。 */
+  if (typeof pickCands === "function" && !pickCands.__w289){
+    var origPC289 = pickCands;
+    var wrappedPC289 = function(pt){
+      var cs = origPC289.apply(this, arguments);
+      if (replaying289 && cs && cs.length){
+        var T = tight289();
+        cs = cs.filter(function(c){ return c.t !== "p" || c.d <= T; });
+      }
+      return cs;
+    };
+    wrappedPC289.__w289 = true;
+    pickCands = wrappedPC289;
+  }
+
+  /* 実タップの記録（document 捕捉＝#slotM や #planWrap より先に必ず見る） */
+  document.addEventListener("pointerdown", function(e){
+    if (e.__fix289 || replaying289) return;
+    if (e.isPrimary === false){ rec289 = null; return; }
+    var t = e.target;
+    if (!t || !t.closest || !(t.closest("#plan") || t.closest("#planWrap"))){ rec289 = null; return; }
+    var mm = null;
+    try { mm = toMM(planPt(e)); } catch(er){}
+    if (!mm){ rec289 = null; return; }
+    var cs = [];
+    try { cs = pickCands(mm) || []; } catch(er){ cs = []; }
+    rec289 = { mm: [mm[0], mm[1]], cx: e.clientX, cy: e.clientY, t: Date.now(), pid: e.pointerId,
+      maxDev: 0,
+      selB: (typeof sel !== "undefined" && sel) ? sel.t + ":" + sel.i : null,
+      hasObj: cs.some(function(c){ return c.t !== "p"; }),
+      partDraw: !!HB.__partDraw };
+  }, true);
+  document.addEventListener("pointermove", function(e){
+    var d = rec289; if (!d || e.pointerId !== d.pid) return;
+    var dev = Math.hypot(e.clientX - d.cx, e.clientY - d.cy);
+    if (dev > d.maxDev) d.maxDev = dev;
+  }, true);
+  document.addEventListener("pointercancel", function(){ rec289 = null; }, true);
+
+  function replayTap289(d){
+    var plan = document.getElementById("plan");
+    if (!plan) return;
+    replaying289 = true;
+    try {
+      var opts = { bubbles: true, cancelable: true, clientX: d.cx, clientY: d.cy,
+                   pointerId: 987289, pointerType: "touch", isPrimary: true, button: 0, buttons: 0 };
+      var dn = new PointerEvent("pointerdown", opts); dn.__fix289 = true;
+      plan.dispatchEvent(dn);
+      var up = new PointerEvent("pointerup", opts); up.__fix289 = true;
+      plan.dispatchEvent(up);
+    } catch(e){}
+    replaying289 = false;
+  }
+
+  /* 判定：pointerup を捕捉で受け、アプリ側の処理が終わった直後（setTimeout 0）に見る。
+     partDraw の pointerup は #slotM で伝播が止まるため、バブルでは届かない事がある。 */
+  document.addEventListener("pointerup", function(e){
+    if (e.__fix289 || replaying289) return;
+    var d = rec289;
+    if (!d || e.pointerId !== d.pid) return;
+    rec289 = null;
+    var ux = e.clientX, uy = e.clientY;
+    setTimeout(function(){
+    try {
+      if (d.maxDev > 14 || Math.hypot(ux - d.cx, uy - d.cy) > 14 || Date.now() - d.t > 900) return;
+      if (gates289()) return;
+      if (roomBarOpen289()) return;
+      var rm = null;
+      try { rm = roomAt(d.mm[0], d.mm[1]); } catch(er){}
+      if (!rm) return;
+      if (nearLight289(d.mm)) return;
+      if (d.hasObj) return;                                   /* 建具・設備・垂れ壁は従来通り */
+      if (nearestPart289(d.mm) <= tight289()) return;        /* 線の上＝間仕切りの編集が従来通り */
+      var selNow = (typeof sel !== "undefined" && sel) ? sel : null;
+      if (d.partDraw){
+        /* 線を引いた直後：描くモードが部屋タップを吸った状態。
+           ゾーン編集などが開いた場合は enclMode の門で既に止まっている。 */
+        if (selNow && selNow.t !== "p" && d.selB !== (selNow.t + ":" + selNow.i)) return;
+        try { toolOpen = null; } catch(er){}
+        if (HB.__partDrawOff){ try { HB.__partDrawOff(true); } catch(er){} }
+        try { drawToolsUI(); } catch(er){}
+        sel = null;
+        try { drawSelBar(); } catch(er){}
+        replayTap289(d);
+        return;
+      }
+      /* 通常モード：このタップで間仕切りが選ばれてしまった時だけ部屋に変える。
+         最初から選ばれていた間仕切りは CAD-176 の候補一周に任せる。 */
+      if (selNow && selNow.t === "p" && d.selB !== "p:" + selNow.i){
+        sel = null;
+        try { drawSelBar(); } catch(er){}
+        replayTap289(d);
+      }
+    } catch(err){}
+    }, 0);
+  }, true);
+})();
+</script>
+
 </html>
