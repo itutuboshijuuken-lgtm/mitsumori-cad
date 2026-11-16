@@ -21668,6 +21668,7 @@ function winWarn250(n0){
    Sは単価表以外のアプリの状態（S.edges / S.parts2D / S.sashes / S.zones / S.tenken / S.tatami / S.roomRecs）。単位mm。 */
 (function(){
 const mm = v => v/1000;
+const __gS307=()=>{try{return S}catch(e){return undefined}};/* CAD-307：本体の状態（全 script 共通の let S）への参照 */
 function rng(seed){let s=seed;return()=>(s=(s*16807)%2147483647)/2147483647}
 function ctex(T,w,h,fn,opt){opt=opt||{};const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h,rng(opt.seed||11));const t=new T.CanvasTexture(c);t.colorSpace=opt.lin?T.NoColorSpace:T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=8;return t}
 function makeTex(T){
@@ -21691,7 +21692,7 @@ function build(S,T,opt){
  opt=opt||{};const mode=opt.mode||'out';const X=makeTex(T);const renderer=opt.renderer;
  const sc=new T.Scene();sc.background=new T.Color(mode==='in'?0xd6e6f5:0xe7eaee);
  if(renderer)sc.environment=skyEnv(T,renderer);
- const E=S.edges||[],W=mm(E[0].v),D=mm(E[1].v),H0=mm(S.ch||2400),H=(mode==='doll'?1.15:H0),FLH=0.45;/* 基礎立ち上がり */
+ const E=S.edges||[],B307=(()=>{try{return (S===__gS307()&&typeof bbox==="function")?bbox():null}catch(e){return null}})(),W=mm(B307&&B307.w>0?B307.w:E[0].v),D=mm(B307&&B307.h>0?B307.h:E[1].v),H0=mm(S.ch||2400),H=(mode==='doll'?1.15:H0),FLH=0.45;/* 基礎立ち上がり。CAD-307（Claude CAD-287メモの取り込み）：幅・奥行きは edges の並び順ではなく平面図と同じ bbox() の w/h から取る（最初に描いた辺が縦だと縦横が入れ替わり、部屋が外周から離れていた）。引数が本体の状態でない時・取れない時は従来どおり */
  const root=new T.Group();sc.add(root);const ceilG=new T.Group();root.add(ceilG);
  const ST=(m,rx,ry)=>{m.map&&m.map.repeat&&0;return m};
  const M=(o)=>new T.MeshStandardMaterial(o);
