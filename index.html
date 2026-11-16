@@ -5848,8 +5848,44 @@ function calc(){
       rows.splice(ashAt291, 0, ...ashRows291);
     } catch(e){}
   }
+  /* ===== CAD-293: 合算経路で抜ける建物単位の行（下屋・自動の階段）を差し込む =====
+     階ごとに平屋として数えるため、calc00 の two（2階建て判定）の時だけ作られる行が抜けていた。
+     (a) 下屋：S.geya があっても GY が空になり行が出ない。(b) 自動の階段：「階段 1か所」が出ない。 */
+  let gyNobe293 = 0;
+  if (S.mode === "zo" && parts.length >= 2){
+    /* (b) 自動の階段：どの階にも階段が置かれていない時だけ、calc00 と同じ行を足場の直後へ */
+    try {
+      const hasStair293 = parts.some((p, i) => { const sn293 = i === cur ? keep : (S.fl[i] && S.fl[i].snap); return sn293 && (sn293.tenken || []).some(o => o && o.k === "stair"); });
+      if (!hasStair293){
+        const w293 = workP("kaidan");
+        const row293 = {name: "階段", spec: `${fmt(1, 1)}か所 × ${fmt(w293.p)}円`, qty: "", cost: w293.p, avg: w293.avg, miss: !w293.p, fix: {kind: "work", key: "kaidan"}, q: 1, fl: ashAt291 >= 0 ? ashFl291 : (labAt291 >= 0 ? labFl291 : 0)};
+        let ins293 = rows.length;
+        if (ashAt291 >= 0){ let j293 = ashAt291; while (j293 < rows.length && (rows[j293].ash || /^足場/.test(rows[j293].name || ""))) j293++; ins293 = j293; }
+        rows.splice(ins293, 0, row293);
+      }
+    } catch(e){}
+    /* (a) 下屋：総2階の近道パスと同じ状態（1階＋2階の要素・S.floors=2）で calc0 を1回回し、下屋グループの行だけを抜き出して1階の節へ */
+    if ((S.geya || []).length){
+      try {
+        const keep293 = flSnap(), fl293 = S.floors;
+        try {
+          const a293 = cur === 0 ? keep : S.fl[0].snap, b293 = cur === 1 ? keep : (S.fl[1] && S.fl[1].snap);
+          flLoad(a293); S.floors = 2; if (b293) mergeUpperFloor(b293);
+          const C293 = calc0();
+          const gyRows293 = []; let inGy293 = false;
+          (C293.rows || []).forEach(r => { if (r.grp){ inGy293 = /^下屋/.test(r.grp); if (inGy293) gyRows293.push(r); return; } if (inGy293) gyRows293.push(r); });
+          if (gyRows293.length){
+            gyNobe293 = (S.geya || []).map(g => geyaDim(g, C293.R)).reduce((x, g) => x + g.L * g.d, 0) / 1e6;
+            gyRows293.forEach(r => { r.fl = 0; });
+            let at293 = rows.findIndex(r => r.flHead === 1); if (at293 < 0) at293 = rows.length;
+            rows.splice(at293, 0, ...gyRows293);
+          }
+        } finally { try { flLoad(keep293); } catch(e){} S.floors = fl293; }
+      } catch(e){}
+    }
+  }
   if (!rows.length) return calcFloor();
-  const C = calcFloor({rows, fields: {genka: num("genka"), area: num("area"), tsubo: num("tsubo"), nobe: num("nobe"), nobeT: num("nobeT"), wallA: num("wallA"), roofA: num("roofA"), gomi}});
+  const C = calcFloor({rows, fields: {genka: num("genka"), area: num("area"), tsubo: num("tsubo"), nobe: num("nobe") + gyNobe293, nobeT: num("nobeT") + gyNobe293 * 0.3025, wallA: num("wallA"), roofA: num("roofA"), gomi}});
   const sums = {}; C.rows.forEach(r => { if (r.fl != null && r.cost) sums[r.fl] = (sums[r.fl] || 0) + r.cost * (r.mk || 1); });
   C.rows.forEach(r => { if (r.flHead != null) r.grp = "■ " + S.fl[r.flHead].name + "　小計 " + fmt(Math.round(sums[r.flHead] || 0)) + "円（税抜）"; });
   return C;
