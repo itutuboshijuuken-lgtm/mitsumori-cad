@@ -16589,6 +16589,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       try {
         if (PV.cx == null){ var c = mViewCenterSvg(); PV.cx = c[0]; PV.cy = c[1]; }
         G.pz = { kind: "plan", z0: PV.z, d0: tp.d, a: planPt({ clientX: tp.mid[0], clientY: tp.mid[1] }) };
+        pz320Begin(G.pz, el);
       } catch(err){ G.pz = { kind: "block" }; }
     } else if (el && VB_IDS[el.id]){
       var cur = readVB(el);
@@ -16603,7 +16604,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   function reAnchor(){
     var tp = twoPts(); if (!tp || !G.pz) return;
     var pz = G.pz;
-    if (pz.kind === "plan"){ try { pz.z0 = PV.z; pz.a = planPt({ clientX: tp.mid[0], clientY: tp.mid[1] }); pz.d0 = tp.d; } catch(err){} }
+    if (pz.kind === "plan"){ try { if (pz.dirty320) pz320Commit(pz, tp.mid); pz.z0 = PV.z; pz.a = planPt({ clientX: tp.mid[0], clientY: tp.mid[1] }); pz.d0 = tp.d; pz320Begin(pz, pz.el); } catch(err){} }
     else if (pz.kind === "vb"){ var cur = readVB(pz.el); if (cur){ pz.z0 = pz.home.w / cur.w; pz.d0 = tp.d; } }
   }
 
@@ -16613,10 +16614,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (pz.kind === "plan"){
       try {
         PV.z = Math.max(1, Math.min(8, pz.z0 * tp.d / pz.d0));
-        applyPV();
-        var nw = planPt({ clientX: tp.mid[0], clientY: tp.mid[1] });
-        PV.cx += pz.a[0] - nw[0]; PV.cy += pz.a[1] - nw[1];
-        applyPV();
+        pz320Move(pz, tp);
       } catch(err){}
     } else if (pz.kind === "vb"){
       try {
@@ -16638,6 +16636,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   /* ピンチ終了時: 本体側の touches / pinch 状態を掃除する
      （指の up を飲み込むため、本体の endT が走らず状態が残るのを防ぐ） */
   function endPinch(){
+    try { if (G.pz && G.pz.kind === "plan" && G.pz.dirty320) pz320Commit(G.pz, null); } catch(err){}
     G.pz = null;
     G.clickBlockUntil = Date.now() + 450;
     try { if (typeof touches !== "undefined" && touches && touches.clear) touches.clear(); } catch(err){}
@@ -16704,6 +16703,55 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 
   /* Safari のジェスチャ拡大を図面サーフェスでは止める */
   window.addEventListener("gesturestart", function(e){ if (surfOf(e)) e.preventDefault(); }, true);
+
+  /* CAD-320: ピンチ中の #plan は要素をリサイズせず CSS transform で拡縮する。
+     applyPV は move のたびに SVG の幅を変えて強制レイアウト＋全体の再描画を
+     起こし、カクつきの主犯だった（perf320 で実測）。ピンチ中は style の
+     書き換えだけにし、確定は指が離れた時に従来の計算を1回だけ走らせる。
+     アンカー（指の中点の下の点）は開始時に getScreenCTM で要素内 px に固定
+     するので、レターボックス等があってもずれない。 */
+  function pz320Begin(pz, el){
+    pz.el = el; pz.dirty320 = false; pz.lastMid = null;
+    if (el.style.transform){ el.style.transform = ""; el.style.willChange = ""; try { applyPV(); } catch(err){} }
+    var r = el.getBoundingClientRect();
+    pz.rect = { left: r.left, top: r.top, width: r.width, height: r.height };
+    pz.zBase = PV.z;
+    pz.ax = null; pz.ay = null;
+    try {
+      var ctm = el.getScreenCTM();
+      if (ctm){
+        var pt = el.createSVGPoint(); pt.x = pz.a[0]; pt.y = pz.a[1];
+        var sp = pt.matrixTransform(ctm);
+        pz.ax = sp.x - r.left; pz.ay = sp.y - r.top;
+      }
+    } catch(err){}
+    if (pz.ax == null){ pz.ax = pz.a[0] / PV.W * r.width; pz.ay = pz.a[1] / PV.H * r.height; }
+    el.style.transformOrigin = "0 0";
+    el.style.willChange = "transform";
+  }
+
+  function pz320Move(pz, tp){
+    if (!pz.el || pz.ax == null) return;
+    var s = PV.z / pz.zBase;
+    var tx = tp.mid[0] - pz.rect.left - s * pz.ax;
+    var ty = tp.mid[1] - pz.rect.top - s * pz.ay;
+    pz.el.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + s + ")";
+    pz.lastMid = tp.mid;
+    pz.dirty320 = true;
+  }
+
+  function pz320Commit(pz, mid){
+    var el = pz.el; if (!el) return;
+    var m = mid || pz.lastMid;
+    el.style.transform = ""; el.style.willChange = "";
+    pz.dirty320 = false;
+    if (!m) return;
+    /* 従来の確定計算（旧 movePinch と同じ式）を最終位置で1回だけ */
+    applyPV();
+    var nw = planPt({ clientX: m[0], clientY: m[1] });
+    PV.cx += pz.a[0] - nw[0]; PV.cy += pz.a[1] - nw[1];
+    applyPV();
+  }
 
   HB.__pinch153State = function(){ return { mode: G.mode, n: G.order.length }; };
 })();
