@@ -4890,10 +4890,13 @@ function solve(){
     let sum = 0;
     if (!unset.length){ idx.forEach(i => sum += (S.edges[i].d === pos ? 1 : -1) * S.edges[i].v); if (Math.abs(sum) > 0.5) dimErr.push(`${nm}の辺の合計が ${fmt(Math.abs(sum))}mm 合いません`); return; }
     const a = unset[unset.length - 1];
+    if (!(S.edges[a].b0 > 0)) S.edges[a].b0 = S.edges[a].v;   /* CAD-317: なぞり寸法の土台を控える（上書き前に一度だけ） */
     idx.forEach(i => { if (i !== a) sum += (S.edges[i].d === pos ? 1 : -1) * S.edges[i].v; });
     const need = S.edges[a].d === pos ? -sum : sum;
-    if (need <= 0) dimErr.push(`${nm}の寸法が合いません（辺が重なります）`);
-    S.edges[a].v = Math.max(need, 1); S.edges[a].auto = unset.length === 1;
+    /* CAD-317: 吸収すると0以下になる時は、1mmに潰して形を壊さず、吸収役は
+       なぞり寸法の土台に戻して警告だけ出す（本人の承認済みの原則3） */
+    if (need <= 0){ dimErr.push(`${nm}の寸法が合いません（辺が重なります）`); S.edges[a].v = S.edges[a].b0; S.edges[a].auto = unset.length === 1; return; }
+    S.edges[a].v = need; S.edges[a].auto = unset.length === 1;
   });
 }
 function pts(){ let x = 0, y = 0; const p = [[0, 0]]; S.edges.forEach(e => { if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v; if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v; p.push([x, y]); }); p.pop(); return p; }
@@ -5063,18 +5066,10 @@ function editEdge(i){
       else {
         pushUndo();   /* CAD-259：寸法を変える前に記録（描く／寸法でも戻せるように） */
         e.v = v; e.set = true; e.usr = true;
-        const ax = (e.d === "R" || e.d === "L") ? ["R","L"] : ["D","U"];
-        const pos = ax[0];
-        let bal = 0; S.edges.forEach(x => { if (ax.includes(x.d)) bal += (x.d === pos ? 1 : -1) * (x.v || 0); });
-        let absorbed = false;
-        if (Math.abs(bal) > 0.5){
-          const cand = S.edges.map((x, j) => j).filter(j => j !== i && S.edges[j].d === e.d && !S.edges[j].usr);
-          for (const j of cand){ const nv = S.edges[j].v - bal * (e.d === pos ? 1 : -1); if (nv > 0){ S.edges[j].v = nv; absorbed = true; break; } }
-        }
-        if (!absorbed){
-          const others = S.edges.filter((x, j) => j !== i && ax.includes(x.d));
-          if (others.every(x => x.set)){ const last = S.edges.map((x, j) => j).filter(j => j !== i && ax.includes(S.edges[j].d)).pop(); S.edges[last].set = false; }
-        }
+        /* CAD-317: ここでは帳尻合わせをしない。入れた辺だけを決め、閉合の差は
+           solve() が未決定の辺にだけ負わせる。旧仕様は同じ向きの未決定の辺の長さを
+           直接書き換え、吸収できない時は usr の辺の set を外して solve() に上書き
+           させていたため、対面の数字が勝手に足し引きされて狂い続けた。 */
       }
       solve(); save(); HB.__edgeSel = null; drawPlan();
       if (v !== null && !HB.__padNav316){
