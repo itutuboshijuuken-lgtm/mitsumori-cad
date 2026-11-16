@@ -24059,7 +24059,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         if (!todo.length) return;
         syncPat(srcPat, cfg[2], true);
         todo.forEach(function(r){
-          if (rectVert(r)) r.setAttribute("fill", cfg[3]);
+          /* CAD-295: rect 1枚ごとの回転は止めた。向きの判定は dir295js の
+             部屋の物差しに一本化する（ここは pattern の用意と印だけ）。 */
           r.setAttribute("data-dir281", "1");
         });
       });
@@ -24180,8 +24181,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         if (mrs.length){
           syncPat(pMk, "p263MukuV", true);
           mrs.forEach(function(r){
-            if (isVert(parseFloat(r.getAttribute("width")), parseFloat(r.getAttribute("height"))))
-              r.setAttribute("fill", "url(#p263MukuV)");
+            /* CAD-295: rect 1枚ごとの回転は止めた（向きは dir295js に一本化）。 */
             r.setAttribute("data-dir281", "1");
           });
         }
@@ -24946,7 +24946,11 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       g.recs.push(r);
     });
     return Object.keys(map).map(function(k){
-      var g = map[k]; g.vert = isVert(g.x1 - g.x0, g.y1 - g.y0); return g;
+      var g = map[k]; g.vert = isVert(g.x1 - g.x0, g.y1 - g.y0);
+      /* CAD-295: 部屋の物差し（dir295js）があればそちらを正とし、上書き合いを無くす */
+      try { var hv = (typeof window !== "undefined" && window.__dir295Vert) ? window.__dir295Vert(g.recs[0]) : null;
+        if (hv !== null && hv !== undefined) g.vert = hv; } catch(e){}
+      return g;
     });
   }
 
@@ -25064,5 +25068,278 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); both290(); return r; }; }
 })();
 </script>
+<script id="dir295js">
+/* ===== CAD-295：板の向きの判定を「部屋」の物差し1つに統一する（最終判定） =====
+   本人の実機指摘（2026-11-16）：同じリビングの中で上部だけ板が横に流れ、
+   向きがちらちら反対に変わる。
+   原因：向きを決める後加工が複数あり物差しが違った（CAD-281＝rect 1枚ごと、
+   CAD-282＝部屋の外形、CAD-290＝(部屋,材料)で集めたレコードの外形）。
+   材料が混ざる部屋や、レコードと全体の床が混ざる部屋では物差しごとに
+   結論が分かれ、CAD-281 と CAD-290 は同じ rect を上書きし合った。
+   直し：木の絵（フローリング／無垢）の全要素の向きを、このブロックだけで
+   決め直す。物差しは部屋だけ：
+     ・部屋の実効仕様（部屋の決め直し＞名前の標準＞全体の床）が木の時は、
+       部屋の外形（部屋全体が木の床）。
+     ・そうでない時は、その部屋にある木のレコード全部（材料を問わない）の外形。
+     ・部屋の外の要素は要素自身の外形。
+   判定はデータと部屋だけで決まるため、再描画・画面遷移・パン／ズームを
+   繰り返しても向きは変わらない。他の後加工が描き直した直後は
+   MutationObserver でかけ直す。見積・数量・保存データは不変。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var WOOD = { flComp: "fl", flMuku: "muku", flMuku30: "muku" };
+  function finOf(r){
+    if (!r) return null;
+    if (r.fk && WOOD[r.fk]) return WOOD[r.fk];
+    if (r.za && r.det && WOOD[r.det.fin]) return WOOD[r.det.fin];
+    if ((r.fk === "flAge" || r.fk === "flOki" || r.fk === "flPura") && WOOD[r.fin]) return WOOD[r.fin];
+    return null;
+  }
+  function isVert(w, d){ return w > 0 && d > w * 1.05; }
+  /* CAD-282 の matOf と同じ素材判定 */
+  function matOf295(nm){
+    nm = nm || "";
+    if (/浴/.test(nm)) return "Bt";
+    if (/トイレ|便所|WC/.test(nm)) return "Ti";
+    if (/洗面|脱衣|サニタリー/.test(nm)) return "Cf";
+    if (/玄関|土間|ポーチ/.test(nm)) return "Do";
+    if (/和|畳/.test(nm)) return "Ta";
+    if (/収納|クローゼット|物入|押入|納戸|C$/.test(nm)) return "Ply";
+    return "Fl";
+  }
+  function roomName295(room){
+    var nm = ""; try { nm = roomNm(room) || ""; } catch(e){}
+    return nm || room.label || room.name || "";
+  }
+  /* 部屋の実効の床仕様が木なら、その材料（fl／muku）を返す（CAD-282 の effFk と同じ決め方） */
+  function effMk295(room){
+    var rf = null; try { rf = roomFinOf(room); } catch(e){}
+    var fk = null;
+    if (rf && rf.f === "none") return null;
+    if (rf && rf.t) fk = (rf.t === "flSheet") ? "flComp" : rf.t;
+    else {
+      var m = matOf295(roomName295(room));
+      if (m === "Bt" || m === "Ti" || m === "Ply") return null;
+      if (m === "Ta") return null;
+      if (m === "Cf") return null;
+      if (m === "Do") return null;
+      var t = (typeof S !== "undefined" && S && S.flType) || "floorFin";
+      fk = (t === "flSheet") ? "flComp" : t;
+    }
+    return WOOD[fk] || null;
+  }
+
+  /* 判定の材料：部屋ごとの向き（部屋の外形か、部屋の木レコード全部の外形か） */
+  var cache295 = { sig: null, J: null };
+  function sig295(){
+    try {
+      var t = (S.tatami || []).map(function(r){
+        return [r.x0, r.y0, r.x1, r.y1, r.fk || "", r.fin || "", (r.za && r.det) ? (r.det.fin || "") : ""].join(",");
+      }).join(";");
+      return t + "|" + (S.flType || "") + "|" + JSON.stringify(S.roomFin || null) +
+             "|" + JSON.stringify(S.edges || []) + "|" + JSON.stringify(S.parts2D || []);
+    } catch(e){ return null; }
+  }
+  function judge295(){
+    if (typeof S === "undefined" || !S || typeof roomsCalc !== "function") return null;
+    var sig = sig295();
+    if (sig !== null && cache295.sig === sig && cache295.J) return cache295.J;
+    var R = null; try { R = roomsCalc(); } catch(e){}
+    if (!R || !R.rooms || !R.comp) return null;
+    var st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0, NX = R.NX;
+    function roomIdxAt(mx, my){
+      var i = Math.floor((mx - bx0) / st), j = Math.floor((my - by0) / st);
+      if (i < 0 || j < 0 || i >= NX) return -1;
+      var idx = j * NX + i;
+      if (idx < 0 || idx >= R.comp.length) return -1;
+      var cid = R.comp[idx];
+      for (var k = 0; k < R.rooms.length; k++) if (R.rooms[k].cid === cid) return k;
+      return -1;
+    }
+    /* 部屋にある木のレコード全部（材料を問わない）の外形 */
+    var unions = {};
+    (S.tatami || []).forEach(function(r){
+      if (!finOf(r)) return;
+      var ri = roomIdxAt((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2); if (ri < 0) return;
+      var u = unions[ri];
+      if (!u){ u = unions[ri] = { x0: 1e18, y0: 1e18, x1: -1e18, y1: -1e18 }; }
+      u.x0 = Math.min(u.x0, Math.min(r.x0, r.x1)); u.x1 = Math.max(u.x1, Math.max(r.x0, r.x1));
+      u.y0 = Math.min(u.y0, Math.min(r.y0, r.y1)); u.y1 = Math.max(u.y1, Math.max(r.y0, r.y1));
+    });
+    var infos = R.rooms.map(function(room, ri){
+      var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+      room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
+        if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
+      var w = (mxx - mnx + 1) * st, d = (mxy - mny + 1) * st;
+      var eff = effMk295(room);
+      if (eff) return { vert: isVert(w, d) };        /* 部屋全体が木の床 */
+      var u = unions[ri];
+      if (u) return { vert: isVert(u.x1 - u.x0, u.y1 - u.y0) }; /* 部屋の木レコード全部の外形 */
+      return { vert: isVert(w, d) };
+    });
+    var J = { roomIdxAt: roomIdxAt, infos: infos };
+    if (sig !== null){ cache295.sig = sig; cache295.J = J; }
+    return J;
+  }
+  /* 回転 pattern が無ければ複製で用意する */
+  function ensureV(root, srcId, dstId){
+    try{
+      if (!root || root.querySelector("#" + dstId)) return;
+      var src = root.querySelector("#" + srcId); if (!src || !src.parentNode) return;
+      var p = src.cloneNode(true);
+      p.setAttribute("id", dstId); p.setAttribute("patternTransform", "rotate(90)");
+      src.parentNode.appendChild(p);
+    }catch(e){}
+  }
+  function mkOfFill(f, pv){
+    if (!f) return null;
+    if (pv){
+      if (f.indexOf("p263Muku") >= 0) return "muku";
+      if (f.indexOf("p263Fl") >= 0) return "fl";
+    } else {
+      if (f.indexOf("pMuku279") >= 0) return "muku";
+      if (f.indexOf("pFl") >= 0) return "fl";
+    }
+    return null;
+  }
+  var FLATMK = { "#DFA95E": "muku", "#CE8F35": "muku", "#EAC288": "fl" };
+  var ZAFILL = ["#9DBE8C", "#B8CCE4", "#DCBE8C"];
+  function fillFor(mk, vert, pv){
+    if (pv) return mk === "muku" ? (vert ? "url(#p263MukuV)" : "url(#p263Muku)")
+                                 : (vert ? "url(#p263FlV)" : "url(#p263Fl)");
+    return mk === "muku" ? (vert ? "url(#pMuku279V)" : "url(#pMuku279)")
+                         : (vert ? "url(#pFlV)" : "url(#pFl)");
+  }
+
+  var busy295 = false, dirty295 = false;
+  function apply295(){
+    if (busy295){ dirty295 = true; return; }
+    busy295 = true;
+    try{
+      var J = judge295();
+      if (J){
+        plan295(J);
+        pv295(J);
+      }
+    }catch(e){}
+    busy295 = false;
+    if (dirty295){ dirty295 = false; setTimeout(apply295, 30); }
+  }
+
+  /* ---- 間取り ---- */
+  function plan295(J){
+    try{
+      var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
+      if (typeof HB === "undefined" || !HB.__pageM) return; /* 描く・寸法の画面では触らない（CAD-288/290 の門とそろえる） */
+      if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+      if (document.body.classList.contains("pz262")) return;
+      if (!svg.getBoundingClientRect().width) return;
+      var T = HB.__planT; if (!T || !(T.s > 0)) return;
+      ensureV(svg, "pFl", "pFlV"); ensureV(svg, "pMuku279", "pMuku279V");
+      var b = null; try { b = (typeof bbox === "function") ? bbox() : null; } catch(e){}
+      /* 平色のままの木レコード rect は、レコードとの位置照合が付いた時だけ対象にする */
+      var recPx = [];
+      (S.tatami || []).forEach(function(r){
+        var mk = finOf(r); if (!mk) return;
+        recPx.push({ mk: mk,
+          x: Math.min(r.x0, r.x1) * T.s + T.ox, y: Math.min(r.y0, r.y1) * T.s + T.oy,
+          w: Math.abs(r.x1 - r.x0) * T.s, h: Math.abs(r.y1 - r.y0) * T.s });
+      });
+      svg.querySelectorAll("rect,polygon").forEach(function(el){
+        try{
+          if (el.closest("pattern") || el.closest("defs")) return;
+          var f = el.getAttribute("fill") || "";
+          var mk = mkOfFill(f, false);
+          var bb = null; try { bb = el.getBBox(); } catch(e){}
+          if (!bb || !(bb.width > 0) || !(bb.height > 0)) return;
+          if (!mk){
+            /* 平色（または座上げ等の工法色）の rect：木レコードと位置が一致する時だけ */
+            var fu = f.toUpperCase();
+            var cand = FLATMK[fu] || (ZAFILL.indexOf(fu) >= 0 ? "?" : null);
+            if (!cand) return;
+            var hit = null;
+            for (var i = 0; i < recPx.length; i++){
+              var rp = recPx[i];
+              if (Math.abs(bb.x - rp.x) < 1.0 && Math.abs(bb.y - rp.y) < 1.0 &&
+                  Math.abs(bb.width - rp.w) < 1.0 && Math.abs(bb.height - rp.h) < 1.0){ hit = rp; break; }
+            }
+            if (!hit) return;
+            mk = hit.mk;
+          }
+          /* 土台の polygon（家全体）は対象外：部屋ごとの上描き側で決める */
+          if (el.tagName === "polygon" && b &&
+              bb.width >= (b.x1 - b.x0) * T.s * 0.95 && bb.height >= (b.y1 - b.y0) * T.s * 0.95) return;
+          var cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+          var mx = (cx - T.ox) / T.s, my = (cy - T.oy) / T.s;
+          var ri = J.roomIdxAt(mx, my);
+          var vert = (ri >= 0) ? J.infos[ri].vert : isVert(bb.width, bb.height);
+          var want = fillFor(mk, vert, false);
+          if (f !== want){ el.setAttribute("fill", want); el.setAttribute("fill-opacity", "1"); }
+        }catch(e){}
+      });
+    }catch(e){}
+  }
+
+  /* ---- 完成図 ---- */
+  function pv295(J){
+    try{
+      var svg = document.getElementById("pvSvg"); if (!svg) return;
+      var defs = svg.querySelector("#d263"); if (!defs) return;
+      if (!svg.getBoundingClientRect().width) return;
+      if (typeof bbox !== "function" || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
+      var b = bbox(), s = Math.min((360 - 68 - 42) / b.w, (470 - 68 - 38) / b.h);
+      if (!(s > 0)) return;
+      ensureV(defs, "p263Fl", "p263FlV"); ensureV(defs, "p263Muku", "p263MukuV");
+      svg.querySelectorAll("#g263 rect, #g279Muku rect, #g282Fl rect, #dir290Pv rect").forEach(function(el){
+        try{
+          var f = el.getAttribute("fill") || "";
+          var mk = mkOfFill(f, true); if (!mk) return;
+          var bb = null; try { bb = el.getBBox(); } catch(e){}
+          if (!bb || !(bb.width > 0) || !(bb.height > 0)) return;
+          var cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
+          var mx = b.x0 + (cx - 68) / s, my = b.y0 + (cy - 68) / s;
+          var ri = J.roomIdxAt(mx, my);
+          var vert = (ri >= 0) ? J.infos[ri].vert : isVert(bb.width, bb.height);
+          var want = fillFor(mk, vert, true);
+          if (f !== want) el.setAttribute("fill", want);
+        }catch(e){}
+      });
+    }catch(e){}
+  }
+
+  /* CAD-290（dir290js）から呼ばれる共通の物差し：レコードの部屋の向きを返す */
+  window.__dir295Vert = function(rec){
+    try{
+      if (!rec || !finOf(rec)) return null;
+      var J = judge295(); if (!J) return null;
+      var ri = J.roomIdxAt((rec.x0 + rec.x1) / 2, (rec.y0 + rec.y1) / 2);
+      if (ri < 0) return null;
+      return J.infos[ri].vert;
+    }catch(e){ return null; }
+  };
+
+  setInterval(apply295, 350); apply295();
+  var prev = window.tidyPlanLabels;
+  if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); apply295(); return r; }; }
+  /* 他の後加工が描き直した直後にも、同じ判定をかけ直す（実行順に依存しない）。
+     #plan／#pvSvg の要素自体が再描画で差し替わる事があるため、監視は
+     body に付けて、図面の中の変化だけに反応する。 */
+  try{
+    var pend295 = null;
+    var mo295 = new MutationObserver(function(muts){
+      if (busy295 || pend295) return;
+      var hit = false;
+      for (var i = 0; i < muts.length && !hit; i++){
+        var t = muts[i].target;
+        if (t && t.closest && (t.closest("#plan") || t.closest("#pvSvg"))) hit = true;
+      }
+      if (!hit) return;
+      pend295 = setTimeout(function(){ pend295 = null; apply295(); }, 30);
+    });
+    mo295.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["fill"] });
+  }catch(e){}
+})();
+</script>
+
 
 </html>
