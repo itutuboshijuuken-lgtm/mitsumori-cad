@@ -26386,7 +26386,9 @@ window.__len309txt = function(){ return null; };
    なぞりの観察は #slotM の pointer イベントを横で見るだけ（本体の処理は
    止めない）。点の集め方（2 SVG単位未満は足さない）と巻き戻し（CAD-318 で
    本体に入れた物と同じ物差し）も本体に合わせ、本体の mm 点列と一致させる。
-   なぞっている間だけ 910 ピッチのドット（外形の基準に揃えた物）を出す。
+   なぞっている間だけ 910 ピッチのマス目（外形の基準に揃えた格子の線）を
+   出す。CAD-321 でドットからマス目に変更（本人の実機指摘 2026-11-17：
+   ドットは「分かりにくい」→「マス目の方がわかりやすい」）。
    CAD-315 の見張り（MutationObserver＋タイマー＋ピンチ判定との照合）も維持。 */
 (function(){ "use strict";
   var NS = "http://www.w3.org/2000/svg";
@@ -26528,7 +26530,10 @@ window.__len309txt = function(){ return null; };
       hud.setAttribute("transform", "translate(" + (X + (W - 292 * u) / 2) + "," + (Y + 76 * u) + ")");
     }
   }
-  /* 910 ピッチのドット（外形の基準 x0/y0 から 910mm 間隔・1本の path） */
+  /* 910 ピッチのマス目（外形の基準 x0/y0 から 910mm 間隔の格子の線・1本の path）
+     CAD-321：CAD-318 のドットは本人の実機で「分かりにくい」となりマス目に変更。
+     線の位置・ピッチ・基準・出る条件はドットと同じ。壁・寸法・部屋ラベルより
+     目立たせないよう、細い線＋半透明の青にする。要素の id は grid318。 */
   function dotsShow318(){
     var s = $("plan"); if (!s) return;
     try {
@@ -26539,14 +26544,18 @@ window.__len309txt = function(){ return null; };
       if (dotsG && dotsG.parentNode) dotsG.remove();
       var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
       var W = vb && vb.width > 0 ? vb.width : 360;
-      var r = Math.max(0.9, 1.15 * W / 360), dstr = "";
+      var sw = Math.max(0.55, 0.8 * W / 360), dstr = "";
+      var X0 = b.x0 * T.s + T.ox, X1 = b.x1 * T.s + T.ox;
+      var Y0 = b.y0 * T.s + T.oy, Y1 = b.y1 * T.s + T.oy;
       for (var gx = b.x0; gx <= b.x1 + 1; gx += 910){
-        for (var gy = b.y0; gy <= b.y1 + 1; gy += 910){
-          var cx = gx * T.s + T.ox, cy = gy * T.s + T.oy;
-          dstr += "M " + cx.toFixed(2) + " " + cy.toFixed(2) + " m " + (-r).toFixed(2) + " 0 a " + r.toFixed(2) + " " + r.toFixed(2) + " 0 1 0 " + (2 * r).toFixed(2) + " 0 a " + r.toFixed(2) + " " + r.toFixed(2) + " 0 1 0 " + (-2 * r).toFixed(2) + " 0 ";
-        }
+        var cx = gx * T.s + T.ox;
+        dstr += "M " + cx.toFixed(2) + " " + Y0.toFixed(2) + " L " + cx.toFixed(2) + " " + Y1.toFixed(2) + " ";
       }
-      dotsG = el318("path", {id: "dots318", d: dstr, fill: "rgba(46,96,140,.5)", "pointer-events": "none"});
+      for (var gy = b.y0; gy <= b.y1 + 1; gy += 910){
+        var cy = gy * T.s + T.oy;
+        dstr += "M " + X0.toFixed(2) + " " + cy.toFixed(2) + " L " + X1.toFixed(2) + " " + cy.toFixed(2) + " ";
+      }
+      dotsG = el318("path", {id: "grid318", d: dstr, fill: "none", stroke: "rgba(46,96,140,.5)", "stroke-width": sw.toFixed(2), "pointer-events": "none"});
       if (hud && hud.parentNode === s) s.insertBefore(dotsG, hud); else s.appendChild(dotsG);
       dotsKey = key;
     } catch(e){}
@@ -26578,7 +26587,7 @@ window.__len309txt = function(){ return null; };
     if (hud.style.display === "none") hud.style.display = "";
   }
   function queue318(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd318); } }
-  /* CAD-315 の見張り：なぞり中に #plan が描き直されると HUD・ドットごと
+  /* CAD-315 の見張り：なぞり中に #plan が描き直されると HUD・マス目ごと
      消えるので、子要素の変化を見て付け直す */
   function watch318(){
     var s = $("plan"); if (!s) return;
