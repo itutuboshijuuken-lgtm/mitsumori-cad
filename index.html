@@ -15784,7 +15784,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var h = "<h3>残りの床" + (ra > 0.05 ? "　" + fmt(ra, 1) + "㎡" : "") + "</h3>"
       + "<p class='hint' style='margin-top:0'>間取りで指定していない分の床の仕上げです（見積に反映します）</p>"
       + "<div class='seg' style='flex-wrap:wrap'>" + FT.map(function(x){ return "<button type='button' data-rfk='" + x[0] + "' aria-pressed='" + (cur === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>"
-      + (cur === "flComp" ? "<p class='hint' style='margin:10px 0 4px'>フローリングの色（家全体で共通）</p><div class='seg' style='flex-wrap:wrap'>" + flcChips275() + "</div>" : "")
+      /* CAD-311: 色チップ廃止（同上） */
       + "<div class='row'><button class='btn pri' id='rsOk' type='button'>OK</button></div>";
     $("mbox").innerHTML = h;
     $("modal").hidden = false;
@@ -15884,7 +15884,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var ra = restArea183();
       rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
     }
-    rows += "<div class='sprow'><div>フローリングの色<small>家全体で共通・完成図と間取りの見た目が変わります</small></div><div><div class='seg' style='flex-wrap:wrap'>" + flcChips275() + "</div></div></div>";
+    /* CAD-311: フローリングの色選択は廃止（標準色のみ。本人の決定 2026-11-16）。保存済みの色の読み替えは従来通り */
     entries.forEach(function(idxs){
       if (idxs.length > 1){
         var r0 = list[idxs[0]], sm = recSummary138(r0);
@@ -22494,7 +22494,7 @@ body.gold #st4 .tabs254 button[aria-pressed="true"]{background:var(--gold);color
 <script>
 (function(){ "use strict";
   var TABS = ["床", "壁", "天井", "その他"], cur = "床";
-  var MAP = {"既存の床（いま張ってある床）": "床", "床": "床", "床の範囲": "床", "床の見切り": "床", "壁": "壁", "天井": "天井", "天井の高さ（全体）": "天井", "回り縁は新規に回しますか": "天井"};
+  var MAP = {"既存の床（いま張ってある床）": "床", "床": "床", "床の範囲": "床", "床の見切り": "床", "壁": "壁", "天井": "天井", "天井の高さ（全体）": "天井", "回り縁は新規に回しますか": "天井", "基礎": "構造・外まわり", "基礎の立ち上がり（GLから）": "構造・外まわり", "屋根の重さ": "構造・外まわり", "モジュール（柱・間柱の基準）": "構造・外まわり", "耐力壁": "構造・外まわり", "外壁": "構造・外まわり", "足場": "構造・外まわり", "構造材の積算方法": "構造・外まわり", "部材ごとの樹種": "構造・外まわり"}; /* CAD-311: zoMat258 の「構造・外まわり」タブと振り分けを一致させる（hid254 の付け外しの喧嘩＝二重表示とスクロール巻き戻しの原因を無くす） */
   var TREE = "#rfWall,#rfCeil,#rfFloor,#rfCur,#rfWallMat,#rfCeilMat,#rfSakanBase,#rfMawari,#rfRooms";
   function vis(e){ return e.getClientRects().length > 0; }
   function isHdr(h){ return !h.closest("details") && !h.closest(TREE); }
