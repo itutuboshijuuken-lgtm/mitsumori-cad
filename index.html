@@ -5018,15 +5018,42 @@ function gridLines345(b){
   const ax = len => { const o = [0]; for (let d = pitch; d < len - 1; d += pitch) o.push(d); if (len > 1 && o[o.length - 1] < len - 1) o.push(len); return o; };
   return {xs: ax(b.w).map(d => b.x0 + d), ys: ax(b.h).map(d => b.y0 + d)};
 }
+/* CAD-349：番付の丸が隣と重ならない様に収める。centers は軸方向の中心位置（昇順）、
+   cap は家側へずらせる上限。戻り値は符号ごとの {rr: 半径, sh: 家側への段違い量}。
+   間隔が直径より短い組は、(1) 半径が元の62%以上で済むならその組だけ少し小さくし、
+   (2) 足りなければ後の符号を通り芯の延長線上で家側へ段違いにずらし、
+   (3) ずらす余地が無い時は (1) に戻す。番付は間引かない（全ての通りに符号が要る）。 */
+function fitSyms349(centers, r, cap){
+  const out = centers.map(() => ({ rr: r, sh: 0 }));
+  for (let i = 0; i + 1 < centers.length; i++){
+    const gap = centers[i + 1] - centers[i];
+    if (!(gap > 0)) continue;
+    const need = out[i].rr + out[i + 1].rr;
+    if (gap >= need) continue;
+    const rr = gap * 0.49;
+    if (rr >= r * 0.62){ out[i].rr = Math.min(out[i].rr, rr); out[i + 1].rr = Math.min(out[i + 1].rr, rr); continue; }
+    const h = Math.sqrt(Math.max(0, need * need - gap * gap)) + 0.5;
+    if (h <= cap) out[i + 1].sh = Math.max(out[i + 1].sh, h);
+    else { out[i].rr = Math.min(out[i].rr, rr); out[i + 1].rr = Math.min(out[i + 1].rr, rr); }
+  }
+  return out;
+}
 function gridSym345(P, b, topY, leftX, r){
   try {
     if (!b || !(b.w > 0) || !(b.h > 0)) return "";
     const gl = gridLines345(b);
+    const c00 = P([b.x0, b.y0]);
     let g = `<g data-sno="grid345" pointer-events="none">`;
-    gl.xs.forEach((x, i) => { const ch = IROHA345[i]; if (!ch) return; const cx = P([x, b.y0])[0];
-      g += `<circle cx="${cx}" cy="${topY}" r="${r}" fill="#fff" stroke="#3E4A57" stroke-width="1.1"/><text x="${cx}" y="${topY}" text-anchor="middle" dominant-baseline="middle" style="font-size:${(r * 1.12).toFixed(1)}px;font-weight:700;fill:#3E4A57">${ch}</text>`; });
-    gl.ys.forEach((y, j) => { const cy = P([b.x0, y])[1], tx = String(j + 1), fs = r * (tx.length > 1 ? 0.92 : 1.12);
-      g += `<circle cx="${leftX}" cy="${cy}" r="${r}" fill="#fff" stroke="#3E4A57" stroke-width="1.1"/><text x="${leftX}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font-size:${fs.toFixed(1)}px;font-weight:700;fill:#3E4A57">${tx}</text>`; });
+    const xs = gl.xs.map(x => P([x, b.y0])[0]);
+    const fx = fitSyms349(xs, r, Math.min(Math.max(0, Math.abs(c00[1] - topY) - r - 1), r * 2.2));
+    const dirY = c00[1] >= topY ? 1 : -1;
+    gl.xs.forEach((x, i) => { const ch = IROHA345[i]; if (!ch) return; const cx = xs[i], cy = topY + dirY * fx[i].sh, rr = fx[i].rr;
+      g += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="#fff" stroke="#3E4A57" stroke-width="1.1"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font-size:${(rr * 1.12).toFixed(1)}px;font-weight:700;fill:#3E4A57">${ch}</text>`; });
+    const ys = gl.ys.map(y => P([b.x0, y])[1]);
+    const fy = fitSyms349(ys, r, Math.min(Math.max(0, Math.abs(c00[0] - leftX) - r - 1), r * 2.2));
+    const dirX = c00[0] >= leftX ? 1 : -1;
+    gl.ys.forEach((y, j) => { const cy = ys[j], cx = leftX + dirX * fy[j].sh, rr = fy[j].rr, tx = String(j + 1), fs = rr * (tx.length > 1 ? 0.92 : 1.12);
+      g += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="#fff" stroke="#3E4A57" stroke-width="1.1"/><text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" style="font-size:${fs.toFixed(1)}px;font-weight:700;fill:#3E4A57">${tx}</text>`; });
     return g + "</g>";
   } catch(e){ return ""; }
 }
@@ -27149,6 +27176,7 @@ window.__len309txt = function(){ return null; };
  CAD-346：完成図の平面図プレビュー（#pvSvg）を色なしの白地の線画にした（本人の実機フィードバック「平面図、色なくていいよ」）。色の出どころは pvRender 本体ではなく CAD-263 の build() が注入する床 pattern・影・壁の断面ハッチ・文字の縁取りで、上塗り群（277フロアタイル・278 CF・279無垢・280土間・281/290/295板の向き・282全体の床・286畳）は全て #d263／#g263 前提だったため、build() の冒頭で止めるだけで連鎖で全部止まる。pvRender 本体の線画（壁・建具・寸法・通り芯の符号・部屋名）と、柱・間柱表示の切り替えは従来通り。間取り画面（#plan）の作業用の色分けは対象外で残した。表示だけの変更で、見積 digest・保存キー・操作感は不変。
  CAD-347：図面一式の第1弾として「伏図」を追加（本人の決定 2026-11-18）。完成図の切り替えに「伏図」ボタンを足し（新築・増築だけ。組み込み方は CAD-129 既存図と同じ）、中で基礎伏図・床伏図・小屋伏図を切り替える。描く要素は既存の計算で裏付けが取れている物だけ：基礎伏図＝立ち上がり（外まわりは母屋側の辺を除く perK と同じ・幅150）＋内部の立ち上がり（内部の桁の下の支持ライン、zoInt の列）；床伏図＝土台（母屋側の辺を除く lensD と同じ）・大引・小つなぎ／根太・鋼製束・柱・内部の柱（位置と本数は framePos・gridLines264・intPostList と一致）；小屋伏図＝桁・小屋梁・母屋・棟木・小屋束・隅木（寄棟）・内部の桁と柱（roof・zoInt から）。番付は CAD-345 の gridSym345 とそろえ、全体寸法と図面名を付けた。実物の伏図の形に合わせ間柱・開口は描かない。描かない物：人通口・アンカーボルト（見積で数えていない）、継手・仕口の位置、下屋の分、2階建ての2階床伏図（床梁の物差しが未整備＝構造計算ノート R8 のため、910間隔の絵が裏付けに見えるのを避ける）。リフォーム・部分工事では出さない（見積が構造材を拾わないので、出すと根拠の無い図になる）。2階建てでは基礎・床は1階、小屋は最上階のデータを flLoad で差し替えて描く（見積の階ごとの計算と同じ）。表示だけの追加で、見積 digest・保存キー・操作感は不変。
  CAD-348：Claude の指摘（2026-11-18「パース素材と平面図そろえ」）への修正。再現確認（repro348）で裏が取れた4件だけを直した。(1) 寸法チェーン：画面上で小さすぎる区間（17mm等）は数字自体を描いておらず、区間の合計が全長と合わなかった（指摘の 1,820/1,803/1,820/2,275＋全長7,735 をそのまま再現）。小さい区間も数字を描き、全体表示では隠し拡大で出す zx252 にした。(2) 部屋名「洗面所」が畳の部屋に付く件：間仕切りが壁まで 200mm 届いていないと部屋計算でつながり、洗面台のある大きな部屋が「洗面所」になってラベルが畳の側に置かれる事を再現。部屋を分ける判定だけ、間仕切りの両端を 300mm 伸ばして判定する（線そのものは変えない）。(3) 部屋ラベルの文字に白の縁取り（.halo）を付け、木目などの床の絵の上でも読める様にした（色と濃さは本人の決めのまま）。(4) 照明の丸記号を tidy342 の障害物に加え、部屋ラベルが丸の上に乗らない様にした。再現しなかった2件（通り芯の符号と寸法数字の重なり／左端の符号がタブに隠れる）は触っていない。「突き抜け18」の警告表示は正しく出る事を確認（端が出た操作経路は実データが無く特定できず）。見積 digest・保存キーは不変のはず。
+ CAD-349：Claude の指摘（2026-11-18 07:22「伏図347の確認」）への対応3件。(1) 伏図ボタンが出ない：原因は取り付け先ではなく id の衝突。間取り画面の全画面ボタンが id="fsBtn" を使用中で、CAD-347 の fsInit が「作成済み」と誤判定して伏図ボタンを一度も作っていなかった（probe347 は全画面ボタンを押し保険の API で開いていたため合格に見えた）。CAD-347 側の id を fsBtn347 に変更。全画面ボタンへの監視の副作用（rf/pt で display を消す）も解消。(2) 番付の丸の重なり：全長4,778mm級で最後の通り間隔（227.5mm）が丸の直径より短く、へ・と（6・7）が重なる事を再現。gridSym345 の中で、少し小さくして済む組は丸を小さくし、足りない組は後の丸を通り芯の延長線上で家側へ段違いにずらす（間引きはしない）。付け方・起点・向きは CAD-345 のまま。(3) 基礎伏図の中央の太い横線：正体は内部の桁の下の内部の立ち上がり（小屋伏図では内部の桁）で、見積の「内部の桁」「内部の基礎」の行と一致する正しい線（内部の柱が0本でも支持ラインの列は見積に出る、CAD-344 の決め）。間違いではないが凡例に説明が無かったため、内部の線を描いた時だけ基礎・小屋の両凡例に説明を足した。表示だけの変更で、見積 digest・保存キーは不変のはず。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
@@ -27679,11 +27707,12 @@ fr.P = function(q){ return [fr.mL + (q[0] - b.x0) * fr.s, fr.mT + (q[1] - b.y0) 
 var R = roof();
 var title = fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): "小屋伏図";
 var g = fsHead(fr, b, title), legend = "";
+var hasInt349 = false; try { hasInt349 = fsIntLines().length > 0; } catch(e){} /* CAD-349：内部の線を描くかどうか（描画と同じ fsIntLines が正本） */
 var geyaNote = (S.geya && S.geya.length)? "下屋の分は描いていません。": "";
 if (fsKind === "kiso"){
 g += fsKiso(fr, b);
 legend = S.kisoNew
-? "基礎伏図：立ち上がりは見積と同じ線です（幅150）。人通口とアンカーボルトは、見積で数えていないので描いていません。" + geyaNote
+? "基礎伏図：立ち上がりは見積と同じ線です（幅150）。" + (hasInt349 ? "真ん中を通る立ち上がりは、内部の桁の下の線です（見積の「内部の基礎」）。" : "") + "人通口とアンカーボルトは、見積で数えていないので描いていません。" + geyaNote
 : "基礎伏図：この家は基礎の新設が無いので、立ち上がりは描いていません。";
 } else if (fsKind === "yuka"){
 g += fsYuka(fr, b);
@@ -27695,7 +27724,7 @@ legend =!wood
 : "床伏図：土台・大引・小つなぎ・鋼製束・柱は見積と同じ位置と本数です。間柱は伏図には描きません（実物の伏図の形です）。" + geyaNote);
 } else {
 g += fsKoya(fr, b);
-legend = "小屋伏図：桁・小屋梁・母屋・棟木・小屋束は見積と同じ位置と本数です。"
+legend = "小屋伏図：桁・小屋梁・母屋・棟木・小屋束" + (hasInt349 ? "・内部の桁" : "") + "は見積と同じ位置と本数です。" + (hasInt349 ? "真ん中を通るのが内部の桁です。" : "")
 + (R.two? "2階の小屋組です。": "")
 + (S.roof === "yose"? "寄棟の母屋は内側の矩形に、隅木は四隅から棟の端へ描いています。": "") + geyaNote;
 }
@@ -27748,9 +27777,9 @@ if (fsOn) fsRender();
 function fsInit(){
 fsSegInit();
 var seg = document.getElementById("pvSeg");
-if (!seg || document.getElementById("fsBtn")) return;
+if (!seg || document.getElementById("fsBtn347")) return;
 var b = document.createElement("button");
-b.type = "button"; b.id = "fsBtn"; b.dataset.pv = "fuse"; b.textContent = "伏図";
+b.type = "button"; b.id = "fsBtn347"; b.dataset.pv = "fuse"; /* CAD-349：id は fsBtn347。素の fsBtn は間取り画面の全画面ボタンが使用中で、衝突すると作成済みと誤判定して伏図ボタンが永遠に作られなかった（CAD-347〜348 の不具合） */ b.textContent = "伏図";
 b.setAttribute("aria-pressed", "false"); b.style.display = "none";
 seg.appendChild(b);
 b.addEventListener("click", function(){
@@ -27768,7 +27797,7 @@ HB.__isoPost63 = function(){ try { if (fsOn) fsRender();} catch(e){}};
 setInterval(function(){
 try {
 fsInit();
-var b = document.getElementById("fsBtn");
+var b = document.getElementById("fsBtn347");
 if (b){
 var zo = S.mode === "zo";
 b.style.display = zo? "": "none";
