@@ -9143,6 +9143,7 @@ function drawIso(){
   })();
   if (HB.__isoPost57) HB.__isoPost57();
   if (HB.__isoPost62) HB.__isoPost62();
+  if (HB.__isoPost63) HB.__isoPost63(); /* CAD-347：伏図を開いていれば描き直す */
   try { if (HB.__sync162) HB.__sync162(); } catch(e){}
   return __rIso;
 }
@@ -27142,6 +27143,7 @@ window.__len309txt = function(){ return null; };
  CAD-344：平面図で間取りと関係ない所に柱が立つ不具合の修正（本人の指摘）。壁まわりの柱（framePos）は壁ベースで正しく、問題は内部の柱だけだった：pvFrame が外形の等分格子に置き、455mm以内に間仕切りとの交点が無い所では格子点のまま残していたため、部屋の真ん中や間仕切りの端から離れた所に柱が浮き、壁の柱と重なる重複も出ていた。内部の柱の位置と本数の正本として intPostList() を新設し、位置は支持ライン（内部の桁の通り）×間仕切りの交点だけにした（framePos の柱と重なる交点・開口の中・開放形の間仕切り・外周は除く）。表示（pvFrame）と見積（内部の柱・金物・ご注意行の本数）はこの正本でそろえた。内部の桁と内部の基礎は支持ラインの列の物なので列数ベースのまま（基礎の説明文だけ「内部の桁の下」に変更、金額不変）。標準の練習の家（寄棟）の digest は不変。切妻・片流れでは浮いた柱の分だけ内部の柱と金物が減る（正当な変化）。
  CAD-345：平面図に通り芯の符号（番付）を追加（本人の要望）。付け方は実物の木造住宅の図面の慣習（令和3年・木造建築士試験の標準解答例ほか study138-夜の部）：X方向の通り（縦の線）＝いろは番付、Y方向の通り（横の線）＝数字番付。起点はアプリの座標の原点の角（左上）で、いろはは左から右へ、数字は上から下へ増やす（実物ノートに起点の明記が無いため原点に合わせた）。通りの位置はモジュール（910／1000）の並び＋外形の終端。出す画面は間取り画面（#plan）と完成図の平面図プレビュー（#pvSvg）の両方で、表示条件は常時（番付は図面の枠の一部で、柱・間柱表示の入切とは独立なため連動させない）。間取り画面では寸法チェーン（300mm外）より内側に置き、符号の組は data-sno で包んで CAD-342 のラベル反発の対象から外した（符号の丸は tidy 側の障害物になる）。プレビューは余白 mT・mL を 68→94 に広げて全長線の外に置いた。表示だけの変更で、見積 digest・保存キー・操作感は不変。
  CAD-346：完成図の平面図プレビュー（#pvSvg）を色なしの白地の線画にした（本人の実機フィードバック「平面図、色なくていいよ」）。色の出どころは pvRender 本体ではなく CAD-263 の build() が注入する床 pattern・影・壁の断面ハッチ・文字の縁取りで、上塗り群（277フロアタイル・278 CF・279無垢・280土間・281/290/295板の向き・282全体の床・286畳）は全て #d263／#g263 前提だったため、build() の冒頭で止めるだけで連鎖で全部止まる。pvRender 本体の線画（壁・建具・寸法・通り芯の符号・部屋名）と、柱・間柱表示の切り替えは従来通り。間取り画面（#plan）の作業用の色分けは対象外で残した。表示だけの変更で、見積 digest・保存キー・操作感は不変。
+ CAD-347：図面一式の第1弾として「伏図」を追加（本人の決定 2026-11-18）。完成図の切り替えに「伏図」ボタンを足し（新築・増築だけ。組み込み方は CAD-129 既存図と同じ）、中で基礎伏図・床伏図・小屋伏図を切り替える。描く要素は既存の計算で裏付けが取れている物だけ：基礎伏図＝立ち上がり（外まわりは母屋側の辺を除く perK と同じ・幅150）＋内部の立ち上がり（内部の桁の下の支持ライン、zoInt の列）；床伏図＝土台（母屋側の辺を除く lensD と同じ）・大引・小つなぎ／根太・鋼製束・柱・内部の柱（位置と本数は framePos・gridLines264・intPostList と一致）；小屋伏図＝桁・小屋梁・母屋・棟木・小屋束・隅木（寄棟）・内部の桁と柱（roof・zoInt から）。番付は CAD-345 の gridSym345 とそろえ、全体寸法と図面名を付けた。実物の伏図の形に合わせ間柱・開口は描かない。描かない物：人通口・アンカーボルト（見積で数えていない）、継手・仕口の位置、下屋の分、2階建ての2階床伏図（床梁の物差しが未整備＝構造計算ノート R8 のため、910間隔の絵が裏付けに見えるのを避ける）。リフォーム・部分工事では出さない（見積が構造材を拾わないので、出すと根拠の無い図になる）。2階建てでは基礎・床は1階、小屋は最上階のデータを flLoad で差し替えて描く（見積の階ごとの計算と同じ）。表示だけの追加で、見積 digest・保存キー・操作感は不変。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
@@ -27372,6 +27374,407 @@ window.__len309txt = function(){ return null; };
     var _dp338 = window.drawPlan;
     window.drawPlan = function(){ window.__dpAt338 = Date.now(); return _dp338.apply(this, arguments); };
   }
+})();
+</script>
+
+<style>
+#st6.fsOn #pvStruct{display:none!important}
+#fsSeg{display:none}
+#st6.fsOn #fsSeg{display:flex}
+</style>
+<script>
+/* CAD-347: 伏図（基礎伏図・床伏図・小屋伏図）— 図面一式の第1弾（本人の決定 2026-11-18）
+完成図(⑥)の切り替えに「伏図」を足す（新築・増築の時だけ。CAD-129 既存図と同じ組み込み方）。
+裏で既に計算している構造（柱・土台・大引・小屋組・基礎）を、実物の伏図の形で出す。
+図の位置と本数は見積と同じ計算（framePos・intPostList・zoInt・gridLines264・roof）から取る。
+実物の伏図の形に合わせ、間柱・開口は描かない（study138：間柱は実施の伏図には描かれない）。
+見積で数えていない物（人通口・アンカーボルト・継手の位置・下屋）は描かない。
+2階建ての2階床伏図は出さない：床梁の物差しが未整備（構造計算ノート R8）のため、
+910間隔の絵を伏図として出すと「それで足りる」という裏付けに見えてしまう。
+基礎・床は1階の、小屋は最上階のデータで描く（見積の階ごとの計算と同じ差し替え方）。
+見るだけで、プロジェクトのデータ・見積・保存は一切変えない。 */
+(function(){
+"use strict";
+var fsOn = false, fsKind = "kiso";
+var r2 = function(v){ return Math.round(v * 100) / 100;};
+
+/* 軸平行の直線（axis="y": 横線 y=c / axis="x": 縦線 x=c）が輪郭の内側に入る区間 */
+function lineSegs(axis, c){
+var P = pts(), xs = [];
+for (var i = 0; i < P.length; i++){
+var a = P[i], d = P[(i + 1) % P.length];
+var a1 = axis === "y"? a[1]: a[0], d1 = axis === "y"? d[1]: d[0];
+var a0 = axis === "y"? a[0]: a[1], d0 = axis === "y"? d[0]: d[1];
+if ((a1 <= c && c < d1) || (d1 <= c && c < a1)) xs.push(a0 + (c - a1) * (d0 - a0) / (d1 - a1));
+}
+xs.sort(function(p, q){ return p - q;});
+var segs = [];
+for (var j = 0; j + 1 < xs.length; j += 2) if (xs[j + 1] - xs[j] > 1) segs.push([xs[j], xs[j + 1]]);
+if (!segs.length){
+/* 輪郭の辺と重なる線（片流れの棟など）は、辺の範囲そのものを使う */
+var b = bbox();
+if (axis === "y" && (Math.abs(c - b.y0) < 1 || Math.abs(c - b.y1) < 1)) segs = [[b.x0, b.x1]];
+if (axis === "x" && (Math.abs(c - b.x0) < 1 || Math.abs(c - b.x1) < 1)) segs = [[b.y0, b.y1]];
+}
+return segs;
+}
+
+/* 内部の柱・桁・基礎の支持ライン（intPostList と同じ決め方。平面の座標で返す） */
+function fsIntLines(){
+try {
+if (S.mode!== "zo") return [];
+var R = roof(); if (R.two) return [];
+var zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
+if (!(zi.rows > 0)) return [];
+var b = bbox(), M1 = (typeof MOD!== "undefined" && MOD)? MOD: 227.5, M2 = M1 * 2, M4 = M1 * 4;
+var spanY =!!R.spanY, org = spanY? b.y0: b.x0, span = spanY? b.h: b.w, out = [];
+for (var i2 = 1; i2 <= zi.rows; i2++){
+var lc = org + span * i2 / (zi.rows + 1);
+if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+out.push({axis: spanY? "y": "x", c: lc});
+}
+return out;
+} catch(e){ return [];}
+}
+
+/* 屋根の座標（d=棟方向, w=梁間方向）→ 平面の座標 */
+function rp(R, b, d, w){ return R.spanY? [b.x0 + d, b.y0 + w]: [b.x0 + w, b.y0 + d];}
+
+function band(fr, a, c, wMm, cls){
+var A = fr.P(a), C = fr.P(c), dx = C[0] - A[0], dy = C[1] - A[1], L = Math.hypot(dx, dy) || 1;
+var hx = -dy / L * wMm * fr.s / 2, hy = dx / L * wMm * fr.s / 2;
+var pp = [[A[0] + hx, A[1] + hy], [C[0] + hx, C[1] + hy], [C[0] - hx, C[1] - hy], [A[0] - hx, A[1] - hy]];
+return "<polygon class=\"" + cls + "\" points=\"" + pp.map(function(p){ return r2(p[0]) + "," + r2(p[1]);}).join(" ") + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.1\"/>";
+}
+function line(fr, a, c, cls, col, wpx, dash){
+var A = fr.P(a), C = fr.P(c);
+return "<line class=\"" + cls + "\" x1=\"" + r2(A[0]) + "\" y1=\"" + r2(A[1]) + "\" x2=\"" + r2(C[0]) + "\" y2=\"" + r2(C[1]) + "\" stroke=\"" + col + "\" stroke-width=\"" + wpx + "\"" + (dash? " stroke-dasharray=\"" + dash + "\"": "") + "/>";
+}
+function postSq(fr, x, y, sizeMm, cls){
+var c = fr.P([x, y]), h = Math.max(2.4, sizeMm * fr.s / 2);
+return "<rect class=\"" + cls + "\" x=\"" + r2(c[0] - h) + "\" y=\"" + r2(c[1] - h) + "\" width=\"" + r2(h * 2) + "\" height=\"" + r2(h * 2) + "\" fill=\"#111\"/>";
+}
+function bunMk(fr, x, y){
+var c = fr.P([x, y]), r = Math.max(2.2, 50 * fr.s);
+return "<circle class=\"fsBun\" cx=\"" + r2(c[0]) + "\" cy=\"" + r2(c[1]) + "\" r=\"" + r2(r) + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.1\"/>";
+}
+function outline(fr, skipHouse, wMm, cls){
+var p = pts(), g = "";
+for (var i = 0; i < p.length; i++){
+if (skipHouse && i === S.house) continue;
+g += band(fr, p[i], p[(i + 1) % p.length], wMm, cls);
+}
+return g;
+}
+/* 間仕切りの中心線（薄い参考線。柱の立つ線が分かる様に） */
+function partRef(fr, F){
+var g = "";
+(F.runs || []).forEach(function(r){
+if (r.kind!== "p" || r.op) return;
+g += line(fr, [r.ax, r.ay], [r.bx, r.by], "fsPartRef", "#C9CFD6", 0.8, "3 3");
+});
+return g;
+}
+function postsDraw(fr, F){
+var g = "";
+(F.posts || []).forEach(function(q){ if (!q.op) g += postSq(fr, q.x, q.y, 105, "fsHashira");});
+return g;
+}
+function intPostsDraw(fr){
+var g = "";
+try { intPostList().list.forEach(function(p){ g += postSq(fr, p.x, p.y, 105, "fsIntPost");});} catch(e){}
+return g;
+}
+/* 支持ライン（内部の桁・内部の立ち上がり）を、輪郭で切って帯で描く */
+function intBands(fr, cls, wMm){
+var g = "";
+fsIntLines().forEach(function(Ln){
+lineSegs(Ln.axis, Ln.c).forEach(function(sg){
+var a = Ln.axis === "y"? [sg[0], Ln.c]: [Ln.c, sg[0]];
+var c = Ln.axis === "y"? [sg[1], Ln.c]: [Ln.c, sg[1]];
+g += band(fr, a, c, wMm, cls);
+});
+});
+return g;
+}
+function fsNorth(W){
+var cx = W - 24, cy = 32, d = northDeg();
+return "<g transform=\"rotate(" + d + " " + cx + " " + cy + ")\"><circle cx=\"" + cx + "\" cy=\"" + cy + "\" r=\"13\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.2\"/><polygon points=\"" + cx + "," + (cy - 8) + " " + (cx - 4.5) + "," + (cy + 6) + " " + cx + "," + (cy + 2.5) + " " + (cx + 4.5) + "," + (cy + 6) + "\" fill=\"#111\"/><text x=\"" + cx + "\" y=\"" + (cy - 18) + "\" text-anchor=\"middle\" style=\"font-size:11px;font-weight:700;fill:#111\">N</text></g>";
+}
+function fsHead(fr, b, title){
+var P = fr.P, mL = fr.mL, mT = fr.mT, C = "#111";
+var g = "<text x=\"4\" y=\"30\" style=\"font-size:16px;font-weight:900;fill:#111\">" + title + "</text>";   /* 左上。上の番付の並び（x=mLから）と重ねない */
+var xa = P([b.x0, b.y0])[0], xb = P([b.x1, b.y0])[0], ya = P([b.x0, b.y0])[1], yb = P([b.x0, b.y1])[1];
+var yT = mT - 50, xL = mL - 50;
+var tick = function(x, y){ return "<line x1=\"" + (x - 3) + "\" y1=\"" + (y + 3) + "\" x2=\"" + (x + 3) + "\" y2=\"" + (y - 3) + "\" stroke=\"" + C + "\" stroke-width=\"1\"/>";};
+g += "<line x1=\"" + xa + "\" y1=\"" + (ya - 4) + "\" x2=\"" + xa + "\" y2=\"" + (yT - 5) + "\" stroke=\"" + C + "\" stroke-width=\"0.7\"/><line x1=\"" + xb + "\" y1=\"" + (ya - 4) + "\" x2=\"" + xb + "\" y2=\"" + (yT - 5) + "\" stroke=\"" + C + "\" stroke-width=\"0.7\"/>";
+g += "<line x1=\"" + xa + "\" y1=\"" + yT + "\" x2=\"" + xb + "\" y2=\"" + yT + "\" stroke=\"" + C + "\" stroke-width=\"1\"/>" + tick(xa, yT) + tick(xb, yT);
+g += "<text x=\"" + ((xa + xb) / 2) + "\" y=\"" + (yT - 4) + "\" text-anchor=\"middle\" style=\"font-size:11px;font-weight:700;fill:#111\">" + fmt(b.w) + "</text>";
+g += "<line x1=\"" + (xa - 4) + "\" y1=\"" + ya + "\" x2=\"" + (xL - 5) + "\" y2=\"" + ya + "\" stroke=\"" + C + "\" stroke-width=\"0.7\"/><line x1=\"" + (xa - 4) + "\" y1=\"" + yb + "\" x2=\"" + (xL - 5) + "\" y2=\"" + yb + "\" stroke=\"" + C + "\" stroke-width=\"0.7\"/>";
+g += "<line x1=\"" + xL + "\" y1=\"" + ya + "\" x2=\"" + xL + "\" y2=\"" + yb + "\" stroke=\"" + C + "\" stroke-width=\"1\"/>" + tick(xL, ya) + tick(xL, yb);
+g += "<text transform=\"rotate(-90 " + (xL - 5) + " " + ((ya + yb) / 2) + ")\" x=\"" + (xL - 5) + "\" y=\"" + ((ya + yb) / 2) + "\" text-anchor=\"middle\" style=\"font-size:11px;font-weight:700;fill:#111\">" + fmt(b.h) + "</text>";
+g += gridSym345(P, b, mT - 79, mL - 79, 9); /* CAD-345 の番付とそろえる */
+g += fsNorth(fr.W);
+return g;
+}
+
+/* ===== 基礎伏図 ===== */
+function fsKiso(fr, b){
+if (!S.kisoNew){
+var p = pts(), g = "";
+for (var i = 0; i < p.length; i++) g += line(fr, p[i], p[(i + 1) % p.length], "fsRef", "#9AA3AD", 1);
+return g;
+}
+/* 立ち上がり：外まわりは基礎の見積行（perK）と同じく母屋側の辺を除く。内部は内部の桁の下の線 */
+return outline(fr, true, 150, "fsKiso") + intBands(fr, "fsKisoInt", 150);
+}
+
+/* ===== 床伏図 ===== */
+function fsYuka(fr, b){
+var F = framePos(), g = partRef(fr, F);
+g += outline(fr, true, 105, "fsDodai"); /* 土台：見積行（lensD）と同じく母屋側の辺を除く */
+var wood = S.floor!== "doma" && S.floor!== "oki";
+if (wood){
+var alongX = b.w >= b.h;
+var A = gridLines264(alongX, 910), B = gridLines264(!alongX, 910);
+var segA = function(along, c, v){ return along? [v, c]: [c, v];};
+A.lines.forEach(function(Ln){
+var gg = "";
+Ln.segs.forEach(function(sg){ gg += band(fr, segA(alongX, Ln.c, sg[0]), segA(alongX, Ln.c, sg[1]), 105, "fsObikiSeg");});
+g += "<g class=\"fsObiki\">" + gg + "</g>";
+});
+if (S.floorKoho === "neda"){
+var Bj = gridLines264(!alongX, S.joistP === 455? 455: 303);
+Bj.lines.forEach(function(Ln){
+Ln.segs.forEach(function(sg){ g += line(fr, segA(!alongX, Ln.c, sg[0]), segA(!alongX, Ln.c, sg[1]), "fsNeda", "#111", Math.max(1, 45 * fr.s));});
+});
+/* 鋼製束：大引の上、910以内の間隔（calc の JR2.posts と同じ数え方） */
+A.lines.forEach(function(Ln){
+Ln.segs.forEach(function(sg){
+var L = sg[1] - sg[0], NN = Math.ceil(L / 910 - 1e-9), n = Math.max(0, NN - 1);
+for (var k = 1; k <= n; k++){ var pt = segA(alongX, Ln.c, sg[0] + L * k / NN); g += bunMk(fr, pt[0], pt[1]);}
+});
+});
+} else {
+/* 剛床：小つなぎは大引と直交の格子を大引の位置で区切る（calc の koNeeds264 と同じ割り）。
+鋼製束は格子の交点（calc の gridPosts264 と同じ数え方） */
+B.lines.forEach(function(Ln){
+Ln.segs.forEach(function(sg){
+var cuts = A.pos.filter(function(p){ return p > sg[0] + 1 && p < sg[1] - 1;});
+var pp = [sg[0]].concat(cuts, [sg[1]]);
+for (var i = 0; i + 1 < pp.length; i++) g += band(fr, segA(!alongX, Ln.c, pp[i]), segA(!alongX, Ln.c, pp[i + 1]), 105, "fsKotsunagi");
+cuts.forEach(function(p){ var pt = segA(!alongX, Ln.c, p); g += bunMk(fr, pt[0], pt[1]);});
+});
+});
+}
+}
+g += postsDraw(fr, F);
+g += intPostsDraw(fr);
+return g;
+}
+
+/* ===== 小屋伏図 ===== */
+function tsukaOnSeg(fr, a, c, L, sizeMm){
+var n = Math.ceil(L / (+S.hariP || 1820) - 1e-9) + 1, g = "";
+for (var k = 0; k < n; k++){
+var f = n <= 1? 0: k / (n - 1);
+g += postSq(fr, a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f, sizeMm, "fsTsuka");
+}
+return g;
+}
+function fsKoya(fr, b){
+var R = roof(), F = framePos(), g = partRef(fr, F);
+var moyaW = +S.moya || 105, tsukaW = +S.tsuka || 105, hariP = +S.hariP || 1820;
+g += outline(fr, false, 105, "fsKeta");
+/* 小屋梁：棟方向に hariP で等分（見積の beams と同じ本数）。梁間の方向に張る */
+var N = Math.max(1, Math.ceil(R.D / hariP - 1e-9)), beamPos = [];
+for (var k = 1; k < N; k++) beamPos.push(R.D * k / N);
+beamPos.forEach(function(p){
+var axis = R.spanY? "x": "y", c = R.spanY? b.x0 + p: b.y0 + p, gg = "";
+lineSegs(axis, c).forEach(function(sg){
+var a = axis === "x"? [c, sg[0]]: [sg[0], c], c2 = axis === "x"? [c, sg[1]]: [sg[1], c];
+gg += band(fr, a, c2, 105, "fsHariSeg");
+});
+g += "<g class=\"fsHari\">" + gg + "</g>";
+});
+if (S.roof === "yose"){
+/* 寄棟：母屋は内側へ x ずれた矩形（見積の moyaNeeds の lenL・lenS と同じ辺）。
+小屋束は母屋の辺と棟の上に等間隔（見積の tsuka の数え方と同じ本数。角は辺ごとに数える） */
+var seenX = {};
+R.ms.forEach(function(m){
+if (m.top) return;
+var x = Math.min(m.x, R.W - m.x);
+if (!(x > 0) || seenX[x]) return; seenX[x] = 1;
+var lenL = R.D - 2 * x, lenS = R.W - 2 * x;
+var c1 = rp(R, b, x, x), c2 = rp(R, b, R.D - x, x), c3 = rp(R, b, R.D - x, R.W - x), c4 = rp(R, b, x, R.W - x);
+var gg = "";
+if (lenL > 300) gg += band(fr, c1, c2, moyaW, "fsMoyaSeg") + band(fr, c3, c4, moyaW, "fsMoyaSeg");
+if (lenS > 300) gg += band(fr, c2, c3, moyaW, "fsMoyaSeg") + band(fr, c4, c1, moyaW, "fsMoyaSeg");
+g += "<g class=\"fsMoya\">" + gg + "</g>";
+if (m.L > 0){
+if (lenL > 300) g += tsukaOnSeg(fr, c1, c2, lenL, tsukaW) + tsukaOnSeg(fr, c3, c4, lenL, tsukaW);
+if (lenS > 300) g += tsukaOnSeg(fr, c2, c3, lenS, tsukaW) + tsukaOnSeg(fr, c4, c1, lenS, tsukaW);
+}
+});
+var ridgeLen = Math.max(0, R.D - R.W);
+var e1 = rp(R, b, R.W / 2, R.W / 2), e2 = rp(R, b, R.D - R.W / 2, R.W / 2);
+if (ridgeLen > 1) g += band(fr, e1, e2, moyaW, "fsMune");
+var topM = null;
+R.ms.forEach(function(m){ if (m.top) topM = m;});
+if (topM && topM.L > 0){
+if (ridgeLen > 1) g += tsukaOnSeg(fr, e1, e2, ridgeLen, tsukaW);
+else g += postSq(fr, e1[0], e1[1], tsukaW, "fsTsuka");
+}
+var cn = [rp(R, b, 0, 0), rp(R, b, R.D, 0), rp(R, b, R.D, R.W), rp(R, b, 0, R.W)];
+g += line(fr, cn[0], e1, "fsSumigi", "#111", 2) + line(fr, cn[3], e1, "fsSumigi", "#111", 2)
++ line(fr, cn[1], e2, "fsSumigi", "#111", 2) + line(fr, cn[2], e2, "fsSumigi", "#111", 2);
+} else {
+/* 切妻・片流れ・棟違い：母屋は棟方向に通る線（roof の ms。同じ位置は1本にまとめる） */
+var seen = {};
+R.ms.forEach(function(m){
+var xk = Math.round(m.x * 10) / 10;
+if (seen[xk]) return; seen[xk] = 1;
+var axis = R.spanY? "y": "x", c = R.spanY? b.y0 + m.x: b.x0 + m.x, gg = "";
+lineSegs(axis, c).forEach(function(sg){
+var a = axis === "y"? [sg[0], c]: [c, sg[0]], c2 = axis === "y"? [sg[1], c]: [c, sg[1]];
+gg += band(fr, a, c2, moyaW, m.top? "fsMuneSeg": "fsMoyaSeg");
+});
+g += "<g class=\"" + (m.top? "fsMune": "fsMoya") + "\">" + gg + "</g>";
+});
+/* 小屋束：母屋×（小屋梁＋両端）の交点。m.L>0 の母屋だけ（見積の tsuka と同じ） */
+var rowsPos = [0].concat(beamPos, [R.D]);
+R.ms.forEach(function(m){
+if (!(m.L > 0)) return;
+rowsPos.forEach(function(p){ var pt = rp(R, b, p, m.x); g += postSq(fr, pt[0], pt[1], tsukaW, "fsTsuka");});
+});
+}
+g += intBands(fr, "fsIntKeta", 105);
+g += intPostsDraw(fr);
+g += postsDraw(fr, F);
+return g;
+}
+
+function fsRender(){
+var svg = document.getElementById("pvSvg"); if (!svg) return;
+var lg = document.getElementById("pvLegend");
+if (!S.edges ||!S.edges.length){ svg.innerHTML = ""; if (lg) lg.textContent = "伏図：まだ図面がありません。"; return;}
+var keep = null, fl0 = S.floors;
+try {
+try { flEnsure();} catch(e){}
+if (S.fl && S.fl.length > 1){
+keep = flSnap();
+var target = fsKind === "koya"? S.fl.length - 1: 0;
+if (target!== S.fi){ var snap = S.fl[target] && S.fl[target].snap; if (snap) flLoad(snap);}
+}
+var b = bbox();
+var fr = {W: 360, mL: 94, mT: 94, s: 0, H: 0, P: null};
+fr.s = Math.min((fr.W - fr.mL - 42) / b.w, (470 - fr.mT - 38) / b.h);
+fr.H = Math.round(fr.mT + b.h * fr.s + 38);
+fr.P = function(q){ return [fr.mL + (q[0] - b.x0) * fr.s, fr.mT + (q[1] - b.y0) * fr.s];};
+var R = roof();
+var title = fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): "小屋伏図";
+var g = fsHead(fr, b, title), legend = "";
+var geyaNote = (S.geya && S.geya.length)? "下屋の分は描いていません。": "";
+if (fsKind === "kiso"){
+g += fsKiso(fr, b);
+legend = S.kisoNew
+? "基礎伏図：立ち上がりは見積と同じ線です（幅150）。人通口とアンカーボルトは、見積で数えていないので描いていません。" + geyaNote
+: "基礎伏図：この家は基礎の新設が無いので、立ち上がりは描いていません。";
+} else if (fsKind === "yuka"){
+g += fsYuka(fr, b);
+var wood = S.floor!== "doma" && S.floor!== "oki";
+legend =!wood
+? "床伏図：この家は床が土間なので、床組（大引など）はありません。土台と柱だけ描いています。"
+: (S.floorKoho === "neda"
+? "床伏図：土台・大引・根太・柱は見積と同じ位置と本数です。間柱は伏図には描きません（実物の伏図の形です）。" + geyaNote
+: "床伏図：土台・大引・小つなぎ・鋼製束・柱は見積と同じ位置と本数です。間柱は伏図には描きません（実物の伏図の形です）。" + geyaNote);
+} else {
+g += fsKoya(fr, b);
+legend = "小屋伏図：桁・小屋梁・母屋・棟木・小屋束は見積と同じ位置と本数です。"
++ (R.two? "2階の小屋組です。": "")
++ (S.roof === "yose"? "寄棟の母屋は内側の矩形に、隅木は四隅から棟の端へ描いています。": "") + geyaNote;
+}
+svg.setAttribute("viewBox", "0 0 " + fr.W + " " + fr.H);
+svg.innerHTML = g;
+if (lg) lg.textContent = legend;
+} finally {
+if (keep){ try { flLoad(keep);} catch(e){} S.floors = fl0;}
+}
+}
+
+function segBtns(){
+var seg = document.getElementById("pvSeg");
+return seg? Array.prototype.slice.call(seg.querySelectorAll("[data-pv]")): [];
+}
+function fsSet(on){
+var st = document.getElementById("st6"); if (!st) return;
+fsOn =!!on;
+st.classList.toggle("fsOn", fsOn);
+if (fsOn){
+st.classList.add("pvOn");
+segBtns().forEach(function(btn){ btn.setAttribute("aria-pressed", String(btn.dataset.pv === "fuse"));});
+fsRender();
+}
+}
+function fsOff(full){
+fsOn = false;
+var st = document.getElementById("st6"); if (!st) return;
+st.classList.remove("fsOn");
+if (full){
+st.classList.remove("pvOn");
+segBtns().forEach(function(btn){ btn.setAttribute("aria-pressed", String(btn.dataset.pv === "iso"));});
+}
+}
+function fsSegInit(){
+var bar = document.getElementById("pvBar");
+if (!bar || document.getElementById("fsSeg")) return;
+var seg = document.createElement("div");
+seg.className = "seg"; seg.id = "fsSeg"; seg.style.margin = "0 0 6px";
+seg.innerHTML = "<button data-fs=\"kiso\" type=\"button\" aria-pressed=\"true\">基礎伏図</button><button data-fs=\"yuka\" type=\"button\" aria-pressed=\"false\">床伏図</button><button data-fs=\"koya\" type=\"button\" aria-pressed=\"false\">小屋伏図</button>";
+bar.insertBefore(seg, bar.firstChild);
+seg.querySelectorAll("[data-fs]").forEach(function(btn){
+btn.addEventListener("click", function(){
+fsKind = btn.dataset.fs;
+seg.querySelectorAll("[data-fs]").forEach(function(x){ x.setAttribute("aria-pressed", String(x === btn));});
+if (fsOn) fsRender();
+});
+});
+}
+function fsInit(){
+fsSegInit();
+var seg = document.getElementById("pvSeg");
+if (!seg || document.getElementById("fsBtn")) return;
+var b = document.createElement("button");
+b.type = "button"; b.id = "fsBtn"; b.dataset.pv = "fuse"; b.textContent = "伏図";
+b.setAttribute("aria-pressed", "false"); b.style.display = "none";
+seg.appendChild(b);
+b.addEventListener("click", function(){
+if (fsOn) fsOff(true);
+else { if (S.mode!== "zo") return; fsSet(true);}
+});
+seg.addEventListener("click", function(e){
+var t = e.target && e.target.closest? e.target.closest("[data-pv]"): null;
+if (t && t.dataset.pv!== "fuse" && fsOn) fsOff(false);
+}, true);
+}
+fsInit();
+/* 完成図が描き直されるたび、伏図モードなら伏図も今のデータで描き直す */
+HB.__isoPost63 = function(){ try { if (fsOn) fsRender();} catch(e){}};
+setInterval(function(){
+try {
+fsInit();
+var b = document.getElementById("fsBtn");
+if (b){
+var zo = S.mode === "zo";
+b.style.display = zo? "": "none";
+if (!zo && fsOn) fsOff(true);
+if (b.getAttribute("aria-pressed")!== String(fsOn)) b.setAttribute("aria-pressed", String(fsOn));
+}
+var st = document.getElementById("st6");
+if (fsOn && st &&!st.classList.contains("pvOn")) fsOff(false);
+} catch(e){}
+}, 600);
+HB.__fs347 = { on: function(){ return fsOn;}, render: fsRender, set: fsSet};
 })();
 </script>
 
