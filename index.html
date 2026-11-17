@@ -4074,18 +4074,25 @@ function tidyPlanLabels(){
   const root = svg.getScreenCTM(); if (!root || !(Math.abs(root.a) > 1e-9) || !(Math.abs(root.d) > 1e-9)) return;  /* CAD-137: 変換が縮退 (レイアウト未確定) の時はラベルを動かさない */
   const texts = [...svg.querySelectorAll("text")].filter(t => !t.closest("#planInk") && !t.closest("[data-sno]"));
   texts.forEach(t => {
+    if (t.__tidy342) return;   /* CAD-342：同じ DOM に tidy をかけ直しても、縮小は1回だけ */
+    t.__tidy342 = 1;
     const cs = getComputedStyle(t), fs = parseFloat(cs.fontSize);
     if (fs) t.style.fontSize = (fs * PLAN_FONT_K) + "px";
     if (t.classList.contains("halo")){ const sw = parseFloat(cs.strokeWidth); if (sw) t.style.strokeWidth = (sw * PLAN_FONT_K) + "px"; }
   });
-  const inv = root.inverse(), items = [];
+  svg.querySelectorAll("line.lead342").forEach(l => l.remove());   /* CAD-342：かけ直しの前に、前回の引き出し線を消す */
+  const inv = root.inverse(), items = [], grp342 = new Map();
   texts.forEach(t => {
     let bb; try { bb = t.getBBox(); } catch(e){ return; }
     const ctm = t.getScreenCTM(); if (!bb || !bb.width || !bb.height || !ctm) return;
     const m = inv.multiply(ctm);
     const ps = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]].map(([x, y]) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f]);
     const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]);
-    items.push({t, m, fixed: [...(t.parentNode ? t.parentNode.children : [])].some(c => c.tagName === "rect"), x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), fs: parseFloat(t.style.fontSize) || 8});
+    /* CAD-342：部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料にする（個別に動くと組が離れるため） */
+    const rec = {t, m, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)};
+    const gEl = t.closest ? t.closest("g[data-lbl310]") : null, key = gEl || t;
+    if (grp342.has(key)){ const o = grp342.get(key); o.mem.push(rec); o.x0 = Math.min(o.x0, rec.x0); o.x1 = Math.max(o.x1, rec.x1); o.y0 = Math.min(o.y0, rec.y0); o.y1 = Math.max(o.y1, rec.y1); o.fs = Math.max(o.fs, parseFloat(t.style.fontSize) || 8); }
+    else { const o = {t, m, mem: [rec], fixed: [...(t.parentNode ? t.parentNode.children : [])].some(c => c.tagName === "rect"), x0: rec.x0, x1: rec.x1, y0: rec.y0, y1: rec.y1, fs: parseFloat(t.style.fontSize) || 8}; grp342.set(key, o); items.push(o); }
   });
   items.sort((a, b) => b.fs - a.fs);
   // 太い線（壁・間仕切り）も避ける：文字が線の上に乗ったり、線に貫かれたりしないように
@@ -4109,36 +4116,94 @@ function tidyPlanLabels(){
   const glows = [];   // 「見る人」で光る円：自分の円の中の文字（DL・CLなど）以外は、円を避ける
   svg.querySelectorAll("circle.selBlink").forEach(ci => { const ctm = ci.getScreenCTM(); if (!ctm) return; const mm = inv.multiply(ctm), cx = +ci.getAttribute("cx"), cy = +ci.getAttribute("cy"), r = +ci.getAttribute("r"), k = Math.hypot(mm.a, mm.b), x = mm.a * cx + mm.c * cy + mm.e, y = mm.b * cx + mm.d * cy + mm.f; glows.push({x0: x - r * k, x1: x + r * k, y0: y - r * k, y1: y + r * k, cx: x, cy: y, rr: r * k}); });
   items.forEach(it => { const mx = (it.x0 + it.x1) / 2, my = (it.y0 + it.y1) / 2; it.gl = glows.filter(g => Math.hypot(mx - g.cx, my - g.cy) > g.rr * 0.5); });
-  const hit = (a, dx, dy, list) => list.some(b => a.x0 + dx < b.x1 && a.x1 + dx > b.x0 && a.y0 + dy < b.y1 && a.y1 + dy > b.y0);
-  const placed = [];
-  items.forEach(it => {
-    const w = it.x1 - it.x0, h = it.y1 - it.y0;
-    const bad = (dx, dy) => hit(it, dx, dy, placed) || (!it.fixed && hit(it, dx, dy, segs)) || hit(it, dx, dy, it.gl || []);
-    if (bad(0, 0)){
-      let best = null;
-      for (let ix = -8; ix <= 8; ix++) for (let iy = -10; iy <= 10; iy++){
-        if (!ix && !iy) continue;
-        const dx = ix * w * 0.3, dy = iy * h * 0.4, d = Math.hypot(dx / (w || 1), dy / (h || 1));
-        if ((best == null || d < best.d) && !bad(dx, dy)) best = {dx, dy, d};
-      }
-      if (best){
-        const m = it.m, det = m.a * m.d - m.b * m.c;
-        if (Math.abs(det) > 1e-9){
-          const lx = (m.d * best.dx - m.c * best.dy) / det, ly = (-m.b * best.dx + m.a * best.dy) / det;
-          it.t.setAttribute("transform", (it.t.getAttribute("transform") || "") + ` translate(${lx} ${ly})`);
-          it.x0 += best.dx; it.x1 += best.dx; it.y0 += best.dy; it.y1 += best.dy;
-        }
-      }
+  /* CAD-342：配置の芯を CAD-316 の反発レイアウトと同じ仕組みに作り替える。
+     文字同士は磁石の反発の様に押し合い（重なりの小さい方向へ半分ずつ）、各文字は
+     元の位置（アンカー）へ引き寄せられる。太い線・番号丸・光る円は動かない
+     障害物として、触れた文字を押し出す（rect を背負う文字は従来どおり線は避けない）。
+     最後は反発だけの仕上げをして、重なりが残らない様にする。 */
+  const PAD342 = 1.5;
+  items.forEach(it => { it.w = it.x1 - it.x0; it.h = it.y1 - it.y0; it.ax = (it.x0 + it.x1) / 2; it.ay = (it.y0 + it.y1) / 2; it.cx = it.ax; it.cy = it.ay; it.obs = it.fixed ? (it.gl || []) : segs.concat(it.gl || []); });
+  const sepPair342 = () => {
+    let hitAny = false;
+    for (let p = 0; p < items.length; p++) for (let q = p + 1; q < items.length; q++){
+      const A = items[p], B = items[q];
+      const dx = B.cx - A.cx, dy = B.cy - A.cy;
+      const ox = (A.w + B.w) / 2 + PAD342 - Math.abs(dx), oy = (A.h + B.h) / 2 + PAD342 - Math.abs(dy);
+      if (ox <= 0 || oy <= 0) continue;
+      hitAny = true;
+      if (ox < oy){ const sg = dx >= 0 ? 1 : -1; A.cx -= sg * ox / 2; B.cx += sg * ox / 2; }
+      else { const sg = dy >= 0 ? 1 : -1; A.cy -= sg * oy / 2; B.cy += sg * oy / 2; }
     }
-    /* CAD-329：重なり回避で画面（viewBox）の外へ押し出された文字を、中へ戻す */
-    { let dx329 = 0, dy329 = 0; const W329 = PV.W || 0, H329 = PV.H || 0;
-      if (W329 && it.x1 - it.x0 <= W329 - 2){ if (it.x0 < 1) dx329 = 1 - it.x0; else if (it.x1 > W329 - 1) dx329 = (W329 - 1) - it.x1; }
-      if (H329 && it.y1 - it.y0 <= H329 - 2){ if (it.y0 < 1) dy329 = 1 - it.y0; else if (it.y1 > H329 - 1) dy329 = (H329 - 1) - it.y1; }
-      if (dx329 || dy329){ const m = it.m, det = m.a * m.d - m.b * m.c;
-        if (Math.abs(det) > 1e-9){ const lx = (m.d * dx329 - m.c * dy329) / det, ly = (-m.b * dx329 + m.a * dy329) / det;
-          it.t.setAttribute("transform", (it.t.getAttribute("transform") || "") + ` translate(${lx} ${ly})`);
-          it.x0 += dx329; it.x1 += dx329; it.y0 += dy329; it.y1 += dy329; } } }
-    placed.push(it);
+    return hitAny;
+  };
+  const sepStatic342 = () => {
+    let hitAny = false;
+    items.forEach(it => {
+      it.obs.forEach(b => {
+        const dx = it.cx - (b.x0 + b.x1) / 2, dy = it.cy - (b.y0 + b.y1) / 2;
+        const ox = (it.w + (b.x1 - b.x0)) / 2 + PAD342 - Math.abs(dx), oy = (it.h + (b.y1 - b.y0)) / 2 + PAD342 - Math.abs(dy);
+        if (ox <= 0 || oy <= 0) return;
+        hitAny = true;
+        if (ox < oy) it.cx += (dx >= 0 ? 1 : -1) * ox; else it.cy += (dy >= 0 ? 1 : -1) * oy;
+      });
+    });
+    return hitAny;
+  };
+  const sep342 = () => { const a = sepPair342(), b = sepStatic342(); return a || b; };
+  const clamp342 = () => { const W = PV.W || 0, H = PV.H || 0; if (!W || !H) return; items.forEach(it => {
+    if (it.w <= W - 2) it.cx = Math.max(1 + it.w / 2, Math.min(W - 1 - it.w / 2, it.cx));
+    if (it.h <= H - 2) it.cy = Math.max(1 + it.h / 2, Math.min(H - 1 - it.h / 2, it.cy));
+  }); };
+  for (let it = 0; it < 60; it++){
+    items.forEach(o => { o.cx += (o.ax - o.cx) * 0.15; o.cy += (o.ay - o.cy) * 0.15; });
+    clamp342();
+    let dirty = false;
+    for (let k = 0; k < 12 && sep342(); k++) dirty = true;
+    clamp342();
+    if (!dirty) break;
+  }
+  for (let k = 0; k < 60 && sep342(); k++) clamp342();
+  clamp342();
+  /* CAD-342：反発でも収まらなかった文字は、一番近い空きへ逃がす（密集時の最終段）。
+     候補は今の位置の周りを近い順に探し、他の文字・障害物・画面の端すべてで判定する。 */
+  const boxHit342 = (cx, cy, w, h, b) => Math.abs(cx - (b.x0 + b.x1) / 2) < (w + (b.x1 - b.x0)) / 2 + PAD342 && Math.abs(cy - (b.y0 + b.y1) / 2) < (h + (b.y1 - b.y0)) / 2 + PAD342;
+  const free342 = (it, cx, cy) => {
+    const W = PV.W || 0, H = PV.H || 0;
+    if (W && (cx - it.w / 2 < 1 || cx + it.w / 2 > W - 1)) return false;
+    if (H && (cy - it.h / 2 < 1 || cy + it.h / 2 > H - 1)) return false;
+    for (const o of items){ if (o === it) continue; if (boxHit342(cx, cy, it.w, it.h, {x0: o.cx - o.w / 2, x1: o.cx + o.w / 2, y0: o.cy - o.h / 2, y1: o.cy + o.h / 2})) return false; }
+    for (const b of it.obs){ if (boxHit342(cx, cy, it.w, it.h, b)) return false; }
+    return true;
+  };
+  items.forEach(it => {
+    if (free342(it, it.cx, it.cy)) return;
+    const cand = [];
+    for (let ix = -10; ix <= 10; ix++) for (let iy = -12; iy <= 12; iy++){ if (!ix && !iy) continue; cand.push([it.cx + ix * it.w * 0.3, it.cy + iy * it.h * 0.45]); }
+    cand.sort((a, b) => Math.hypot(a[0] - it.cx, a[1] - it.cy) - Math.hypot(b[0] - it.cx, b[1] - it.cy));
+    for (const c of cand){ if (free342(it, c[0], c[1])){ it.cx = c[0]; it.cy = c[1]; break; } }
+  });
+  /* 確定：元の位置からのずれを transform で適用する（組の材料は全員に同じずれ）。
+     大きくずれた文字には、CAD-316 の札と同じ破線の引き出し線を元の位置から引く。 */
+  items.forEach(it => {
+    const dx = it.cx - it.ax, dy = it.cy - it.ay;
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return;
+    it.mem.forEach(rec => {
+      const m = rec.m, det = m.a * m.d - m.b * m.c;
+      if (!(Math.abs(det) > 1e-9)) return;
+      const lx = (m.d * dx - m.c * dy) / det, ly = (-m.b * dx + m.a * dy) / det;
+      rec.t.setAttribute("transform", (rec.t.getAttribute("transform") || "") + ` translate(${lx} ${ly})`);
+    });
+    it.x0 += dx; it.x1 += dx; it.y0 += dy; it.y1 += dy;
+    if (Math.hypot(dx, dy) >= 18){
+      try {
+        const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        ln.setAttribute("x1", it.ax); ln.setAttribute("y1", it.ay); ln.setAttribute("x2", it.cx); ln.setAttribute("y2", it.cy);
+        ln.setAttribute("stroke", getComputedStyle(it.t).fill || "#666"); ln.setAttribute("stroke-width", "1.2");
+        ln.setAttribute("stroke-dasharray", "3 2"); ln.setAttribute("opacity", ".6"); ln.setAttribute("pointer-events", "none");
+        ln.setAttribute("class", "lead342");
+        svg.appendChild(ln);
+      } catch(e){}
+    }
   });
 }
 
@@ -21794,7 +21859,7 @@ function winWarn250(n0){
 /* ===== CAD-252：表示まわりの直し（小さい文字は拡大時だけ出す／壁に吸い付く所の予告） ===== */
 (function(){ "use strict";
   /* 全体表示（1.5倍未満）では .zx252 の文字（間仕切りラベル・ドアの弧と重なる寸法）を隠し、拡大したら出す */
-  try { setInterval(() => { try { const sv = document.getElementById("plan"); if (!sv || typeof PV === "undefined") return; sv.classList.toggle("zlo252", !(PV.z >= 1.5)); } catch(e){} }, 400); } catch(e){}
+  try { setInterval(() => { try { const sv = document.getElementById("plan"); if (!sv || typeof PV === "undefined") return; const was252 = sv.classList.contains("zlo252"); sv.classList.toggle("zlo252", !(PV.z >= 1.5)); if (was252 && !sv.classList.contains("zlo252") && typeof tidyPlanLabels === "function") tidyPlanLabels();   /* CAD-342：隠れていた文字が出てきたら反発をかけ直す */ } catch(e){} }, 400); } catch(e){}
   /* ---- 壁に吸い付く所の予告：構えている間だけ、指の位置で「付く予定の壁」を太線で光らせる。
          予告の計算は配置の実物（nearestHost／25px判定／空きが無い時の fallback／addEquip の壁選び）を
          そのまま複製した読み取り専用。配置そのものの動きは従来どおり。 ---- */
@@ -27017,6 +27082,7 @@ window.__len309txt = function(){ return null; };
  CAD-339：第8回の合格10枚を 337・338 と同じ変換（512・WebP q90）で収録（全て新規キー）。屋根の形（#roofSeg）：片流れ kata・切妻 kiri・寄棟 yose・棟違い mune。下屋 geya は屋根画面の #geyaAdd（下屋を追加）。完成図の切替（#pvSeg）：立体図 iso・平面図 plan。回す mawasu は完成図の #rotL／#rotR と選択バーの回転ボタン（#sbRot／#sbRotK／#sbKK）。#sbFlip は反転（サッシの flip）なので対象外。OK ok は選択バーの #sbOk、長さ nagasa は #sbLen。ICONS 85→95キー、SCALE/ORIGIN 68→78キー。入れられなかった物はなし。
  CAD-340：優先＋水回りの作り直し6枚と第6回前半6枚を 337〜339 と同じ変換（512・WebP q90）で収録。作り直し6枚は既存キーの差し替え：描く kaku（下の大きなボタン「描く・選ぶ」#toolTabs [data-tt='part']）・置く oku（「置く」）・床仕様 yuka（#floorBtn）・トイレ toilet・洗面台 senmen・キッチン kitchen。大きなボタン3つは SCALE/ORIGIN が無かったので今回から原本bbox算出で追加（1.00〜1.08、見え方はほぼ不変）。第6回前半6枚は新規キー＋RULES（#fxMenu）：ピクチャーレール picrail・ロールスクリーン roll・ブラインド blind・ダクトレール duct・スポットライト spot・ペンダントライト pendant。ICONS 95→101キー、SCALE/ORIGIN 78→87キー。入れられなかった物はなし。
  CAD-341：第9回の合格7枚と作り直し6枚を 337〜340 と同じ変換（512・WebP q90）で収録。第9回は新規キー＋RULES：大きさ size（選択バー #sbSize）・反転 flip（#sbFlip、339報告の予告どおり）・壁まで fit（#sbFit）・形 form（#sbForm292）・戸袋 tobukuro（#sbTob308）・見積書PDF pdf（#pdfBtn）・材料の本数 matnum（#estJumpMat271）。作り直しは既存キーの差し替え：片開き katahiraki・片引き katahiki・クローゼット closet・浴槽 yokuso（SCALE/ORIGIN は新絵の bbox から算出）。腰窓 koshi・小窓 komado は専用キーが無かったので新規キー＋RULES（#toolCh [data-tool='winK'/'winS']）。ICONS 101→110キー、SCALE/ORIGIN 87→96キー。入れられなかった物はなし。
+ CAD-342：図面の上の表示物すべての重なり回避を、CAD-316 の反発レイアウトと同じ仕組みに統一（本人の実機の指摘「全てを磁石の反発みたいにできないの？」）。tidyPlanLabels の配置の芯（重なった物だけ空きマスを探す貪欲な探索）を、アンカーへの引き寄せ＋文字同士の押し合い＋太い線・番号丸・光る円は静止障害物として押し出し＋反発だけの仕上げ＋viewBox 内クランプ、の反発ソルバへ作り替え。部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料として動かし、反発でも収まらない物は一番近い空きへ逃がす最終段を追加。対象は #plan に描かれる全 text（寸法の数字・部屋の名前と㎡・状態バッジ・物の名前・間仕切りラベル・ガイド文字・316の札の文字）。大きくずれた文字には 316 と同じ破線の引き出し線（lead342）を元の位置から引く。.zx252 の文字（全体表示では隠れている間仕切りラベル等）は getBBox が取れず材料にできないため、拡大で表示に切り替わった瞬間に tidy をかけ直す（縮小の二重がけ防止つき）。文字の内容・大きさ・見積・保存キーは不変。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
