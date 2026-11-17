@@ -373,8 +373,9 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #enclBar .ecd button{min-height:34px}
 #enclBar .ect button,#enclBar .ect5 button{min-height:32px}
 #enclBar .ecx button{min-height:38px}
-.selBlink{animation:selBlink .9s ease-in-out infinite}
-@keyframes selBlink{0%,100%{opacity:1}50%{opacity:.15}}
+/* CAD-329：選択のピンク点滅の波形を作り替え（本人の指定：濃い時間は短く・薄い時間は中くらい・消えている時間を長く） */
+.selBlink{animation:selBlink 2.4s linear infinite}
+@keyframes selBlink{0%{opacity:0;animation-timing-function:ease-out}8.3%{opacity:1;animation-timing-function:linear}16.7%{opacity:1;animation-timing-function:ease-in-out}50%{opacity:0;animation-timing-function:linear}100%{opacity:0}}
 .armBlink{animation:armBlink .8s ease-in-out infinite}
 @keyframes armBlink{0%,100%{background:#FFF8DC;box-shadow:0 0 0 0 rgba(255,140,0,0)}50%{background:#FFC400;box-shadow:0 0 0 4px rgba(255,140,0,.5)}}
 /* CAD-81 本番ルール：案内の点滅はチュートリアル（body.nbtutRun）だけ、本番は静かに示す。CAD-93：「選んだ物」の点滅（.selBlink／#FF00C8）は状態表示なので本番に復活（当該3ルールを削除）。道具・案内の点滅は従来通り本番では静止 */
@@ -2986,6 +2987,11 @@ function alignSvg(P, sc){
     hits.sort((a, b) => (a.k === "pen" ? 0 : 1) - (b.k === "pen" ? 0 : 1) || a.d - b.d);
     const CG = "#1E9E5A", CO = "#E8742C", CR = "#D32F2F", out = [], seen = {};
     const uniq = []; hits.forEach(h => { if (!uniq.some(u => u.r.v === h.r.v && Math.abs(u.r.c - h.r.c) < 1.5)) uniq.push(h); });
+    /* CAD-329：ガイドの文字が図の右端で見切れない様に、幅を見積もって収まる位置・向きに直す（文字そのものは変えない） */
+    const estW329 = t => { let w = 0; for (const ch of String(t)){ const c = ch.codePointAt(0); w += c > 0xFF ? 10 : (c >= 48 && c <= 57) ? 5.8 : ch === "." ? 3.2 : ch === " " ? 3.3 : 6.5; } return w * 0.72; };
+    const fit329 = (x, anchor, t) => { const lim = (PV.W || 1e9) - 2, tw = estW329(t);
+      if (anchor === "start"){ if (x + tw <= lim) return [x, "start"]; let nx = x - 8; if (nx - tw < 2) nx = 2 + tw; return [nx, "end"]; }
+      let nx = x; if (nx + tw / 2 > lim) nx = lim - tw / 2; if (nx - tw / 2 < 2) nx = 2 + tw / 2; return [nx, "middle"]; };
     uniq.slice(0, 6).forEach(h => {
       const r = h.r, col = h.k === "pen" ? CR : (h.k === "ok" || (h.k === "ext" && h.ok)) ? CG : CO;
       const pt = (c, a) => P(r.v ? [c, a] : [a, c]);
@@ -3001,17 +3007,20 @@ function alignSvg(P, sc){
           out.push(`<line x1="${pA[0]}" y1="${pA[1]}" x2="${pB[0]}" y2="${pB[1]}" stroke="${col}" stroke-width="1.6" pointer-events="none"/>` + tri2(pA, 1) + tri2(pB, -1)); }
       }
       const key = txt + Math.round(mid[0] / 6) + Math.round(mid[1] / 6); if (seen[key]) return; seen[key] = 1;
-      out.push(`<text x="${mid[0] + (r.v ? 4 : 0)}" y="${mid[1] + (r.v ? 0 : -4)}" text-anchor="${r.v ? "start" : "middle"}" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${txt}</text>`);
+      const [lx329, la329] = fit329(mid[0] + (r.v ? 4 : 0), r.v ? "start" : "middle", txt);
+      out.push(`<text x="${lx329}" y="${mid[1] + (r.v ? 0 : -4)}" text-anchor="${la329}"start" : "middle"}" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${txt}</text>`);
     });
     if (coreK && coreK.rc){ const o = coreK.o, rc = coreK.rc, cx = (rc.x0 + rc.x1) / 2, cy = (rc.y0 + rc.y1) / 2;
       const f2 = v => { const q = Math.round(v * 2) / 2; return Number.isInteger(q) ? fmt(q) : fmt(q, 1); };
       const dcx = o.x - cx, dcy = o.y - cy;
       if (Math.abs(dcx) <= 60){ const ok = Math.abs(dcx) <= 1.5, col = ok ? CG : CO, p0 = P([cx, rc.y0]), p1 = P([cx, rc.y1]), pm = P([cx, rc.y0]);
         out.push(`<line x1="${p0[0]}" y1="${p0[1]}" x2="${p1[0]}" y2="${p1[1]}" stroke="${col}" stroke-width="1.6" stroke-dasharray="6 3" stroke-opacity=".9" pointer-events="none"/>`);
-        out.push(`<text x="${pm[0]}" y="${pm[1] - 4}" text-anchor="middle" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${ok ? "✓ 部屋の芯にぴったり" : "部屋の芯まで " + f2(Math.abs(dcx))}</text>`); }
+        const tx329a = ok ? "✓ 部屋の芯にぴったり" : "部屋の芯まで " + f2(Math.abs(dcx)); const [lx329a, la329a] = fit329(pm[0], "middle", tx329a);
+        out.push(`<text x="${lx329a}" y="${pm[1] - 4}" text-anchor="${la329a}" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${tx329a}</text>`); }
       if (Math.abs(dcy) <= 60){ const ok = Math.abs(dcy) <= 1.5, col = ok ? CG : CO, p0 = P([rc.x0, cy]), p1 = P([rc.x1, cy]), pm = P([rc.x0, cy]);
         out.push(`<line x1="${p0[0]}" y1="${p0[1]}" x2="${p1[0]}" y2="${p1[1]}" stroke="${col}" stroke-width="1.6" stroke-dasharray="6 3" stroke-opacity=".9" pointer-events="none"/>`);
-        out.push(`<text x="${pm[0] + 4}" y="${pm[1]}" text-anchor="start" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${ok ? "✓ 部屋の芯にぴったり" : "部屋の芯まで " + f2(Math.abs(dcy))}</text>`); }
+        const tx329b = ok ? "✓ 部屋の芯にぴったり" : "部屋の芯まで " + f2(Math.abs(dcy)); const [lx329b, la329b] = fit329(pm[0] + 4, "start", tx329b);
+        out.push(`<text x="${lx329b}" y="${pm[1]}" text-anchor="${la329b}" class="halo" pointer-events="none" style="font-size:10px;font-weight:800;fill:${col}">${tx329b}</text>`); }
     }
     return `<g pointer-events="none">${out.join("")}</g>`;
   } catch(er){ return ""; }
@@ -4120,6 +4129,14 @@ function tidyPlanLabels(){
         }
       }
     }
+    /* CAD-329：重なり回避で画面（viewBox）の外へ押し出された文字を、中へ戻す */
+    { let dx329 = 0, dy329 = 0; const W329 = PV.W || 0, H329 = PV.H || 0;
+      if (W329 && it.x1 - it.x0 <= W329 - 2){ if (it.x0 < 1) dx329 = 1 - it.x0; else if (it.x1 > W329 - 1) dx329 = (W329 - 1) - it.x1; }
+      if (H329 && it.y1 - it.y0 <= H329 - 2){ if (it.y0 < 1) dy329 = 1 - it.y0; else if (it.y1 > H329 - 1) dy329 = (H329 - 1) - it.y1; }
+      if (dx329 || dy329){ const m = it.m, det = m.a * m.d - m.b * m.c;
+        if (Math.abs(det) > 1e-9){ const lx = (m.d * dx329 - m.c * dy329) / det, ly = (-m.b * dx329 + m.a * dy329) / det;
+          it.t.setAttribute("transform", (it.t.getAttribute("transform") || "") + ` translate(${lx} ${ly})`);
+          it.x0 += dx329; it.x1 += dx329; it.y0 += dy329; it.y1 += dy329; } } }
     placed.push(it);
   });
 }
