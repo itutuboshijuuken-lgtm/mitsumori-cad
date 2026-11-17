@@ -6079,7 +6079,7 @@ function calc(){
       if (S.mode === "zo" && C && Array.isArray(C.rows) && !C.rows.some(r => r.intNote)){
         const R = roof(), zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
         const rows = [];
-        if (zi.n > 0){ const need = beamNeeded(R.W); rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${zi.n}本・立ち上がり${zi.rows}列を入れています`, qty: "", cost: 0, note: need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です", intNote: true, zoNote: true}); }
+        if (zi.rows > 0){ const need = beamNeeded(R.W), ipn = intPostList().n; rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${ipn}本・立ち上がり${zi.rows}列を入れています`, qty: "", cost: 0, note: need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です", intNote: true, zoNote: true}); }  /* CAD-344：柱の本数は intPostList（間仕切りとの交点だけ） */
         if (rows.length){ let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; }); if (last >= 0) C.rows.splice(last + 1, 0, ...rows); else C.rows.unshift({grp: "ご注意"}, ...rows); }
       }
     } catch(e){}
@@ -6357,7 +6357,7 @@ function framePos(){
       if (c.f){ Z.studN++; if (S0.thick) Z.thick++; else Z.thin++; }
       else if (c.p){ Z.partStudN++; if (S0.thick){ Z.partThick++; Z.partThickLens.push(c.hq + 100); } else { Z.partThin++; Z.partThinLens.push(c.hq + 100); } }
     });
-    Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind}));
+    Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind, ops: r.ops, op: (r.kind === "p" && r.q && typeof partForm292 === "function" && partForm292(r.q) === "open") ? 1 : 0}));  /* CAD-344：開口区間と開放形の印も控える（内部の柱の交点判定に使う） */
     return Z;
   } catch(e){ Z.err = true; try { HB.__frameErr154 = true; } catch(_){} return Z; }
 }
@@ -7130,7 +7130,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("hashira", "柱", 105, 105, Array(colsEach).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
-    { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ lum("hashira", "内部の柱", 105, 105, Array(zi.n).fill(Lc + 120), `105角・梁間${fmt(W)}を飛ばせないため（${zi.rows}列）`, true); lum("keta", "内部の桁（柱の上）", 105, S.hari, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(S.hari)}・${zi.rows}列`, true); work("kanamono", "内部の柱の金物", zi.n, "本"); } }
+    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const ipn = intPostList().n; if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120), `105角・間仕切りとの交点（${zi.rows}列）`, true); lum("keta", "内部の桁（柱の上）", 105, S.hari, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(S.hari)}・${zi.rows}列`, true); if (ipn > 0) work("kanamono", "内部の柱の金物", ipn, "本"); } }  /* CAD-344：内部の柱・金物は間仕切りとの交点にある分だけ（intPostList）。桁は支持ラインの列数で従来通り */
   }
   /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
      余り材は専用プールで拾う（lum の共有プール POOL を使うと、ほかの行の本数が動いてしまうため）。 */
@@ -7271,7 +7271,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const w3 = workP("kisoPump"); rows.push({name: "基礎 生コン・ポンプ最低料金", spec: `少量の割増 ${fmt(w3.p)}円`, qty: "1式", cost: w3.p, avg: w3.avg, fix: {kind: "work", key: "kisoPump"}}); }   /* CAD-248：生コン・ポンプの最低料金（新設） */
-    { const zi = zoInt(W, D, yose, two); if (zi.n > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・柱${zi.n}本の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }
+    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・内部の桁の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }  /* CAD-344：基礎は内部の桁の下に連続で入る物なので列数ベースのまま。文言だけ実態に合わせた（金額不変） */
   }
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
   else { work("domaCon", "土間コンクリート", area, "㎡"); if (S.floor === "oki"){ okiRows(area, per); floorFin(Math.max(0, area - tatArea()), "1階 "); } else work("domaFin", "土間仕上げ", area, "㎡"); if (two) floorFin(area, "2階 "); }
@@ -11045,6 +11045,46 @@ function zoInt(W, D, yose, two){
     return {n: rows * per, rows: per > 0 ? rows : 0, per, lim, W, D};
   } catch(e){ return {n: 0, rows: 0}; }
 }
+/* CAD-344：内部の柱の位置と本数の正本。支持ライン（内部の桁の通り）と
+   間仕切りの交点だけに立てる（決まり：内部の柱は梁の交点・壁の上にだけ。
+   部屋の真ん中の等分格子には立てない）。
+   - ラインの位置の決め方は従来通り（等分→910通りに寄せ→端から455以上）。
+   - 交点が framePos の柱と重なる所は、同じ柱なので数えない。
+   - 開口の中・開放形の間仕切りとの交点・外周の上には立てない。
+   完成図の表示（pvFrame）と見積（内部の柱・金物・ご注意行）はここでそろえる。 */
+function intPostList(){
+  try {
+    if (S.mode !== "zo") return {list: [], n: 0};
+    const R = roof(); if (R.two) return {list: [], n: 0};
+    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
+    if (!(zi.rows > 0) || !(zi.per > 0)) return {list: [], n: 0};
+    const b = bbox(), F = framePos();
+    const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+    const wallK = new Set((F.posts || []).map(p => Math.round(p.x * 2) + "," + Math.round(p.y * 2)));
+    const pruns = (F.runs || []).filter(r => r.kind === "p" && !r.op);
+    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
+    const out = [], seen = new Set();
+    for (let i2 = 1; i2 <= zi.rows; i2++){
+      let lc = org + span * i2 / (zi.rows + 1);
+      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+      pruns.forEach(r => {
+        const den = spanY ? r.uy : r.ux;
+        if (Math.abs(den) < 1e-9) return;
+        const t = spanY ? (lc - r.ay) / r.uy : (lc - r.ax) / r.ux;
+        if (t < -1e-9 || t > r.L + 1e-9) return;
+        const px = r.ax + r.ux * t, py = r.ay + r.uy * t;
+        if (px <= b.x0 + 1 || px >= b.x1 - 1 || py <= b.y0 + 1 || py >= b.y1 - 1) return;
+        if ((r.ops || []).some(o => t > o[0] + 1 && t < o[1] - 1)) return;
+        const kk = Math.round(px * 2) + "," + Math.round(py * 2);
+        if (wallK.has(kk) || seen.has(kk)) return;
+        seen.add(kk);
+        out.push({x: px, y: py});
+      });
+    }
+    out.sort((a, c) => a.x - c.x || a.y - c.y);
+    return {list: out, n: out.length};
+  } catch(e){ return {list: [], n: 0}; }
+}
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：内部の柱・基礎の行）。この IIFE はラッパーだけだったため除去のみ。相方の roofKey/roofLbl/beamLimit/beamNeeded/zoInt はこのブロックに残る。 */
 </script>
 <script>
@@ -13416,39 +13456,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try {
       if (S.mode === "zo"){
         const R = roof(); two = !!R.two;
-        const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
-        if (zi.n > 0 && zi.rows > 0 && zi.per > 0){
-          intN = zi.n;
-          const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
-          const pruns = F6.runs.filter(r => r.kind === "p"), seen = new Set();
-          for (let i2 = 1; i2 <= zi.rows; i2++) for (let j2 = 1; j2 <= zi.per; j2++){
-            const fx = R.spanY ? j2 / (zi.per + 1) : i2 / (zi.rows + 1);
-            const fy = R.spanY ? i2 / (zi.rows + 1) : j2 / (zi.per + 1);
-            let px = b.x0 + b.w * fx, py = b.y0 + b.h * fy;
-            // 支持ライン（内部の桁の通り）は 910 通りに寄せる
-            const sp = R.spanY ? b.h : b.w;
-            if (sp > M4){
-              if (R.spanY) py = Math.max(b.y0 + M2, Math.min(b.y1 - M2, b.y0 + Math.round((py - b.y0) / M4) * M4));
-              else px = Math.max(b.x0 + M2, Math.min(b.x1 - M2, b.x0 + Math.round((px - b.x0) / M4) * M4));
-            }
-            // ラインの近くで間仕切りと交わる点があれば、柱はそこに立てる（部屋の真ん中の格子にはしない）
-            let best = null, bd = M2;
-            pruns.forEach(r => {
-              const den = R.spanY ? r.uy : r.ux;
-              if (Math.abs(den) < 1e-9) return;
-              const t = R.spanY ? (py - r.ay) / r.uy : (px - r.ax) / r.ux;
-              if (t < 0 || t > r.L) return;
-              const qx = r.ax + r.ux * t, qy = r.ay + r.uy * t, dd = Math.hypot(qx - px, qy - py);
-              if (dd < bd){ bd = dd; best = [qx, qy]; }
-            });
-            if (best){ px = best[0]; py = best[1]; }
-            else if (R.spanY) px = b.x0 + Math.round((px - b.x0) / M4) * M4;
-            else py = b.y0 + Math.round((py - b.y0) / M4) * M4;
-            const kk = Math.round(px * 2) + "," + Math.round(py * 2);
-            if (seen.has(kk)) continue; seen.add(kk);
-            posts.push({x: px, y: py, interior: true});
-          }
-        }
+        /* CAD-344：内部の柱は「支持ライン×間仕切り」の交点だけ（intPostList が正本）。
+           以前の等分格子＋近くの交点へ寄せる方式は、交点が無い・遠い所で格子点の
+           まま部屋の真ん中に柱が残った（本人の指摘）。 */
+        const ipl = intPostList(); intN = ipl.n;
+        ipl.list.forEach(p => posts.push({x: p.x, y: p.y, interior: true}));
       }
     } catch(e){}
     const zo = S.mode === "zo", rf = S.mode === "rf";
@@ -27093,6 +27105,7 @@ window.__len309txt = function(){ return null; };
  CAD-341：第9回の合格7枚と作り直し6枚を 337〜340 と同じ変換（512・WebP q90）で収録。第9回は新規キー＋RULES：大きさ size（選択バー #sbSize）・反転 flip（#sbFlip、339報告の予告どおり）・壁まで fit（#sbFit）・形 form（#sbForm292）・戸袋 tobukuro（#sbTob308）・見積書PDF pdf（#pdfBtn）・材料の本数 matnum（#estJumpMat271）。作り直しは既存キーの差し替え：片開き katahiraki・片引き katahiki・クローゼット closet・浴槽 yokuso（SCALE/ORIGIN は新絵の bbox から算出）。腰窓 koshi・小窓 komado は専用キーが無かったので新規キー＋RULES（#toolCh [data-tool='winK'/'winS']）。ICONS 101→110キー、SCALE/ORIGIN 87→96キー。入れられなかった物はなし。
  CAD-342：図面の上の表示物すべての重なり回避を、CAD-316 の反発レイアウトと同じ仕組みに統一（本人の実機の指摘「全てを磁石の反発みたいにできないの？」）。tidyPlanLabels の配置の芯（重なった物だけ空きマスを探す貪欲な探索）を、アンカーへの引き寄せ＋文字同士の押し合い＋太い線・番号丸・光る円は静止障害物として押し出し＋反発だけの仕上げ＋viewBox 内クランプ、の反発ソルバへ作り替え。部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料として動かし、反発でも収まらない物は一番近い空きへ逃がす最終段を追加。対象は #plan に描かれる全 text（寸法の数字・部屋の名前と㎡・状態バッジ・物の名前・間仕切りラベル・ガイド文字・316の札の文字）。大きくずれた文字には 316 と同じ破線の引き出し線（lead342）を元の位置から引く。.zx252 の文字（全体表示では隠れている間仕切りラベル等）は getBBox が取れず材料にできないため、拡大で表示に切り替わった瞬間に tidy をかけ直す（縮小の二重がけ防止つき）。文字の内容・大きさ・見積・保存キーは不変。
  CAD-343：部屋全体の床適用で土間などの置いた範囲が飲み込まれる不具合の修正（本人の動画での指摘）。原因は部屋タップ（HB.__ltSeg50）の CAD-170 ロジックで、印なしレコードが部屋を全面覆っていると「旧版の部屋タップ記録」とみなして全体を置き換えていたため、囲みで置いた土間の床範囲（flDoma）・畳の範囲が無垢などと一緒に消えていた。土間ゾーン（S.zones）は fixAssign のゾーン優先で従来から守られていたが、部屋タップの対象計算でも床を別に払うゾーン（zoneCutQ198）を先に引く形にそろえた。全面置換は、覆う記録が単一の床種類で畳・土間・座上げ・ec印のいずれでもない時だけに限定し、それ以外はすき間だけに置く（すき間ゼロなら置かずトーストで知らせる）。指で囲む部分適用と、土間を後から指定する逆向き（CAD-287）は無変更。未操作の標準状態の見積 digest は不変。
+ CAD-344：平面図で間取りと関係ない所に柱が立つ不具合の修正（本人の指摘）。壁まわりの柱（framePos）は壁ベースで正しく、問題は内部の柱だけだった：pvFrame が外形の等分格子に置き、455mm以内に間仕切りとの交点が無い所では格子点のまま残していたため、部屋の真ん中や間仕切りの端から離れた所に柱が浮き、壁の柱と重なる重複も出ていた。内部の柱の位置と本数の正本として intPostList() を新設し、位置は支持ライン（内部の桁の通り）×間仕切りの交点だけにした（framePos の柱と重なる交点・開口の中・開放形の間仕切り・外周は除く）。表示（pvFrame）と見積（内部の柱・金物・ご注意行の本数）はこの正本でそろえた。内部の桁と内部の基礎は支持ラインの列の物なので列数ベースのまま（基礎の説明文だけ「内部の桁の下」に変更、金額不変）。標準の練習の家（寄棟）の digest は不変。切妻・片流れでは浮いた柱の分だけ内部の柱と金物が減る（正当な変化）。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
