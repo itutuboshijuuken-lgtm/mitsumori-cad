@@ -12712,18 +12712,27 @@ document.addEventListener("click", function(e){
            部屋の残りの部分にだけ新しい仕上げを置く。印つきの記録は pushFloor の
            引き算で置き換わるので、部屋の仕上げ変更は従来通りできる。
            印なしの記録だけで部屋がすき間なく埋まっている場合は、旧版の部屋タップの
-           記録とみなして従来通り部屋全体を置き換える（古いデータでも変更できる）。 */
+           記録とみなして従来通り部屋全体を置き換える（古いデータでも変更できる）。
+           CAD-343: ただし、覆っている記録に「囲みなどで置いた範囲」（畳・土間・
+           座上げ・ec印つき・種類の混ざった記録）が含まれていたら、それは本人が
+           置いた範囲なので置き換えず、すき間だけに置く。床を別に払うゾーン
+           （土間・浴室など、zoneCutQ198 の対象）も、すき間の計算で先に引いて
+           部屋タップで上書きしない。 */
         let targets170 = rects;
         {
           let gaps170 = rects.slice();
-          (S.tatami || []).forEach(o => { if (!o.rm) gaps170 = gaps170.flatMap(p => subFloor140(p, o)); });
+          const cover343 = [];
+          (S.tatami || []).forEach(o => { if (!o.rm){ gaps170 = gaps170.flatMap(p => subFloor140(p, o)); cover343.push(o); } });
+          (S.zones || []).forEach(z => { if (typeof zoneCutQ198 === "function" && zoneCutQ198(z)) gaps170 = gaps170.flatMap(p => subFloor140(p, z)); });
           const roomA170 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
           const gapA170 = gaps170.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
           if (gapA170 > Math.max(1, roomA170 * 0.001)) targets170 = gaps170;
+          else if (cover343.some(o => !o.fk || o.fk === "flDoma" || o.za || o.ec) || new Set(cover343.map(o => o.fk || "")).size > 1) targets170 = gaps170;
         }
-        targets170.forEach(rc => { pushFloor(rc, HB.__floorArm); const rec170 = S.tatami[S.tatami.length - 1]; if (rec170) rec170.rm = 1; });
+        let placed343 = 0;
+        targets170.forEach(rc => { pushFloor(rc, HB.__floorArm); const rec170 = S.tatami[S.tatami.length - 1]; if (rec170) rec170.rm = 1; placed343++; });
         fixAssign(); save(); drawPlan();
-        toast("床を" + FLN[HB.__floorArm] + "にしました（部屋全体）");
+        toast(placed343 ? "床を" + FLN[HB.__floorArm] + "にしました（部屋全体）" : "この部屋は、置いた床の範囲で決まっています");
       } else toast("部屋の上をタップしてください");
       return true;
     }
@@ -27083,6 +27092,7 @@ window.__len309txt = function(){ return null; };
  CAD-340：優先＋水回りの作り直し6枚と第6回前半6枚を 337〜339 と同じ変換（512・WebP q90）で収録。作り直し6枚は既存キーの差し替え：描く kaku（下の大きなボタン「描く・選ぶ」#toolTabs [data-tt='part']）・置く oku（「置く」）・床仕様 yuka（#floorBtn）・トイレ toilet・洗面台 senmen・キッチン kitchen。大きなボタン3つは SCALE/ORIGIN が無かったので今回から原本bbox算出で追加（1.00〜1.08、見え方はほぼ不変）。第6回前半6枚は新規キー＋RULES（#fxMenu）：ピクチャーレール picrail・ロールスクリーン roll・ブラインド blind・ダクトレール duct・スポットライト spot・ペンダントライト pendant。ICONS 95→101キー、SCALE/ORIGIN 78→87キー。入れられなかった物はなし。
  CAD-341：第9回の合格7枚と作り直し6枚を 337〜340 と同じ変換（512・WebP q90）で収録。第9回は新規キー＋RULES：大きさ size（選択バー #sbSize）・反転 flip（#sbFlip、339報告の予告どおり）・壁まで fit（#sbFit）・形 form（#sbForm292）・戸袋 tobukuro（#sbTob308）・見積書PDF pdf（#pdfBtn）・材料の本数 matnum（#estJumpMat271）。作り直しは既存キーの差し替え：片開き katahiraki・片引き katahiki・クローゼット closet・浴槽 yokuso（SCALE/ORIGIN は新絵の bbox から算出）。腰窓 koshi・小窓 komado は専用キーが無かったので新規キー＋RULES（#toolCh [data-tool='winK'/'winS']）。ICONS 101→110キー、SCALE/ORIGIN 87→96キー。入れられなかった物はなし。
  CAD-342：図面の上の表示物すべての重なり回避を、CAD-316 の反発レイアウトと同じ仕組みに統一（本人の実機の指摘「全てを磁石の反発みたいにできないの？」）。tidyPlanLabels の配置の芯（重なった物だけ空きマスを探す貪欲な探索）を、アンカーへの引き寄せ＋文字同士の押し合い＋太い線・番号丸・光る円は静止障害物として押し出し＋反発だけの仕上げ＋viewBox 内クランプ、の反発ソルバへ作り替え。部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料として動かし、反発でも収まらない物は一番近い空きへ逃がす最終段を追加。対象は #plan に描かれる全 text（寸法の数字・部屋の名前と㎡・状態バッジ・物の名前・間仕切りラベル・ガイド文字・316の札の文字）。大きくずれた文字には 316 と同じ破線の引き出し線（lead342）を元の位置から引く。.zx252 の文字（全体表示では隠れている間仕切りラベル等）は getBBox が取れず材料にできないため、拡大で表示に切り替わった瞬間に tidy をかけ直す（縮小の二重がけ防止つき）。文字の内容・大きさ・見積・保存キーは不変。
+ CAD-343：部屋全体の床適用で土間などの置いた範囲が飲み込まれる不具合の修正（本人の動画での指摘）。原因は部屋タップ（HB.__ltSeg50）の CAD-170 ロジックで、印なしレコードが部屋を全面覆っていると「旧版の部屋タップ記録」とみなして全体を置き換えていたため、囲みで置いた土間の床範囲（flDoma）・畳の範囲が無垢などと一緒に消えていた。土間ゾーン（S.zones）は fixAssign のゾーン優先で従来から守られていたが、部屋タップの対象計算でも床を別に払うゾーン（zoneCutQ198）を先に引く形にそろえた。全面置換は、覆う記録が単一の床種類で畳・土間・座上げ・ec印のいずれでもない時だけに限定し、それ以外はすき間だけに置く（すき間ゼロなら置かずトーストで知らせる）。指で囲む部分適用と、土間を後から指定する逆向き（CAD-287）は無変更。未操作の標準状態の見積 digest は不変。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
