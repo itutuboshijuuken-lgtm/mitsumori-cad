@@ -2208,11 +2208,11 @@ function dimOverlay(P, sc){
     out.push(`<line x1="${A0[0]}" y1="${A0[1]}" x2="${C0[0]}" y2="${C0[1]}" stroke="${col}" stroke-width=".8"/>`);
     for (let k = 0; k < ts.length; k++){ const q0 = P([a[0] + u[0] * ts[k] + n[0] * off, a[1] + u[1] * ts[k] + n[1] * off]); out.push(`<circle cx="${q0[0]}" cy="${q0[1]}" r="1.8" fill="${col}"/>`); }
     for (let k = 0; k < ts.length - 1; k++){
-      const d = ts[k + 1] - ts[k]; if (d * sc < 18) continue;
+      const d = ts[k + 1] - ts[k]; const tiny348 = d * sc < 18;   /* CAD-348：小さすぎる区間も数字を消さない（消すと区間の合計が全長と合わなくなる）。全体表示では隠し、拡大で出す（zx252） */
       const ex = (d * sc < dimTxtW319(fmtDR319(d)) * 6.6 + 6 && k % 2) ? 14 / sc : 0;
       const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 130 + ex), a[1] + u[1] * mid + n[1] * (off + 130 + ex)]);
       const tw252 = dimTxtW319(fmtDR319(d)) * 6.6 / sc, crossed252 = swings252.some(sw => sw.e === i && Math.hypot(Math.max(0, Math.abs(mid - sw.t) - tw252 / 2), off + 130 + ex) < sw.r);   /* CAD-252：ドアの開く線と重なる寸法文字は全体表示で隠し、拡大で出す */
-      out.push(tx(q0[0], q0[1], fmtDR319(d), ts.length > 2 ? "#C2571A" : col, vert, crossed252 ? "zx252" : ""));
+      out.push(tx(q0[0], q0[1], fmtDR319(d), ts.length > 2 ? "#C2571A" : col, vert, (crossed252 || tiny348) ? "zx252" : ""));
       chainVals.add(Math.round(d));
     }
     if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 330), m[1] + n[1] * (off + 330)]); out.push(tx(q0[0], q0[1], `全長 ${fmtDR319(L)}${e.set ? "" : "（自動）"}`, col, vert)); }
@@ -8066,12 +8066,16 @@ function roomsCalc(){
   const ins = new Uint8Array(NX * NY), blk = new Uint8Array(NX * NY);
   for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) if (inside([cx(i), cy(j)], p)) ins[j * NX + i] = 1;
   segs.forEach(q => {
-    const x0 = Math.min(q.x1, q.x2) - 60, x1 = Math.max(q.x1, q.x2) + 60, y0 = Math.min(q.y1, q.y2) - 60, y1 = Math.max(q.y1, q.y2) + 60;
-    const vx = q.x2 - q.x1, vy = q.y2 - q.y1, L2 = vx * vx + vy * vy || 1;
+    /* CAD-348：間仕切りが壁まで少し届いていない（端のすき間 300mm 以内）時は、届いているものとして部屋を分ける。
+       なぞった端が壁の手前で止まると部屋がつながり、部屋の名前・面積がずれるため。判定（blk）だけの延長で、線そのものは変えない */
+    const Lq348 = Math.hypot(q.x2 - q.x1, q.y2 - q.y1) || 1, ux348 = (q.x2 - q.x1) / Lq348, uy348 = (q.y2 - q.y1) / Lq348, EXT348 = 300;
+    const ax1 = q.x1 - ux348 * EXT348, ay1 = q.y1 - uy348 * EXT348, ax2 = q.x2 + ux348 * EXT348, ay2 = q.y2 + uy348 * EXT348;
+    const x0 = Math.min(ax1, ax2) - 60, x1 = Math.max(ax1, ax2) + 60, y0 = Math.min(ay1, ay2) - 60, y1 = Math.max(ay1, ay2) + 60;
+    const vx = ax2 - ax1, vy = ay2 - ay1, L2 = vx * vx + vy * vy || 1;
     for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++){
       const X = cx(i), Y = cy(j); if (X < x0 || X > x1 || Y < y0 || Y > y1) continue;
-      let t = ((X - q.x1) * vx + (Y - q.y1) * vy) / L2; t = Math.max(0, Math.min(1, t));
-      if (Math.hypot(X - q.x1 - t * vx, Y - q.y1 - t * vy) < 60) blk[j * NX + i] = 1;
+      let t = ((X - ax1) * vx + (Y - ay1) * vy) / L2; t = Math.max(0, Math.min(1, t));
+      if (Math.hypot(X - ax1 - t * vx, Y - ay1 - t * vy) < 60) blk[j * NX + i] = 1;
     }
   });
   // 撤去する壁のまわりは、部屋の文字を置かない（文字が撤去の線に重ならないように）
@@ -8804,11 +8808,11 @@ function ltSvg(P, sc){
   return (S.lights || []).map((l, i) => {
     const c = P([l.x, l.y]), r = l.k === "down" ? Math.max(5, 75 * sc) : Math.max(7, 200 * sc), col = LTCOL[l.act || "new"], sw = Math.max(1, 8 * sc);
     const isSel = sel && sel.t === "lt" && sel.i === i;
-    let h = `<g>${isSel ? `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + Math.max(sw * 2, 6)}" fill="#FF00C8" fill-opacity=".35"/>` : ""}<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${col}" stroke-width="${sw}"${l.act === "remove" ? ' stroke-dasharray="' + sw * 2 + " " + sw + '"' : ""}/>`;
+    let h = `<g>${isSel ? `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + Math.max(sw * 2, 6)}" fill="#FF00C8" fill-opacity=".35"/>` : ""}<g data-sno="lt348"><circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${col}" stroke-width="${sw}"${l.act === "remove" ? ' stroke-dasharray="' + sw * 2 + " " + sw + '"' : ""}/>`;
     if (l.k === "down") h += `<circle cx="${c[0]}" cy="${c[1]}" r="${r * 0.3}" fill="${col}"/>`;
     else h += `<path d="M${c[0] - r * 0.7} ${c[1]}H${c[0] + r * 0.7}M${c[0]} ${c[1] - r * 0.7}V${c[1] + r * 0.7}" stroke="${col}" stroke-width="${sw}"/>`;
     if (l.act === "remove") h += `<path d="M${c[0] - r * 0.6} ${c[1] - r * 0.6}L${c[0] + r * 0.6} ${c[1] + r * 0.6}M${c[0] + r * 0.6} ${c[1] - r * 0.6}L${c[0] - r * 0.6} ${c[1] + r * 0.6}" stroke="#C62828" stroke-width="${sw}"/>`;
-    h += `<text x="${c[0]}" y="${c[1] + r + 8}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:800;fill:${col}">${l.k === "down" ? "DL" : "CL"}</text>`;
+    h += `</g><text x="${c[0]}" y="${c[1] + r + 8}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:800;fill:${col}">${l.k === "down" ? "DL" : "CL"}</text>`;   /* CAD-348：記号の丸（data-sno 内）は tidy342 の障害物。文字は外に残して従来どおり避け合う */
     return h + "</g>";
   }).join("");
 }
@@ -26515,14 +26519,14 @@ window.__len309txt = function(){ return null; };
       if (nm){
         var yMin = yr[0] + fs * 0.8, yMax = yr[1] - (extra ? 36 : 20);
         var cy = yMax >= yMin ? Math.max(yMin, Math.min(yMax, c[1])) : (yr[0] + yr[1]) / 2 - 3;
-        g += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" style="font-size:' + fs + 'px;font-weight:800;fill:' + (on ? "#C2571A" : "#2563B0") + ';fill-opacity:' + (on ? ".9" : ".62") + ';pointer-events:none">' + nm + '</text>';
-        g += '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
-        if (noWork) g += '<text x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
-        else if (flTxt) g += '<text x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#2F6B5F;fill-opacity:.75;pointer-events:none">' + flTxt + '</text>';
+        g += '<text class="halo" x="' + cx + '" y="' + cy + '" text-anchor="middle" style="font-size:' + fs + 'px;font-weight:800;fill:' + (on ? "#C2571A" : "#2563B0") + ';fill-opacity:' + (on ? ".9" : ".62") + ';pointer-events:none">' + nm + '</text>';
+        g += '<text class="halo" x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';   /* CAD-348：床の絵の上でも読める様に白の縁取り */
+        if (noWork) g += '<text class="halo" x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
+        else if (flTxt) g += '<text class="halo" x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#2F6B5F;fill-opacity:.75;pointer-events:none">' + flTxt + '</text>';
       } else {
         var cyA = (yr[0] + yr[1]) / 2 + 4;
-        g += '<text x="' + cx + '" y="' + cyA + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
-        if (noWork) g += '<text x="' + cx + '" y="' + (cyA + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
+        g += '<text class="halo" x="' + cx + '" y="' + cyA + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
+        if (noWork) g += '<text class="halo" x="' + cx + '" y="' + (cyA + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
       }
       g += "</g>";
       h += g;
@@ -27144,6 +27148,7 @@ window.__len309txt = function(){ return null; };
  CAD-345：平面図に通り芯の符号（番付）を追加（本人の要望）。付け方は実物の木造住宅の図面の慣習（令和3年・木造建築士試験の標準解答例ほか study138-夜の部）：X方向の通り（縦の線）＝いろは番付、Y方向の通り（横の線）＝数字番付。起点はアプリの座標の原点の角（左上）で、いろはは左から右へ、数字は上から下へ増やす（実物ノートに起点の明記が無いため原点に合わせた）。通りの位置はモジュール（910／1000）の並び＋外形の終端。出す画面は間取り画面（#plan）と完成図の平面図プレビュー（#pvSvg）の両方で、表示条件は常時（番付は図面の枠の一部で、柱・間柱表示の入切とは独立なため連動させない）。間取り画面では寸法チェーン（300mm外）より内側に置き、符号の組は data-sno で包んで CAD-342 のラベル反発の対象から外した（符号の丸は tidy 側の障害物になる）。プレビューは余白 mT・mL を 68→94 に広げて全長線の外に置いた。表示だけの変更で、見積 digest・保存キー・操作感は不変。
  CAD-346：完成図の平面図プレビュー（#pvSvg）を色なしの白地の線画にした（本人の実機フィードバック「平面図、色なくていいよ」）。色の出どころは pvRender 本体ではなく CAD-263 の build() が注入する床 pattern・影・壁の断面ハッチ・文字の縁取りで、上塗り群（277フロアタイル・278 CF・279無垢・280土間・281/290/295板の向き・282全体の床・286畳）は全て #d263／#g263 前提だったため、build() の冒頭で止めるだけで連鎖で全部止まる。pvRender 本体の線画（壁・建具・寸法・通り芯の符号・部屋名）と、柱・間柱表示の切り替えは従来通り。間取り画面（#plan）の作業用の色分けは対象外で残した。表示だけの変更で、見積 digest・保存キー・操作感は不変。
  CAD-347：図面一式の第1弾として「伏図」を追加（本人の決定 2026-11-18）。完成図の切り替えに「伏図」ボタンを足し（新築・増築だけ。組み込み方は CAD-129 既存図と同じ）、中で基礎伏図・床伏図・小屋伏図を切り替える。描く要素は既存の計算で裏付けが取れている物だけ：基礎伏図＝立ち上がり（外まわりは母屋側の辺を除く perK と同じ・幅150）＋内部の立ち上がり（内部の桁の下の支持ライン、zoInt の列）；床伏図＝土台（母屋側の辺を除く lensD と同じ）・大引・小つなぎ／根太・鋼製束・柱・内部の柱（位置と本数は framePos・gridLines264・intPostList と一致）；小屋伏図＝桁・小屋梁・母屋・棟木・小屋束・隅木（寄棟）・内部の桁と柱（roof・zoInt から）。番付は CAD-345 の gridSym345 とそろえ、全体寸法と図面名を付けた。実物の伏図の形に合わせ間柱・開口は描かない。描かない物：人通口・アンカーボルト（見積で数えていない）、継手・仕口の位置、下屋の分、2階建ての2階床伏図（床梁の物差しが未整備＝構造計算ノート R8 のため、910間隔の絵が裏付けに見えるのを避ける）。リフォーム・部分工事では出さない（見積が構造材を拾わないので、出すと根拠の無い図になる）。2階建てでは基礎・床は1階、小屋は最上階のデータを flLoad で差し替えて描く（見積の階ごとの計算と同じ）。表示だけの追加で、見積 digest・保存キー・操作感は不変。
+ CAD-348：Claude の指摘（2026-11-18「パース素材と平面図そろえ」）への修正。再現確認（repro348）で裏が取れた4件だけを直した。(1) 寸法チェーン：画面上で小さすぎる区間（17mm等）は数字自体を描いておらず、区間の合計が全長と合わなかった（指摘の 1,820/1,803/1,820/2,275＋全長7,735 をそのまま再現）。小さい区間も数字を描き、全体表示では隠し拡大で出す zx252 にした。(2) 部屋名「洗面所」が畳の部屋に付く件：間仕切りが壁まで 200mm 届いていないと部屋計算でつながり、洗面台のある大きな部屋が「洗面所」になってラベルが畳の側に置かれる事を再現。部屋を分ける判定だけ、間仕切りの両端を 300mm 伸ばして判定する（線そのものは変えない）。(3) 部屋ラベルの文字に白の縁取り（.halo）を付け、木目などの床の絵の上でも読める様にした（色と濃さは本人の決めのまま）。(4) 照明の丸記号を tidy342 の障害物に加え、部屋ラベルが丸の上に乗らない様にした。再現しなかった2件（通り芯の符号と寸法数字の重なり／左端の符号がタブに隠れる）は触っていない。「突き抜け18」の警告表示は正しく出る事を確認（端が出た操作経路は実データが無く特定できず）。見積 digest・保存キーは不変のはず。
  CAD-332：第4回作り直しの合格8枚を無加工PNGのまま差し替え（スイッチ・手すり・下地補強・カーテンレール・アクセントクロス・火災警報器・室内物干し・板張り。いずれも室内図の項目）。同じフォルダの下駄箱は CAD-331 で入れた検証済み版が正のため差し替えない。
    本人の実機の指摘（「わかりにくすぎる」「背景も黒じゃない方が見やすい」）への直し。
    ・使う絵は、ChatGPT のアイコン画像の中央の「実物の絵」だけを切り出した物。
