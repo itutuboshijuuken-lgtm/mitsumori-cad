@@ -2034,7 +2034,7 @@ HB.__cands = cands;
      CAD-223：照明の配置中（置いた照明が選択中）も同じ。解除→再描画で押した要素が消えて
      クリックが取り消され、次の1つが1回のタップで置けなくなるため、押した瞬間は解除しない。
      タップの意味（選び直し／次を置く）はクリック側の ltPlanClick（段4・本体）が決める。 */
-  if (HB.__pageM && !onItem && sel && PV.z <= 1 && !(HB.__put && sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) && !(ltTool && sel.t === "lt")){ sel = null; drawPlan(); }
+  if (HB.__pageM && !onItem && sel && PV.z <= 1 && !(HB.__put && sel.t === "o" && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) && !(ltTool && sel.t === "lt")){ sel = null; if (typeof window.__dpDefer374 === "function") window.__dpDefer374(); else drawPlan(); }   /* CAD-374：解除は即時、描き直しだけ遅らせる（この指がピンチの 1 本目なら、ピンチが終わるまで描かない） */
   if (false && !HB.__pageM && !tool && PV.z > 1 && !onItem){ try { $("plan").setPointerCapture(e.pointerId); } catch(er){} const r = $("plan").getBoundingClientRect(); panning = {p: [e.clientX, e.clientY], c: [PV.cx, PV.cy], k: (PV.W / PV.z) / r.width, dx: 0, dy: 0}; $("plan").style.willChange = "transform"; }
 }, true);
 $("plan").addEventListener("pointermove", e => {
@@ -4080,6 +4080,9 @@ const PLAN_FONT_K = 0.6;
 function tidyPlanLabels(){
   const svg = $("plan"); if (!svg || !svg.getScreenCTM) return;
   const root = svg.getScreenCTM(); if (!root || !(Math.abs(root.a) > 1e-9) || !(Math.abs(root.d) > 1e-9)) return;  /* CAD-137: 変換が縮退 (レイアウト未確定) の時はラベルを動かさない */
+  /* CAD-374：同じ DOM・同じ拡大側・同じ表示大きさでは計算し直さない（境の往復や連鎖の重複で連発させない。DOM は drawPlan のたびに入れ替わるので、その時は必ず計算する） */
+  const memoKey374 = (typeof PV !== "undefined" && PV.z >= 1.5 ? "z" : "a") + "|" + Math.round(svg.getBoundingClientRect().width / 50) + "x" + Math.round(svg.getBoundingClientRect().height / 50);
+  if (svg.__tidyMemo374 && svg.__tidyMemo374.dom === svg.firstElementChild && svg.__tidyMemo374.key === memoKey374) return;
   const texts = [...svg.querySelectorAll("text")].filter(t => !t.closest("#planInk") && !t.closest("[data-sno]"));
   texts.forEach(t => {
     if (t.__tidy342) return;   /* CAD-342：同じ DOM に tidy をかけ直しても、縮小は1回だけ */
@@ -4089,6 +4092,14 @@ function tidyPlanLabels(){
     if (t.classList.contains("halo")){ const sw = parseFloat(cs.strokeWidth); if (sw) t.style.strokeWidth = (sw * PLAN_FONT_K) + "px"; }
   });
   svg.querySelectorAll("line.lead342").forEach(l => l.remove());   /* CAD-342：かけ直しの前に、前回の引き出し線を消す */
+  /* CAD-374：基の transform の記録と復元。記録は tidy 本体の入口（連鎖の後段ラッパーが
+     translate を足す前）に取る：後段が足した分まで「基」にしてしまうと、戻した時に残る。
+     前回 tidy が付けた translate は基へ戻してから計算し直すので、同じ DOM へかけ直しても
+     ずれが積み重ならず、縮小側でかけ直せば全体表示の並びに戻る */
+  texts.forEach(t => {
+    if (t.__tidyBase374 === undefined) t.__tidyBase374 = t.getAttribute("transform") || "";
+    else { const b374 = t.__tidyBase374; if (b374) t.setAttribute("transform", b374); else t.removeAttribute("transform"); }
+  });
   const inv = root.inverse(), items = [], grp342 = new Map();
   texts.forEach(t => {
     let bb; try { bb = t.getBBox(); } catch(e){ return; }
@@ -4199,7 +4210,8 @@ function tidyPlanLabels(){
       const m = rec.m, det = m.a * m.d - m.b * m.c;
       if (!(Math.abs(det) > 1e-9)) return;
       const lx = (m.d * dx - m.c * dy) / det, ly = (-m.b * dx + m.a * dy) / det;
-      rec.t.setAttribute("transform", (rec.t.getAttribute("transform") || "") + ` translate(${lx} ${ly})`);
+      if (rec.t.__tidyBase374 === undefined) rec.t.__tidyBase374 = rec.t.getAttribute("transform") || "";   /* CAD-374：tidy が触る前の transform を控える */
+      rec.t.setAttribute("transform", rec.t.__tidyBase374 + ` translate(${lx} ${ly})`);
     });
     it.x0 += dx; it.x1 += dx; it.y0 += dy; it.y1 += dy;
     if (Math.hypot(dx, dy) >= 18){
@@ -4213,6 +4225,7 @@ function tidyPlanLabels(){
       } catch(e){}
     }
   });
+  svg.__tidyMemo374 = { dom: svg.firstElementChild, key: memoKey374 };   /* CAD-374：計算済みの印 */
 }
 
 let nt = null;
@@ -10720,7 +10733,7 @@ body.mSel #stM .mtools, body.mSel #stM .flowNext, body.mSel #hgChip{display:none
   setInterval(() => {
     const b = document.getElementById("selBar");
     const on = typeof step !== "undefined" && step === "M" && b && !b.hidden;
-    if (document.body.classList.contains("mSel") !== !!on){ document.body.classList.toggle("mSel", !!on); try { if (!(window.__dpAt338 && Date.now() - window.__dpAt338 < 250)) drawPlan(); } catch(e){} }
+    if (document.body.classList.contains("mSel") !== !!on){ document.body.classList.toggle("mSel", !!on); try { if (typeof window.__pinchBusy374 === "function" && window.__pinchBusy374()){ if (typeof window.__dpDefer374 === "function") window.__dpDefer374(); } else if (!(window.__dpAt338 && Date.now() - window.__dpAt338 < 250)) drawPlan(); } catch(e){} }   /* CAD-374：ピンチ中なら描き直しを遅らせる */
   }, 150);
 })();
 </script>
@@ -22127,7 +22140,7 @@ function winWarn250(n0){
 /* ===== CAD-252：表示まわりの直し（小さい文字は拡大時だけ出す／壁に吸い付く所の予告） ===== */
 (function(){ "use strict";
   /* 全体表示（1.5倍未満）では .zx252 の文字（間仕切りラベル・ドアの弧と重なる寸法）を隠し、拡大したら出す */
-  try { setInterval(() => { try { const sv = document.getElementById("plan"); if (!sv || typeof PV === "undefined") return; const was252 = sv.classList.contains("zlo252"); sv.classList.toggle("zlo252", !(PV.z >= 1.5)); if (was252 && !sv.classList.contains("zlo252") && typeof tidyPlanLabels === "function") tidyPlanLabels();   /* CAD-342：隠れていた文字が出てきたら反発をかけ直す */ } catch(e){} }, 400); } catch(e){}
+  try { var lastZ374 = null, zChAt374 = 0, tidySide374 = null, lastSide374 = null, sideRun374 = 0; setInterval(() => { try { const sv = document.getElementById("plan"); if (!sv || typeof PV === "undefined") return; sv.classList.toggle("zlo252", !(PV.z >= 1.5)); /* CAD-374：tidy は境を越えた瞬間ではなく、z が 350ms 変わらず落ち着いた時にだけ、拡大側・縮小側とも 1 回だけかける。往復で連発させず、戻った時の並びも全体表示に直る */ const now374 = Date.now(); if (lastZ374 === null || Math.abs(PV.z - lastZ374) > 0.002){ lastZ374 = PV.z; zChAt374 = now374; } const side374 = PV.z >= 1.5; if (side374 === lastSide374) sideRun374++; else { lastSide374 = side374; sideRun374 = 1; } if (tidySide374 === null) tidySide374 = side374; else if (side374 !== tidySide374 && sideRun374 >= 2 && now374 - zChAt374 >= 350 && !(typeof window.__pinchBusy374 === "function" && window.__pinchBusy374())){ tidySide374 = side374; if (typeof tidyPlanLabels === "function") tidyPlanLabels(); } } catch(e){} }, 100); } catch(e){}
   /* ---- 壁に吸い付く所の予告：構えている間だけ、指の位置で「付く予定の壁」を太線で光らせる。
          予告の計算は配置の実物（nearestHost／25px判定／空きが無い時の fallback／addEquip の壁選び）を
          そのまま複製した読み取り専用。配置そのものの動きは従来どおり。 ---- */
@@ -24711,6 +24724,12 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       if (!dst && !create) return null;
       if (dst) dst.remove();
       dst = src.cloneNode(true);
+      /* CAD-374：複製側の image は元の image への参照（use）に置き換え、同じ画像データを 2 重に持たない様にする（見た目は不変） */
+      try {
+        var sImgs374 = src.querySelectorAll("image"), dImgs374 = dst.querySelectorAll("image");
+        sImgs374.forEach(function(im, ix){ if (!im.getAttribute("id")) im.setAttribute("id", "imgU374-" + (src.getAttribute("id") || "pat") + "-" + ix); });
+        dImgs374.forEach(function(im, ix){ var ref = sImgs374[ix]; if (!ref || !im.parentNode) return; var u = document.createElementNS(NS, "use"); u.setAttribute("href", "#" + ref.getAttribute("id")); try { u.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#" + ref.getAttribute("id")); } catch(e2){} im.parentNode.replaceChild(u, im); });
+      } catch(e){}
       dst.setAttribute("id", dstId);
       dst.setAttribute("patternTransform", "rotate(90)");
       dst.setAttribute("data-sync281", sig);
@@ -24941,6 +24960,12 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
     if (!root || root.querySelector("#" + dstId)) return;
     var src = root.querySelector("#" + srcId); if (!src) return;
     var p = src.cloneNode(true);
+    /* CAD-374：複製側の image は元の image への参照（use）に置き換え、画像データを共有する */
+    try {
+      var sImgs374 = src.querySelectorAll("image"), dImgs374 = p.querySelectorAll("image");
+      sImgs374.forEach(function(im, ix){ if (!im.getAttribute("id")) im.setAttribute("id", "imgU374-" + srcId + "-" + ix); });
+      dImgs374.forEach(function(im, ix){ var ref = sImgs374[ix]; if (!ref || !im.parentNode) return; var u = document.createElementNS(NS, "use"); u.setAttribute("href", "#" + ref.getAttribute("id")); try { u.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", "#" + ref.getAttribute("id")); } catch(e2){} im.parentNode.replaceChild(u, im); });
+    } catch(e){}
     p.setAttribute("id", dstId); p.setAttribute("patternTransform", "rotate(90)");
     (src.parentNode || root).appendChild(p);
   }
@@ -28973,6 +28998,31 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
     } catch(e){}
   }, 700);
   HB.__hide369 = {on: function(){ return on369; }, set: set369};
+})();
+</script>
+
+<script>
+/* ===== CAD-374：ピンチ中の余分な描き直しを抑える =====
+   選択中のピンチ前後に走る drawPlan（実測 1 回約 83ms）の発生源は 2 つ：
+   (1) 間取り pointerdown の選択解除（1 本目の指が空き地に触れた瞬間に発火）
+   (2) mSel 見張り（150ms）が選択バーの表示切替で発火し、選択直後のピンチに重なる
+   どちらも「ピンチかもしれない間」は描き直しを遅らせ、ピンチが終わってから
+   1 回だけ流す。普通のタップでは約 110ms 遅れるだけで、動作は従来通り。 */
+(function(){ "use strict";
+  window.__pinchBusy374 = function(){
+    try { const s = (typeof HB !== "undefined" && HB.__pinch153State) ? HB.__pinch153State() : null; return !!(s && (s.mode === "pinch" || (s.mode === "dead" && s.n > 0))); } catch(e){ return false; }
+  };
+  let pend374 = false;
+  window.__dpDefer374 = function(){
+    if (pend374) return; pend374 = true;
+    let tries = 0;
+    const tick374 = () => {
+      if (window.__pinchBusy374() && tries < 20){ tries++; setTimeout(tick374, 150); return; }
+      pend374 = false;
+      try { drawPlan(); } catch(e){}
+    };
+    setTimeout(tick374, 110);
+  };
 })();
 </script>
 
