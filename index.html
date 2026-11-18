@@ -765,6 +765,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     </div>
     <div id="priceList"></div>
     <button class="btn" id="itemAdd" type="button" style="width:100%;margin-top:8px">＋ 材料を手で追加</button>
+    <h2>掛率の設定（定価×掛率）</h2>
+    <div class="card" id="kakeList379"></div>
     <h2>工事の単価（原価）</h2>
     <div class="card" id="workList"></div>
     <div class="row"><button class="btn pri" id="backFromP" type="button">戻る</button></div>
@@ -6013,6 +6015,7 @@ function drawExtras(){
     if ("fukkyu" in e) h += tg(i, "fukkyu", "周辺の床・壁 解体復旧", "復旧なし");
     if ("ashiba" in e){ h += tg(i, "ashiba", "足場あり", "足場なし"); if (e.ashiba) h += `<button class="set" data-xa="${i}" type="button"><span>足場の面積<small>${e.ashA > 0 ? "手で入れた面積" : "大きさから自動（タップで変更）"}</small></span><b>${fmt(ashibaOf(e), 1)}㎡</b></button>`; }
     if (e.k === "dodai") h += `<div class="seg">${[["anchor", "ケミカルアンカー"], ["mashi", "基礎増し打ち"]].map(([v, n]) => `<button data-ti="${i}" data-tk="method" data-tv="${v}" aria-pressed="${e.method === v}" type="button">${n}</button>`).join("")}</div><p class="hint" style="margin:6px 2px 0">お客様向けの見積には、両工法の説明も記載されます。</p>`;
+    h += tkSelHTML379(e, i);   /* CAD-379：種類（定価×掛率）の選択欄（対象カテゴリだけ出る） */
     return h + `</div>`;
   }).join("");
   $("exList").querySelectorAll("[data-xw]").forEach(el => el.onchange = () => { if (el.value === "") return; S.extras[+el.dataset.xw].w = S.edges[+el.value].v / 1000; save(); drawExtras(); });
@@ -6022,6 +6025,7 @@ function drawExtras(){
   $("exList").querySelectorAll("[data-xn]").forEach(el => el.oninput = () => { S.extras[+el.dataset.xn].name = el.value; save(); });
   $("exList").querySelectorAll("[data-xi]").forEach(b => b.onclick = () => { const e = S.extras[+b.dataset.xi], f = EXT[e.k].f.find(x => x[0] === b.dataset.xf); openPad({title: `${EXT[e.k].n}：${f[1]}`, unit: f[2] || "", value: e[f[0]], done: v => { e[f[0]] = v || 0; save(); drawExtras(); }}); });
   $("exList").querySelectorAll("[data-ti]").forEach(b => b.onclick = () => { const e = S.extras[+b.dataset.ti], v = b.dataset.tv; e[b.dataset.tk] = v === "1" ? true : v === "0" ? false : v; save(); drawExtras(); });
+  $("exList").querySelectorAll("[data-tk379]").forEach(el => el.onchange = () => { const e = S.extras[+el.dataset.tk379]; if (el.value) e.tk379 = el.value; else delete e.tk379; save(); drawExtras(); });   /* CAD-379 */
 }
 /* ---------- ⑤ 見積 ---------- */
 // 材の長さ：個人事業主が運べるのは4mまで（6mは使わない）。4mより長い所は、4m材を継いで数える。通し柱だけは6mまで（継げない）
@@ -6802,11 +6806,11 @@ function calc00(){
         if (nin > 0){ const w = workP("ninku"); rows.push({name: "大工手間（和室→洋室）", spec: `${fmt(Math.ceil(nin * 2) / 2, 1)}人工 × ${fmt(w.p)}円（床0.25・壁0.1・天井0.08人工/㎡で計算）`, qty: "", cost: Math.ceil(nin * 2) / 2 * w.p, avg: true, fix: {kind: "work", key: "ninku"}}); }
       }
       else if (e.k === "tearai"){
-        const n2 = Math.max(1, Math.round(e.n)); work("tearaiHon", "手洗い器（壁付）", n2, "台"); work("tearaiWork", "手洗い器 取付・給排水", n2, "台");
+        const n2 = Math.max(1, Math.round(e.n)); { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null; if (tk379) rows.push(tkRowObj379("手洗い器 " + tk379.name, tk379, n2)); else work("tearaiHon", "手洗い器（壁付）", n2, "台"); } work("tearaiWork", "手洗い器 取付・給排水", n2, "台");   /* CAD-379 */
       }
       else if (e.k === "senmen"){
         const n2 = Math.max(1, Math.round(e.n));
-        if (e.size === "600") work("sHon600", "洗面化粧台 W600", n2, "台"); else work("sHon", "洗面化粧台 W750", n2, "台"); if (e.tear){ work("sTear", "洗面化粧台 既存撤去", n2, "台"); addG("pla", 0.4 * n2, 30 * n2); }
+        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null; if (tk379) rows.push(tkRowObj379("洗面化粧台 " + tk379.name, tk379, n2)); else if (e.size === "600") work("sHon600", "洗面化粧台 W600", n2, "台"); else work("sHon", "洗面化粧台 W750", n2, "台"); }   /* CAD-379 */ if (e.tear){ work("sTear", "洗面化粧台 既存撤去", n2, "台"); addG("pla", 0.4 * n2, 30 * n2); }
         work("sWork", "洗面化粧台 取付・給排水", n2, "台"); if (e.cf) work("cfShiki", "洗面所 床CF張替え", n2, "式");
       }
       else if (e.k === "uchimado"){
@@ -6870,7 +6874,9 @@ function calc00(){
       }
       else if (e.k === "kitchen"){
         const n2 = Math.max(1, Math.round(e.n)), r = e.w / 2550, pre = e.auto ? "キッチン（図から） " : "キッチン ";
-        const hp = workP("kHon"); rows.push({name: `${pre}本体（I型・間口${fmt(e.w)}）`, spec: `${n2}台 × ${fmt(Math.round(hp.p * r))}円${r !== 1 ? `（2550の${fmt(r * 100)}%）` : ""}`, qty: "", cost: hp.p * r * n2, avg: hp.avg, fix: {kind: "work", key: "kHon"}});
+        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null;   /* CAD-379：定価は間口2550プランの価格なので、間口比は従来どおり掛ける */
+        if (tk379){ const u379 = tkUnit379(tk379); rows.push({name: `${pre}本体（${tk379.name}）`, spec: `${n2}台 × ${fmt(Math.round(u379 * r))}円（定価${fmt(tk379.price)}円${tk379.from ? "〜" : ""} × 掛率${fmt(tkRatePct379(tk379.maker), 1)}%・${tk379.maker}${r !== 1 ? `・間口2550の${fmt(r * 100)}%` : ""}）`, qty: "", cost: u379 * r * n2, avg: false, fix: {kind: "teika379", maker: tk379.maker}, q: n2}); }
+        else { const hp = workP("kHon"); rows.push({name: `${pre}本体（I型・間口${fmt(e.w)}）`, spec: `${n2}台 × ${fmt(Math.round(hp.p * r))}円${r !== 1 ? `（2550の${fmt(r * 100)}%）` : ""}`, qty: "", cost: hp.p * r * n2, avg: hp.avg, fix: {kind: "work", key: "kHon"}}); } }
         if (e.tear){ work("kTear", pre + "既存撤去", n2, "台"); addG("wood", 1.0 * n2, 90 * n2); addG("pla", 0.5 * n2, 30 * n2); }
         work("kWork", pre + "施工費", n2, "台"); work("kHaiso", pre + "配送費", n2, "台"); work("kGencho", pre + "現調費", n2, "台");
         if (e.setsubi) work("kSetsubi", pre + "給排水・ガス接続", n2, "台");
@@ -6884,7 +6890,7 @@ function calc00(){
       else if (e.k === "ub"){
         const n2 = Math.max(1, Math.round(e.n)), pre = (e.auto || e.zid) ? "ユニットバス（図から） " : "ユニットバス ";
         const ubMk201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード";
-        work("uHon" + e.size, `${pre}${e.size}（${ubMk201}）`, n2, "台");
+        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null; if (tk379) rows.push(tkRowObj379(pre + tk379.name, tk379, n2)); else work("uHon" + e.size, `${pre}${e.size}（${ubMk201}）`, n2, "台"); }   /* CAD-379 */
         if (e.from === "ub" && e.tear){ work("ubKaitai", pre + "既存解体", n2, "台"); addG("pla", 1.2 * n2, 200 * n2); }
         work("uKumi", pre + "組立", n2, "台");
         if (e.setsubi) work("uSetsubi", pre + "給排水・給湯接続", n2, "台");
@@ -6941,9 +6947,11 @@ function calc00(){
       }
       else if (e.k === "toilet"){
         const n2 = Math.max(1, Math.round(e.n)), pre = (e.auto || e.zid) ? "トイレ（図から） " : "トイレ ";
-        if (e.type === "qr"){ work("tQR", pre + "ピュアレストQR（便器＋タンク）", n2, "台"); if (e.tearai) work("tTearai", pre + "手洗い付きタンク 差額", n2, "台"); work("tSB", pre + "ウォシュレットSB", n2, "台"); }
+        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null;   /* CAD-379：種類（定価）を選んだら本体行は定価×掛率の1行にする */
+        if (tk379) rows.push(tkRowObj379(pre + tk379.name, tk379, n2));
+        else if (e.type === "qr"){ work("tQR", pre + "ピュアレストQR（便器＋タンク）", n2, "台"); if (e.tearai) work("tTearai", pre + "手洗い付きタンク 差額", n2, "台"); work("tSB", pre + "ウォシュレットSB", n2, "台"); }
         else if (e.type === "ittai") work(e.remodel ? "tIttaiR" : "tIttai", pre + (e.remodel ? "一体型 GGA3（リモデル）" : "一体型 GGA3"), n2, "台");
-        else work("tTankless", pre + "タンクレス", n2, "台");
+        else work("tTankless", pre + "タンクレス", n2, "台"); }
         if (!e.nw) work("tTear", pre + "既存撤去", n2, "台"); work("tParts", pre + "部材（止水栓・フレキ・フランジ等）", n2, "台"); work("tWork", pre + (e.nw ? "取付手間" : "取替手間"), n2, "台");
         if (e.remodel && e.type !== "ittai") work("tRemodel", pre + "リモデル排水", n2, "台");
         if (!e.nw){ addG("toki", 0.15 * n2, 35 * n2); addG("pla", 0.1 * n2, 10 * n2); }
@@ -7560,6 +7568,7 @@ function fixRow(r){
   if (!r || !r.fix) return;
   const f = r.fix;
   if (f.kind === "work"){ const w = WORK.find(x => x[0] === f.key); openPad({title: w[1], sub: PR.work[f.key] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[f.key] || "", done: v => { PR.work[f.key] = v || 0; saveP(); drawEst(); }}); }
+  else if (f.kind === "teika379"){ const mk = f.maker; openPad({title: `${mk} の掛率`, sub: KAKE379.by[mk] ? "メーカー別の掛率です（空のまま決定で、全体の掛率に戻ります）" : `今は全体の掛率 ${fmt(KAKE379.all, 1)}% を使っています`, unit: "%", value: KAKE379.by[mk] || "", done: v => { if (v == null || !(v > 0)) delete KAKE379.by[mk]; else KAKE379.by[mk] = v; saveKake379(); drawEst(); }}); }
   else if (f.kind === "ninku") openPad({title: "大工の人工（この現場）", sub: `空のまま決定で、坪${fmt(workP("ninkuT").p, 1)}人工の自動に戻ります`, unit: "人工", value: S.ninkuN || "", done: v => { S.ninkuN = v || null; save(); drawEst(); }});
   else if (f.kind === "kotsu"){ const K = S.kotsu = S.kotsu || {}; openPad({title: "現場までの距離（片道）", unit: "km", value: K.km || "", done: v => { K.km = v || 0; save(); drawEst(); }}); }
   else if (f.kind === "shokei") openPad({title: "諸経費（1式）", unit: "円", value: S.shokei.mode === "fix" ? S.shokei.v : "", done: v => { S.shokei = {mode: "fix", v: v || 0}; save(); drawEst(); }});
@@ -9484,6 +9493,7 @@ function drawPrice(){
   $("priceList").querySelectorAll("[data-it]").forEach(b => b.onclick = () => editItem(+b.dataset.it, null, drawPrice));
   $("workList").innerHTML = WORK.map(([k, n, u]) => `<button class="set" data-wk="${k}" type="button"><span>${n}<small>${u}</small></span><b>${PR.work[k] ? fmt(PR.work[k]) : `<span class="kari">仮</span> ${fmt(WORK.find(x => x[0] === k)[4])}`}</b></button>`).join("") + `<p class="hint">「仮」は山口県あたりの平均の目安です。自分の単価を入れると置き換わります。</p>`;
   $("workList").querySelectorAll("[data-wk]").forEach(b => b.onclick = () => { const w = WORK.find(x => x[0] === b.dataset.wk); openPad({title: w[1], sub: PR.work[w[0]] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[w[0]] || "", done: v => { PR.work[w[0]] = v || 0; saveP(); drawPrice(); }}); });
+  if (window.__drawKake379) window.__drawKake379();
 }
 function editItem(i, preset, after){
   const it = i >= 0 ? PR.items[i] : preset || {name: "", cat: "木材", sp: "スギ", t: 105, w: 105, len: 4000, unit: "本", qty: 1, price: ""};
@@ -29336,6 +29346,87 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
   }, 700);
   HB.__pc377 = { on: function(){ return pcOn; }, render: render377, set: pcSet377 };
 })();
+</script>
+
+<script>
+/* ===== CAD-379：定価×掛率（第1弾） =====
+   データは teika-*.md（第1〜5弾）の「そのまま入れる」分だけ（税抜・メーカー公式で直接確認済み）。
+   旧価格の印つき・保留・裏取れずは入れていない。各行：[id, カテゴリ, メーカー, 名前, 定価（税抜・円）, 〜開始価格か, 出典, 確認日]
+   価格は商品のみで工事費は含まない（取付・撤去などの行は従来どおり別に出る）。
+   掛率の保存キー gosei-kakeritsu-v1 は、利用者が掛率を変えた時だけ書く（読み込みでは書かない）。 */
+const TEIKA379 = [
+  ["t-rs", "toilet", "TOTO", "ネオレスト RS（タンクレス）", 327000, 1, "TOTO公式「ネオレスト タイプと価格一覧」", "2026-11-17"],
+  ["t-as", "toilet", "TOTO", "ネオレスト AS（タンクレス）", 409000, 1, "TOTO公式「ネオレスト タイプと価格一覧」", "2026-11-17"],
+  ["t-ls", "toilet", "TOTO", "ネオレスト LS（タンクレス）", 478000, 1, "TOTO公式「ネオレスト タイプと価格一覧」", "2026-11-17"],
+  ["t-exn", "toilet", "TOTO", "ピュアレストEX セット（手洗なし・ウォシュレット付）", 373900, 0, "TOTO公式「ピュアレストEX」商品ページ", "2026-11-17"],
+  ["t-ext", "toilet", "TOTO", "ピュアレストEX セット（手洗あり・ウォシュレット付）", 380700, 0, "TOTO公式「ピュアレストEX」商品ページ", "2026-11-17"],
+  ["t-f4a", "toilet", "TOTO", "ウォシュレット アプリコットF4A（便座のみ）", 218500, 0, "TOTO公式「ピュアレストEX」商品ページ（セット内訳）", "2026-11-17"],
+  ["t-ss", "toilet", "LIXIL", "サティスS（タンクレス）", 356000, 1, "LIXIL公式「サティス」", "2026-11-17"],
+  ["t-sg", "toilet", "LIXIL", "サティスG（タンクレス）", 417000, 1, "LIXIL公式 サティススペシャルサイト", "2026-11-17"],
+  ["t-sx", "toilet", "LIXIL", "サティスX（タンクレス）", 547000, 1, "LIXIL公式 サティススペシャルサイト", "2026-11-17"],
+  ["t-alcf", "toilet", "Panasonic", "アラウーノ L-CLASS（床置き）", 352000, 1, "Panasonic公式ニュースリリース（2026-09-02）", "2026-11-17"],
+  ["t-alcs", "toilet", "Panasonic", "アラウーノ L-CLASS（セミフロート）", 382000, 1, "Panasonic公式ニュースリリース（2026-09-02）", "2026-11-17"],
+  ["t-as160", "toilet", "Panasonic", "アラウーノ S160", 279000, 1, "Panasonic公式「アラウーノ S160」プランページ", "2026-11-17"],
+  ["s-lum", "senmen", "LIXIL", "ルミシス（ボウル一体タイプ）", 330000, 1, "LIXIL公式「洗面化粧室」", "2026-11-17"],
+  ["s-cre", "senmen", "LIXIL", "クレヴィ", 400000, 1, "LIXIL公式「洗面化粧台・ランドリールーム」", "2026-11-17"],
+  ["s-pia", "senmen", "LIXIL", "ピアラ", 210000, 1, "LIXIL公式「洗面化粧台・ランドリールーム」", "2026-11-17"],
+  ["s-oft", "senmen", "LIXIL", "オフト", 130000, 1, "LIXIL公式「洗面化粧台・ランドリールーム」", "2026-11-17"],
+  ["s-cus", "senmen", "LIXIL", "カスタム バニティ（ミラー・下棚なし）", 240000, 1, "LIXIL公式「洗面化粧室」", "2026-11-17"],
+  ["s-use", "senmen", "Panasonic", "ウツクシーズSE", 259900, 1, "Panasonic公式 ハウジング商品連絡（2026年9月度）", "2026-11-17"],
+  ["s-user", "senmen", "Panasonic", "ウツクシーズSE 代表構成（間口750・引出・3面鏡）", 324900, 0, "Panasonic公式「ウツクシーズSE」紹介ページ", "2026-11-17"],
+  ["w-kyo", "tearai", "LIXIL", "狭小手洗シリーズ", 63000, 1, "LIXIL公式「手洗キャビネット・手洗カウンター・手洗器」", "2026-11-17"],
+  ["w-cof", "tearai", "LIXIL", "コフレル（手洗キャビネット）", 114000, 1, "LIXIL公式「手洗キャビネット・手洗カウンター・手洗器」", "2026-11-17"],
+  ["w-cap", "tearai", "LIXIL", "キャパシア（手洗キャビネット）", 136900, 1, "LIXIL公式「手洗キャビネット・手洗カウンター・手洗器」", "2026-11-17"],
+  ["u-sn", "ub", "TOTO", "サザナ Nタイプ（1616・基本仕様）", 904000, 0, "TOTO公式「サザナ タイプと価格一覧」", "2026-11-17"],
+  ["u-ss", "ub", "TOTO", "サザナ Sタイプ（1616・基本仕様）", 1126000, 0, "TOTO公式「サザナ タイプと価格一覧」", "2026-11-17"],
+  ["u-st", "ub", "TOTO", "サザナ Tタイプ（1616・基本仕様）", 1181000, 0, "TOTO公式「サザナ タイプと価格一覧」", "2026-11-17"],
+  ["u-sp", "ub", "TOTO", "サザナ Pタイプ（1616・基本仕様）", 1368000, 0, "TOTO公式「サザナ タイプと価格一覧」", "2026-11-17"],
+  ["u-sf", "ub", "TOTO", "サザナ Fタイプ（1616・基本仕様）", 1564000, 0, "TOTO公式「サザナ タイプと価格一覧」", "2026-11-17"],
+  ["u-omin", "ub", "Panasonic", "オフローラ ミニマムセレクト（1616）", 1070850, 0, "Panasonic公式「オフローラ ベースプラン」", "2026-11-17"],
+  ["u-obase", "ub", "Panasonic", "オフローラ ベースプラン（1616）", 1273250, 0, "Panasonic公式「オフローラ ベースプラン」", "2026-11-17"],
+  ["u-osugo", "ub", "Panasonic", "オフローラ スゴピカクリーン（1616）", 1359600, 0, "Panasonic公式「オフローラ ベースプラン」", "2026-11-17"],
+  ["k-shi", "kitchen", "LIXIL", "シエラ（I型255・パッケージ）", 738000, 1, "LIXIL公式「シエラ」商品ページ", "2026-11-18"],
+  ["k-noc", "kitchen", "LIXIL", "ノクト（I型255・フロアユニットのみ）", 1111000, 1, "LIXIL公式「ノクト」商品ページ", "2026-11-18"],
+  ["k-ric", "kitchen", "LIXIL", "リシェル（I型255・パッケージ）", 1028000, 1, "LIXIL公式「リシェル」商品ページ", "2026-11-18"],
+  ["k-ess", "kitchen", "Panasonic", "ラクシーナ エッセンシャルプラン（I型2550）", 1365100, 0, "Panasonic公式「ラクシーナ エッセンシャルプラン」", "2026-11-18"],
+  ["k-cen", "kitchen", "クリナップ", "セントロ（I型255）", 1477000, 1, "クリナップ公式「キッチン」", "2026-11-18"],
+  ["k-ste", "kitchen", "クリナップ", "ステディア（I型255）", 910000, 1, "クリナップ公式「キッチン」", "2026-11-18"],
+  ["k-rak", "kitchen", "クリナップ", "ラクエラ（I型255）", 709000, 1, "クリナップ公式「キッチン」", "2026-11-18"]
+].map(a => ({id: a[0], cat: a[1], maker: a[2], name: a[3], price: a[4], from: !!a[5], src: a[6], date: a[7]}));
+var KAKE379 = {all: 65, by: {}};   /* 掛率（%）。初期値：全体65%・メーカー別なし */
+try { const k379 = JSON.parse(localStorage.getItem("gosei-kakeritsu-v1") || "null"); if (k379 && k379.all > 0) KAKE379 = {all: +k379.all, by: k379.by || {}}; } catch (e) {}
+function saveKake379(){ try { localStorage.setItem("gosei-kakeritsu-v1", JSON.stringify(KAKE379)); } catch (e) {} }
+function tkEntry379(id){ return TEIKA379.find(t => t.id === id) || null; }
+function tkRatePct379(maker){ const b = KAKE379.by[maker]; return (b > 0 ? b : KAKE379.all); }
+function tkUnit379(t){ return Math.round(t.price * tkRatePct379(t.maker) / 100); }
+function tkRowObj379(name, t, n2){
+  const u = tkUnit379(t);
+  return {name, spec: `${n2}台 × ${fmt(u)}円（定価${fmt(t.price)}円${t.from ? "〜" : ""} × 掛率${fmt(tkRatePct379(t.maker), 1)}%・${t.maker}）`, qty: "", cost: u * n2, avg: false, fix: {kind: "teika379", maker: t.maker}, q: n2};
+}
+function tkSelHTML379(e, i){
+  const list = TEIKA379.filter(t => t.cat === e.k);
+  if (!list.length) return "";
+  const cur = e.tk379 ? tkEntry379(e.tk379) : null;
+  let h = `<div class="sub2" style="margin-top:6px">種類（定価から選ぶ）</div><select data-tk379="${i}" style="width:100%;margin-top:2px"><option value="">指定なし（今の単価）</option>` +
+    list.map(t => `<option value="${t.id}"${e.tk379 === t.id ? " selected" : ""}>${esc(t.maker)} ${esc(t.name)}（定価 ${fmt(t.price)}円${t.from ? "〜" : ""}）</option>`).join("") + `</select>`;
+  if (cur) h += `<p class="hint" style="margin:4px 2px 0">本体の単価＝定価 ${fmt(cur.price)}円 × 掛率${fmt(tkRatePct379(cur.maker), 1)}%（${esc(cur.maker)}）＝ <b>${fmt(tkUnit379(cur))}円</b>（商品のみ・税抜）<br>出典：${esc(cur.src)}／確認日 ${cur.date}</p>`;
+  else h += `<p class="hint" style="margin:4px 2px 0">選ぶと、本体の単価が「メーカー定価 × 掛率」になります。掛率は単価表の画面で変えられます。</p>`;
+  return h;
+}
+function drawKake379(){
+  const el = document.getElementById("kakeList379"); if (!el) return;
+  const makers = []; TEIKA379.forEach(t => { if (!makers.includes(t.maker)) makers.push(t.maker); });
+  let h = `<button class="set" data-kake379="__all" type="button"><span>全体の掛率<small>メーカー別が無い時に使う</small></span><b>${fmt(KAKE379.all, 1)}%</b></button>`;
+  h += makers.map(mk => { const b = KAKE379.by[mk]; return `<button class="set" data-kake379="${esc(mk)}" type="button"><span>${esc(mk)}<small>${b ? "メーカー別の掛率" : "全体の掛率を使用中"}</small></span><b>${fmt(b || KAKE379.all, 1)}%</b></button>`; }).join("");
+  h += `<p class="hint">種類（定価）を選んだ商品は、単価＝メーカー定価（税抜）×掛率 で計算します。材料屋との掛率に合わせて変えてください。</p>`;
+  el.innerHTML = h;
+  el.querySelectorAll("[data-kake379]").forEach(b => b.onclick = () => {
+    const mk = b.dataset.kake379;
+    if (mk === "__all") openPad({title: "全体の掛率", sub: "メーカー別の掛率が無い時に使います", unit: "%", value: KAKE379.all, done: v => { if (v != null && v > 0) KAKE379.all = v; saveKake379(); drawPrice(); }});
+    else openPad({title: `${mk} の掛率`, sub: "空のまま決定で、全体の掛率に戻ります", unit: "%", value: KAKE379.by[mk] || "", done: v => { if (v == null || !(v > 0)) delete KAKE379.by[mk]; else KAKE379.by[mk] = v; saveKake379(); drawPrice(); }});
+  });
+}
+window.__drawKake379 = drawKake379;
 </script>
 
 </html>
