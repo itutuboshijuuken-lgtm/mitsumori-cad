@@ -222,6 +222,8 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #enclBar .r1 .ok{background:var(--ai);color:#fff;border-color:var(--ai)}
 #enclBar .r1 .del{color:#C62828;border-color:#C62828}
 #enclBar .r1{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:3px;font-size:12px;font-weight:800;line-height:1.3}
+#enclBar .r1{flex-wrap:wrap}   /* CAD-384: 長い決定表示でも「終了」が画面外に出ない様に折り返す */
+#enclBar .r1>span{flex-wrap:wrap}
 #enclBar .r1 button{min-height:32px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:12px;font-weight:800;color:var(--sub);padding:0 8px;white-space:nowrap}
 #enclBar .ecd{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;margin-bottom:3px}
 #enclBar .ecd button{min-height:42px;border:1px solid var(--line);border-radius:8px;background:#F1F4F8;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--ink);padding:0}
@@ -3171,6 +3173,18 @@ function drawToolsUICore(){
   if (HB.__dtSeg06 && HB.__put && ltTool && toolOpen === HB.__put.g){ try { ltTool = null; HB.__ltAct = null; } catch(er){} }
   /* --- 旧 blk06（origUI）前段：構えが今のタブ・状態と合わなければ落とす（clearPut の中身そのまま） --- */
   if (HB.__dtSeg06 && HB.__put && (toolOpen !== HB.__put.g || ltTool || enclMode)){ HB.__put = null; HB.__sashAct = null; }
+  /* --- CAD-384: 持ち替えで落ちない構えを落とす（床・照明・解体） ---
+     床の構え（__floorArm）は道具を選び直しても落ちる入口が無く、部屋タップで
+     床が入り続けた（本人の実機報告 2026-11-18）。他の構えが立った時に落とす。
+     照明（ltTool）は「電気」以外の葉に残ると平面タップで照明が置けたため、
+     葉が light でない時は落とす。解体（hgMode）は置く構え等と重なると壁タップ
+     1回で解体の切替と配置が両方走るため、重なったら落とす。 */
+  if (HB.__dtSeg06){ try {
+    var busy384 = !!(HB.__put || ltTool || enclMode || HB.__partDraw || HB.__delMode || HB.__hgMode);
+    if (busy384 && HB.__floorOff384) HB.__floorOff384(true);
+    if (ltTool && toolOpen !== "light"){ ltTool = null; HB.__ltAct = null; }
+    if (HB.__hgMode && (HB.__put || ltTool || HB.__delMode || enclMode) && HB.__hgOff384) HB.__hgOff384();
+  } catch(er){} }
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawNotchRow();
   /* CAD-216: 長さチップ（455・910・1,820・2,730・長さ…）と垂れ壁・腰壁の専用ボタンは廃止。
@@ -4264,6 +4278,7 @@ function drawToolTabs(){
     if (k === "part" && HB.__partDraw && toolOpen === "part") b.classList.add("armBlink"); /* CAD-172：今いる画面の道具だけ点滅 */
     b.onclick = () => {
       if (enclMode) enclReset();
+      if (HB.__floorOff384) HB.__floorOff384(true);   /* CAD-384: タブの持ち替えで床の構えを落とす */
       if (k === "part"){
         /* CAD-145: 「壁を描く」は押したらそのまま指で描ける (中の「指で描く」チップは廃止)。
            もう一度押すと閉じて、指描きも解除する。 */
@@ -4285,6 +4300,7 @@ function drawToolTabs(){
       const b = document.createElement("button"); b.type = "button"; b.textContent = n; b.dataset.tt = k;
       b.setAttribute("aria-pressed", (k === "light" ? toolOpen === "light" || !!ltTool : toolOpen === k) ? "true" : "false");
       b.onclick = () => {
+        if (HB.__floorOff384) HB.__floorOff384(true);   /* CAD-384: 葉の持ち替えで床の構えを落とす */
         if (k === "light" && ltTool){ ltTool = null; toast("照明をやめました"); drawToolsUI(); drawPlan(); return; }
         if (enclMode) enclReset();
         window.putLeaf136 = k; toolOpen = toolOpen === k ? null : k; drawToolsUI(); drawPlan();
@@ -10615,6 +10631,8 @@ HB.__padStdSeg12 = true;
     renderHgBr();
   };
   function paintBtn(){ const b = document.getElementById("hgBtn"); if (b){ b.textContent = HB.__hgMode ? `🧱 解体：選び中（${hgDShort(HB.__hgDepth)}）` : "🧱 解体"; b.setAttribute("aria-pressed", String(!!HB.__hgMode)); } }
+  /* CAD-384: 解体の構えを外から落とす入口（置く構え等と重なった時に使う） */
+  HB.__hgOff384 = function(){ if (!HB.__hgMode) return; HB.__hgMode = false; paintBtn(); hgChip(); };
   // 枝分かれ（床仕様と同じ「✓ 決定／さらにこだわる」の型）：押す→標準（仕上げ材のみ解体）で
   // 決めるか、さらにこだわるで深さ（仕上げ材のみ／下地から／撤去）を選んでから決める
   function hgBtnTap152(){
@@ -10649,6 +10667,8 @@ HB.__padStdSeg12 = true;
     const bc = br.querySelector("[data-hgcan]"); if (bc) bc.onclick = () => { hgBr = null; renderHgBr(); };
     const bd = br.querySelector("[data-hgdec]"); if (bd) bd.onclick = () => {
       HB.__hgDepth = hgBr.depth; hgBr = null; renderHgBr();
+      if (HB.__delMode && HB.__delSet) HB.__delSet(false);   /* CAD-384: 消す道具と重ねない */
+      if (HB.__floorOff384) HB.__floorOff384(false);   /* CAD-384: 床の構えと重ねない */
       HB.__hgMode = true; paintBtn(); hgChip();
       toast(`解体（${hgDName(HB.__hgDepth)}）：壁をタップ`);
     };
@@ -15958,6 +15978,10 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      選びは保留（pendEncl173）へ移し、構え（__floorArm・pend138）はここで落とす
      （二重に持つと、決定前に部屋タップ等で即適用される事故が起きるため）。
      CAD-158 側が囲み（encl）を開いた後に呼ぶ。成功したら true。 */
+  /* CAD-384: 床の構えの保留（決めた内容 pend138 と、座上げの選択欄 br138）を
+     落とす。何か落としたら true。道具の持ち替えで床の構えを落とす時
+     （HB.__floorOff384）から呼ばれる。 */
+  HB.__floorPendOff384 = function(){ var had = !!pend138 || !!br138; pend138 = null; if (br138) closeBar138(); return had; };
   HB.__enclArmPend174 = function(){
     var fk = HB.__floorArm; if (!fk) return false;
     var kind, det, chipFk;
@@ -16096,6 +16120,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
        種類チップ（data-et）を押し直したら、床の選びは取り消す
        （ゾーンとして決める方へ切り替えたとみなす）。 */
     var okB173 = t.closest ? t.closest("#ecOkN, #ecOk") : null;
+    if (okB173 && HB.__pendOkAt384 && Date.now() - HB.__pendOkAt384 < 900) return;   /* CAD-384: pointerup で適用済みの同じタップ */
     if (okB173 && okB173.closest && okB173.closest("#enclBar") && pendEnclOk173()){
       e.preventDefault(); e.stopImmediatePropagation();
       var p173 = pendEncl173; pendEncl173 = null;
@@ -16103,6 +16128,23 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       return;
     }
     if (t.closest("#enclBar [data-et]")) pendEncl173 = null;
+  }, true);
+
+  /* CAD-384: 「決定」の実タップは CAD-157 が pointerup で本来の onclick
+     （enclApply）へ直結するため、click の横取りだけでは選んだ床が適用されず
+     部屋ができてしまう。捕捉の pointerup で保留があれば先に適用する。 */
+  document.addEventListener("pointerup", function(e){
+    if (!e || e.pointerType === "mouse") return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (document.body && document.body.classList && document.body.classList.contains("nbtutRun")) return;
+    var okB = t.closest("#ecOkN, #ecOk");
+    if (okB && okB.closest && okB.closest("#enclBar") && pendEnclOk173()){
+      e.preventDefault(); e.stopImmediatePropagation();
+      var p384 = pendEncl173; pendEncl173 = null;
+      HB.__pendOkAt384 = Date.now();
+      decideNow138("encl", p384.kind, p384.det);
+    }
   }, true);
 
   /* 間取りのパネル：置き床・小上がりのチップを「座上げ」1つにまとめる */
@@ -17781,6 +17823,23 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   function disarmFloor176(){
     HB.__floorArm = null; HB.__zaActive138 = false; HB.__flBlinkChip140 = null;
   }
+  /* CAD-384: 床の構え一式（部屋決め・囲みの両方／まとめて指定・座上げの
+     選択欄・決めた内容の保留まで）を落とす共通の入口。道具の持ち替え
+     （タブ・葉・ラジアル・他の構えが立った時）から呼ばれる。
+     床の作業中でなければ何もしない（false）。 */
+  HB.__floorOff384 = function(toastIt){
+    var hadPend = false;
+    if (HB.__floorPendOff384){ try { hadPend = !!HB.__floorPendOff384(); } catch(e){} }
+    var was = !!(HB.__floorArm || multi375 || zaForRoom176 || hadPend);
+    if (!was && !HB.__zaActive138 && !HB.__flBlinkChip140) return false;
+    multi375 = false; zaForRoom176 = false;
+    disarmFloor176();
+    var p = document.getElementById("floorPanel");
+    if (p) p.querySelectorAll("[data-flk]").forEach(function(x){ x.classList.remove("armBlink"); });
+    if (roomSel176){ try { renderRoomBar176(); } catch(e){} }
+    if (toastIt && was) toast("床の指定をやめました");
+    return true;
+  };
   /* 床チップ: 本物の床パネルのチップを押すのと全く同じ入口を使い、
      立った構えでこの部屋へ ltPlanClick（床仕様の部屋タップその物）を
      通して適用する。適用後は構えを落とす（部屋の編集から1回だけ）。 */
@@ -17830,6 +17889,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   function closeRoom176(){
     if (zaForRoom176){ var zc = document.querySelector("#flBranch [data-zcan]"); if (zc) zc.click(); zaForRoom176 = false; }
     if (multi375){ multi375 = false; disarmFloor176(); }   /* CAD-375：バーが閉じたら、まとめて指定も終わる（構えも落とす） */
+    else if (HB.__floorArm){ disarmFloor176(); }   /* CAD-384：まとめて指定でなくても、バーが閉じたら床の構えは必ず落とす */
+    if (HB.__floorPendOff384){ try { HB.__floorPendOff384(); } catch(e){} }   /* CAD-384：決めた内容の保留と座上げの選択欄も落とす */
     roomSel176 = null;
     parkFl367();   /* CAD-367：床パネルを元の場所へ戻してからバーを空にする */
     try { document.body.classList.remove("rmSel367"); } catch(e){}
@@ -29847,6 +29908,7 @@ window.__drawKake379 = drawKake379;
   function activate(key){
     try {
       if (typeof enclMode !== "undefined" && enclMode && typeof enclReset === "function") enclReset();
+      if (key !== "floor" && typeof HB !== "undefined" && HB.__floorOff384) HB.__floorOff384(true);   /* CAD-384: 円メニューで持ち替えたら床の構えを落とす */
       if (key !== "del" && typeof HB !== "undefined" && HB.__delMode && HB.__delSet) HB.__delSet(false);
       if (key === "del"){
         var db = document.getElementById("delToolBtn");
