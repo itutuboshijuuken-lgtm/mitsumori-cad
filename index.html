@@ -17576,6 +17576,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   var tapDown176 = null;      // pointerdown の記録（タップ判定用）
   var spot176 = {x: 0, y: 0, sig: "", n: 0};
   var zaForRoom176 = false;   // 部屋の編集から座上げの選択欄を開いている
+  var multi375 = false;        // CAD-375：まとめて指定中（同じ床を続けて部屋へ入れる状態）
   var applying176 = false;    // 部屋の編集経由で床を適用している最中
   var barSig176 = "";
 
@@ -17591,7 +17592,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     + "#roomBar176 .rmFl176{display:flex;flex-wrap:wrap;gap:6px}"
     + "#roomBar176 .rmFl176 button{flex:1 1 30%;min-height:42px;font-size:13.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:#fff;color:#222;padding:0 4px}"
     + "#roomBar176 .rmFl176 button.on176{outline:3px solid #2563B0}"
-    + "#roomBar176 .rmZaHint176{margin-top:8px;font-size:12.5px;color:#8A6D00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 8px}";
+    + "#roomBar176 .rmZaHint176{margin-top:8px;font-size:12.5px;color:#8A6D00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 8px}"
+    + "#roomBar176 .rmMulti375{margin-top:8px}"
+    + "#roomBar176 .rmMulti375>button{width:100%;min-height:44px;font-size:14px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ai);padding:0 4px}"
+    + "#roomBar176 .rmMulti375.on375{display:flex;align-items:center;gap:8px;background:#FFF3E6;border:1.5px solid #E8742C;border-radius:8px;padding:0 6px 0 10px;min-height:44px;font-size:13px;font-weight:700;color:#8A4A00}"
+    + "#roomBar176 .rmMulti375.on375 span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
+    + "#roomBar176 .rmMulti375.on375>button{flex:0 0 auto;width:auto;min-width:76px;min-height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;font-weight:800;color:var(--ai);padding:0 10px}";
   document.head.appendChild(st176);
 
   function gatesOff176(){
@@ -17690,6 +17696,14 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }).join("") + "</div>";
     }
     h += "<div class='rmFlT176'>床の仕上げ" + (fl ? "（今：" + fl + "）" : "") + "</div>";
+    /* CAD-375：まとめて指定の行。まとめ中は状態と「終了」、止めている時は入口ボタン。
+       置き場所はラベルの直下：バーの最下行は下の大きなボタンに被さって押せないため */
+    if (multi375){
+      var fln375 = (HB.__FLN && HB.__floorArm && HB.__FLN[HB.__floorArm]) || "床";
+      h += "<div class='rmMulti375 on375'><span>まとめて指定中：" + fln375 + "</span><button type='button' id='rmMultiEnd375'>終了</button></div>";
+    } else {
+      h += "<div class='rmMulti375'><button type='button' id='rmMultiBtn375'>他の部屋もまとめて</button></div>";
+    }
     h += "<div id='rmFlHost367'></div>";   /* CAD-367：ここへ本物の床パネル（背景の絵つき・畳と小上がり入り）を移す。文字だけのチップ並びは廃止 */
     if (zaForRoom176) h += "<div class='rmZaHint176'>座上げの選択欄が、道具の列の所に出ています。工法と上の仕上げを選ぶと、この部屋に入ります。</div>";
     bar.innerHTML = h;
@@ -17697,6 +17711,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try { document.body.classList.add("rmSel367"); } catch(e){}   /* CAD-367：部屋の選択中は下の「置く」を隠す */
     hostFl367();   /* CAD-367：床パネルをバーの中へ移す */
     bar.querySelector("#rmClose176").onclick = function(){ closeRoom176(); };
+    var mb375 = bar.querySelector("#rmMultiBtn375");
+    if (mb375) mb375.onclick = function(){
+      if (!HB.__floorArm){ toast("先に床の種類を選んでください"); return; }
+      multi375 = true;
+      toast("他の部屋をタップすると、同じ床になります");
+      renderRoomBar176();
+    };
+    var me375 = bar.querySelector("#rmMultiEnd375");
+    if (me375) me375.onclick = function(){ endMulti375(); };
     var nb176 = bar.querySelector("#rmName176"); if (nb176) nb176.onclick = function(){ roomNameSheet(rm); };
     bar.querySelectorAll("[data-rmdim]").forEach(function(b){
       b.onclick = function(){
@@ -17716,6 +17739,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     });
   }
 
+  /* CAD-375：まとめて指定を終わる（構えも落とす） */
+  function endMulti375(){
+    multi375 = false;
+    disarmFloor176();
+    renderRoomBar176();
+    toast("まとめて指定を終了しました");
+  }
   function disarmFloor176(){
     HB.__floorArm = null; HB.__zaActive138 = false; HB.__flBlinkChip140 = null;
   }
@@ -17767,6 +17797,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
   function closeRoom176(){
     if (zaForRoom176){ var zc = document.querySelector("#flBranch [data-zcan]"); if (zc) zc.click(); zaForRoom176 = false; }
+    if (multi375){ multi375 = false; disarmFloor176(); }   /* CAD-375：バーが閉じたら、まとめて指定も終わる（構えも落とす） */
     roomSel176 = null;
     parkFl367();   /* CAD-367：床パネルを元の場所へ戻してからバーを空にする */
     try { document.body.classList.remove("rmSel367"); } catch(e){}
@@ -17903,6 +17934,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   setInterval(function(){
     try {
       if (!roomSel176 || applying176 || zaForRoom176) return;
+      if (multi375 && !HB.__floorArm){ multi375 = false; renderRoomBar176(); }   /* CAD-375：×で構えが落ちたら、まとめて指定も終わる */
       if (!HB.__pageM){ closeRoom176(); return; }
       if (typeof sel !== "undefined" && sel){ closeRoom176(); return; }
       if ((typeof enclMode !== "undefined" && enclMode) || HB.__put){ closeRoom176(); return; }   /* CAD-367：床を構えてもバーは閉じない（バー内のパネルで構えるのが新しい形。構えた床は部屋タップ／囲みで従来どおり付く） */
