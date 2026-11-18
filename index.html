@@ -8114,7 +8114,7 @@ const ROOM_ABBR = {"トイレ": "便", "浴室": "浴", "玄関": "玄", "廊下
 function roomShort(r, R, P){
   /* CAD-250：1文字の略称（洗・Cなど）は意味が通じないので使わない。名前が無い部屋は空白。
      クローゼットだけは、名前が収まらない時に「CL」と出す。 */
-  const full = roomNm(r); if (!full) return r.label === "CL" ? "CL" : "";   /* CAD-258：収納ゾーンの部屋（ラベルCL）は平面図でも CL と出す */
+  const full = roomDispNm366(r); if (!full) return r.label === "CL" ? "CL" : "";   /* CAD-366：予想の名前も図面に出す */   /* CAD-258：収納ゾーンの部屋（ラベルCL）は平面図でも CL と出す */
   if (full !== "クローゼット") return full;
   let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; r.cells.forEach(k => { const i = k % R.NX, j = (k - i) / R.NX; i0 = Math.min(i0, i); i1 = Math.max(i1, i); j0 = Math.min(j0, j); j1 = Math.max(j1, j); });
   const a = P([R.b.x0 + i0 * R.st, R.b.y0 + j0 * R.st]), b = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (j1 + 1) * R.st]);
@@ -8198,7 +8198,79 @@ if ((S.tenken || []).some(o => { if (o.k !== k250) return false; const i = Math.
 }
 return null;
 }
-function roomLbl(r){ return roomNm(r) || r.label; }
+function roomLbl(r){ return roomDispNm366(r) || r.label; }   /* CAD-366：題名・ボタンの名前も予想つきの表示名で出す */
+/* ---------- CAD-366：全部の部屋に予想の名前を出す ----------
+   翔伍の指摘（2026-11-18・実機動画）：シートでは「Dの部屋」と出るのに、図面には
+   名前が出ていない部屋がある（大きな部屋が㎡だけ）。置いた物から名前が付く部屋
+   （トイレ・浴室・洗面所）だけ図面に出ていた。
+   ・表示名＝自分で決めた名前（S.roomNames）→自動（ゾーン・置いた物）→予想、の順。
+     自分で決めた名前は予想で上書きしない。
+   ・roomNm 自体は変えない（板の向き・材質など、名前で振る舞いが変わる既存の
+     判定を守るため）。予想は表示だけに使い、見積の計算には使わない。 */
+var nmCache366 = {};
+function roomUserNm366(r){
+  if (!r) return null;
+  const R = roomsCalc();
+  if (Array.isArray(S.roomNames)) for (const e of S.roomNames){
+    const i = Math.floor((e.p[0] - R.b.x0) / R.st), j = Math.floor((e.p[1] - R.b.y0) / R.st);
+    if (i < 0 || j < 0 || i >= R.NX || j >= R.NY) continue;
+    if (R.comp[j * R.NX + i] === r.cid && e.name) return e.name;
+  }
+  return null;
+}
+function roomGuessMap366(skipUser){
+  const R = roomsCalc();
+  const sig = (skipUser ? "T|" : "F|") + (roomsCalc.k || "") + JSON.stringify([
+    (skipUser ? [] : (S.roomNames || []).map(e => [e.p, e.name])),
+    (S.zones || []).map(z => [z.k, z.x0, z.y0, z.x1, z.y1]),
+    (S.tenken || []).map(o => [o.k, o.x, o.y, o.use || ""]),
+    (S.tatami || []).map(t => [t.x0, t.y0, t.x1, t.y1, t.fk || "", t.za ? 1 : 0])]);
+  if (nmCache366[sig]) return nmCache366[sig];
+  const map = {};
+  const inRoom = (x, y) => { const i = Math.floor((x - R.b.x0) / R.st), j = Math.floor((y - R.b.y0) / R.st); return (i < 0 || j < 0 || i >= R.NX || j >= R.NY) ? -1 : R.comp[j * R.NX + i]; };
+  const bbOf = r => { let i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; r.cells.forEach(c => { const i = c % R.NX, j = (c - i) / R.NX; if (i < i0) i0 = i; if (i > i1) i1 = i; if (j < j0) j0 = j; if (j > j1) j1 = j; }); return {x0: R.b.x0 + i0 * R.st, y0: R.b.y0 + j0 * R.st, x1: R.b.x0 + (i1 + 1) * R.st, y1: R.b.y0 + (j1 + 1) * R.st}; };
+  const zoneFrac = (r, k) => { const zs = (S.zones || []).filter(z => z.k === k); if (!zs.length || !r.cells.length) return 0; let hit = 0; r.cells.forEach(c => { const i = c % R.NX, j = (c - i) / R.NX, x = R.b.x0 + (i + 0.5) * R.st, y = R.b.y0 + (j + 0.5) * R.st; if (zs.some(z => x >= z.x0 && x <= z.x1 && y >= z.y0 && y <= z.y1)) hit++; }); return hit / r.cells.length; };
+  /* 1. 決まっている名前：自分で決めた名前・ゾーン・置いた物・収納 */
+  R.rooms.forEach(r => {
+    let nm = skipUser ? null : roomUserNm366(r);
+    if (!nm){ const zk = roomZoneKind(r); if (zk) nm = ZK_NAME[zk]; }
+    if (!nm){ const FN = {bath: "浴室", wc: "トイレ", senmen: "洗面所", senpan: "洗面所", tearai: "洗面所", geta: "玄関"};
+      for (const k of Object.keys(FN)) if ((S.tenken || []).some(o => o.k === k && inRoom(o.x, o.y) === r.cid)){ nm = FN[k]; break; } }
+    if (!nm && r.label === "CL") nm = "クローゼット";
+    if (nm) map[r.cid] = {nm, fixed: true};
+  });
+  /* 2. キッチンのある部屋：一番大きい部屋なら LDK、別なら キッチン */
+  const hasK = r => (S.tenken || []).some(o => (o.k === "kitchen" || (o.k === "counter" && o.use === "kitchen")) && inRoom(o.x, o.y) === r.cid);
+  const maxArea = R.rooms.reduce((a, r) => Math.max(a, r.area), 0);
+  R.rooms.forEach(r => { if (!map[r.cid] && hasK(r)) map[r.cid] = {nm: r.area >= maxArea - 0.01 ? "LDK" : "キッチン", fixed: true}; });
+  /* 3. 畳の部屋は和室・土間の部屋は玄関・小さい階段の部屋は階段室 */
+  R.rooms.forEach(r => { if (map[r.cid]) return;
+    const bb = bbOf(r); let ta = 0;
+    (S.tatami || []).forEach(t => { if (t.za || (t.fk && t.fk !== "tatami")) return; const ix = Math.min(bb.x1, t.x1) - Math.max(bb.x0, t.x0), iy = Math.min(bb.y1, t.y1) - Math.max(bb.y0, t.y0); if (ix > 0 && iy > 0) ta += ix * iy; });
+    if (r.area > 0 && ta / (r.area * 1e6) >= 0.6){ map[r.cid] = {nm: "和室", fixed: true}; return; }
+    if (zoneFrac(r, "doma") >= 0.6){ map[r.cid] = {nm: "玄関", fixed: true}; return; }
+    if (r.area <= 8 && (S.tenken || []).some(o => o.k === "stair" && inRoom(o.x, o.y) === r.cid)){ map[r.cid] = {nm: "階段室", fixed: true}; }
+  });
+  /* 4. 残り：細長い小さい部屋は廊下、大きい順に リビング→寝室→子供部屋→洋室 */
+  const rest = R.rooms.filter(r => !map[r.cid]);
+  rest.forEach(r => { const bb = bbOf(r), mn = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0); if (mn <= 1200 && r.area <= 6) map[r.cid] = {nm: "廊下", fixed: false}; });
+  const rank = rest.filter(r => !map[r.cid]).sort((a, b) => b.area - a.area || a.cid - b.cid);
+  const SEQ366 = ["リビング", "寝室", "子供部屋"];
+  rank.forEach((r, i) => { map[r.cid] = {nm: i < SEQ366.length ? SEQ366[i] : "洋室", fixed: false}; });
+  /* 5. 重なったら予想の方に番号を付ける（決まった名前は変えない） */
+  const used = {};
+  R.rooms.forEach(r => { const m = map[r.cid]; if (m && m.fixed) used[m.nm] = (used[m.nm] || 0) + 1; });
+  R.rooms.forEach(r => { const m = map[r.cid]; if (!m || m.fixed) return;
+    if (used[m.nm]){ let n = 2; while (used[m.nm + n]) n++; m.nm = m.nm + n; }
+    used[m.nm] = (used[m.nm] || 0) + 1; });
+  nmCache366 = {}; nmCache366[sig] = map;
+  return map;
+}
+function roomGuess366(r){ if (!r) return null; const m = roomGuessMap366(false)[r.cid]; return m ? m.nm : null; }
+/* 表示用の名前（間取り・完成図・シートの題名で使う） */
+function roomDispNm366(r){ if (!r) return null; const m = roomGuessMap366(false)[r.cid]; return (m && m.nm) || roomNm(r) || null; }
+/* 予想だけ（自分で決めた名前を除いた予想）。名前を変えるシートで「予想：」と出す用 */
+function roomPredict366(r){ if (!r) return null; const m = roomGuessMap366(true)[r.cid]; return m ? m.nm : null; }
 // 囲んだ四角の中で、一番広く入っている部屋
 function roomInRect(rr){
   const cnt = new Map();
@@ -8213,7 +8285,8 @@ const RM_NAMES = ["洋室", "和室", "LDK", "リビング", "ダイニング", 
 function roomNameSheet(r){
   if (!r) return;
   const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
-  const others = roomsCalc().rooms.filter(o => o.cid !== r.cid).map(o => roomNm(o)).filter(Boolean);
+  const others = roomsCalc().rooms.filter(o => o.cid !== r.cid).map(o => roomDispNm366(o)).filter(Boolean);   /* CAD-366：重なり判定は表示名で */
+  const un366 = roomUserNm366(r), pr366 = roomPredict366(r), dn366 = roomDispNm366(r) || r.label;
   const uniq = base => { const re = new RegExp("^" + base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\d*$"); const n = others.filter(x => re.test(x)).length; return n ? base + (n + 1) : base; };
   const setName = nm => {
     const R = roomsCalc();
@@ -8222,14 +8295,16 @@ function roomNameSheet(r){
     save(); $("modal").hidden = true; drawPlan(); if (typeof drawRoom === "function") drawRoom();
     if (nm) toast(`${nm}（${fmt(r.area, 1)}㎡）`);
   };
-  $("mbox").innerHTML = `<h3>部屋の名前　${r.label}（${fmt(r.area, 1)}㎡）</h3>
+  $("mbox").innerHTML = `<h3>部屋の名前　${esc(dn366)}（${fmt(r.area, 1)}㎡）</h3>
+    <p class="hint" style="margin:2px 0 4px;font-size:14px">予想：<b style="color:var(--ai);font-size:15px">${esc(pr366 || "なし")}</b>${un366 ? `　今は自分で決めた名前「${esc(un366)}」になっています` : "　この名前でよければ、そのまま閉じて大丈夫です"}</p>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0;max-height:46vh;overflow:auto">${RM_NAMES.map(n => `<button type="button" class="btn sub" data-rn="${n}" style="min-height:44px;font-size:15px">${n}</button>`).join("")}</div>
-    <input id="rnIn" type="text" value="${esc(roomNm(r) || "")}" placeholder="自分で入力（例：母の部屋）" style="width:100%;box-sizing:border-box;min-height:44px;font-size:16px;border:2px solid var(--line);border-radius:10px;padding:0 10px;margin-bottom:8px">
-    <div class="row"><button class="btn sub" id="rnLater" type="button">あとで</button><button class="btn pri" id="rnOk" type="button">OK</button></div>`;
+    <input id="rnIn" type="text" value="${esc(un366 || "")}" placeholder="自分で入力（例：母の部屋）" style="width:100%;box-sizing:border-box;min-height:44px;font-size:16px;border:2px solid var(--line);border-radius:10px;padding:0 10px;margin-bottom:8px">
+    <div class="row">${un366 ? `<button class="btn sub" id="rnAuto" type="button">予想に戻す</button>` : ""}<button class="btn sub" id="rnLater" type="button">あとで</button><button class="btn pri" id="rnOk" type="button">OK</button></div>`;
   $("modal").hidden = false;
   $("mbox").querySelectorAll("[data-rn]").forEach(b => b.onclick = () => setName(uniq(b.dataset.rn)));
   $("rnOk").onclick = () => setName($("rnIn").value.trim());
   $("rnLater").onclick = () => { $("modal").hidden = true; };
+  if ($("rnAuto")) $("rnAuto").onclick = () => setName("");   /* CAD-366：自分で決めた名前を消して予想に戻す */
 }
 /* ---------- 部屋ごとの仕上げ（床・壁・天井）。「全体と同じ」の項目は、全体の設定を使う ---------- */
 const RF_OPT = {
@@ -17538,7 +17613,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var entries = roomEntries176(roomSel176.pt);
     var fl = roomFloorLabel176(roomSel176.pt);
     barSig176 = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "|" + (zaForRoom176 ? "z" : "") + "|" + (HB.__floorArm || "");
-    var h = "<div class='r1'><span>🚪" + nm + "の部屋</span><span><button id='rmClose176' type='button'>閉じる</button></span></div>";
+    var h = "<div class='r1'><button id='rmName176' type='button' style='background:none;border:none;font:inherit;font-weight:900;color:inherit;padding:4px 0;text-align:left'>🚪" + nm + "の部屋</button><span><button id='rmClose176' type='button'>閉じる</button></span></div>";   /* CAD-366：題名を押すと名前を変えるシートが開く */
     if (entries.length){
       h += "<div class='rmDims176'>" + entries.map(function(en, ix){
         return "<button type='button' data-rmdim='" + ix + "'>🚪" + nm + (en.dim === "w" ? "横幅 " : "奥行 ") + fmt(en.cur) + "</button>";
@@ -17554,6 +17629,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     bar.innerHTML = h;
     bar.hidden = false;
     bar.querySelector("#rmClose176").onclick = function(){ closeRoom176(); };
+    var nb176 = bar.querySelector("#rmName176"); if (nb176) nb176.onclick = function(){ roomNameSheet(rm); };
     bar.querySelectorAll("[data-rmdim]").forEach(function(b){
       b.onclick = function(){
         var en = entries[+b.dataset.rmdim]; if (!en) return;
