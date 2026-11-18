@@ -519,6 +519,12 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="row"><button class="btn sub" id="clearInk" type="button">クリア</button><button class="btn pri" id="fixInk" type="button">整える</button></div>
     <h2>定型から選ぶ</h2>
     <div class="row"><button class="btn" data-preset="rect" type="button">四角</button><button class="btn" data-preset="L" type="button">L字</button></div>
+    <div class="shp" id="presetBox363" hidden>
+      <h2 style="margin-top:4px">部屋の見本から選ぶ</h2>
+      <p class="hint" style="margin-top:0">畳数をタップすると、その大きさの部屋がそのまま置けます。置いた後で大きさは直せます。</p>
+      <div class="tsopts" id="presetGrid363"></div>
+      <div class="row" style="margin-top:8px"><button class="btn sub" id="presetRot363" type="button">回転（今は縦長）</button></div>
+    </div>
   </section>
 
   <!-- ② 寸法 -->
@@ -530,6 +536,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
+    <div id="presetBar363" hidden></div>
     <p class="hint" id="dimHint"></p>
     <div id="edgeList"></div>
     <div id="dimStatus"></div>
@@ -28128,6 +28135,115 @@ if (typeof HB !== "undefined" && HB.__ltSeg50 && !HB.__ltSeg50.__d352){
   }
   window.addEventListener("touchend", tend358, {capture: true, passive: false});
   window.addEventListener("touchcancel", tend358, {capture: true, passive: false});
+})();
+</script>
+
+<style id="preset363css">
+#presetBar363{touch-action:manipulation;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px;margin-top:8px}
+#presetBar363 .r1{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;font-size:13px;font-weight:800}
+#presetBar363 .r2{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+#presetBar363 .r2 button,#presetBar363 .r1 button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 4px}
+body.gold #presetBar363{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
+body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
+</style>
+<script id="preset363js">
+/* ===== CAD-363：部屋の見本（プリセット） =====
+   翔伍の発案（2026-11-18）：「何も無いとイメージが難しい」への対応。
+   描く画面で外形が無い時だけ畳数の見本を並べ、タップでその大きさの
+   長方形の外形をそのまま置く。置いたら寸法画面でコントローラー
+   （#selBar と同じ見た目）が出て、横・縦の長さと回転をその場で直せる。
+   辺の付け方は既存の定型「四角」と同じ（R・D は決定、L・U は吸収役）。
+   既存の操作（なぞり描き・寸法パッド・点滅）には触らない。 */
+(function(){
+  var SIZES363 = [
+    ["3畳", 1820, 2730], ["4.5畳", 2730, 2730], ["6畳", 2730, 3640], ["8畳", 3640, 3640],
+    ["10畳", 3640, 4550], ["12畳", 3640, 5460], ["16畳", 3640, 7280], ["20畳", 4550, 7280]
+  ];
+  var rot363 = false;        /* true = 横長（縦横を入れ替えて置く） */
+  var placed363 = null;      /* 置いた見本 {name}。コントローラーの有効印 */
+  function G363(id){ return document.getElementById(id); }
+  function hasEdges363(){ try { return !!(typeof S !== "undefined" && S.edges && S.edges.length); } catch(e){ return false; } }
+  function tut363(){ try { return document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+
+  /* ---------- 描く画面：見本箱 ---------- */
+  function drawGrid363(){
+    var g = G363("presetGrid363"); if (!g) return;
+    g.innerHTML = SIZES363.map(function(sz, i){
+      var W = rot363 ? sz[2] : sz[1], D = rot363 ? sz[1] : sz[2];
+      var sc = 40 / Math.max(W, D);
+      return '<button data-p363="' + i + '" type="button"><svg viewBox="0 0 46 46"><rect x="' + (23 - W * sc / 2).toFixed(1) + '" y="' + (23 - D * sc / 2).toFixed(1) + '" width="' + (W * sc).toFixed(1) + '" height="' + (D * sc).toFixed(1) + '" fill="#EEF4FB" stroke="#2563B0" stroke-width="2"/></svg><span><b>' + sz[0] + '</b><small>' + fmt(W) + ' × ' + fmt(D) + '</small></span></button>';
+    }).join("");
+    g.querySelectorAll("[data-p363]").forEach(function(b){
+      b.addEventListener("click", function(){ place363(SIZES363[+b.dataset.p363]); });
+    });
+    var rb = G363("presetRot363");
+    if (rb) rb.textContent = "回転（今は" + (rot363 ? "横長" : "縦長") + "）";
+  }
+  function updBox363(){
+    var box = G363("presetBox363"); if (!box) return;
+    var show = !hasEdges363() && !tut363();
+    if (show && box.hidden) drawGrid363();
+    box.hidden = !show;
+  }
+  function place363(sz){
+    var W = rot363 ? sz[2] : sz[1], D = rot363 ? sz[1] : sz[2];
+    resetPV();
+    if (S.edges) pushUndo();   /* CAD-259 と同じ作法 */
+    S.edges = [{d:"R", v:W, set:true}, {d:"D", v:D, set:true}, {d:"L", v:W, set:false}, {d:"U", v:D, set:false}];
+    S.house = -1; solve(); save();
+    go(2);
+    placed363 = {name: sz[0]};
+    drawBar363();
+    toast(sz[0] + "の見本を置きました");
+  }
+
+  /* ---------- 寸法画面：コントローラー ---------- */
+  /* 見本の形のまま（R・D が決定、L・U が吸収役の長方形）かどうか */
+  function pat363(){
+    if (!hasEdges363() || S.edges.length !== 4) return false;
+    var e = S.edges;
+    return e[0].d === "R" && e[1].d === "D" && e[2].d === "L" && e[3].d === "U" && e[0].set && e[1].set && !e[2].set && !e[3].set;
+  }
+  function cur363(){ var b = bbox(); return {w: Math.round(b.w), d: Math.round(b.h)}; }
+  function setSize363(W, D){
+    var e = S.edges;
+    e[0].v = W; e[0].set = true; e[0].usr = true;
+    e[1].v = D; e[1].set = true; e[1].usr = true;
+    e[2].v = W; e[2].set = false; delete e[2].b0;   /* 吸収役は solve() が合わせ直す */
+    e[3].v = D; e[3].set = false; delete e[3].b0;
+    solve(); save(); drawPlan(); drawBar363();
+  }
+  function drawBar363(){
+    var bar = G363("presetBar363"); if (!bar) return;
+    if (!placed363 || !pat363()){ bar.hidden = true; return; }
+    var c = cur363();
+    bar.innerHTML = '<div class="r1"><span>' + placed363.name + 'の見本　' + fmtD319(c.w) + ' × ' + fmtD319(c.d) + '</span><button id="pbEnd363" type="button">終了</button></div>' +
+      '<div class="r2"><button id="pbW363" type="button">横の長さ</button><button id="pbD363" type="button">縦の長さ</button><button id="pbRot363" type="button">回転</button></div>';
+    bar.hidden = false;
+    G363("pbEnd363").addEventListener("click", function(){ placed363 = null; bar.hidden = true; });
+    G363("pbW363").addEventListener("click", function(){
+      openPad({title: "横の長さ", unit: "mm", value: cur363().w, done: function(v){ if (v != null && v > 0){ pushUndo(); setSize363(Math.max(455, Math.round(v)), cur363().d); } }});
+    });
+    G363("pbD363").addEventListener("click", function(){
+      openPad({title: "縦の長さ", unit: "mm", value: cur363().d, done: function(v){ if (v != null && v > 0){ pushUndo(); setSize363(cur363().w, Math.max(455, Math.round(v))); } }});
+    });
+    G363("pbRot363").addEventListener("click", function(){ var c2 = cur363(); pushUndo(); setSize363(c2.d, c2.w); });
+  }
+  /* コントローラーは寸法画面にいる間だけ。離れる／形が変わると自動で終わる。
+     表示中の寸法が（辺リスト側の編集などで）変わっていたら書き直す。 */
+  function syncBar363(){
+    var bar = G363("presetBar363"); if (!bar) return;
+    if (!placed363){ bar.hidden = true; return; }
+    if ((typeof step !== "undefined" && step !== 2) || !pat363()){ placed363 = null; bar.hidden = true; return; }
+    var c = cur363(), want = placed363.name + 'の見本　' + fmtD319(c.w) + ' × ' + fmtD319(c.d);
+    var sp = bar.querySelector(".r1 span");
+    if (bar.hidden || !sp || sp.textContent !== want) drawBar363();
+  }
+
+  var rb0 = G363("presetRot363");
+  if (rb0) rb0.addEventListener("click", function(){ rot363 = !rot363; drawGrid363(); });
+  drawGrid363(); updBox363();
+  setInterval(function(){ updBox363(); syncBar363(); }, 700);
 })();
 </script>
 
