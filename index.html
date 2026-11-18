@@ -744,6 +744,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div id="elevBox" style="display:none;grid-template-columns:1fr;gap:8px;margin-bottom:8px"></div>
       <div class="card"><div id="h3dBar254" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div class="seg" style="flex:1 1 140px;margin:0"><button data-h3d="fine" type="button" aria-pressed="false">きれい</button><button data-h3d="light" type="button" aria-pressed="true">軽い</button></div><div class="seg" id="h3dView254" style="flex:1 1 140px;margin:0;display:none"><button data-h3dv="out" type="button" aria-pressed="true">外観</button><button data-h3dv="doll" type="button" aria-pressed="false">断面</button><button data-h3dv="in" type="button" aria-pressed="false">室内</button></div><div class="chips" id="h3dRooms255" style="display:none;flex:1 1 100%;margin:0"></div></div><svg id="iso" viewBox="0 0 360 300" aria-label="完成図"></svg><canvas id="h3d" aria-label="完成図3D" style="display:none;width:100%;aspect-ratio:6/5;border-radius:8px"></canvas></div>
       <div class="card" id="pvCard"><svg id="pvSvg" viewBox="0 0 360 300" aria-label="平面図"></svg></div>
+      <div class="card" id="cutBox368"><div id="cutList368"></div></div>
     <div id="fxBar" hidden></div>
     <div class="row"><button class="btn" id="rotL" type="button">↺ 回す</button><button class="btn" id="rotR" type="button">回す ↻</button></div>
     <p class="hint">完成イメージ（概略）です。サッシは「仕様」で指定した壁に均等配置しています。</p>
@@ -6470,6 +6471,7 @@ function calc00(){
   const jtA = (arr, add) => S.precut ? arr.slice() : arr.map(n => n + add);   // CAD-121: 継ぎの見込み（1か所150mm）は材木単価の方法だけ。プレカットは長さ通り
   function lum(key, name, a, b, needs, spec, inPrecut){
     if (!needs.length) return;
+    if (window.__capCut368 && name !== "小屋束") window.__capCut368.push({key, name, sp: S.sp[key] || "スギ", a, b, needs: needs.slice(), spec});   /* CAD-368：カット寸法画面の材料取り（窓口が開いている時だけ・計算は無変更）。小屋束は3m材の本数が渡るので集計場所で別に取る */
     // CAD-121: プレカットは「加工費のみ」。材木はどちらの方法でも材木単価で拾う（0円化しない）。
     // プレカット方法の工場材（inPrecut）は長さ通りの1本で発注する（4m制限・継ぎ見込みなし、余り材も使わない）
     const sp = S.sp[key] || "スギ", PC = !!(S.precut && inPrecut), jt = !PC && name !== "通し柱" && needs.some(n => n > 4000) ? "（4m以下の材を継ぐ）" : ""; let m, upool = 0;
@@ -7229,6 +7231,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
       const needs = [];
       for (let i = 0; i < ukF; i++){ needs.push(Lc); if (two) needs.push(Lc2); }
       ukS.forEach(h => { needs.push(Math.max(0, (+S.ch || 2400) + (+S.fuko || 100) - h)); if (two) needs.push(Math.max(0, (+S.ch2 || 2400) + (+S.fuko || 100) - h)); });
+      if (window.__capCut368) window.__capCut368.push({key: "uke", name: "入隅 ボード受け", sp: "スギ", a: 36, b: 45, needs: needs.slice(), spec: ""});   /* CAD-368：カット寸法画面の材料取り */
       const pk = packStock(needs, []); let cost = null, miss = false, avg = false, conv = false;
       Object.keys(pk.m).forEach(L => { const pr = lumberPrice("スギ", 36, 45, +L); if (!pr) miss = true; else { cost = (cost || 0) + pr.p * pk.m[L]; avg = avg || !!pr.avg; conv = conv || !!pr.conv; } });
       const nStk = Object.values(pk.m).reduce((a, b) => a + b, 0);
@@ -7279,6 +7282,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     }
   }
   const tsNeeds = []; Object.keys(tsuka).forEach(k => { for (let i = 0; i < tsuka[k]; i++) tsNeeds.push(+k + 100); });
+  if (window.__capCut368){ const kn368 = []; Object.keys(tsuka).forEach(k => { for (let i = 0; i < tsuka[k]; i++) kn368.push(+k); }); if (kn368.length) window.__capCut368.push({key: "tsuka", name: "小屋束", sp: S.sp.tsuka || "スギ", a: S.tsuka, b: S.tsuka, needs: kn368, spec: ""}); }   /* CAD-368：小屋束は1本ごとの正寸（tsuka の集計）で取る */
   lum("tsuka", "小屋束", S.tsuka, S.tsuka, cutTsuka(tsNeeds), `${fmt(S.tsuka)}角・${tsNeeds.length}本を3m材から・長さ ${Object.keys(tsuka).map(k => fmt(+k)).join("/")}`, true);
   lum("moya", "母屋・棟木", S.moya, S.moya, moyaNeeds, `${fmt(S.moya)}角`, true);
   if (yose) lum("sumigi", "隅木", 105, 150, Array(4).fill((W / 2 + S.noki) * Math.sqrt(2 + t * t) + 200), `105×150・長さ${fmt((W / 2 + S.noki) * Math.sqrt(2 + t * t))}（√${fmt(2 + t * t, 4)}）`, true);
@@ -28521,6 +28525,227 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
     + "#roomBar176 #floorPanel{margin:0}"
     + "#roomBar176 #flBranch{margin:6px 0 0}";
   document.head.appendChild(st);
+})();
+</script>
+<style>
+#cutBox368{display:none}
+#st6.cutOn368 #cutBox368{display:block}
+#st6.cutOn368 #pvCard{display:none}
+#st6.cutOn368 #pvStruct{display:none!important}
+#st6.cutOn368 #fsSeg{display:none!important}
+#cutList368{font-size:13.5px;line-height:1.65;color:#222}
+#cutList368 .cH{font-weight:700;font-size:14.5px;margin:14px 0 4px;padding-bottom:2px;border-bottom:2px solid #C9A227}
+#cutList368 .cH:first-child{margin-top:0}
+#cutList368 .cF{font-weight:700;margin:12px 0 2px;color:#7A5B00}
+#cutList368 .cM{margin:6px 0}
+#cutList368 .cS{color:#5B6673;font-size:12px}
+#cutList368 .cN{color:#5B6673;font-size:12.5px;margin:4px 0}
+</style>
+<script>
+/* ================= CAD-368：カット寸法の画面 =================
+   翔伍の指示（2026-11-18）：アプリが今どこまで把握できているか、わかる物を
+   全部アプリ内に出しておく。後で本人が見て、いらない所・違う所を言う。
+   入口は完成図の切り替えに「カット寸法」（CAD-347 伏図と同じ組み込み方）。
+   中身は調査（プレカット-わかる事一覧-2026-11-18）の3分類：
+   1. カット寸法まで分かる物＝ lum() に渡る1本ごとの必要長さ（calc の取り口で記録）
+   2. 数が分かる物 ＝ 見積の行（ボード・合板・断熱など）＋筋かいの本数
+   3. まだ分からない物 ＝ 正直に書く
+   階ごとの数字は calc() 本体に計算させ、flLoad の差し替え位置で区切る
+   （見積と全く同じ計算になる）。見るだけで、見積・保存は一切変えない。 */
+(function(){
+  "use strict";
+  var cutOn = false, lastSig368 = "";
+  function n368(v){ return Math.round(v).toLocaleString("ja-JP"); }
+  function esc368(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  /* 柱は正寸で出す（呼び出し側で +120 のほぞ見込みが入っている。見積の行の
+     spec も「長さ2,540」＝正寸表記で、調査の一覧も正寸がカット寸法） */
+  var POST120 = {"柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1};
+  /* 定尺だけの並びでも構造の正寸として残す物（念のための保険。通常は混ざる） */
+  var KEEP1 = {"土台": 1, "桁": 1, "小屋梁": 1, "胴差": 1, "2階床梁": 1, "大引": 1, "柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1, "母屋・棟木": 1, "隅木": 1, "鼻隠し": 1, "破風板": 1, "間柱": 1};
+
+  /* 窓枠（窓ごと）：見積の wakuLen206 と同じ条件の窓だけ、1台分の部材を出す */
+  function sashParts368(){
+    var out = [];
+    try {
+      (S.sashes || []).forEach(function(s){
+        if (typeof wakuLen206 !== "function" || !(wakuLen206(s) > 0)) return;
+        var w = +s.w || 0, h = +s.h || 0;
+        out.push({cat: s.cat || "窓", w: w, h: h, n: s.n || 1, ue: w, shita: /掃き出し/.test(s.cat || "") ? 0 : w, tate: h + 40});
+      });
+    } catch(e){}
+    return out;
+  }
+
+  /* calc() を1回回して、材料取り（__capCut368）を階ごとに区切って集める。
+     区切りは flLoad の差し替え位置（calc 本体が階を入れ替える所）。
+     差し替えのたびに、その階の窓枠の材料も控える。 */
+  function collect368(){
+    var caps = [], sashSnaps = [sashParts368()];
+    window.__capCut368 = caps;
+    var origLoad = window.flLoad;
+    window.flLoad = function(o){
+      var r = origLoad.apply(this, arguments);
+      try { sashSnaps.push(sashParts368()); } catch(e){ sashSnaps.push([]); }
+      if (window.__capCut368) window.__capCut368.push({mark368: 1});
+      return r;
+    };
+    var C = null;
+    try { C = calc(); } catch(e){ C = null; }
+    window.flLoad = origLoad;
+    window.__capCut368 = null;
+    var segs = [[]];
+    caps.forEach(function(c){ if (c.mark368) segs.push([]); else segs[segs.length - 1].push(c); });
+    var nonEmpty = [];
+    segs.forEach(function(s, i){ if (s.length) nonEmpty.push({caps: s, sash: sashSnaps[i] || []}); });
+    var nf = 1; try { if (S.fl && S.fl.length) nf = S.fl.length; } catch(e){}
+    var floors = [], geya = [];
+    if (nf > 1 && nonEmpty.length >= 2){
+      nonEmpty.forEach(function(x, k){
+        if (k < nf) floors.push({label: (S.fl[k] && S.fl[k].name) || (k + 1) + "階", caps: x.caps, sash: x.sash});
+        else x.caps.forEach(function(c){ if (/^下屋/.test(c.name) || c.name === "垂木掛け") geya.push(c); });
+      });
+      if (geya.length) floors.splice(1, 0, {label: "下屋", caps: geya, sash: []});
+    } else if (nonEmpty.length){
+      var all = []; nonEmpty.forEach(function(x){ all = all.concat(x.caps); });
+      floors.push({label: nf > 1 ? "1〜2階（まとめて計算）" : null, caps: all, sash: nonEmpty[0].sash});
+    }
+    return {floors: floors, rows: C && C.rows ? C.rows : []};
+  }
+
+  function lenTxt368(needs){
+    var m = {}, ks = [];
+    needs.forEach(function(v){ var r = Math.round(v); if (!(r in m)){ m[r] = 0; ks.push(r); } m[r]++; });
+    ks.sort(function(a, b){ return b - a; });
+    return ks.map(function(r){ return n368(r) + " × " + m[r] + "本"; }).join("／");
+  }
+
+  /* 1階分（1区切り分）の HTML と、定尺だけの物（数が分かる物へ回す分）を返す */
+  function segHtml368(fl){
+    var order = [], map = {};
+    fl.caps.forEach(function(c){
+      if (c.key === "suji") return;   /* 筋かいは本数だけの組へ */
+      var needs = c.needs.slice();
+      if (POST120[c.name]) needs = needs.map(function(v){ return v - 120; });
+      var k = c.name + "|" + c.a + "x" + c.b + "|" + c.sp;
+      if (!map[k]){ map[k] = {name: c.name, a: c.a, b: c.b, sp: c.sp, needs: []}; order.push(map[k]); }
+      map[k].needs = map[k].needs.concat(needs);
+    });
+    var g1 = [], g2 = [];
+    order.forEach(function(e){
+      var stockOnly = e.needs.length > 0 && e.needs.every(function(v){ return v === 3000 || v === 4000; });
+      if (stockOnly && !KEEP1[e.name]) g2.push(e); else g1.push(e);
+    });
+    var h = "";
+    if (fl.label) h += "<div class='cF'>■ " + esc368(fl.label) + "</div>";
+    g1.forEach(function(e){
+      h += "<div class='cM'><b>" + esc368(e.name) + "</b> <span class='cS'>" + esc368(e.sp) + " " + n368(e.a) + "×" + n368(e.b) + "</span><br>" + lenTxt368(e.needs) + "</div>";
+    });
+    if (fl.sash && fl.sash.length){
+      h += "<div class='cM'><b>窓枠</b> <span class='cS'>窓ごと・1台分</span></div>";
+      fl.sash.forEach(function(w){
+        h += "<div class='cM'>" + esc368(w.cat) + " " + n368(w.w) + "×" + n368(w.h) + (w.n > 1 ? "（" + w.n + "台）" : "") + "<br>上枠 " + n368(w.ue) + (w.shita ? "・下枠 " + n368(w.shita) : "・下枠なし") + "・縦枠 " + n368(w.tate) + " × 2本</div>";
+      });
+    }
+    return {h: h, g2: g2};
+  }
+
+  function render368(){
+    var box = document.getElementById("cutList368"); if (!box) return;
+    var D = collect368();
+    var h = "<div class='cH'>カット寸法まで分かる物</div>";
+    h += "<div class='cN'>今の家の状態で、アプリが持っている材料の長さと数です。見るだけの画面で、見積と保存は変わりません。</div>";
+    if (S.mode === "zo") h += "<div class='cN'>" + (S.precut ? "プレカットの方法：長さは実寸です。柱は正寸（ほぞ見込み120を引いた長さ）で出しています。" : "材木の方法：土台は+150、桁と梁は+300の継ぎ見込みが入った長さです。柱は正寸（ほぞ見込み120を引いた長さ）で出しています。") + "</div>";
+    var g2all = [], suji = null;
+    if (!D.floors.length) h += "<div class='cM'>まだ図面がありません。</div>";
+    D.floors.forEach(function(fl){
+      var r = segHtml368(fl); h += r.h;
+      r.g2.forEach(function(e){ g2all.push(e); });
+      fl.caps.forEach(function(c){ if (c.key === "suji") suji = c; });
+    });
+    h += "<div class='cH'>数が分かる物（寸法の割り付けはまだ）</div>";
+    var lines = [];
+    if (suji) lines.push("<div class='cM'><b>筋かい</b> <span class='cS'>" + n368(suji.a) + "×" + n368(suji.b) + "</span><br>" + suji.needs.length + "本（1本の長さ " + n368(suji.needs[0] || 0) + "・入れる位置はまだ決めていません）</div>");
+    g2all.forEach(function(e){
+      lines.push("<div class='cM'><b>" + esc368(e.name) + "</b> <span class='cS'>" + esc368(e.sp) + " " + n368(e.a) + "×" + n368(e.b) + "</span><br>定尺 " + lenTxt368(e.needs) + "</div>");
+    });
+    var seen = {};
+    (D.rows || []).forEach(function(r){
+      if (!r || r.grp || !r.name) return;
+      if (!(/ボード|合板|面材|断熱|幅木|巾木|見切り|雨樋|鋼製束|釘/.test(r.name) || (r.fix && r.fix.kind === "sheet"))) return;
+      var dk = r.name + "|" + (r.qty || "") + "|" + (r.spec || "");
+      if (seen[dk]) return; seen[dk] = 1;
+      lines.push("<div class='cM'><b>" + esc368(r.name) + "</b>" + (r.qty ? "：" + esc368(r.qty) : "") + (r.spec ? "<br><span class='cS'>" + esc368(r.spec) + "</span>" : "") + "</div>");
+    });
+    h += lines.length ? lines.join("") : "<div class='cM'>（ありません）</div>";
+    h += "<div class='cH'>まだ分からない物</div>";
+    [
+      "ボードの割り付け：壁と天井のボードは、面積から枚数だけ出しています。壁ごとに何枚を何mmに切るかは、まだ計算していません。",
+      "部屋ごとの天井下地：新築では家全体を1つの長方形で計算しています。部屋ごとには分けていません。",
+      "床の仕上げ材：フローリング・フロアタイル・クッションフロアは㎡だけです。板の並べ方（割り付け）はまだです。",
+      "基礎の材料：生コンの量・鉄筋の長さと本数・型枠の面積は、まだ計算していません。",
+      "桁と梁の太さ：設定の値で決まっています。スパンから自動では決めていません。",
+      "筋かいの位置：本数だけです。どの壁に入れるかは決めていません。",
+      "回り縁：新築の見積には、まだ行がありません。",
+      "垂木（寄棟の時）：1本ごとの長さではなく、4m材の本数で持っています。"
+    ].forEach(function(t){ h += "<div class='cM'>" + esc368(t) + "</div>"; });
+    box.innerHTML = h;
+    var lg = document.getElementById("pvLegend");
+    if (lg) lg.textContent = "カット寸法：今の家で分かる、材料の長さと数です。見積は変わりません。";
+  }
+
+  function segBtns368(){ var seg = document.getElementById("pvSeg"); return seg ? Array.prototype.slice.call(seg.querySelectorAll("[data-pv]")) : []; }
+  function cutSet368(on){
+    var st = document.getElementById("st6"); if (!st) return;
+    cutOn = !!on;
+    st.classList.toggle("cutOn368", cutOn);
+    if (cutOn){
+      try { if (HB.__fs347 && HB.__fs347.on()) HB.__fs347.set(false); } catch(e){}
+      st.classList.add("pvOn");
+      segBtns368().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "cut")); });
+      render368();
+      lastSig368 = sig368();
+    }
+  }
+  function cutOff368(full){
+    cutOn = false;
+    var st = document.getElementById("st6"); if (!st) return;
+    st.classList.remove("cutOn368");
+    if (full){
+      st.classList.remove("pvOn");
+      segBtns368().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "iso")); });
+    }
+  }
+  function sig368(){
+    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length].join("|"); } catch(e){ return ""; }
+  }
+  function cutInit368(){
+    var seg = document.getElementById("pvSeg");
+    if (!seg || document.getElementById("cutBtn368")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "cutBtn368"; b.dataset.pv = "cut"; b.textContent = "カット寸法";
+    b.setAttribute("aria-pressed", "false");
+    seg.appendChild(b);
+    b.addEventListener("click", function(){ if (cutOn) cutOff368(true); else cutSet368(true); });
+    seg.addEventListener("click", function(e){
+      var t = e.target && e.target.closest ? e.target.closest("[data-pv]") : null;
+      if (t && t.dataset.pv !== "cut" && cutOn) cutOff368(false);
+    }, true);
+  }
+  cutInit368();
+  setInterval(function(){
+    try {
+      cutInit368();
+      var b = document.getElementById("cutBtn368");
+      if (b && b.getAttribute("aria-pressed") !== String(cutOn)) b.setAttribute("aria-pressed", String(cutOn));
+      var st = document.getElementById("st6");
+      if (cutOn && st && !st.classList.contains("pvOn")) cutOff368(false);
+      if (cutOn && st && !st.hidden){
+        var sg = sig368();
+        if (sg && sg !== lastSig368){ lastSig368 = sg; render368(); }
+      }
+    } catch(e){}
+  }, 700);
+  HB.__cut368 = {on: function(){ return cutOn; }, render: render368, set: cutSet368};
 })();
 </script>
 
