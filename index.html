@@ -25575,7 +25575,14 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         else if (r.za && r.det) fk = r.det.fin;
         else if (r.fk === "flAge") fk = r.fin;
         if (!fk || !VMAP[fk]) return;
-        var fill = patFor(VMAP, fk, isVert(r.x1 - r.x0, r.y1 - r.y0)); if (!fill) return;
+        /* CAD-387：向きは、レコードの中心が属する部屋の外形で決める（帯や
+           切れ端でも部屋の向きにそろえる）。部屋の外の範囲だけ範囲自身の形 */
+        var v387 = isVert(r.x1 - r.x0, r.y1 - r.y0);
+        var ci387 = Math.floor(((r.y0 + r.y1) / 2 - (R.b ? R.b.y0 : 0)) / R.st) * R.NX +
+                    Math.floor(((r.x0 + r.x1) / 2 - (R.b ? R.b.x0 : 0)) / R.st);
+        var cid387 = (ci387 >= 0 && ci387 < R.comp.length) ? R.comp[ci387] : -1;
+        if (cid387 >= 0){ for (var k387 = 0; k387 < R.rooms.length; k387++){ if (R.rooms[k387].cid === cid387){ var bx387 = roomBox282(R.rooms[k387], R); if (bx387) v387 = isVert(bx387.w, bx387.d); break; } } }
+        var fill = patFor(VMAP, fk, v387); if (!fill) return;
         items.push({ x: r.x0, y: r.y0, w: r.x1 - r.x0, h: r.y1 - r.y0, f: fill });
       });
       var sig = sigOf(items);
@@ -26033,13 +26040,24 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       var ri = roomIdxAt((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2);
       var key = ri + "|" + mk;
       var g = map[key];
-      if (!g){ g = map[key] = { mk: mk, x0: 1e18, y0: 1e18, x1: -1e18, y1: -1e18, recs: [] }; }
+      if (!g){ g = map[key] = { mk: mk, ri: ri, x0: 1e18, y0: 1e18, x1: -1e18, y1: -1e18, recs: [] }; }
       g.x0 = Math.min(g.x0, Math.min(r.x0, r.x1)); g.x1 = Math.max(g.x1, Math.max(r.x0, r.x1));
       g.y0 = Math.min(g.y0, Math.min(r.y0, r.y1)); g.y1 = Math.max(g.y1, Math.max(r.y0, r.y1));
       g.recs.push(r);
     });
+    /* 部屋ごとの外形（CAD-387：グループの向きの物差し） */
+    var roomBoxes290 = R.rooms.map(function(room){
+      var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+      room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
+        if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
+      return (mxx < 0) ? null : { w: (mxx - mnx + 1) * st, d: (mxy - mny + 1) * st };
+    });
     return Object.keys(map).map(function(k){
-      var g = map[k]; g.vert = isVert(g.x1 - g.x0, g.y1 - g.y0);
+      var g = map[k];
+      /* CAD-387：部屋に属するグループは部屋の外形で決める（帯や切れ端も部屋の
+         向きにそろえる）。部屋の外のグループだけ、集めた範囲自身の外形で決める */
+      var rb290 = (g.ri >= 0) ? roomBoxes290[g.ri] : null;
+      g.vert = rb290 ? isVert(rb290.w, rb290.d) : isVert(g.x1 - g.x0, g.y1 - g.y0);
       /* CAD-295: 部屋の物差し（dir295js）があればそちらを正とし、上書き合いを無くす */
       try { var hv = (typeof window !== "undefined" && window.__dir295Vert) ? window.__dir295Vert(g.recs[0]) : null;
         if (hv !== null && hv !== undefined) g.vert = hv; } catch(e){}
@@ -26174,6 +26192,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
      ・部屋の実効仕様（部屋の決め直し＞名前の標準＞全体の床）が木の時は、
        部屋の外形（部屋全体が木の床）。
      ・そうでない時は、その部屋にある木のレコード全部（材料を問わない）の外形。
+       （CAD-387で廃止：この合体外形が、階段横の帯だけ横向きになる原因だった。
+        向きは部屋の外形だけで決める）
      ・部屋の外の要素は要素自身の外形。
    判定はデータと部屋だけで決まるため、再描画・画面遷移・パン／ズームを
    繰り返しても向きは変わらない。他の後加工が描き直した直後は
@@ -26222,7 +26242,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
     return WOOD[fk] || null;
   }
 
-  /* 判定の材料：部屋ごとの向き（部屋の外形か、部屋の木レコード全部の外形か） */
+  /* 判定の材料：部屋ごとの向き（CAD-387：部屋の外形だけ。木レコードの合体外形は廃止） */
   var cache295 = { sig: null, J: null };
   function sig295(){
     try {
@@ -26264,10 +26284,12 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
         if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
       var w = (mxx - mnx + 1) * st, d = (mxy - mny + 1) * st;
-      var eff = effMk295(room);
-      if (eff) return { vert: isVert(w, d) };        /* 部屋全体が木の床 */
-      var u = unions[ri];
-      if (u) return { vert: isVert(u.x1 - u.x0, u.y1 - u.y0) }; /* 部屋の木レコード全部の外形 */
+      /* CAD-387：向きは部屋の外形だけで決める（本人の決まり「フローリングは
+         部屋の長手方向に張る」）。以前は、部屋の仕上げが木と決められない時
+         （例：玄関＝土間が標準の部屋）に、その部屋にある木レコード全部の
+         外形で判定していたため、階段横の帯の様に木レコードが細長い範囲
+         だけにあると、帯自身の形（横長）で横向きになった。帯や切れ端でも、
+         属する部屋の向きにそろえる。部屋の外の要素は従来通り要素自身の外形。 */
       return { vert: isVert(w, d) };
     });
     var J = { roomIdxAt: roomIdxAt, infos: infos };
