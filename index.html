@@ -1353,6 +1353,8 @@ const WORK = [
   ["kdUe", "階段 踏板・蹴込み 上張り", "円/段", 0, 9000],
   ["kdNon", "階段 滑り止め 取付", "円/段", 0, 1500],
   ["kdRail", "階段 手すり 取付", "円/m", 0, 9000],
+  ["kdBar35", "階段 手すり丸棒35", "円/m", 0, 3000],   /* CAD-378：手すり別行の丸棒（φ35）。仮単価の根拠＝メーカー公式の部品定価（材料のみ・旧価格）LIXIL ラウンド L4000 11,700円/本＝2,925円/m、大建 丸棒ストレート4000 11,400円/本＝2,850円/m（teika-06-stairs.md） */
+  ["kdBracket", "階段 手すり受け金具", "円/個", 0, 1500],   /* CAD-378：仮単価の根拠＝LIXIL 壁付けブラケット 3,000円/2個＝1,500円/個、大建 ブラケット横用 2,800円/2個＝1,400円/個（同上・材料のみ・旧価格） */
   ["kdKake", "階段 架け替え・新設（一式）", "円/か所", 0, 350000],
   ["kotsuKm", "交通費（車・1kmあたり）", "円/km", 0, 30]
 ];
@@ -6556,7 +6558,9 @@ function calc00(){
     st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
     Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190), R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
       work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
-      if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)) work("kdRail", "階段 手すり（片側）", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`); });
+      if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)){ const railN378 = Math.ceil(railL * 1000 / 910) + 1;   /* CAD-378：受け金具は流れごとに910mmピッチ・両端入り（翔伍の決定 2026-11-18）。手すりは片側1本＝1か所1流れ */
+        work("kdBar35", "手すり丸棒35", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`);
+        work("kdBracket", "手すり受け金具", railN378 * g.c, "個", `${g.c}か所 × ${railN378}個（910mmピッチ・両端入り）`); } });
   }
   function tenkenRows(){
     stairRows();
