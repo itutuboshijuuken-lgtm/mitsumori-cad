@@ -1031,9 +1031,12 @@ const WORK = [
   ["domaFin", "土間仕上げ（金ゴテ等）", "円/㎡", 0, 2500],
   ["floorFin", "床 フロアタイル", "円/㎡", 0, 6000],
   ["flComp", "床 フローリング（複合）", "円/㎡", 0, 7000],
+  ["flCompL", "床 フローリング（複合）張り手間", "円/㎡", 0, 2500],   /* CAD-388：材料と手間を分ける（初期値の材料分は 7,000−2,500） */
   ["flMuku", "床 無垢板15mm", "円/㎡", 0, 12000],
   ["flMuku30", "床 無垢板30mm（仮）", "円/㎡", 0, 18000],
+  ["flMukuL", "床 無垢板 張り手間", "円/㎡", 0, 3000],   /* CAD-388：無垢（15mm・30mm共用）。材料分は初期値−3,000 */
   ["flCF", "床 CF（クッションフロア）", "円/㎡", 0, 3500],
+  ["flCFL", "床 CF 張り手間", "円/㎡", 0, 1500],   /* CAD-388：材料分は 3,500−1,500 */
   ["flDoma", "床 土間（コンクリート・仕上げ）（仮）", "円/㎡", 0, 9500],
   ["flOki", "床 置き床（仮）", "円/㎡", 0, 12000],
   ["flAge", "小上がり造作（下地・仕上げ共）（仮）", "円/㎡", 0, 28000],
@@ -6647,7 +6650,35 @@ function calc00(){
     S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
-  function floorFin(a, pre, ft){ const ty = ft || S.flType || "floorFin"; const nm275 = (ty === "flComp" || ty === "flSheet") && S.flColor === "light" ? "フローリング張り（明るい）" : (ty === "flComp" || ty === "flSheet") && S.flColor === "dark" ? "フローリング張り（濃い）" : null; work(ty, nm275 ? `${pre}${nm275}` : `${pre}床 ${FTN[ty] || "フロアタイル"}`, a, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(ty).p)}円`); rows[rows.length - 1].cost *= 1.05; }
+  function floorFin(a, pre, ft, tkid388){
+    const ty = ft || S.flType || "floorFin";
+    const nm275 = (ty === "flComp" || ty === "flSheet") && S.flColor === "light" ? "フローリング張り（明るい）" : (ty === "flComp" || ty === "flSheet") && S.flColor === "dark" ? "フローリング張り（濃い）" : null;
+    const baseNm388 = nm275 ? `${pre}${nm275}` : `${pre}床 ${FTN[ty] || "フロアタイル"}`;
+    /* CAD-388：床の行を「材料」と「張り手間」に分ける。対象は flComp・flSheet・
+       flMuku・flMuku30・flCF。材料分＝初期値−手間の初期値（WORK の初期値同士で
+       計算するので、手間の単価だけ変えても材料分は動かない）。
+       床の単価を自分で入れている人（workP が仮でない）は割り直さず従来の1行。
+       定価（tkid388＝範囲の選択、無ければ S.tk388＝全体の選択）を選んでいる
+       間は、材料は定価×掛率が優先し、手間行はそのまま付く。 */
+    const LAB388 = {flComp: "flCompL", flSheet: "flCompL", flMuku: "flMukuL", flMuku30: "flMukuL", flCF: "flCFL"};
+    const labKey388 = LAB388[ty];
+    if (labKey388){
+      const matKey388 = ty === "flSheet" ? "flComp" : ty;
+      let tk388 = null;
+      if (tkid388 && typeof tkEntry388 === "function") tk388 = tkEntry388(tkid388);
+      if (!tk388 && labKey388 === "flCompL" && S.tk388 && typeof tkEntry388 === "function") tk388 = tkEntry388(S.tk388);
+      const mw388 = workP(matKey388);
+      if (tk388 || mw388.avg){
+        const labW388 = workP(labKey388);
+        const matU388 = tk388 ? tkUnit379(tk388) : (WORK.find(x => x[0] === matKey388)[4] - WORK.find(x => x[0] === labKey388)[4]);
+        const tb388 = `（${(a / 3.305785).toFixed(1)}坪）`;
+        rows.push({name: `${baseNm388}（材料）`, spec: tk388 ? `${fmt(a, 1)}㎡${tb388}（5%増し） × ${fmt(matU388)}円（定価${fmt(tk388.price)}円/㎡ × 掛率${fmt(tkRatePct379(tk388.maker), 1)}%・${tk388.maker}）` : `${fmt(a, 1)}㎡${tb388}（5%増し） × ${fmt(matU388)}円`, qty: "", cost: a * matU388 * 1.05, avg: !tk388, miss: !matU388, fix: tk388 ? {kind: "teika379", maker: tk388.maker} : {kind: "work", key: matKey388}, q: a});
+        rows.push({name: `${baseNm388}（張り手間）`, spec: `${fmt(a, 1)}㎡${tb388}（5%増し） × ${fmt(labW388.p)}円`, qty: "", cost: a * labW388.p * 1.05, avg: labW388.avg, miss: !labW388.p, fix: {kind: "work", key: labKey388}, q: a});
+        return;
+      }
+    }
+    work(ty, baseNm388, a, "㎡", `${fmt(a, 1)}㎡（5%増し） × ${fmt(workP(ty).p)}円`); rows[rows.length - 1].cost *= 1.05;
+  }
   const atFloor = s => /室内ドア|クローゼット|玄関|勝手口|掃き出し/.test(s.cat) || (s.cat === "開口" && s.h >= 2000);
   function habakiMikiri(perTotal, nFloors, o){
     const cut = o ? o.cut : S.sashes.filter(atFloor).reduce((a, s) => a + s.w * s.n, 0);
@@ -6655,7 +6686,9 @@ function calc00(){
     work("habaki", "幅木", hl, "m", `まわり ${fmt(perTotal / 1000, 1)}m − 出入口 ${fmt(cut / 1000, 1)}m ＋15%余裕 ＝ ${fmt(hl, 1)}m × ${fmt(workP("habaki").p)}円`);
     const doors = o ? o.doors : S.sashes.filter(s => /室内ドア|クローゼット|玄関|勝手口/.test(s.cat)).reduce((a, s) => a + s.w * s.n, 0);
     const mk = o ? Math.max(1, Math.ceil((doors + 1820 * nFloors * 0.5) / 1800 * 1.5)) : Math.max(3, Math.ceil((doors + 1820 * nFloors) / 1800 * 1.5));
-    work("mikiri", "見切り材", mk, "本", `出入口・床の切り替え用 ${mk}本（余裕込み）× ${fmt(workP("mikiri").p)}円`);
+    { const tkm388 = (typeof tkEntry388A === "function") ? tkEntry388A(S.tkMikiri388) : null;   /* CAD-388：見切り材の定価を選んでいる間は定価×掛率（行の数え方は従来どおり） */
+      if (tkm388){ const um388 = tkUnit379(tkm388); rows.push({name: `見切り材（${tkm388.maker} ${tkm388.name}）`, spec: `出入口・床の切り替え用 ${mk}本（余裕込み）× ${fmt(um388)}円（定価${fmt(tkm388.price)}円 × 掛率${fmt(tkRatePct379(tkm388.maker), 1)}%・${tkm388.maker}）`, qty: "", cost: um388 * mk, avg: false, fix: {kind: "teika379", maker: tkm388.maker}, q: mk}); }
+      else work("mikiri", "見切り材", mk, "本", `出入口・床の切り替え用 ${mk}本（余裕込み）× ${fmt(workP("mikiri").p)}円`); }
   }
   function okiRows(a, perim){
     const nA = Math.ceil(a * 7 * 1.1), nB = Math.ceil(a / 1.092 * 1.05);
@@ -6811,7 +6844,9 @@ function calc00(){
         if (A > 0) work("domaCon", "玄関ポーチ コンクリート", A, "㎡", `全体 幅${fmt(e.w, 2)}m × 奥行き${fmt(e.d, 2)}m ＝ ${fmt(A, 2)}㎡ × ${fmt(workP("domaCon").p)}円`);
         if (finA > 0) work(FKY[e.fin] || "domaFin", `玄関ポーチ 仕上げ（${FNM[e.fin] || "モルタル金ゴテ"}）`, finA, "㎡", `天端と階段（踏み面${fmt(e.tread)}mm × ${fmt(e.dan)}段・蹴上 約${e.dan > 0 ? Math.round(e.rise / e.dan) : 0}mm）＝ ${fmt(finA, 2)}㎡ × ${fmt(workP(FKY[e.fin] || "domaFin").p)}円`);
       }
-      else if (e.k === "parts"){ const w = WORK.find(x => x[0] === e.key); if (w && e.q > 0) work(e.key, w[1], e.q, w[2].replace("円/", "")); }
+      else if (e.k === "parts"){ const w = WORK.find(x => x[0] === e.key); const tkp388 = (e.tk388 && typeof tkEntry388A === "function") ? tkEntry388A(e.tk388) : null;   /* CAD-388：框の定価を選んでいる間は定価×掛率 */
+        if (tkp388 && e.q > 0){ const up388 = tkUnit379(tkp388); rows.push({name: tkp388.name, spec: `${e.q}本 × ${fmt(up388)}円（定価${fmt(tkp388.price)}円 × 掛率${fmt(tkRatePct379(tkp388.maker), 1)}%・${tkp388.maker}）`, qty: "", cost: up388 * e.q, avg: false, fix: {kind: "teika379", maker: tkp388.maker}, q: e.q}); }
+        else if (w && e.q > 0) work(e.key, w[1], e.q, w[2].replace("円/", "")); }
       else if (e.k === "repair"){
         [["fl", "rpFloor"], ["tg", "rpTategu"], ["cr", "rpCross"], ["am", "rpAmido"], ["sh", "rpShoji"], ["na", "rpNari"], ["te", "rpTeguruma"], ["ck", "rpCaulk"]].forEach(([f, k]) => { if (e[f] > 0){ const w = WORK.find(x => x[0] === k); work(k, w[1].replace("リペア ", ""), e[f], w[2].replace("円/", "")); } });
       }
@@ -12949,8 +12984,8 @@ document.addEventListener("click", function(e){
   // 見積：仕上げ範囲の分を、その仕上げで拾う（全体の床からは tatArea が引いている）
   HB.__floorRows = function(floorFin){
     const by = {};
-    (S.tatami || []).forEach(r => { if (r.fk) by[r.fk] = (by[r.fk] || 0) + (r.x1 - r.x0) * (r.y1 - r.y0) / 1e6; });
-    Object.keys(by).forEach(fk => { if (by[fk] > 0.05) floorFin(by[fk], "", fk); });
+    (S.tatami || []).forEach(r => { if (r.fk){ const k388 = r.fk + "\u0001" + (r.tk388 || ""); by[k388] = by[k388] || { fk: r.fk, tk: r.tk388 || "", a: 0 }; by[k388].a += (r.x1 - r.x0) * (r.y1 - r.y0) / 1e6; } });
+    Object.keys(by).forEach(k388 => { const g388 = by[k388]; if (g388.a > 0.05) floorFin(g388.a, "", g388.fk, g388.tk || undefined); });   /* CAD-388：定価の選択（r.tk388）ごとに分けて渡す。選択が無ければ従来と同一 */
   };
 
   function floorSnap(rc){
@@ -30273,5 +30308,98 @@ list.querySelectorAll("[data-tk386]").forEach(el => el.onchange = () => { const 
 /* 仕様の画面のサッシ・ドアのカードに、種類（定価）の選択欄を足す（drawSash0 の後段） */
 const _drawSash0_386 = drawSash0;
 drawSash0 = function(){ _drawSash0_386(); try { tkSashUI386();} catch(e){}};
+</script>
+
+<script>
+/* ===== CAD-388：フロア定価（材料）＋付属品の定価 =====
+データは study-floor-labor-2026-11-19.md で再確認した分だけ（ノダ公式カタログ
+「クオルテ／クオルテ防音45」カタログコード2502＝2025年2月、2026-11-19 再確認）。
+床材本体の価格は材料のみ・税抜・円/㎡（クオルテ ¥39,000/坪＝¥11,818/㎡、
+クオルテ防音45 ¥38,000/ケース＝¥12,303/㎡。どちらもカタログ表記の㎡単価）。
+付属品は円/本。FA12R-21/-22 は再確認で見つけた品番対応の訂正を反映済み
+（-21＝2,950×138×80 ¥28,000／-22＝1,950×168×100 ¥19,000）。
+Panasonic 幅木（QPE119A02JV ¥7,700）は 2026年10月の価格改定前の値しか
+裏が取れていないため入れていない。
+掛率と保存キー（gosei-kakeritsu-v1）は CAD-379 の仕組みを共用。 */
+const TEIKA388 = [["f-quo", "クオルテ KLTS1（複合フローリング・303×1818×12mm・6枚入1坪）", 11818], ["f-quo45", "クオルテ防音45 KLT45S1（直貼り防音・143×900×11.5mm・24枚入）", 12303]].map(a => ({id: a[0], maker: "ノダ", name: a[1], price: a[2], src: "ノダ公式カタログ「クオルテ／クオルテ防音45」（カタログコード2502・2025年2月）", date: "2026-11-19"}));
+function tkEntry388(id){ return TEIKA388.find(t => t.id === id) || null; }
+const TEIKA388A = [["a-mikiri", "mikiri", "幅狭成型床見切り［付け框兼用］ FKA-71（フロア厚12mm用）", 4000], ["a-fa20", "kamachi", "上り框 FA12R-20（1,950×138×80）", 17000], ["a-fa22", "kamachi", "上り框 FA12R-22（1,950×168×100）", 19000], ["a-fa21", "kamachi", "上り框 FA12R-21（2,950×138×80）", 28000], ["a-fa23", "kamachi", "上り框 FA12R-23（2,950×168×100）", 30000], ["a-fas10", "kamachi", "上り框 FAS-10（1,950×120×70）", 27000], ["a-fas11", "kamachi", "上り框 FAS-11（2,950×120×70）", 45000], ["a-fas12", "kamachi", "上り框 FAS-12（1,950×150×90）", 30000], ["a-fas13", "kamachi", "上り框 FAS-13（2,950×150×90）", 48000], ["a-fhs10", "kamachi", "付け框 FHS-10（1,950×120×30）", 18000], ["a-fhs11", "kamachi", "付け框 FHS-11（2,950×120×30）", 27000], ["a-fhs12", "kamachi", "付け框 FHS-12（1,950×150×30）", 22000], ["a-fhs13", "kamachi", "付け框 FHS-13（2,950×150×30）", 33000]].map(a => ({id: a[0], kind: a[1], maker: "ノダ", name: a[2], price: a[3], src: "ノダ公式カタログ「クオルテ／クオルテ防音45」（カタログコード2502・2025年2月）", date: "2026-11-19"}));
+function tkEntry388A(id){ return TEIKA388A.find(t => t.id === id) || null; }
+function tkFloorSel388(cur){
+  const e = cur ? tkEntry388(cur) : null;
+  let h = `<div class="sub2" style="margin-top:6px">種類（定価から選ぶ）</div><select data-tk388="1" style="width:100%;margin-top:2px"><option value="">指定なし（今の単価）</option>` +
+    TEIKA388.map(t => `<option value="${t.id}"${cur === t.id ? " selected" : ""}>${esc(t.maker)} ${esc(t.name)}（定価 ${fmt(t.price)}円/㎡）</option>`).join("") + `</select>`;
+  if (e) h += `<p class="hint" style="margin:4px 2px 0">材料の単価＝定価 ${fmt(e.price)}円/㎡ × 掛率${fmt(tkRatePct379(e.maker), 1)}%（${esc(e.maker)}）＝ <b>${fmt(tkUnit379(e))}円/㎡</b>（材料のみ・税抜）。張り手間は別に付きます。<br>出典：${esc(e.src)}／確認日 ${e.date}</p>`;
+  else h += `<p class="hint" style="margin:4px 2px 0">選ぶと、材料の単価が「メーカー定価 × 掛率」になります。掛率は単価表の画面で変えられます。</p>`;
+  return h;
+}
+/* 置いた床の範囲のシートに、定価の選択欄を足す（tatSheet の後段。
+   対象はフローリングの範囲だけ。オイル・無塗装の範囲は flCompO の行に
+   なるため出さない） */
+const _tatSheet388 = tatSheet;
+tatSheet = function(i){
+  _tatSheet388(i);
+  try {
+    const r = (S.tatami || [])[i];
+    if (!r || r.za || r.fk !== "flComp") return;
+    if (r.det && r.det.mat !== "hikiban" && (r.det.paint || "uv") !== "uv") return;
+    const mb = document.getElementById("mbox");
+    if (!mb || mb.querySelector("[data-tk388]")) return;
+    const row = mb.querySelector(".row");
+    if (!row) return;
+    const div = document.createElement("div");
+    div.innerHTML = tkFloorSel388(r.tk388 || "");
+    row.parentNode.insertBefore(div, row);
+    div.querySelector("[data-tk388]").onchange = ev => { if (ev.target.value) r.tk388 = ev.target.value; else delete r.tk388; save(); tatSheet(i); };
+  } catch(e){}
+};
+/* 仕様画面「床の範囲」に、全体の床の定価と見切り材の定価の選択欄を足す
+   （drawSpec の後段。床の範囲の再描画のたびに付け直す） */
+const _drawSpec388 = drawSpec;
+drawSpec = function(){
+  _drawSpec388();
+  try {
+    const box = document.getElementById("specFl138");
+    if (!box || box.querySelector("#tk388box")) return;
+    const cur = S.flType === "flSheet" ? "flComp" : (S.flType || "");
+    const div = document.createElement("div");
+    div.id = "tk388box";
+    let h = "";
+    if (cur === "flComp") h += tkFloorSel388(S.tk388 || "");
+    const mk388 = S.tkMikiri388 ? tkEntry388A(S.tkMikiri388) : null;
+    h += `<div class="sub2" style="margin-top:6px">見切り材（定価から選ぶ）</div><select data-tk388m="1" style="width:100%;margin-top:2px"><option value="">指定なし（今の単価）</option>` +
+      TEIKA388A.filter(t => t.kind === "mikiri").map(t => `<option value="${t.id}"${S.tkMikiri388 === t.id ? " selected" : ""}>${esc(t.maker)} ${esc(t.name)}（定価 ${fmt(t.price)}円/本）</option>`).join("") + `</select>`;
+    if (mk388) h += `<p class="hint" style="margin:4px 2px 0">見切り材の単価＝定価 ${fmt(mk388.price)}円 × 掛率${fmt(tkRatePct379(mk388.maker), 1)}%（${esc(mk388.maker)}）＝ <b>${fmt(tkUnit379(mk388))}円/本</b>（税抜）。<br>出典：${esc(mk388.src)}／確認日 ${mk388.date}</p>`;
+    div.innerHTML = h;
+    box.appendChild(div);
+    const sf = div.querySelector("[data-tk388]");
+    if (sf) sf.onchange = ev => { if (ev.target.value) S.tk388 = ev.target.value; else delete S.tk388; save(); drawSpec(); };
+    const sm = div.querySelector("[data-tk388m]");
+    if (sm) sm.onchange = ev => { if (ev.target.value) S.tkMikiri388 = ev.target.value; else delete S.tkMikiri388; save(); drawSpec(); };
+  } catch(e){}
+};
+/* 部分工事の部品で「永大 リフォーム框」を選んだカードに、上り框・付け框の
+   定価の選択欄を足す（drawExtras の後段） */
+const _drawExtras388 = drawExtras;
+drawExtras = function(){
+  _drawExtras388();
+  try {
+    const list = document.getElementById("exList");
+    if (!list) return;
+    list.querySelectorAll("[data-px]").forEach(sel => {
+      const i = +sel.dataset.px, e = S.extras[i];
+      if (!e || e.k !== "parts" || e.key !== "pKamachi") return;
+      const card = sel.closest(".ex");
+      if (!card || card.querySelector("[data-tk388p]")) return;
+      const cur = e.tk388 ? tkEntry388A(e.tk388) : null;
+      const div = document.createElement("div");
+      div.innerHTML = `<div class="sub2" style="margin-top:6px">種類（定価から選ぶ）</div><select data-tk388p="${i}" style="width:100%;margin-top:2px"><option value="">指定なし（今の単価）</option>` +
+        TEIKA388A.filter(t => t.kind === "kamachi").map(t => `<option value="${t.id}"${e.tk388 === t.id ? " selected" : ""}>${esc(t.maker)} ${esc(t.name)}（定価 ${fmt(t.price)}円/本）</option>`).join("") + `</select>` +
+        (cur ? `<p class="hint" style="margin:4px 2px 0">単価＝定価 ${fmt(cur.price)}円 × 掛率${fmt(tkRatePct379(cur.maker), 1)}%（${esc(cur.maker)}）＝ <b>${fmt(tkUnit379(cur))}円/本</b>（材料のみ・税抜）。<br>出典：${esc(cur.src)}／確認日 ${cur.date}</p>` : `<p class="hint" style="margin:4px 2px 0">選ぶと、この框の単価が「メーカー定価 × 掛率」になります。</p>`);
+      card.appendChild(div);
+      div.querySelector("[data-tk388p]").onchange = ev => { if (ev.target.value) e.tk388 = ev.target.value; else delete e.tk388; save(); drawExtras(); };
+    });
+  } catch(e){}
+};
 </script>
 </html>
