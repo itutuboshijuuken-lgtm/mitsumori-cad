@@ -2128,14 +2128,15 @@ const pState = q => q.state || (q.isNew ? "new" : "keep");
 /* CAD-292: 間仕切りの形（普通の壁／垂れ壁／腰壁／開放）。記録は q.wf（無い＝普通の壁）。
    腰壁は従来の高さ指定 q.top（床からの高さ）も同じ形として扱う（互換）。垂れ壁は
    q.wfh が天井からの下がり。開放は壁として拾わないが、線の区切りは従来通り効く。 */
-const PFN292 = {full: "普通の壁", tare: "垂れ壁", koshi: "腰壁", open: "開放"};
-const partForm292 = q => { if (!q) return "full"; if (q.wf === "open" || q.wf === "tare" || q.wf === "koshi") return q.wf; return q.top ? "koshi" : "full"; };
+const PFN292 = {full: "普通の壁", tare: "垂れ壁", koshi: "腰壁", fuka: "壁をふかす", open: "開放"};   /* CAD-385: 壁をふかす（片面の増し壁） */
+const partForm292 = q => { if (!q) return "full"; if (q.wf === "open" || q.wf === "tare" || q.wf === "koshi" || q.wf === "fuka") return q.wf; return q.top ? "koshi" : "full"; };
 const partHq292 = (q, ch) => { const f = partForm292(q), c = ch || 2400; if (f === "open") return 0; if (f === "tare") return Math.max(0, c - (q.wfh || 600)); return Math.min(q.top || c, c); };
 function setPartForm292(q, f, h){
   const ch = (typeof S !== "undefined" && S && +S.ch) || 2400;
   if (f === "open"){ q.wf = "open"; delete q.wfh; delete q.top; }
   else if (f === "tare"){ q.wf = "tare"; q.wfh = Math.max(50, Math.min(Math.round(h || q.wfh || 600), Math.max(50, ch - 50))); delete q.top; }
   else if (f === "koshi"){ const v = Math.max(50, Math.min(Math.round(h || q.top || q.wfh || 900), ch)); q.wf = "koshi"; q.wfh = v; q.top = v; }
+  else if (f === "fuka"){ q.wf = "fuka"; delete q.wfh; delete q.top; }   /* CAD-385: ふかしは高さ指定なし（天井まで） */
   else { delete q.wf; delete q.wfh; delete q.top; }
 }
 const PST = {keep: ["既存", "#2563B0"], new: ["新設", "#E8742C"], remove: ["撤去", "#C62828"]};
@@ -3056,6 +3057,8 @@ function planExtras(P, sc){
   (S.parts2D || []).forEach((q, i) => {
     const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]), m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
     const isSel = sel && sel.t === "p" && sel.i === i;
+    /* CAD-385: 壁をふかすは、線の片側に 100mm ずらした細い平行線を足して厚みを見せる（選択時は本体と同じピンク） */
+    const fk385 = partForm292(q) === "fuka" && pState(q) !== "remove" ? (() => { const dx = c[0] - a[0], dy = c[1] - a[1], pl = Math.hypot(dx, dy) || 1, off = 100 * sc, nx = -dy / pl * off, ny = dx / pl * off; return `<line x1="${a[0] + nx}" y1="${a[1] + ny}" x2="${c[0] + nx}" y2="${c[1] + ny}" stroke="${isSel ? "#FF00C8" : PST[pState(q)][1]}" stroke-width="1.2" vector-effect="non-scaling-stroke" pointer-events="none"/>`; })() : "";
     if (beamOn(q) && L > 1){
       const bb = bbox(), ux = (q.x2 - q.x1) / L, uy = (q.y2 - q.y1) / L, ex = Math.max(0, (beamLen(q) - L) / 2), cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v)), sp = beamSpan(q);
       const A2 = sp.al ? P(sp.vert ? [q.x1, sp.lo] : [sp.lo, q.y1]) : P([cl(q.x1 - ux * ex, bb.x0, bb.x1), cl(q.y1 - uy * ex, bb.y0, bb.y1)]), B2 = sp.al ? P(sp.vert ? [q.x1, sp.hi] : [sp.hi, q.y1]) : P([cl(q.x2 + ux * ex, bb.x0, bb.x1), cl(q.y2 + uy * ex, bb.y0, bb.y1)]);
@@ -3063,8 +3066,8 @@ function planExtras(P, sc){
     }
     /* CAD-305: 開放（撤去でない）は壁が無いので見える線を描かない。当たり判定の透明線・文字・選択の点滅は従来通り */
     /* CAD-372：間仕切りの線は、拡大しても太いまま膨らまない様に画面基準の細さに保つ（vector-effect="non-scaling-stroke"） */
-    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? (isSel ? `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FF00C8" stroke-width="2.5" vector-effect="non-scaling-stroke"/>` : "") : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${isSel ? "#FF00C8" : PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""} vector-effect="non-scaling-stroke"/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
-      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmtD319(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : ""}${partForm292(q) === "koshi" ? "・腰壁 " + fmtD319(q.top || q.wfh || 900) : partForm292(q) === "tare" ? "・垂れ壁 " + fmtD319(q.wfh || 600) : partForm292(q) === "open" ? "・開放" : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
+    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? (isSel ? `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FF00C8" stroke-width="2.5" vector-effect="non-scaling-stroke"/>` : "") : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${isSel ? "#FF00C8" : PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""} vector-effect="non-scaling-stroke"/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>${fk385}` +
+      `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmtD319(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : ""}${partForm292(q) === "koshi" ? "・腰壁 " + fmtD319(q.top || q.wfh || 900) : partForm292(q) === "tare" ? "・垂れ壁 " + fmtD319(q.wfh || 600) : partForm292(q) === "open" ? "・開放" : partForm292(q) === "fuka" ? "・ふかし" : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
     const q = S.parts2D[sel.i], a = P([q.x1, q.y1]), c = P([q.x2, q.y2]);
@@ -5040,7 +5043,7 @@ function partSheet(i){
     <div class="seg">${(S.mode === "zo" ? ["keep", "new"] : ["keep", "new", "remove"]).map(k => `<button data-nw="${k}" aria-pressed="${pState(q) === k}" type="button">${PST[k][0]}</button>`).join("")}</div>
     <div class="seg" style="margin-top:6px"><button data-or="h" aria-pressed="${horiz}" type="button">横向き</button><button data-or="v" aria-pressed="${!horiz}" type="button">縦向き</button></div>
     <div class="sub2" style="margin-top:10px">壁の形</div>
-    <div class="seg">${["full", "tare", "koshi", "open"].map(f => `<button data-wf="${f}" aria-pressed="${partForm292(q) === f}" type="button">${PFN292[f]}</button>`).join("")}</div>
+    <div class="seg">${["full", "tare", "koshi", "fuka", "open"].map(f => `<button data-wf="${f}" aria-pressed="${partForm292(q) === f}" type="button">${PFN292[f]}</button>`).join("")}</div>
     ${partForm292(q) === "tare" ? row("pf", "天井からの下がり", q.wfh || 600) : partForm292(q) === "koshi" ? row("pf", "床からの高さ", q.top || q.wfh || 900) : ""}
     ${row("po", horiz ? "上の壁からの位置" : "左の壁からの位置", off)}${row("ps", horiz ? "始まり（左の壁から）" : "始まり（上の壁から）", st)}${row("pl", "長さ", L)}
     <div class="row"><button class="btn sub" id="psFit" type="button">壁から壁まで伸ばす</button></div>
@@ -6692,9 +6695,14 @@ function calc00(){
     let remLen = 0;
     let hA = 0, nA = 0;
     let lenEff = 0, newLenEff = 0, lenFloor = 0;   /* CAD-292: 形に合わせた実効長さ（高さ割合）と、床に届く形の長さ（幅木・見切り用） */
-    P2.forEach(q => { const L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), st = pState(q), hq = partHq292(q, ch), f292 = ch > 0 ? hq / ch : 0, fm292 = partForm292(q); if (st === "remove"){ remLen += L; return; } len += L; hA += L * hq; lenEff += L * f292; if (fm292 !== "tare" && fm292 !== "open") lenFloor += L; if (st === "new"){ newLen += L; nA += L * hq; newLenEff += L * f292; } });
+    let fA = 0, nfA = 0, lenFuka = 0; const fukaLens = [];   /* CAD-385: 壁をふかす（片面分）の面積・長さと、下地の間柱の長さ（455間隔・天井高+100） */
+    P2.forEach(q => { const L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1), st = pState(q), hq = partHq292(q, ch), f292 = ch > 0 ? hq / ch : 0, fm292 = partForm292(q); if (st === "remove"){ remLen += L; return; } len += L; hA += L * hq; lenEff += L * f292; if (fm292 !== "tare" && fm292 !== "open") lenFloor += L; if (fm292 === "fuka"){ fA += L * hq; lenFuka += L; if (st === "new") nfA += L * hq; const nn = Math.floor(L / 455) + 1; for (let k = 0; k < nn; k++) fukaLens.push(ch + 100); } if (st === "new"){ newLen += L; nA += L * hq; newLenEff += L * f292; } });
     const opP = S.sashes.filter(sa => sa.host && sa.host.t === "p").reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
-    return {len, newLen, remLen, lenEff, newLenEff, lenFloor, area: Math.max(0, hA / 1e6 * 2 - opP * 2), newArea: nA / 1e6 * 2};
+    const isFk385 = sa => { if (!sa.host || sa.host.t !== "p") return false; const q = P2[sa.host.i]; return !!q && partForm292(q) === "fuka" && pState(q) !== "remove"; };   /* CAD-385: ふかし面の開口は片面分だけ引く */
+    const opFuka = S.sashes.filter(sa => isFk385(sa)).reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;
+    const opFukaN = S.sashes.filter(sa => isFk385(sa) && pState(P2[sa.host.i]) === "new").reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;
+    const fukaArea = Math.max(0, fA / 1e6 - opFuka), fukaNewArea = Math.max(0, nfA / 1e6 - opFukaN);
+    return {len, newLen, remLen, lenEff, newLenEff, lenFloor, lenFuka, fukaLens, fukaArea, area: Math.max(0, hA / 1e6 * 2 - opP * 2) + fukaArea, newArea: nA / 1e6 * 2 + fukaNewArea};
   }
   function partNewRows(ch){
     const pi = partInfo(ch);
@@ -6709,16 +6717,17 @@ function calc00(){
         work("hariHokyo", "梁補強 取付手間", tot / 1000, "m", `${bq.length}か所 ${fmt(tot / 1000, 2)}m × ${fmt(workP("hariHokyo").p)}円`);
         work("kariuke", "仮受け（ジャッキ・束）", bq.length, "か所"); }
     }
-    if (!(pi.newLen > 0)) return;
+    if (!(pi.newLen > 0) && !(pi.lenFuka > 0)) return;   /* CAD-385: ふかしだけの時も下地を拾う */
     const L = pi.newLen;
     { const F6 = framePos(), nP = F6.partPostN, nTh = F6.partThick, nTn = F6.partThin, nAll = nTh + nTn; const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP();
       const lens292 = (arr, n) => (arr && arr.length === n) ? arr : Array(n).fill(ch + 100);   /* CAD-292: 柱・間柱の長さは形（壁のある高さ）に合わせる */
       if (nP > 0) lum("hashira", "新設間仕切り 柱", 105, 105, lens292(F6.partPostLens, nP), `105角・壁の端と交点・壁 ${fmt(L / 1000, 2)}m`, false);
       if (S.mabaKata === "mix" && nTn > 0 && nTh > 0){ lum("mabashira", "新設間仕切り 間柱", ta, tb, lens292(F6.partThickLens, nTh), `${ta}×${tb}・910の位置（継目）${F6.jambN ? "と開口の両脇" : ""}・壁 ${fmt(L / 1000, 2)}m`, false); lum("mabashira", "新設間仕切り 間柱", na, nb, lens292(F6.partThinLens, nTn), `${na}×${nb}・455の位置・壁 ${fmt(L / 1000, 2)}m`, false); }
       else if (nAll > 0) lum("mabashira", "新設間仕切り 間柱", ta, tb, lens292((F6.partThickLens || []).concat(F6.partThinLens || []), nAll), `${ta}×${tb}・455間隔・壁 ${fmt(L / 1000, 2)}m`, false); }
+    if (pi.fukaLens && pi.fukaLens.length){ const [fa385, fb385] = mabaSecP(); lum("mabashira", "ふかし壁 間柱", fa385, fb385, pi.fukaLens, `${fa385}×${fb385}・455間隔・片面の下地・壁 ${fmt(pi.lenFuka / 1000, 2)}m`, false); lum("suji", "ふかし壁 上下枠", 45, 105, Array(Math.ceil(pi.lenFuka * 2 / 3900)).fill(4000), "45×105", false); }   /* CAD-385: ふかしの下地は間仕切りと同じ物差し */
     lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(pi.newLenEff * 2 / 3900)).fill(4000), "45×105", false);   /* CAD-292: 上下枠は高さ割合 */
-    const w = workP("ninku"), nin = Math.ceil(pi.newLenEff / 1000 * 0.4 * 2) / 2;   /* CAD-292: 大工手間も高さ割合 */
-    if (nin > 0 && !(S.mode === "zo" && !zoAttached())) rows.push({name: "大工手間（新設間仕切り）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
+    const w = workP("ninku"), nin = Math.ceil((pi.newLenEff + (pi.lenFuka || 0)) / 1000 * 0.4 * 2) / 2;   /* CAD-385: ふかしの下地の手間も同じ物差し（1mあたり0.4人工）に含める */   /* CAD-292: 大工手間も高さ割合 */
+    if (nin > 0 && !(S.mode === "zo" && !zoAttached())) rows.push({name: pi.newLen > 0 ? "大工手間（新設間仕切り）" : "大工手間（ふかし壁）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
   }
   function exRows(){
     S.extras.forEach(normEx);
@@ -7068,7 +7077,7 @@ function calc00(){
     } catch (e198) { /* 引く量が取れない時は従来どおり引かない */ }
     if (!rmMode){
       const fw0 = S.rfWall, wallN0 = Math.max(0, per * ch / 1e6 - openArea()) + (fw0 === "none" ? 0 : PI.area);
-      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), ecu: cuts198.houseFloor, ccW: cuts198.houseW, ccC: cuts198.houseC, perOki: per, perHab: per + PI.lenFloor * 2, dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
+      scopes.push({label: null, area, wallN: wallN0, ff: S.rfFloor, fw: fw0, fc: S.rfCeil, wm: S.rfWallMat, cm: S.rfCeilMat, ccur: S.rfCeilCur || "board", maw: !!S.rfMawari, tat: tatArea(), zcut: zoneFinCut(), ecu: cuts198.houseFloor, ccW: cuts198.houseW, ccC: cuts198.houseC, perOki: per, perHab: per + PI.lenFloor * 2 + (PI.lenFuka || 0),   /* CAD-385: ふかし面の足元・天井際も1面分 */ dim: [R.b.w, R.b.h], hab: null, jr: () => joistRuns(R.b.w >= R.b.h)});
     } else {
       roomStats(ch).forEach(m => {
         const poly = [[m.bb.x0, m.bb.y0], [m.bb.x1, m.bb.y0], [m.bb.x1, m.bb.y1], [m.bb.x0, m.bb.y1]];
@@ -12654,7 +12663,7 @@ HB.__dskSeg32 = true;
     if (sel.t === "p"){
       L.push("長さ：間仕切りの長さを、数字で決めます。");
       L.push("壁まで：両端を、いちばん近い壁・間仕切りまで伸ばします。");
-      if (has("sbForm292")) L.push("形：普通の壁・垂れ壁（天井から下がる）・腰壁（床から途中まで）・開放（壁なし）を選びます。見積も形に合わせて変わります。");
+      if (has("sbForm292")) L.push("形：普通の壁・垂れ壁（天井から下がる）・腰壁（床から途中まで）・壁をふかす（壁の前に下地を組んで前に出す）・開放（壁なし）を選びます。見積も形に合わせて変わります。");
       if (has("sbBeam")) L.push("梁補強：撤去する壁に、梁の補強が要るかを選びます。");
       if (has("sbNew")) L.push("状態のボタン：新設・既存のまま・撤去を切り替えます。");
       L.push("⟳90°：縦と横を入れ替えます。");
@@ -13846,18 +13855,21 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   function pvWalls(P, bandO, bandP){
     const p = pts(), lwO = 1.7, lwP = 1.3;
     let black = "", white = "";
-    const partSegs = [];
+    const partSegs = [], fkSegs385 = [];   /* CAD-385: ふかし壁は帯の片側に 90mm 分の帯を足す */
     (S.parts2D || []).forEach(q => {
       if (pState(q) === "remove") return;
       if (partForm292(q) === "open") return;   /* CAD-292: 開放は完成図でも壁として描かない */
       const Lh = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (Lh < 30) return;
       const ux = (q.x2 - q.x1) / Lh, uy = (q.y2 - q.y1) / Lh, ext = 40;
       partSegs.push([[q.x1 - ux * ext, q.y1 - uy * ext], [q.x2 + ux * ext, q.y2 + uy * ext]]);
+      if (partForm292(q) === "fuka"){ const sh385 = 105; fkSegs385.push([[q.x1 - ux * ext - uy * sh385, q.y1 - uy * ext + ux * sh385], [q.x2 + ux * ext - uy * sh385, q.y2 + uy * ext + ux * sh385]]); }   /* CAD-385: 中心を法線方向へ 105mm（帯半分60＋増し分45）ずらした帯。現況側 bfWalls には足さない */
     });
     (S.wallLines || []).forEach(w => { if (Math.hypot(w.x2 - w.x1, w.y2 - w.y1) >= 30) partSegs.push([[w.x1, w.y1], [w.x2, w.y2]]); });
     partSegs.forEach(([a, c]) => { black += `<polygon points="${pvBandPts(P, a, c, bandP / 2)}" fill="#111"/>`; });
+    fkSegs385.forEach(([a, c]) => { black += `<polygon points="${pvBandPts(P, a, c, bandP * 0.375)}" fill="#111"/>`; });   /* CAD-385 */
     for (let i = 0; i < p.length; i++){ if (i === S.noWall) continue; black += `<polygon points="${pvBandPts(P, p[i], p[(i + 1) % p.length], bandO / 2)}" fill="#111"/>`; }
     partSegs.forEach(([a, c]) => { white += `<polygon points="${pvBandPts(P, a, c, Math.max(0.6, bandP / 2 - lwP))}" fill="#fff"/>`; });
+    fkSegs385.forEach(([a, c]) => { white += `<polygon points="${pvBandPts(P, a, c, Math.max(0.6, bandP * 0.375 - lwP))}" fill="#fff"/>`; });   /* CAD-385 */
     for (let i = 0; i < p.length; i++){ if (i === S.noWall) continue; white += `<polygon points="${pvBandPts(P, p[i], p[(i + 1) % p.length], Math.max(0.6, bandO / 2 - lwO))}" fill="#fff"/>`; }
     if (S.noWall >= 0 && p[S.noWall]){ const a = P(p[S.noWall]), c = P(p[(S.noWall + 1) % p.length]); white += `<line x1="${r2(a[0])}" y1="${r2(a[1])}" x2="${r2(c[0])}" y2="${r2(c[1])}" stroke="#111" stroke-width="1.1" stroke-dasharray="5 4"/>`; }
     return black + white;
@@ -21469,9 +21481,9 @@ function partFormSheet292(i){
   const q = (typeof S !== "undefined" && S && S.parts2D) ? S.parts2D[i] : null; if (!q) return;
   const f = partForm292(q);
   const hv = f === "tare" ? (q.wfh || 600) : f === "koshi" ? (q.top || q.wfh || 900) : 0;
-  const desc = {full: "天井まで届く、今まで通りの壁です。", tare: "天井から下の途中まで下がる壁です。下は開いています。", koshi: "床から上の途中まで立つ壁です。上は開いています。", open: "壁はありません。部屋の分かれと床の境だけが残り、壁としては見積に入りません。"}[f];
+  const desc = {full: "天井まで届く、今まで通りの壁です。", tare: "天井から下の途中まで下がる壁です。下は開いています。", koshi: "床から上の途中まで立つ壁です。上は開いています。", fuka: "今ある壁の前に下地を組んで、壁を前に出す形です。ふかした面（片面）の下地・ボード・仕上げが見積に入ります。", open: "壁はありません。部屋の分かれと床の境だけが残り、壁としては見積に入りません。"}[f];
   $("mbox").innerHTML = `<h3>間仕切りの形</h3>
-    <div class="seg">${["full", "tare", "koshi", "open"].map(k => `<button data-wf292="${k}" aria-pressed="${f === k}" type="button">${PFN292[k]}</button>`).join("")}</div>
+    <div class="seg">${["full", "tare", "koshi", "fuka", "open"].map(k => `<button data-wf292="${k}" aria-pressed="${f === k}" type="button">${PFN292[k]}</button>`).join("")}</div>
     <p class="hint" style="margin-top:8px">${desc}</p>
     ${f === "tare" || f === "koshi" ? `<div class="sub2" style="margin-top:8px">${f === "tare" ? "天井からの下がり" : "床からの高さ"}：<b>${fmt(hv)}</b>mm</div><div class="chips"><button data-h292="-100" type="button">−100</button><button data-h292="-10" type="button">−10</button><button data-h292="10" type="button">＋10</button><button data-h292="100" type="button">＋100</button><button data-h292="pad" type="button">数字で</button></div>` : ""}
     <div class="row"><button class="btn pri" id="pfOk292" type="button">OK</button></div>`;
