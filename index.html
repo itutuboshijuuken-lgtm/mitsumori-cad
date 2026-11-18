@@ -13021,13 +13021,9 @@ document.addEventListener("click", function(e){
   HB.__floorTab = false;
   function floorPanelSync(){
     const tabs = document.getElementById("toolTabs"); if (!tabs) return;
-    if (!document.getElementById("floorBtn")){
-      const b = document.createElement("button");
-      b.type = "button"; b.id = "floorBtn"; b.textContent = "床仕様";
-      b.onclick = () => { try { toolOpen = null; } catch(e){} if (HB.__partDrawOff) HB.__partDrawOff(true); /* CAD-172：床へ移ったら壁を描く状態を落とす */ HB.__floorTab = !HB.__floorTab; if (!HB.__floorTab) HB.__floorArm = null; try { drawToolsUI(); } catch(e){} };
-      tabs.appendChild(b);
-    }
-    document.getElementById("floorBtn").setAttribute("aria-pressed", String(!!HB.__floorTab));
+    /* CAD-367：床仕様ボタン（#floorBtn）は廃止。床は部屋のコントローラーの中に
+       移したパネルで選ぶ。既に作られている物があれば取り除く。 */
+    const fb367 = document.getElementById("floorBtn"); if (fb367) fb367.remove();
     let panel = document.getElementById("floorPanel");
     if (!panel){
       panel = document.createElement("div");
@@ -13046,9 +13042,10 @@ document.addEventListener("click", function(e){
         HB.__floorTab = false; try { floorPanelSync(); } catch(e){}
       });
     }
-    panel.hidden = !HB.__floorTab;
-    panel.style.display = HB.__floorTab ? "flex" : "none";
-    if (!HB.__floorTab) panel.querySelectorAll("[data-flk]").forEach(x => x.classList.remove("armBlink"));
+    /* CAD-367：パネルは部屋バー（コントローラー）の中にある時だけ出す。
+       それ以外の場所（上の道具の列）では出さない。 */
+    if (panel.closest && panel.closest("#roomBar176")){ panel.hidden = false; panel.style.display = "flex"; }
+    else { panel.hidden = true; panel.style.display = "none"; panel.querySelectorAll("[data-flk]").forEach(x => x.classList.remove("armBlink")); }
   }
   /* 旧 drawToolTabs ラッパー（別名 _dtt・後段で床タブを閉じて floorPanelSync）は段階1で blk02 の
      統合 drawToolTabs へ畳み込み済み（後段として取り込み）。実体はこの IIFE の局所関数
@@ -17604,9 +17601,31 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
 
   var FLCHIPS176 = ["flComp", "floorFin", "flCF", "flMuku", "flMuku30", "flDoma", "za", "tatami"];
+  /* CAD-367：床パネル（#floorPanel）と座上げの選択欄（#flBranch）を、
+     部屋バーの中へ移す／元の場所へ戻す。パネルは背景の絵つきの本物を
+     そのまま動かす（絵の付け先は #floorPanel のままなので見た目は不変）。
+     バーの innerHTML を作り直す前に必ず parkFl367 で戻す（中に入れたまま
+     作り直すと、パネルごと消えてしまうため）。 */
+  function parkFl367(){
+    var host = $("rmFlHost367"); if (!host) return;
+    var anchor = document.getElementById("toolCh3") || document.getElementById("toolTabs");
+    if (!anchor) return;
+    var p = $("floorPanel"), br = $("flBranch");
+    if (p && p.parentNode === host) anchor.insertAdjacentElement("afterend", p);
+    if (br && br.parentNode === host){ if (p) p.insertAdjacentElement("afterend", br); else anchor.insertAdjacentElement("afterend", br); }
+    if (p){ p.hidden = true; p.style.display = "none"; }   /* 戻したパネルは隠す（バー内へ移す時に hostFl367 が出す） */
+  }
+  function hostFl367(){
+    var host = $("rmFlHost367"); if (!host) return;
+    var p = $("floorPanel"); if (!p) return;
+    host.appendChild(p);
+    var br = $("flBranch"); if (br) host.appendChild(br);
+    p.hidden = false; p.style.display = "flex";
+  }
   function renderRoomBar176(){
     var bar = $("roomBar176"); if (!bar) return;
-    if (!roomSel176){ bar.hidden = true; bar.innerHTML = ""; barSig176 = ""; return; }
+    parkFl367();   /* CAD-367：作り直す前に床パネルを元の場所へ戻す */
+    if (!roomSel176){ bar.hidden = true; bar.innerHTML = ""; barSig176 = ""; try { document.body.classList.remove("rmSel367"); } catch(e){} return; }
     var rm = roomAtPt176(roomSel176.pt);
     if (!rm){ closeRoom176(); return; }
     var nm = roomLbl(rm);
@@ -17620,14 +17639,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       }).join("") + "</div>";
     }
     h += "<div class='rmFlT176'>床の仕上げ" + (fl ? "（今：" + fl + "）" : "") + "</div>";
-    h += "<div class='rmFl176'>" + FLCHIPS176.map(function(fk){
-      var lbl = fk === "za" ? "座上げ" : ((HB.__FLN || {})[fk] || fk);
-      var on = !!HB.__floorArm && (HB.__floorArm === fk || (fk === "za" && (HB.__floorArm === "flOki" || HB.__floorArm === "flAge" || HB.__floorArm === "flPura")));
-      return "<button type='button' data-rmfl='" + fk + "'" + (on ? " class='on176'" : "") + ">" + lbl + "</button>";
-    }).join("") + "</div>";
+    h += "<div id='rmFlHost367'></div>";   /* CAD-367：ここへ本物の床パネル（背景の絵つき・畳と小上がり入り）を移す。文字だけのチップ並びは廃止 */
     if (zaForRoom176) h += "<div class='rmZaHint176'>座上げの選択欄が、道具の列の所に出ています。工法と上の仕上げを選ぶと、この部屋に入ります。</div>";
     bar.innerHTML = h;
     bar.hidden = false;
+    try { document.body.classList.add("rmSel367"); } catch(e){}   /* CAD-367：部屋の選択中は下の「置く」を隠す */
+    hostFl367();   /* CAD-367：床パネルをバーの中へ移す */
     bar.querySelector("#rmClose176").onclick = function(){ closeRoom176(); };
     var nb176 = bar.querySelector("#rmName176"); if (nb176) nb176.onclick = function(){ roomNameSheet(rm); };
     bar.querySelectorAll("[data-rmdim]").forEach(function(b){
@@ -17700,6 +17717,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   function closeRoom176(){
     if (zaForRoom176){ var zc = document.querySelector("#flBranch [data-zcan]"); if (zc) zc.click(); zaForRoom176 = false; }
     roomSel176 = null;
+    parkFl367();   /* CAD-367：床パネルを元の場所へ戻してからバーを空にする */
+    try { document.body.classList.remove("rmSel367"); } catch(e){}
     var bar = $("roomBar176"); if (bar){ bar.hidden = true; bar.innerHTML = ""; }
     barSig176 = "";
   }
@@ -17837,7 +17856,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       if (!roomSel176 || applying176 || zaForRoom176) return;
       if (!HB.__pageM){ closeRoom176(); return; }
       if (typeof sel !== "undefined" && sel){ closeRoom176(); return; }
-      if ((typeof enclMode !== "undefined" && enclMode) || HB.__put || HB.__floorArm){ closeRoom176(); return; }
+      if ((typeof enclMode !== "undefined" && enclMode) || HB.__put){ closeRoom176(); return; }   /* CAD-367：床を構えてもバーは閉じない（バー内のパネルで構えるのが新しい形。構えた床は部屋タップ／囲みで従来どおり付く） */
       var rm = roomAtPt176(roomSel176.pt);
       if (!rm){ closeRoom176(); return; }
       var nm = roomLbl(rm), entries = roomEntries176(roomSel176.pt), fl = roomFloorLabel176(roomSel176.pt);
@@ -25168,7 +25187,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       var rb = $("roomBar176");
       var roomShown = !!(rb && !rb.hidden);
       var fp = $("floorPanel");
-      var panelShown = !!(fp && !fp.hidden && fp.style.display !== "none");
+      var panelShown = !!(fp && !fp.hidden && fp.style.display !== "none" && !(fp.closest && fp.closest("#roomBar176")));   /* CAD-367：バー内のパネルは部屋バーと一体（同時表示の判定の対象外） */
       if (roomShown && panelShown){
         if (!prevRoom282){
           /* 部屋バーが後から開いた → 床仕様シートを閉じる */
@@ -28481,6 +28500,27 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
   }
   drawRp365(); sync365();
   setInterval(sync365, 700);
+})();
+</script>
+<script>
+/* ================= CAD-367：床仕様のまとめ直し（見た目の調整） =================
+   翔伍と3回の確認を経て確定（2026-11-18）。本体の変更は floorPanelSync
+   （床仕様ボタンを作らない）と renderRoomBar176（パネルをバーへ移す）。
+   ここでは下の大きなボタンの並びの調整だけを持つ：
+   ・床仕様ボタンが無くなったので #toolTabs は2列。
+   ・部屋の選択中（body.rmSel367）は「置く」を隠し、1列にする。
+     選択が外れたら「置く」は戻る。 */
+(function(){
+  "use strict";
+  var st = document.createElement("style");
+  st.id = "sty367";
+  st.textContent =
+    "body #stM #toolTabs{grid-template-columns:1fr 1fr}"
+    + "body.rmSel367 #stM #toolTabs{grid-template-columns:1fr}"
+    + "body.rmSel367 #toolTabs [data-tt='put']{display:none!important}"
+    + "#roomBar176 #floorPanel{margin:0}"
+    + "#roomBar176 #flBranch{margin:6px 0 0}";
+  document.head.appendChild(st);
 })();
 </script>
 
