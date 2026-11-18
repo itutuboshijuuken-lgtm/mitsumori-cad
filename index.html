@@ -3049,7 +3049,8 @@ function planExtras(P, sc){
       h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#E8742C" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#E8742C"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#E8742C"/></g>`;
     }
     /* CAD-305: 開放（撤去でない）は壁が無いので見える線を描かない。当たり判定の透明線・文字・選択の点滅は従来通り */
-    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? "" : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""}/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
+    /* CAD-372：間仕切りの線は、拡大しても太いまま膨らまない様に画面基準の細さに保つ（vector-effect="non-scaling-stroke"） */
+    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? "" : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""} vector-effect="non-scaling-stroke"/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
       `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmtD319(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : ""}${partForm292(q) === "koshi" ? "・腰壁 " + fmtD319(q.top || q.wfh || 900) : partForm292(q) === "tare" ? "・垂れ壁 " + fmtD319(q.wfh || 600) : partForm292(q) === "open" ? "・開放" : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
@@ -3123,7 +3124,7 @@ function planExtras(P, sc){
     h += `<g data-op="${i}" style="cursor:grab"${stt === "keep" ? ' opacity=".5"' : ""}>${g}${(() => { const d = ty === "door" ? w : 260, m0 = 120; const q = [[A[0] - n[0] * m0, A[1] - n[1] * m0], [B[0] - n[0] * m0, B[1] - n[1] * m0], [B[0] + n[0] * d, B[1] + n[1] * d], [A[0] + n[0] * d, A[1] + n[1] * d]]; return `<polygon points="${q.map(X).join(" ")}" fill="transparent"/>`; })()}<rect x="${Math.min(P(A)[0], P(B)[0]) - 6}" y="${Math.min(P(A)[1], P(B)[1]) - 6}" width="${Math.abs(P(B)[0] - P(A)[0]) + 12}" height="${Math.abs(P(B)[1] - P(A)[1]) + 12}" fill="transparent"/><text x="${cm[0]}" y="${cm[1] + 4}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:700;fill:${SST[stt][1]}">${sa.w}${stt === "keep" ? " 既存" : stt === "ip" ? " 内窓" : stt === "fusuma" ? " 襖張替" : stt === "shoji" ? " 障子張替" : ""}</text></g>`;
   });
   // パーティション：天井まで行かないことが分かるように、白い破線を上に重ねる
-  (S.parts2D || []).forEach(q => { const f292 = partForm292(q); if ((f292 === "koshi" || f292 === "tare") && pState(q) !== "remove"){ const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]); h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#fff" stroke-width="2" stroke-dasharray="${f292 === "tare" ? "2 4" : "12 7"}" pointer-events="none"/>`; } });   /* CAD-292：腰壁＝白破線、垂れ壁＝白の点線 */
+  (S.parts2D || []).forEach(q => { const f292 = partForm292(q); if ((f292 === "koshi" || f292 === "tare") && pState(q) !== "remove"){ const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]); h += `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#fff" stroke-width="2" stroke-dasharray="${f292 === "tare" ? "2 4" : "12 7"}" vector-effect="non-scaling-stroke" pointer-events="none"/>`; } });   /* CAD-292：腰壁＝白破線、垂れ壁＝白の点線 */
   // 部屋の名前・面積は、いちばん上に描く（間仕切りや建具に隠れないように）
   h += roomLabelsSvg(P, "all");
   if (HB.__peStage07) h += HB.__peStage07(P, sc);
@@ -4365,27 +4366,69 @@ function tareAsk(t){
   openPad({title: "天井から何mm下がる？", unit: "mm", std: false, value: t.h || 400, extra: [300, 400, 500, 600].map(v => ({label: String(v), fn: () => { closePad(); fin(v); }})), done: v => { if (v > 0) fin(v); }});
 }
 // 壁との接点の印：緑＝くっついている、オレンジ＝すき間、赤＝壁を突き抜けている
+/* CAD-372：間仕切り1本の両端について、接点の状態を返す（jointMarks の印と
+   「そろえる」で共用）。poke＝突き抜け量（最大）、pokeT＝そろえる先の線の
+   座標（最後に越えた線＝端に一番近い越えた線）、gap＝向かいの線までの距離
+   （一番近い線）、gapT＝その線の座標、touch＝どこかに接しているか。
+   座標は軸方向の値（縦の間仕切りなら y、横なら x）。軸に沿わない物は null。
+   判定の物差しは従来の jointMarks と同じ（突き抜けは300mmまで等）。 */
+function jointEnds372(q){
+  const vq = Math.abs(q.x1 - q.x2) < 1, hq = Math.abs(q.y1 - q.y2) < 1; if (!vq && !hq) return null;
+  const parts = (S.parts2D || []).filter(z => pState(z) !== "remove");
+  const pol = pts(), wl = pol.map((a, i) => [a, pol[(i + 1) % pol.length]]);
+  const segs = wl.concat(parts.filter(z => z !== q).map(z => [[z.x1, z.y1], [z.x2, z.y2]]));
+  return [[q.x1, q.y1, q.x2, q.y2], [q.x2, q.y2, q.x1, q.y1]].map(([px, py, ox, oy]) => {
+    const out = vq ? Math.sign(py - oy) : Math.sign(px - ox); let touch = false, poke = 0, pokeMin = 1e9, pokeT = null, gap = 1e9, gapT = null;
+    segs.forEach(([a, d]) => {
+      if (segDist([px, py], a, d).d <= 1.5) touch = true;
+      const hs = Math.abs(a[1] - d[1]) < 1, vs = Math.abs(a[0] - d[0]) < 1;
+      if (vq && hs && px >= Math.min(a[0], d[0]) - 1 && px <= Math.max(a[0], d[0]) + 1){ const dd = (a[1] - py) * out; if (dd > 1.5){ if (dd < gap){ gap = dd; gapT = a[1]; } } else if (dd < -1.5 && -dd <= 300 && (a[1] - oy) * out > 1.5){ if (-dd > poke) poke = -dd; if (-dd < pokeMin){ pokeMin = -dd; pokeT = a[1]; } } }
+      if (hq && vs && py >= Math.min(a[1], d[1]) - 1 && py <= Math.max(a[1], d[1]) + 1){ const dd = (a[0] - px) * out; if (dd > 1.5){ if (dd < gap){ gap = dd; gapT = a[0]; } } else if (dd < -1.5 && -dd <= 300 && (a[0] - ox) * out > 1.5){ if (-dd > poke) poke = -dd; if (-dd < pokeMin){ pokeMin = -dd; pokeT = a[0]; } } }
+    });
+    return {px, py, touch, poke, pokeT, gap, gapT};
+  });
+}
+/* CAD-372：警告（突き抜け・すき間）のある間仕切りか */
+function partWarn372(q){ try { const E = jointEnds372(q); return !!E && E.some(e => e.poke > 0 || (!e.touch && e.gap <= 300)); } catch(e){ return false; } }
+/* CAD-372：「そろえる」。警告のある端を相手の線にぴったり合わせる。
+   突き抜けは最後に越えた線まで戻し、すき間は一番近い向かいの線まで伸ばす。
+   両端に警告があれば両方そろえる。長さが50mm未満になる形は変えない。 */
+function alignPart372(q){
+  const E = jointEnds372(q); if (!E) return false;
+  const vq = Math.abs(q.x1 - q.x2) < 1;
+  const nq = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; let moved = false;
+  E.forEach((e, ei) => { const key = vq ? (ei === 0 ? "y1" : "y2") : (ei === 0 ? "x1" : "x2");
+    if (e.poke > 0 && e.pokeT != null){ nq[key] = e.pokeT; moved = true; }
+    else if (!e.touch && e.gap <= 300 && e.gapT != null){ nq[key] = e.gapT; moved = true; } });
+  if (!moved) return false;
+  if (Math.hypot(nq.x2 - nq.x1, nq.y2 - nq.y1) < 50) return false;
+  q.x1 = nq.x1; q.y1 = nq.y1; q.x2 = nq.x2; q.y2 = nq.y2; return true;
+}
 function jointMarks(P){
   try {
     const parts = (S.parts2D || []).filter(q => pState(q) !== "remove"); if (!parts.length) return "";
-    const pol = pts(), wl = pol.map((a, i) => [a, pol[(i + 1) % pol.length]]); let h = "";
+    /* CAD-372：印は大きな丸をやめて四角にする。大きさは間仕切りの壁厚
+       （120mm。完成図で壁の帯に使う bandP と同じ物差し）で、端点が中心。
+       四角そのものは実寸で拡縮し、輪郭の線だけ拡大率に依らず細く保つ。 */
+    const sc372 = (typeof HB !== "undefined" && HB.__planT && HB.__planT.s) || 0.05;
+    const SQ372 = Math.max(3, 120 * sc372), SQ372s = Math.max(2.2, SQ372 * 0.62);
+    const sq372 = (sx, sy, side, attrs) => `<rect x="${(sx - side / 2).toFixed(2)}" y="${(sy - side / 2).toFixed(2)}" width="${side.toFixed(2)}" height="${side.toFixed(2)}" ${attrs} pointer-events="none"/>`;
+    let h = "";
     parts.forEach(q => {
       const oi369 = (S.parts2D || []).indexOf(q);   /* CAD-369：印をタップした時に選ぶための元の番号 */
-      const vq = Math.abs(q.x1 - q.x2) < 1, hq = Math.abs(q.y1 - q.y2) < 1; if (!vq && !hq) return;
-      const segs = wl.concat(parts.filter(z => z !== q).map(z => [[z.x1, z.y1], [z.x2, z.y2]]));
-      [[q.x1, q.y1, q.x2, q.y2], [q.x2, q.y2, q.x1, q.y1]].forEach(([px, py, ox, oy]) => {
-        const out = vq ? Math.sign(py - oy) : Math.sign(px - ox); let touch = false, poke = 0, gap = 1e9;
-        segs.forEach(([a, d]) => {
-          if (segDist([px, py], a, d).d <= 1.5) touch = true;
-          const hs = Math.abs(a[1] - d[1]) < 1, vs = Math.abs(a[0] - d[0]) < 1;
-          if (vq && hs && px >= Math.min(a[0], d[0]) - 1 && px <= Math.max(a[0], d[0]) + 1){ const dd = (a[1] - py) * out; if (dd > 1.5) gap = Math.min(gap, dd); else if (dd < -1.5 && -dd <= 300 && (a[1] - oy) * out > 1.5) poke = Math.max(poke, -dd); }
-          if (hq && vs && py >= Math.min(a[1], d[1]) - 1 && py <= Math.max(a[1], d[1]) + 1){ const dd = (a[0] - px) * out; if (dd > 1.5) gap = Math.min(gap, dd); else if (dd < -1.5 && -dd <= 300 && (a[0] - ox) * out > 1.5) poke = Math.max(poke, -dd); }
-        });
-        const [sx, sy] = P([px, py]);
-        if (poke > 0) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="#D32F2F" stroke="#fff" stroke-width="1.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
-        else if (touch) h += `<circle cx="${sx}" cy="${sy}" r="3.5" fill="#1B9E4B" stroke="#fff" stroke-width="1" pointer-events="none"/>`;
-        else if (gap <= 300) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="none" stroke="#E8742C" stroke-width="2.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
-        else h += `<circle cx="${sx}" cy="${sy}" r="4" fill="none" stroke="#8A96A3" stroke-width="2" pointer-events="none"/>`;
+      const ends = jointEnds372(q); if (!ends) return;
+      const vq = Math.abs(q.x1 - q.x2) < 1;
+      const isSel372 = (typeof sel !== "undefined" && sel && sel.t === "p" && sel.i === oi369);
+      ends.forEach(E => {
+        const [sx, sy] = P([E.px, E.py]);
+        /* CAD-372：選んだ間仕切りは、はみ出した部分（突き抜け）と空いて
+           いる部分（すき間）を実寸の長さで色を付けて見せる */
+        if (isSel372 && E.poke > 0 && E.pokeT != null){ const tp = P(vq ? [E.px, E.pokeT] : [E.pokeT, E.py]); h += `<line x1="${tp[0].toFixed(2)}" y1="${tp[1].toFixed(2)}" x2="${sx}" y2="${sy}" stroke="#D32F2F" stroke-width="6" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
+        else if (isSel372 && !E.touch && E.gap <= 300 && E.gapT != null){ const tp = P(vq ? [E.px, E.gapT] : [E.gapT, E.py]); h += `<line x1="${sx}" y1="${sy}" x2="${tp[0].toFixed(2)}" y2="${tp[1].toFixed(2)}" stroke="#E8742C" stroke-width="6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
+        if (E.poke > 0) h += sq372(sx, sy, SQ372, `fill="#D32F2F" stroke="#fff" stroke-width="1" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(E.poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
+        else if (E.touch) h += sq372(sx, sy, SQ372s, `fill="#1B9E4B" stroke="#fff" stroke-width="1" vector-effect="non-scaling-stroke"`);
+        else if (E.gap <= 300) h += sq372(sx, sy, SQ372, `fill="none" stroke="#E8742C" stroke-width="2" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(E.gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
+        else h += sq372(sx, sy, SQ372s, `fill="none" stroke="#8A96A3" stroke-width="2" vector-effect="non-scaling-stroke"`);
       });
     });
     return h;
@@ -4650,7 +4693,7 @@ function drawSelBar0(){
   const okTxt217 = (!isP && HB.__put && (HB.__put.g === "door" || HB.__put.g === "win" || HB.__put.g === "gen")) ? "終了" : "OK";   /* CAD-217：ドア・窓の配置の流れの中では終わるボタンは「終了」 */
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">${okTxt217}</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw"><div class="sbL${isP ? "" : " o"}">${isP
-      ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : "なし"} ▸</button><button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>` : `<button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
+      ? `<button id="sbLen" type="button">長さ寸法</button><button id="sbFit" type="button">壁まで伸ばす</button>${partWarn372(q) ? `<button id="sbAlign372" type="button" style="color:#C62828;font-weight:800">そろえる</button>` : ""}${pState(q) === "remove" ? `<button id="sbBeam" type="button" style="white-space:normal;line-height:1.15;font-size:11px;color:${beamOn(q) ? "#C62828" : "var(--sub)"}">梁補強 ${beamOn(q) ? (q.beam == null ? "要確認 " : "") + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : "なし"} ▸</button><button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>` : `<button id="sbForm292" type="button">形：${PFN292[partForm292(q)]}</button>`}<button id="sbNew" type="button" style="color:${pState(q) === "remove" ? "#2563B0" : PST[pState(q)][1]}">${pState(q) === "remove" ? "既存に戻す" : PST[pState(q)][0] + " ▸"}</button>`
       : `<button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbSt" type="button" style="color:${SST[sState(sa)][1]}">${SST[sState(sa)][0]} ▸</button><button id="sbSize" type="button">大きさ・種類</button>`}</div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${isP ? `<button id="sbRot" class="rot" type="button">⟳<small>90°</small></button>` : `<button id="sbFlip" class="rot" type="button">⟳<small>向き</small></button>`}</div>
     <div class="sbR">${isP ? `<button id="sbStep" class="stp" type="button">${selStep}mm</button>` : "<span></span>"}<button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
@@ -4681,6 +4724,7 @@ if (!isP){ const tt = bar.querySelector(".r1 > span"); if (tt){ tt.style.cssText
       movePart(q, 0, 0); try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
     $("sbLen").onclick = () => openPad({title: "間仕切りの長さ", value: Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), extra: [455, 910, 1820, 2730, 3640].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); setLen(q, v); save(); drawPlan(); }})), done: v => { if (v){ pushUndo(); setLen(q, v); save(); drawPlan(); } }});
     $("sbFit").onclick = () => { pushUndo(); const o148 = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (q.y1 === q.y2){ q.x1 = extendTo(q, false, -1); q.x2 = extendTo(q, false, 1); } else { q.y1 = extendTo(q, true, -1); q.y2 = extendTo(q, true, 1); } try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148)){ q.x1 = o148.x1; q.y1 = o148.y1; q.x2 = o148.x2; q.y2 = o148.y2; } } catch(e){} save(); drawPlan(); };
+    if ($("sbAlign372")) $("sbAlign372").onclick = () => { pushUndo(); const o148c = {x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}; if (alignPart372(q)){ let ok372 = true; try { if (HB.__g148 && !HB.__g148.seg(q) && HB.__g148.seg(o148c)){ q.x1 = o148c.x1; q.y1 = o148c.y1; q.x2 = o148c.x2; q.y2 = o148c.y2; ok372 = false; } } catch(e){} save(); drawPlan(); if (ok372) toast("そろえました"); } };   /* CAD-372：突き抜け・すき間を0にする */
     if ($("sbForm292")) $("sbForm292").onclick = () => partFormSheet292(sel.i);   /* CAD-292：間仕切りの形の選択シート（旧「高さ寸法」＝sbTop の置き換え。垂れ壁の別記録への変換は置く道具の垂れ壁モードが担う） */
     $("sbNew").onclick = () => { pushUndo(); setPState(q, (S.mode === "zo" ? {keep: "new", new: "keep", remove: "keep"} : {keep: "new", new: "remove", remove: "keep"})[pState(q)]); save(); drawPlan(); if (beamNeed(q) && q.beam == null) beamAsk(q); };
     if ($("sbBeam")) $("sbBeam").onclick = () => beamAsk(q);
