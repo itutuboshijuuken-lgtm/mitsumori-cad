@@ -2581,14 +2581,14 @@ function tenkenSvg(o, i, P){
   if (HB.__tenkenBranch32){ const __b32 = HB.__tenkenBranch32(o, i, P); if (__b32 !== null) return __b32; }
   if (o.k === "counter") return counterSvg(o, i, P);
   if (o.k === "dansa"){ const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), isSel = sel && sel.t === "k" && sel.i === i, cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2;
-    let g = `<g>${isSel ? `<rect class="selBlink" x="${a[0] - 5}" y="${a[1] - 5}" width="${b[0] - a[0] + 10}" height="${b[1] - a[1] + 10}" fill="#FF00C8" fill-opacity=".3"/>` : ""}<rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="#FFF3E6" stroke="#C2571A" stroke-width="1.4"/>`;
+    let g = `<g><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="#FFF3E6" stroke="${isSel ? "#FF00C8" : "#C2571A"}" stroke-width="1.4"/>`;
     const n = 6; for (let j = 1; j < n; j++){ if (o.dir === "v"){ const y = a[1] + (b[1] - a[1]) * j / n; g += `<line x1="${a[0]}" y1="${y}" x2="${b[0]}" y2="${y + 4}" stroke="#C2571A" stroke-width=".8"/>`; } else { const x = a[0] + (b[0] - a[0]) * j / n; g += `<line x1="${x}" y1="${a[1]}" x2="${x + 4}" y2="${b[1]}" stroke="#C2571A" stroke-width=".8"/>`; } }
     g += `<text x="${o.dir === "v" ? cx : a[0] - 3}" y="${o.dir === "v" ? a[1] - 4 : cy + 3}" text-anchor="${o.dir === "v" ? "middle" : "end"}" class="halo" style="font-size:9px;font-weight:800;fill:#C2571A">段差</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g; }
   if (o.k === "makura" || o.k === "chudan"){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2, mk = o.k === "makura", col = mk ? "#8A6A3A" : "#6B4F1D", ins = W2 >= 70 && H2 >= 28;
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="${mk ? "rgba(235,217,184,.22)" : "rgba(235,217,184,.5)"}" stroke="${col}" stroke-width="1.4" ${mk ? 'stroke-dasharray="7 4"' : ""}/>`;
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="${mk ? "rgba(235,217,184,.22)" : "rgba(235,217,184,.5)"}" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.4" ${mk ? 'stroke-dasharray="7 4"' : ""}/>`;
     g += `<text x="${cx}" y="${ins ? cy - 1 : y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:${col}">${mk ? "枕棚" : "中段"}</text><text x="${cx}" y="${ins ? cy + 9 : y0 + H2 + 21}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:700;fill:${col}">H${fmt(o.h || 0)}</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
@@ -2616,7 +2616,7 @@ function tenkenSvg(o, i, P){
       for (let k = 1; k < nw; k++){ const th = Math.PI / 2 * k / nw, tn = Math.tan(th); const ex = tn <= 1 ? lw : hw + hh / tn, ey = tn <= 1 ? hh - hw * tn : 0; L += ln(hw, hh, ex, ey); }
       L += `<path d="M${lw * .75} ${lh * .94} L${lw * .75} ${hh * .85} Q${lw * .75} ${hh * .5} ${lw * .5} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
     }
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
     g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${STN[T]}）</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
@@ -2636,7 +2636,7 @@ function tenkenSvg(o, i, P){
     /* CAD-313：扉は1枚600mmまで。枚数＝幅÷600の切り上げ、幅を均等に割る（両開きの組を並べ、端数は片開き）。保存データは変えず、描く時にこの割りで描く */
     const nd = Math.max(1, Math.ceil(o.w / 600)), rl = L / nd;
     const door = (H, s, rr) => { const uu = [u[0] * s, u[1] * s], ct = [H[0] + uu[0] * rr, H[1] + uu[1] * rr], ot = [H[0] + F[0] * rr, H[1] + F[1] * rr], sw = (F[0] * uu[1] - F[1] * uu[0]) > 0 ? 1 : 0; return `<line x1="${H[0]}" y1="${H[1]}" x2="${ot[0]}" y2="${ot[1]}" stroke="${C}" stroke-width="1.3"/><path d="M${ot[0]} ${ot[1]} A${rr} ${rr} 0 0 ${sw} ${ct[0]} ${ct[1]}" fill="none" stroke="${C}" stroke-width="0.9" stroke-dasharray="3 2"/>`; };
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/>`;
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : C}" stroke-width="1.6"/>`;
     g += `<line x1="${c1[0] - F[0] * ins}" y1="${c1[1] - F[1] * ins}" x2="${c2[0] - F[0] * ins}" y2="${c2[1] - F[1] * ins}" stroke="${C}" stroke-width="0.9"/>`;
     for (let j = 0; j < nd; j++){ const pa = [c1[0] + u[0] * rl * j, c1[1] + u[1] * rl * j], pb = [c1[0] + u[0] * rl * (j + 1), c1[1] + u[1] * rl * (j + 1)]; g += j % 2 === 0 ? door(pa, 1, rl) : door(pb, -1, rl); }
     /* ラベル：前面が下（dir=n）の時は開き弧が下へ出るので、重ならない様に箱の中へ出す */
@@ -2646,7 +2646,7 @@ function tenkenSvg(o, i, P){
   }
   if (o.k === "senpan"){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2;
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="#5B6B7A" stroke-width="1.6"/>`;
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : "#5B6B7A"}" stroke-width="1.6"/>`;
     const rr = Math.min(W2, H2) * 0.16; g += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="#CFE6F7" stroke="#5B6B7A" stroke-width="1.2"/><circle cx="${cx}" cy="${cy}" r="${rr * 0.45}" fill="#fff" stroke="#5B6B7A" stroke-width="1"/>`;
     g += `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">洗濯機パン</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
@@ -2654,7 +2654,7 @@ function tenkenSvg(o, i, P){
   }
   if (o.k === "kitchen" || o.k === "senmen"){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2, nm = o.k === "kitchen" ? "キッチン" : "洗面";
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="#5B6B7A" stroke-width="1.6"/>`;
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : "#5B6B7A"}" stroke-width="1.6"/>`;
     const sk = Math.min(W2, H2) * 0.28, sx = o.k === "kitchen" ? (o.dir === "e" || o.dir === "w" ? cx : x0 + W2 * 0.3) : cx, sy = o.k === "kitchen" ? (o.dir === "e" || o.dir === "w" ? y0 + H2 * 0.3 : cy) : cy;
     g += `<ellipse cx="${sx}" cy="${sy}" rx="${sk * 1.2}" ry="${sk * 0.8}" fill="#CFE6F7" stroke="#5B6B7A" stroke-width="1"/>`;
     if (o.k === "senmen"){ const fd = {n: [cx, y0 + H2 * 0.13], s: [cx, y0 + H2 * 0.87], e: [x0 + W2 * 0.87, cy], w: [x0 + W2 * 0.13, cy]}[o.dir || "n"] || [cx, y0 + H2 * 0.13]; g += `<circle cx="${fd[0]}" cy="${fd[1]}" r="${Math.max(2, sk * 0.2)}" fill="#fff" stroke="#5B6B7A" stroke-width="1"/>`; if (Math.min(W2, H2) >= 22) g += `<text x="${sx}" y="${sy + Math.max(7, Math.min(11, sk * 0.9)) * 0.36}" text-anchor="middle" style="font-size:${Math.max(7, Math.min(11, sk * 0.9))}px;font-weight:800;fill:#3E5A75">洗</text>`; }
@@ -2665,34 +2665,34 @@ function tenkenSvg(o, i, P){
   }
   if (o.k === "acout"){
     const c = P([o.x, o.y]), isSel = sel && sel.t === "k" && sel.i === i, r = Math.max(9, Math.abs(P([o.x + o.w / 2, o.y])[0] - c[0]));
-    let g = `<g data-tk2="${i}" data-sno="ac">${isSel ? `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + 7}" fill="#FF00C8" fill-opacity=".3"/>` : ""}<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="#1F6FB5" stroke-width="2"/><text x="${c[0]}" y="${c[1] + 3.5}" text-anchor="middle" style="font-size:9px;font-weight:900;fill:#1F6FB5">AC</text><text x="${c[0]}" y="${c[1] + r + 10}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#1F6FB5">天井コ</text></g>`;
+    let g = `<g data-tk2="${i}" data-sno="ac"><circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${isSel ? "#FF00C8" : "#1F6FB5"}" stroke-width="2"/><text x="${c[0]}" y="${c[1] + 3.5}" text-anchor="middle" style="font-size:9px;font-weight:900;fill:#1F6FB5">AC</text><text x="${c[0]}" y="${c[1] + r + 10}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#1F6FB5">天井コ</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt(c); flashClear(); }
     return g;
   }
   if (o.k === "pillar"){
     const c = P([o.x, o.y]), isSel = sel && sel.t === "k" && sel.i === i, r = Math.max(5, Math.abs(P([o.x + o.w / 2, o.y])[0] - c[0]));
-    let g = `<g data-tk2="${i}">${isSel ? `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + 7}" fill="#FF00C8" fill-opacity=".3"/>` : ""}<rect x="${c[0] - r}" y="${c[1] - r}" width="${2 * r}" height="${2 * r}" fill="#5B3A1A" stroke="#fff" stroke-width="1.5"/><text x="${c[0]}" y="${c[1] + r + 11}" text-anchor="middle" class="halo" style="font-size:10px;font-weight:800;fill:#5B3A1A">独立柱</text></g>`;
+    let g = `<g data-tk2="${i}"><rect x="${c[0] - r}" y="${c[1] - r}" width="${2 * r}" height="${2 * r}" fill="#5B3A1A" stroke="${isSel ? "#FF00C8" : "#fff"}" stroke-width="1.5"/><text x="${c[0]}" y="${c[1] + r + 11}" text-anchor="middle" class="halo" style="font-size:10px;font-weight:800;fill:#5B3A1A">独立柱</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt(c); flashClear(); }
     return g;
   }
   if (o.k === "yukaten"){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2, col = "#8A6E45", ix = Math.min(W2, H2) * 0.16;
     /* CAD-273: 床下点検口（開口410×560）。枠＋ふたの取っ手の丸。大きさは商品名の 450×600 ではなく実際の床開口の数字 */
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#F3EBDD" stroke="${col}" stroke-width="1.6"/><rect x="${x0 + ix}" y="${y0 + ix}" width="${W2 - 2 * ix}" height="${H2 - 2 * ix}" fill="none" stroke="${col}" stroke-width="1.1"/><circle cx="${cx}" cy="${cy}" r="${Math.max(2, Math.min(W2, H2) * 0.07)}" fill="none" stroke="${col}" stroke-width="1"/>`
+    let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#F3EBDD" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.6"/><rect x="${x0 + ix}" y="${y0 + ix}" width="${W2 - 2 * ix}" height="${H2 - 2 * ix}" fill="none" stroke="${col}" stroke-width="1.1"/><circle cx="${cx}" cy="${cy}" r="${Math.max(2, Math.min(W2, H2) * 0.07)}" fill="none" stroke="${col}" stroke-width="1"/>`
       + `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:${col}">床下点検口</text><text x="${cx}" y="${y0 + H2 + 21}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:700;fill:${col}">開口410×560</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
   }
   if (o.k === "yukashu"){
     const a = P([o.x - o.w / 2, o.y - o.w / 2]), b = P([o.x + o.w / 2, o.y + o.w / 2]), w = b[0] - a[0], hh = b[1] - a[1], cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2, isSel = sel && sel.t === "k" && sel.i === i, ix = w * 0.18, iy = hh * 0.18;
-    let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${a[0] - 5}" y="${a[1] - 5}" width="${w + 10}" height="${hh + 10}" fill="#FF00C8" fill-opacity=".3"/>` : ""}<rect x="${a[0]}" y="${a[1]}" width="${w}" height="${hh}" fill="#F3EBDD" stroke="#7A5A2E" stroke-width="1.6"/><rect x="${a[0] + ix}" y="${a[1] + iy}" width="${w - 2 * ix}" height="${hh - 2 * iy}" fill="none" stroke="#7A5A2E" stroke-width="1.1"/>`
+    let g = `<g data-tk2="${i}"><rect x="${a[0]}" y="${a[1]}" width="${w}" height="${hh}" fill="#F3EBDD" stroke="${isSel ? "#FF00C8" : "#7A5A2E"}" stroke-width="1.6"/><rect x="${a[0] + ix}" y="${a[1] + iy}" width="${w - 2 * ix}" height="${hh - 2 * iy}" fill="none" stroke="#7A5A2E" stroke-width="1.1"/>`
       + `<text x="${cx}" y="${b[1] + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#7A5A2E">床下収納</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
   }
   const a = P([o.x - o.w / 2, o.y - o.w / 2]), b = P([o.x + o.w / 2, o.y + o.w / 2]), w = b[0] - a[0], hh = b[1] - a[1], cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2, isSel = sel && sel.t === "k" && sel.i === i;
   const fl = o.k === "floor", col = fl ? "#8A6E45" : "#4F6D8F";
-  let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${a[0] - 5}" y="${a[1] - 5}" width="${w + 10}" height="${hh + 10}" fill="#FF00C8" fill-opacity=".3"/>` : ""}<rect x="${a[0]}" y="${a[1]}" width="${w}" height="${hh}" fill="${fl ? "#F3EBDD" : "#fff"}" stroke="${col}" stroke-width="1.6" ${fl ? "" : 'stroke-dasharray="4 3"'}/>`
+  let g = `<g data-tk2="${i}"><rect x="${a[0]}" y="${a[1]}" width="${w}" height="${hh}" fill="${fl ? "#F3EBDD" : "#fff"}" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.6" ${fl ? "" : 'stroke-dasharray="4 3"'}/>`
     + `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="1"/><line x1="${b[0]}" y1="${a[1]}" x2="${a[0]}" y2="${b[1]}" stroke="${col}" stroke-width="1"/>`
     + `<text x="${cx}" y="${b[1] + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:${col}">${fl ? "床下点検" : "天井点検"}</text></g>`;
   if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
@@ -3042,7 +3042,6 @@ function planExtras(P, sc){
   (S.parts2D || []).forEach((q, i) => {
     const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]), m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
     const isSel = sel && sel.t === "p" && sel.i === i;
-    if (isSel) h += `<line class="selBlink" x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FF00C8" stroke-opacity=".4" stroke-width="10" stroke-linecap="butt"/>`;
     if (beamOn(q) && L > 1){
       const bb = bbox(), ux = (q.x2 - q.x1) / L, uy = (q.y2 - q.y1) / L, ex = Math.max(0, (beamLen(q) - L) / 2), cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v)), sp = beamSpan(q);
       const A2 = sp.al ? P(sp.vert ? [q.x1, sp.lo] : [sp.lo, q.y1]) : P([cl(q.x1 - ux * ex, bb.x0, bb.x1), cl(q.y1 - uy * ex, bb.y0, bb.y1)]), B2 = sp.al ? P(sp.vert ? [q.x1, sp.hi] : [sp.hi, q.y1]) : P([cl(q.x2 + ux * ex, bb.x0, bb.x1), cl(q.y2 + uy * ex, bb.y0, bb.y1)]);
@@ -3050,7 +3049,7 @@ function planExtras(P, sc){
     }
     /* CAD-305: 開放（撤去でない）は壁が無いので見える線を描かない。当たり判定の透明線・文字・選択の点滅は従来通り */
     /* CAD-372：間仕切りの線は、拡大しても太いまま膨らまない様に画面基準の細さに保つ（vector-effect="non-scaling-stroke"） */
-    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? "" : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""} vector-effect="non-scaling-stroke"/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
+    h += `<g data-pt="${i}" style="cursor:grab">${partForm292(q) === "open" && pState(q) !== "remove" ? (isSel ? `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FF00C8" stroke-width="2.5" vector-effect="non-scaling-stroke"/>` : "") : `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="${isSel ? "#FF00C8" : PST[pState(q)][1]}" stroke-width="${pState(q) === "keep" ? 2 : 2.5}" ${pState(q) === "remove" ? 'stroke-dasharray="7 5"' : ""} vector-effect="non-scaling-stroke"/>`}<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="transparent" stroke-width="18"/>` +
       `<text x="${m[0] + 4}" y="${m[1] - 5}" class="halo zx252" style="font-size:11px;font-weight:700;fill:${PST[pState(q)][1]}">${fmtD319(L)}${pState(q) !== "keep" && !(S.mode === "zo" && typeof zoAttached === "function" && !zoAttached()) ? " " + PST[pState(q)][0] : ""}${beamOn(q) ? "・梁補強" + (q.beam == null ? "?" : "") + " " + fmtD319(beamLen(q)) + "×" + fmtD319(beamH(q)) : ""}${partForm292(q) === "koshi" ? "・腰壁 " + fmtD319(q.top || q.wfh || 900) : partForm292(q) === "tare" ? "・垂れ壁 " + fmtD319(q.wfh || 600) : partForm292(q) === "open" ? "・開放" : ""}</text>${pState(q) === "remove" ? `<text x="${m[0]}" y="${m[1] + 6}" text-anchor="middle" style="font-size:16px;font-weight:900;fill:#C62828">×</text>` : ""}</g>`;
   });
   if (sel && sel.t === "p" && S.parts2D && S.parts2D[sel.i]){
@@ -3070,7 +3069,7 @@ function planExtras(P, sc){
     const A = [a[0] + u[0] * p0, a[1] + u[1] * p0], B = [A[0] + u[0] * w, A[1] + u[1] * w];
     const ty = typeOf(sa), X = q => P(q).join(",");
     const k308 = kata308(sa), M308 = [A[0] + u[0] * w / 2, A[1] + u[1] * w / 2], OA308 = k308 && k308.pk ? M308 : A, OB308 = k308 && k308.pk ? B : M308, PKA308 = k308 && k308.pk ? A : M308;   /* CAD-308：片引きは開口の半分（OA308〜OB308）だけ壁を抜く。戸袋は PKA308 から半分 */
-    let g = `<line x1="${P(k308 ? OA308 : A)[0]}" y1="${P(k308 ? OA308 : A)[1]}" x2="${P(k308 ? OB308 : B)[0]}" y2="${P(k308 ? OB308 : B)[1]}" stroke="#fff" stroke-width="6"/>`;
+    let g = `<line x1="${P(k308 ? OA308 : A)[0]}" y1="${P(k308 ? OA308 : A)[1]}" x2="${P(k308 ? OB308 : B)[0]}" y2="${P(k308 ? OB308 : B)[1]}" stroke="${sel && sel.t === "o" && sel.i === i ? "#FF00C8" : "#fff"}" stroke-width="6"/>`;
     if (ty === "door"){
       // 扉1枚ぶん：蝶番の側から開いた扉の線と、開く軌跡の弧
       const leaf = (hinge, other, len) => { const tip = [hinge[0] + n[0] * len, hinge[1] + n[1] * len], r = len * sc, sweep = (n[0] * (other[1] - hinge[1]) - n[1] * (other[0] - hinge[0])) > 0 ? 1 : 0;
@@ -3117,7 +3116,7 @@ function planExtras(P, sc){
         g += `<polygon points="${q.map(X).join(" ")}" fill="#5EEAD4" stroke="#0F766E" stroke-width="1.5"/><line x1="${P(A)[0]}" y1="${P(A)[1]}" x2="${P(B)[0]}" y2="${P(B)[1]}" stroke="#0F766E" stroke-width="1"/>`; }
     }
     const cm = P([(A[0] + B[0]) / 2 + n[0] * 140, (A[1] + B[1]) / 2 + n[1] * 140]);
-    if (sel && sel.t === "o" && sel.i === i){ const cc = P([(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]); h += `<circle class="selBlink" cx="${cc[0]}" cy="${cc[1]}" r="${Math.max(16, w * sc * 0.7)}" fill="#FF00C8" fill-opacity=".08" stroke="#FF00C8" stroke-width="1.2" stroke-dasharray="4 3"/>`; if (Date.now() - flashAt < 2500){ h += pulseAt(cc); flashClear(); } }
+    if (sel && sel.t === "o" && sel.i === i){ const cc = P([(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]); if (Date.now() - flashAt < 2500){ h += pulseAt(cc); flashClear(); } }   /* CAD-373：破線の丸いハローは廃止（帯その物がピンクになる） */
     h += sashBadge(P, A, B, n, i);
     const stt = sState(sa);
     if (stt === "ip"){ const o = 110, s1 = [A[0] + n[0] * o, A[1] + n[1] * o], e1 = [B[0] + n[0] * o, B[1] + n[1] * o]; g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#0F766E" stroke-width="2.5"/>`; }
@@ -4550,22 +4549,14 @@ const HOLD = {dir: null, t1: 0, t2: 0};
 function holdStop(){ clearTimeout(HOLD.t1); clearInterval(HOLD.t2); HOLD.dir = null; const b = document.querySelector("#selBar .ar.on, #fxBar .ar.on"); if (b) b.classList.remove("on"); }
 ["pointerup", "pointercancel", "blur"].forEach(ev => window.addEventListener(ev, holdStop));
 /* ---------- 重なっている物の一覧（何を触っているか、すぐ分かる） ---------- */
-/* ---------- 選んだ物を、ほかのどの色とも違う色（ビビッドなマゼンタ）で点滅させる ---------- */
+/* ---------- 選んだ物の示し方（CAD-373・本人の決定 2026-11-18） ----------
+   選択の点滅と、線の外側に光る表示（ハロー）は廃止する。選んだ物その物を
+   ピンク（#FF00C8）で示す：壁・間仕切りは線その物（＝厚み分だけ）、
+   物は枠その物、建具は壁を抜く帯その物がピンクになる。実体は
+   planExtras（間仕切り・建具）／tenkenSvg・ltSvg（物・照明）側で描くため、
+   この重ね描き関数は役目を終えて空にする（呼び出し側は従来通り）。 */
 const SEL_COL = "#FF00C8";
 function selBlinkSvg(P){
-  if (!sel || !HB.__pageM) return "";
-  const ln = (a, b, w) => { const p = P(a), q = P(b); return `<g class="selBlink" pointer-events="none"><line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="#fff" stroke-width="${w + 4}" stroke-linecap="round"/><line x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke="${SEL_COL}" stroke-width="${w}" stroke-linecap="round"/></g>`; };
-  if (sel.t === "p"){ const q = S.parts2D && S.parts2D[sel.i]; return q ? ln([q.x1, q.y1], [q.x2, q.y2], 5) : ""; }
-  if (sel.t === "o"){
-    const sa = S.sashes[sel.i]; if (!sa || !sa.host) return ""; const seg = hostSeg(sa.host); if (!seg) return "";
-    const L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
-    const A = [seg[0][0] + u[0] * sa.pos, seg[0][1] + u[1] * sa.pos], B = [A[0] + u[0] * sa.w, A[1] + u[1] * sa.w]; return ln(A, B, 6);
-  }
-  if (sel.t === "k"){
-    const o = S.tenken && S.tenken[sel.i]; if (!o) return ""; const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]);
-    const x = Math.min(a[0], b[0]) - 3, y = Math.min(a[1], b[1]) - 3, w = Math.abs(b[0] - a[0]) + 6, h = Math.abs(b[1] - a[1]) + 6;
-    return `<g class="selBlink" pointer-events="none"><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#fff" stroke-width="9"/><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="${SEL_COL}" stroke-width="5"/></g>`;
-  }
   return "";
 }
 function candLabel(c){
@@ -8758,14 +8749,14 @@ function fxSvg(g, backs){
     if (g.noAccLabel && f.k === "accent") return;
     const w = fxWall(g, f.w), P = (u, z) => g.PJ(w.a[0] + w.ux * u, w.a[1] + w.uy * u, z), col = FKCOL[f.k], isSel = !!sel && sel.t === "fx" && sel.i === idx;
     const A0 = P(f.u, f.z), A1 = P(f.u + 100, f.z), up = Math.max(1e-6, Math.hypot(A1[0] - A0[0], A1[1] - A0[1]) / 100);
-    const sel8 = (pts2) => isSel ? `<polygon class="selBlink" points="${pp(pts2)}" fill="none" stroke="#FF00C8" stroke-width="${px(4)}" stroke-dasharray="${px(10)} ${px(6)}"/>` : "";
+    const sel8 = (pts2) => isSel ? `<polygon points="${pp(pts2)}" fill="none" stroke="#FF00C8" stroke-width="${px(3)}" pointer-events="none"/>` : "";   /* CAD-373：破線の外枠はやめ、物の輪郭その物をピンクに（静止） */
     if (FK[f.k][1] === "pt"){
       const c = P(f.u, f.z);
       if (f.k === "alarm"){
         const r = 55 * up;
         out.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${col}" stroke-width="${px(3)}"/>`);
         out.push(`<text x="${c[0]}" y="${c[1] + 25 * up}" text-anchor="middle" style="font-size:${70 * up}px;font-weight:900;fill:${col}">警</text>`);
-        if (isSel) out.push(`<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + px(6)}" fill="none" stroke="#FF00C8" stroke-width="${px(4)}" stroke-dasharray="${px(10)} ${px(6)}"/>`);
+        if (isSel) out.push(`<circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="none" stroke="#FF00C8" stroke-width="${px(3)}" pointer-events="none"/>`);   /* CAD-373：丸も物その物の大きさでピンクに */
       } else {
         const hw = {outlet: 35, switch: 35, hanger: 50, sconce: 75}[f.k] || 50, hh = {outlet: 60, switch: 60, hanger: 50, sconce: 75}[f.k] || 50, q = [P(f.u - hw, f.z - hh), P(f.u + hw, f.z - hh), P(f.u + hw, f.z + hh), P(f.u - hw, f.z + hh)];
         out.push(`<polygon points="${pp(q)}" fill="#fff" stroke="${col}" stroke-width="${px(3)}"/>`);
@@ -8776,8 +8767,7 @@ function fxSvg(g, backs){
           out.push(`<text x="${c[0]}" y="${c[1] + fs * up * 0.36}" text-anchor="middle" style="font-size:${fs * up}px;font-weight:900;fill:${col}">${ch}</text>`);
         }
         { const lab = f.k === "outlet" ? "コ" : f.k === "switch" ? "SW" : ""; if (lab){ const lp = P(f.u + hw + 45, f.z); out.push(`<text x="${lp[0]}" y="${lp[1] + px(3)}" text-anchor="start" class="halo" style="font-size:${px(9)}px;font-weight:900;fill:${col}">${lab}</text>`); } }
-        out.push(sel8(
-          [P(f.u - hw - 45, f.z - hh - 45), P(f.u + hw + 45, f.z - hh - 45), P(f.u + hw + 45, f.z + hh + 45), P(f.u - hw - 45, f.z + hh + 45)]));
+        out.push(sel8(q));   /* CAD-373：45mm 広げた枠はやめ、物その物の輪郭にする */
       }
     } else if (AREA.includes(f.k)){
       const q = [P(f.u, f.z), P(f.u + f.len, f.z), P(f.u + f.len, f.z + f.hgt), P(f.u, f.z + f.hgt)];
@@ -8810,8 +8800,7 @@ function fxSvg(g, backs){
     } else if (FK[f.k][1] === "seg"){
       const a = f.v ? P(f.u, f.z) : P(f.u, f.z), b = f.v ? P(f.u, f.z + f.len) : P(f.u + f.len, f.z);
       const m = f.v ? P(f.u + 130, f.z + f.len / 2) : P(f.u + f.len / 2, f.z + 130), lt = `${FK[f.k][0]} ${fmt(f.len)}`;
-      if (isSel) out.push(`<line class="selBlink" x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#FF00C8" stroke-opacity=".45" stroke-width="${px(14)}" stroke-linecap="round"/>`);
-      out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${px(f.k === "rail" ? 4 : f.k === "indirect" ? 6 : 3)}" stroke-linecap="round"${f.k === "indirect" ? ` stroke-dasharray="${px(14)} ${px(7)}"` : ""}/>`);
+      out.push(`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${isSel ? "#FF00C8" : col}" stroke-width="${px(f.k === "rail" ? 4 : f.k === "indirect" ? 6 : 3)}" stroke-linecap="round"${f.k === "indirect" ? ` stroke-dasharray="${px(14)} ${px(7)}"` : ""}/>`);
       out.push(`<circle cx="${a[0]}" cy="${a[1]}" r="${px(3.5)}" fill="${col}"/><circle cx="${b[0]}" cy="${b[1]}" r="${px(3.5)}" fill="${col}"/>`);
       LB(m[0], m[1], lt, f.v ? "start" : "middle", 8);
       out.push(`<text x="${m[0]}" y="${m[1]}" text-anchor="${f.v ? "start" : "middle"}" class="halo" style="font-size:${px(8)}px;font-weight:800;fill:${col}">${lt}</text>`);
@@ -8996,7 +8985,7 @@ function ltSvg(P, sc){
   return (S.lights || []).map((l, i) => {
     const c = P([l.x, l.y]), r = l.k === "down" ? Math.max(5, 75 * sc) : Math.max(7, 200 * sc), col = LTCOL[l.act || "new"], sw = Math.max(1, 8 * sc);
     const isSel = sel && sel.t === "lt" && sel.i === i;
-    let h = `<g>${isSel ? `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="${r + Math.max(sw * 2, 6)}" fill="#FF00C8" fill-opacity=".35"/>` : ""}<g data-sno="lt348"><circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${col}" stroke-width="${sw}"${l.act === "remove" ? ' stroke-dasharray="' + sw * 2 + " " + sw + '"' : ""}/>`;
+    let h = `<g data-lt2="${i}"><g data-sno="lt348"><circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${isSel ? "#FF00C8" : col}" stroke-width="${sw}"${l.act === "remove" ? ' stroke-dasharray="' + sw * 2 + " " + sw + '"' : ""}/>`;
     if (l.k === "down") h += `<circle cx="${c[0]}" cy="${c[1]}" r="${r * 0.3}" fill="${col}"/>`;
     else h += `<path d="M${c[0] - r * 0.7} ${c[1]}H${c[0] + r * 0.7}M${c[0]} ${c[1] - r * 0.7}V${c[1] + r * 0.7}" stroke="${col}" stroke-width="${sw}"/>`;
     if (l.act === "remove") h += `<path d="M${c[0] - r * 0.6} ${c[1] - r * 0.6}L${c[0] + r * 0.6} ${c[1] + r * 0.6}M${c[0] + r * 0.6} ${c[1] - r * 0.6}L${c[0] - r * 0.6} ${c[1] + r * 0.6}" stroke="#C62828" stroke-width="${sw}"/>`;
@@ -11078,7 +11067,7 @@ function ctLabelPos(o, i, P, poly, c){
 function counterSvg(o, i, P){
   const pts2 = ctPoly(o).map(q => P(q)), pp = pts2.map(q => q.join(",")).join(" "), isSel = sel && sel.t === "k" && sel.i === i;
   const [hx, hy] = tkExt(o), c = P([o.x, o.y]);
-  let g = `<g data-tk2="${i}">${isSel ? `<polygon class="selBlink" points="${pp}" fill="#FF00C8" fill-opacity=".25" stroke="#FF00C8" stroke-width="6"/>` : ""}<polygon points="${pp}" fill="#EBD9B8" stroke="#8A6A3A" stroke-width="1.6"/>`;
+  let g = `<g data-tk2="${i}"><polygon points="${pp}" fill="#EBD9B8" stroke="${isSel ? "#FF00C8" : "#8A6A3A"}" stroke-width="1.6"/>`;
   const lp = ctLabelPos(o, i, P, pts2, c);
   g += `<text x="${lp[0]}" y="${lp[1]}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#6B4F1D">カウンター${o.sh === "L" ? "(L)" : ""}</text><text x="${lp[0]}" y="${lp[1] + 10}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:700;fill:#6B4F1D">${fmt(o.w)}×${fmt(o.d)}</text></g>`;
   if (isSel && Date.now() - flashAt < 2500){ g += pulseAt(c); flashClear(); }
@@ -11380,7 +11369,7 @@ function sujiWall(){
     const ang = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, isSel = sel && sel.t === "k" && sel.i === i;
     const x0 = c[0] - lw / 2, y0 = c[1] - ld / 2;
     let g = `<g data-tk2="${i}" transform="rotate(${ang} ${c[0]} ${c[1]})">`;
-    if (isSel) g += `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${lw + 10}" height="${ld + 10}" rx="6" fill="#FF00C8" fill-opacity=".28"/>`;
+    if (isSel && o.k === "wc") g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" fill="none" stroke="#FF00C8" stroke-width="2.5" pointer-events="none"/>`;   /* CAD-373：便器は枠が無い形なので、物の範囲その物にピンクの枠を出す（外へは広げない）。手洗い・浴槽は外枠その物をピンクにする */
     if (o.k === "wc"){
       // 図面でよく使う洋式便器：うしろにタンク、前に便座の輪（外の輪と中の穴）
       g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" fill="#fff" fill-opacity="0.01"/>`
@@ -11389,12 +11378,12 @@ function sujiWall(){
         + `<ellipse cx="${c[0]}" cy="${y0 + ld * 0.62}" rx="${lw * 0.27}" ry="${ld * 0.24}" fill="#E6F2EE" stroke="${col}" stroke-width="1.2"/>`;
     } else if (o.k === "tearai"){
       // 手洗い（案B）：四角い器・丸い洗い場・かべ側に蛇口。広い時だけ「手」の字
-      g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" rx="3" fill="#fff" stroke="${col}" stroke-width="1.6"/>`
+      g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" rx="3" fill="#fff" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.6"/>`
         + `<ellipse cx="${c[0]}" cy="${y0 + ld * 0.58}" rx="${lw * 0.31}" ry="${ld * 0.3}" fill="#E6F2EE" stroke="${col}" stroke-width="1.2"/>`
         + `<rect x="${c[0] - lw * 0.09}" y="${y0 + ld * 0.05}" width="${lw * 0.18}" height="${ld * 0.14}" rx="1.5" fill="#fff" stroke="${col}" stroke-width="1"/>`;
       if (ld >= 13) g += `<text x="${c[0]}" y="${y0 + ld * 0.58 + Math.max(7, Math.min(12, ld * 0.34)) * 0.36}" text-anchor="middle" transform="rotate(${-ang} ${c[0]} ${y0 + ld * 0.58})" style="font-size:${Math.max(7, Math.min(12, ld * 0.34))}px;font-weight:800;fill:${col}">手</text>`;
     } else {
-      g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" rx="4" fill="#fff" stroke="${col}" stroke-width="1.8"/>`;
+      g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" rx="4" fill="#fff" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.8"/>`;
       // 浴槽：ふちの中に、湯ぶね・蛇口（左）・排水口（右）。広い時だけ「浴」の字
       g += `<rect x="${x0 + lw * 0.05}" y="${y0 + ld * 0.12}" width="${lw * 0.9}" height="${ld * 0.76}" rx="${ld * 0.2}" fill="#DCEEFA" stroke="${col}" stroke-width="1.4"/>`
         + `<rect x="${x0 + lw * 0.1}" y="${c[1] - ld * 0.1}" width="${Math.max(4, lw * 0.06)}" height="${ld * 0.2}" rx="1.5" fill="#fff" stroke="${col}" stroke-width="1"/>`
@@ -13232,7 +13221,7 @@ document.addEventListener("click", function(e){
     const bar = document.getElementById("selBar"); if (!bar || bar.hidden) return;
     if (typeof sel === "undefined" || !sel) return;
     if (typeof dragging !== "undefined" && dragging) return;
-    const els = document.querySelectorAll("#plan .selBlink"); if (!els.length) return;
+    const els = document.querySelectorAll("#plan " + (sel.t === "p" ? `[data-pt="${sel.i}"]` : sel.t === "o" ? `[data-op="${sel.i}"]` : sel.t === "k" ? `[data-tk2="${sel.i}"]` : sel.t === "lt" ? `[data-lt2="${sel.i}"]` : ".selBlink")); if (!els.length) return;   /* CAD-373：選択表示が物その物のピンクになったので、目印は種類ごとの data 属性にする */
     let top = Infinity, bot = -Infinity;
     els.forEach(el => { const r = el.getBoundingClientRect(); if (!r.width && !r.height) return; if (r.top < top) top = r.top; if (r.bottom > bot) bot = r.bottom; });
     if (bot === -Infinity) return;
@@ -17783,7 +17772,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   HB.__dpPost176 = function(){
     /* CAD-301：選択表示は「輪郭の線だけ」。塗りは全廃（選んでも床の色は変わらない）。
        四角でない部屋は、セルの境界をつないだ輪郭を描く（形に沿って枠が出る）。
-       点滅は他の選択表示と同じ selBlink。 */
+       CAD-373：点滅は廃止（静止表示）。輪郭その物のピンク破線は従来通り。 */
     try {
         var old = document.getElementById("roomOut176"); if (old) old.remove();
         if (roomSel176 && HB.__pageM){
@@ -17798,7 +17787,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
               rc.setAttribute("width", (rr.x1 - rr.x0) * T.s); rc.setAttribute("height", (rr.y1 - rr.y0) * T.s);
               rc.setAttribute("fill", "none");
               rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "2"); rc.setAttribute("stroke-dasharray", "7 5");
-              rc.setAttribute("class", "selBlink");
               g.appendChild(rc); done = true;
             } else {
               var rm2 = roomAtPt176(roomSel176.pt);
@@ -17843,7 +17831,6 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
                   pth.setAttribute("d", d);
                   pth.setAttribute("fill", "none");
                   pth.setAttribute("stroke", "#FF00C8"); pth.setAttribute("stroke-width", "2"); pth.setAttribute("stroke-dasharray", "7 5");
-                  pth.setAttribute("class", "selBlink");
                   g.appendChild(pth); done = true;
                 }
               }
@@ -18551,6 +18538,7 @@ CAD-176 が部屋バーを先に開き、CAD-177 の入口が「部屋バー表�
     try {
       if (typeof enclMode !== "undefined" && enclMode) return;   /* 置いた直後は入口(b)・CAD-181 が持ち場 */
       if (typeof encl !== "undefined" && encl && encl.edit && encl.edit.fl177) return;   /* 177 がこのタップで開いた */
+      if (typeof sel !== "undefined" && sel) return;   /* CAD-373：このタップで物を選んだ場合は譲る（CAD-204 の門と同じ。従来は開始時の選択しか見ておらず、間仕切りを選んだタップでも床の囲み編集が開いて選択が消えた） */
       if (gates182(d.selB)) return;
       if (d.maxDev > 14 || Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 900) return;
       if (nearLight182(d.mm)) return;
@@ -20234,7 +20222,6 @@ setInterval(gkSync208, 600);
     var F = faces219();
     F.forEach(function(f, fi){
       var ax = X(f.o[0]), ay = Y(f.o[1]), bx = X(f.o[0] + f.r[0] * f.len), by = Y(f.o[1] + f.r[1] * f.len), selF = fi === state.selFi;
-      if (selF) h += "<line class=\"selBlink\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"#FF00C8\" stroke-width=\"230\" stroke-linecap=\"round\" pointer-events=\"none\"/>";
       h += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"95\" stroke-linecap=\"round\" opacity=\".85\" pointer-events=\"none\"/>";
       h += "<line class=\"mfHit\" data-mfi=\"" + fi + "\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"520\" stroke-linecap=\"round\"/>";
     });
@@ -26467,7 +26454,7 @@ function stairSvg306(o, i, P){
   lay.lines.forEach(function(q){ L += `<line x1="${X(q[0])}" y1="${Y(q[1])}" x2="${X(q[2])}" y2="${Y(q[3])}" stroke="${C}" stroke-width="${q[4]}"/>`; });
   if (lay.walk.length > 1) L += `<path d="M${lay.walk.map(function(p){ return X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1); }).join(" L")}" fill="none" stroke="${C}" stroke-width="1.5"/>`;
   if (lay.head) L += arrow306(X(lay.head[0]), Y(lay.head[1]), lay.head[2], lay.head[3], lw, lh);
-  var g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+  var g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
   g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${nameOf306(o)}）</text></g>`;
   if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
   return g;
@@ -26519,7 +26506,7 @@ function stairSvg299(o, i, P){
       L += `<path d="M${lw * .08} ${lh * .93} L${lw * .68} ${lh * .93} Q${lw * .77} ${lh * .93} ${lw * .75} ${lh * .8} L${lw * .75} ${hh * .66} Q${lw * .75} ${hh * .48} ${lw * .58} ${hh * .5} L${lw * .1} ${hh * .5}" fill="none" stroke="${C}" stroke-width="1.5"/>` + arrow(lw * .1, hh * .5, -1, 0);
     }
   }
-  let g = `<g data-tk2="${i}">${isSel ? `<rect class="selBlink" x="${x0 - 5}" y="${y0 - 5}" width="${W2 + 10}" height="${H2 + 10}" rx="4" fill="#FF00C8" fill-opacity=".25"/>` : ""}<rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
+  let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : C}" stroke-width="1.6"/><g transform="translate(${cx} ${cy}) rotate(${rot}) translate(${-lw / 2} ${-lh / 2})">${L}</g>`;
   g += `<text x="${cx}" y="${y0 + H2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">階段（${fullName299(o)}）</text></g>`;
   if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
   return g;
