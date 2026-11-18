@@ -28385,16 +28385,17 @@ body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgb
 
 
 <style id="roomPreset365css">
-#rpBox365{touch-action:manipulation;position:absolute;left:6px;right:6px;bottom:64px;z-index:6;max-height:62dvh;overflow-y:auto;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px}
+#rpBox365{touch-action:manipulation;flex:none;margin-bottom:64px;max-height:36dvh;overflow-y:auto;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px}   /* CAD-371：図面を覆わない様フロー内へ（開くと #slotM が縮む）。margin-bottom は画面下に固定の #toolTabs（大きなボタン）に重ならないための逃げ（旧 bottom:64px と同じ量） */
 #rpBox365 .rpHead{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-bottom:4px}
 #rpBox365 .rpHead button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 12px}
 #rpBox365 .rpMsg{font-size:13px;font-weight:800;margin:2px 0 6px}
 #rpBox365 .rpBtns{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 #rpBox365 .rpBtns button{min-height:42px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 4px}
-#rpOpen365{touch-action:manipulation;position:absolute;left:6px;right:6px;bottom:64px;z-index:6;min-height:40px;border:2px solid #E8742C;border-radius:10px;background:#fff;font-size:13px;font-weight:800;color:var(--ai)}
+#rpOpen365{touch-action:manipulation;flex:none;margin-bottom:64px;min-height:40px;border:2px solid #E8742C;border-radius:10px;background:#fff;font-size:13px;font-weight:800;color:var(--ai)}   /* CAD-371：チップもフロー内へ（逃げの margin はパネルと同じ） */
 body.gold #rpBox365{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
 body.gold #rpBox365 .rpHead button,body.gold #rpBox365 .rpBtns button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
 body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.55)}
+body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdit185 #rpOpen365{margin-bottom:0}   /* CAD-371：大きなボタンが隠れる状態（部屋の選択中・囲み編集中）では逃げの余白を戻す */
 </style>
 <script id="roomPreset365js">
 /* ===== CAD-365：間取り画面で部屋の見本を置く＋描く画面の出し分け =====
@@ -28421,6 +28422,8 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
   ];
   var rot365 = false;      /* true = 横長（縦横を入れ替えて置く） */
   var closed365 = false;   /* 「閉じる」を押した印 */
+  var open371 = false;     /* CAD-371：見本パネルを開いているか（出し方の判断の結果） */
+  var wasAvail371 = false; /* CAD-371：前回の同期で間取り画面にいたか（入った瞬間だけ自動判定する） */
   var after365 = false;    /* 置いた直後の選択を出している印 */
   var last365 = null;      /* 最後に置いた見本 */
   function G365(id){ return document.getElementById(id); }
@@ -28515,11 +28518,49 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
     if (af) af.hidden = !after365;
     if (after365 && last365){ var m = G365("rpMsg365"); if (m) m.textContent = last365[0] + "の部屋を置きました"; }
   }
-  G365("rpClose365").addEventListener("click", function(){ closed365 = true; sync365(); });
+  G365("rpClose365").addEventListener("click", function(){ closed365 = true; open371 = false; saveClosed371(); sync365(); });
   G365("rpRot365").addEventListener("click", function(){ rot365 = !rot365; drawRp365(); });
   G365("rpSame365").addEventListener("click", function(){ if (last365 && !place365(last365)){ after365 = false; drawRp365(); } });
   G365("rpChange365").addEventListener("click", function(){ after365 = false; drawRp365(); });
-  openBtn.addEventListener("click", function(){ closed365 = false; after365 = false; drawRp365(); sync365(); });
+  openBtn.addEventListener("click", function(){ closed365 = false; open371 = true; after365 = false; drawRp365(); sync365(); });
+
+  /* ---------- CAD-371：出し方の判断 ----------
+     自動で開くのは「その階に部屋がまだ1つも無い」時だけ（間取り画面に
+     入った瞬間に判定）。部屋の有無は本体の hasRoom と同じ物差し
+     （roomRecs・parts2D・zones）。「閉じる」を押した現場では、その後
+     その現場では自動で開かない（gosei-rp371-v1 に現場idで覚える。
+     起動時・同期では書かない）。チップからは手動でいつでも開ける。 */
+  var RPKEY371 = "gosei-rp371-v1";
+  function hasRoom371(){
+    try { return ((S.roomRecs || []).length + (S.parts2D || []).length + (S.zones || []).length) > 0; } catch(e){ return true; }
+  }
+  function houseClosed371(){
+    try {
+      var pid = (typeof PJ !== "undefined" && PJ && PJ.cur) || "";
+      if (!pid) return false;
+      var m = JSON.parse(localStorage.getItem(RPKEY371) || "{}");
+      return !!(m && m.c && m.c[pid]);
+    } catch(e){ return false; }
+  }
+  function saveClosed371(){
+    try {
+      var pid = (typeof PJ !== "undefined" && PJ && PJ.cur) || "";
+      if (!pid) return;
+      var m = JSON.parse(localStorage.getItem(RPKEY371) || "{}");
+      if (!m || typeof m !== "object") m = {};
+      if (!m.c || typeof m.c !== "object") m.c = {};
+      m.c[pid] = 1;
+      localStorage.setItem(RPKEY371, JSON.stringify(m));
+    } catch(e){}
+  }
+  function refit371(){
+    /* パネルの開閉で #slotM の高さが変わったら、図面を今の広さに合わせ直す。
+       HB.__pinH は「選択バーが出ても図面を縮めない」ための最大高さの覚えで、
+       そのままだと開いた時に図面の下が切れる。パネルの開閉の変わり目だけ
+       0 に戻して drawPlan し直し、開いている間も図面全体が見える様にする。 */
+    try { if (typeof HB !== "undefined") HB.__pinH = 0; } catch(e){}
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+  }
 
   /* ---------- 表示の同期（間取り画面だけ／描く画面の坪決めの位置） ---------- */
   function sync365(){
@@ -28527,8 +28568,17 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
     try { hasE = !!(typeof S !== "undefined" && S.edges && S.edges.length); } catch(e){}
     try { tut = document.body.classList.contains("nbtutRun"); } catch(e){}
     var avail = stM && !stM.hidden && hasE && !tut;
-    box.hidden = !(avail && !closed365);
-    openBtn.hidden = !(avail && closed365);
+    /* CAD-371：入った瞬間だけ自動判定（部屋が無い階だけ自動で開く。
+       閉じた事のある現場では開かない）。開いた後は閉じるまで開いたまま。 */
+    if (avail && !wasAvail371) open371 = !hasRoom371() && !houseClosed371();
+    if (!avail) open371 = false;
+    wasAvail371 = !!avail;
+    var showBox371 = !!(avail && open371);
+    if (box.hidden === showBox371){
+      box.hidden = !showBox371;
+      if (!stM.hidden) refit371();
+    }
+    openBtn.hidden = !(avail && !open371);
     /* 新築・増築の描く画面では、坪決め（#tsuboIn の .shp）を一番上へ */
     var tb = G365("tsuboIn");
     if (tb && tb.parentElement){
