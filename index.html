@@ -381,6 +381,8 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #plan [stroke="#FF00C8"]:not(#edgeBlink316),#iso [stroke="#FF00C8"],#elevBox [stroke="#FF00C8"],#miniPlan219 [stroke="#FF00C8"]{animation:selPink380 .8s ease-in-out infinite}
 @keyframes mfPink380{0%,100%{outline-color:#FF00C8}50%{outline-color:rgba(255,0,200,.25)}}
 #elevBox .card.mfCard219{animation:mfPink380 .8s ease-in-out infinite}
+/* CAD-382（本人の指摘 2026-11-18夜）：重なりの候補バー（candBarAdd）で選んでいる物のチップも、図面のピンク点滅と合わせてピンクで点滅させる。速さは CAD-380 と同じ .8s・同じ波形（selPink380）。対象はチップ全般（間仕切り・建具・窓・物）で、選んでいる物に対応する data-on="1" のチップだけ */
+#selBar .cands [data-on="1"]{background:#FF00C8!important;border-color:#FF00C8!important;color:#fff!important;animation:selPink380 .8s ease-in-out infinite}
 @keyframes selBlink{0%{opacity:0;animation-timing-function:ease-out}4.2%{opacity:1;animation-timing-function:linear}8.3%{opacity:1;animation-timing-function:ease-in-out}41.7%{opacity:0;animation-timing-function:linear}100%{opacity:0}}
 .armBlink{animation:armBlink .8s ease-in-out infinite}
 @keyframes armBlink{0%,100%{background:#FFF8DC;box-shadow:0 0 0 0 rgba(255,140,0,0)}50%{background:#FFC400;box-shadow:0 0 0 4px rgba(255,140,0,.5)}}
@@ -4447,10 +4449,10 @@ function jointMarks(P){
            いる部分（すき間）を実寸の長さで色を付けて見せる */
         if (isSel372 && E.poke > 0 && E.pokeT != null){ const tp = P(vq ? [E.px, E.pokeT] : [E.pokeT, E.py]); h += `<line x1="${tp[0].toFixed(2)}" y1="${tp[1].toFixed(2)}" x2="${sx}" y2="${sy}" stroke="#D32F2F" stroke-width="6" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
         else if (isSel372 && !E.touch && E.gap <= 300 && E.gapT != null){ const tp = P(vq ? [E.px, E.gapT] : [E.gapT, E.py]); h += `<line x1="${sx}" y1="${sy}" x2="${tp[0].toFixed(2)}" y2="${tp[1].toFixed(2)}" stroke="#E8742C" stroke-width="6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
-        if (E.poke > 0) h += sq372(sx, sy, SQ372, `fill="#D32F2F" stroke="#fff" stroke-width="1" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(E.poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
-        else if (E.touch) h += sq372(sx, sy, SQ372s, `fill="#1B9E4B" stroke="#fff" stroke-width="1" vector-effect="non-scaling-stroke"`);
-        else if (E.gap <= 300) h += sq372(sx, sy, SQ372, `fill="none" stroke="#E8742C" stroke-width="2" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(E.gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
-        else h += sq372(sx, sy, SQ372s, `fill="none" stroke="#8A96A3" stroke-width="2" vector-effect="non-scaling-stroke"`);
+        if (E.poke > 0) h += sq372(sx, sy, SQ372, `fill="#D32F2F" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(E.poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
+        else if (E.touch) h += sq372(sx, sy, SQ372s, `fill="#1B9E4B" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"`);
+        else if (E.gap <= 300) h += sq372(sx, sy, SQ372, `fill="none" stroke="#E8742C" stroke-width="3" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(E.gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
+        else h += sq372(sx, sy, SQ372s, `fill="none" stroke="#8A96A3" stroke-width="3" vector-effect="non-scaling-stroke"`);
       });
     });
     return h;
@@ -13952,11 +13954,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       // CAD-146 の向きは90度逆で、ホゾの向きと勘違いしやすいという本人の指摘（2026-11-13）で回転させた
       const ux = st.ux == null ? 1 : st.ux, uy = st.uy == null ? 0 : st.uy, nx = -uy, ny = ux, hl = 52.5, ht = (st.thick ? secA : (pvMix() ? secB : secA)) / 2;
       const cs = [[1, 1], [1, -1], [-1, -1], [-1, 1]].map(([a2, b2]) => P([st.x + ux * ht * a2 + nx * hl * b2, st.y + uy * ht * a2 + ny * hl * b2]));
-      g += `<polygon class="pvStud" data-thick="${st.thick ? 1 : 0}" points="${cs.map(c => r2(c[0]) + "," + r2(c[1])).join(" ")}" fill="#fff" stroke="#111" stroke-width="1.1"/>`;
+      g += `<polygon class="pvStud" data-thick="${st.thick ? 1 : 0}" points="${cs.map(c => r2(c[0]) + "," + r2(c[1])).join(" ")}" fill="#fff" stroke="#111" stroke-width="2.2"/>`;
     });
     F.posts.forEach(pt => {
       const c = P([pt.x, pt.y]), sz = pt.interior ? Math.max(3.2, 105 * s) : Math.max(3, bandO);
-      g += `<rect class="pvPost" x="${r2(c[0] - sz / 2)}" y="${r2(c[1] - sz / 2)}" width="${r2(sz)}" height="${r2(sz)}" fill="#111"/>`;
+      g += `<rect class="pvPost" x="${r2(c[0] - sz / 2)}" y="${r2(c[1] - sz / 2)}" width="${r2(sz)}" height="${r2(sz)}" fill="#111" stroke="#111" stroke-width="1.6"/>`;
     });
     return g;
   }
