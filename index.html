@@ -28165,6 +28165,7 @@ body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgb
   function G363(id){ return document.getElementById(id); }
   function hasEdges363(){ try { return !!(typeof S !== "undefined" && S.edges && S.edges.length); } catch(e){ return false; } }
   function tut363(){ try { return document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+  function modeRf363(){ try { return typeof S !== "undefined" && S.mode === "rf"; } catch(e){ return false; } }
 
   /* ---------- 描く画面：見本箱 ---------- */
   function drawGrid363(){
@@ -28182,7 +28183,7 @@ body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgb
   }
   function updBox363(){
     var box = G363("presetBox363"); if (!box) return;
-    var show = !hasEdges363() && !tut363();
+    var show = !hasEdges363() && !tut363() && modeRf363();   /* CAD-365：畳の見本はリフォームの時だけ（新築・増築は坪決めを一番上に） */
     if (show && box.hidden) drawGrid363();
     box.hidden = !show;
   }
@@ -28245,6 +28246,165 @@ body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgb
   if (rb0) rb0.addEventListener("click", function(){ rot363 = !rot363; drawGrid363(); });
   drawGrid363(); updBox363();
   setInterval(function(){ updBox363(); syncBar363(); }, 700);
+})();
+</script>
+
+
+<style id="roomPreset365css">
+#rpBox365{touch-action:manipulation;position:absolute;left:6px;right:6px;bottom:64px;z-index:6;max-height:62dvh;overflow-y:auto;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px}
+#rpBox365 .rpHead{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:13px;font-weight:800;margin-bottom:4px}
+#rpBox365 .rpHead button{min-height:36px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 12px}
+#rpBox365 .rpMsg{font-size:13px;font-weight:800;margin:2px 0 6px}
+#rpBox365 .rpBtns{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+#rpBox365 .rpBtns button{min-height:42px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 4px}
+#rpOpen365{touch-action:manipulation;position:absolute;left:6px;right:6px;bottom:64px;z-index:6;min-height:40px;border:2px solid #E8742C;border-radius:10px;background:#fff;font-size:13px;font-weight:800;color:var(--ai)}
+body.gold #rpBox365{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
+body.gold #rpBox365 .rpHead button,body.gold #rpBox365 .rpBtns button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
+body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.55)}
+</style>
+<script id="roomPreset365js">
+/* ===== CAD-365：間取り画面で部屋の見本を置く＋描く画面の出し分け =====
+   翔伍の指示（2026-11-18）：
+   ・畳の見本（描く画面）はリフォームの時だけ。新築・増築の描く画面では
+     畳の見本を出さず、「何坪の家か」を決める所（既存の坪数プリセット）を
+     一番上に持ってくる（このブロックの sync365 が order を付け替える）。
+   ・間取り画面でも畳の見本を出して、タップするとその大きさの部屋が
+     外形の中に間仕切りで区切られて入る。置き場所は左上から空いている
+     所へ順に詰める決まったルール（455mm刻みで走査）。入らない大きさは
+     置けず、トーストで知らせる。
+   ・置く壁は既存の roomWalls（囲み→部屋と同じ物）で作り、roomRecs にも
+     記録する。置いた部屋は通常の間仕切りと全く同じ物で、後から直せる。
+   ・置いた直後は「同じ大きさを続けて置く」「サイズを変えて置く」が
+     選べる。「閉じる」で見本を閉じ、「部屋の見本を開く」で開き直せる。
+   ・パネルの置き場は #selBar と同じ絶対配置（bottom:64px・z-index:6）。
+     フローに入れると図面（#slotM）の大きさで押し下げられ、下部の固定
+     ツールバーに潜ってタップできなくなるため。選ぶだけのシートなので
+     図面に重なってよい（2026-11-10 の本人の決まり）。 */
+(function(){
+  var SIZES365 = [
+    ["3畳", 1820, 2730], ["4.5畳", 2730, 2730], ["6畳", 2730, 3640], ["8畳", 3640, 3640],
+    ["10畳", 3640, 4550], ["12畳", 3640, 5460], ["16畳", 3640, 7280], ["20畳", 4550, 7280]
+  ];
+  var rot365 = false;      /* true = 横長（縦横を入れ替えて置く） */
+  var closed365 = false;   /* 「閉じる」を押した印 */
+  var after365 = false;    /* 置いた直後の選択を出している印 */
+  var last365 = null;      /* 最後に置いた見本 */
+  function G365(id){ return document.getElementById(id); }
+  var stM = G365("stM"); if (!stM) return;
+
+  var box = document.createElement("div");
+  box.id = "rpBox365"; box.hidden = true;
+  box.innerHTML =
+    '<div class="rpHead"><span>部屋の見本</span><button id="rpClose365" type="button">閉じる</button></div>' +
+    '<div id="rpGridWrap365"><div class="tsopts" id="rpGrid365"></div>' +
+    '<div class="row" style="margin-top:6px"><button class="btn sub" id="rpRot365" type="button">回転（今は縦長）</button></div></div>' +
+    '<div id="rpAfter365" hidden><p class="rpMsg" id="rpMsg365"></p>' +
+    '<div class="rpBtns"><button id="rpSame365" type="button">同じ大きさを続けて置く</button>' +
+    '<button id="rpChange365" type="button">サイズを変えて置く</button></div></div>';
+  stM.appendChild(box);
+  var openBtn = document.createElement("button");
+  openBtn.id = "rpOpen365"; openBtn.type = "button"; openBtn.textContent = "部屋の見本を開く"; openBtn.hidden = true;
+  stM.appendChild(openBtn);
+
+  /* ---------- 置ける場所を探す（左上から順に） ---------- */
+  function segInRect365(q, rx0, ry0, rx1, ry1){
+    var dx = q.x2 - q.x1, dy = q.y2 - q.y1, L = Math.hypot(dx, dy);
+    var n = Math.max(1, Math.ceil(L / 50));
+    for (var i = 0; i <= n; i++){
+      var x = q.x1 + dx * i / n, y = q.y1 + dy * i / n;
+      if (x > rx0 && x < rx1 && y > ry0 && y < ry1) return true;
+    }
+    return false;
+  }
+  function fits365(x, y, W, D){
+    var P = pts(), x1 = x + W, y1 = y + D, E = 2, i, j;
+    var sx0 = x + 30, sy0 = y + 30, sx1 = x1 - 30, sy1 = y1 - 30;
+    /* 外形の内側か（30mm 内側に寄せた四角を刻んで確かめる） */
+    for (i = 0; i <= 4; i++) for (j = 0; j <= 4; j++){
+      if (!inside([sx0 + (sx1 - sx0) * i / 4, sy0 + (sy1 - sy0) * j / 4], P)) return false;
+    }
+    /* 既存の間仕切りが中を通らない（境界に重なるのは可） */
+    var segs = (S.parts2D || []).filter(function(q){ return pState(q) !== "remove"; });
+    for (i = 0; i < segs.length; i++) if (segInRect365(segs[i], sx0, sy0, sx1, sy1)) return false;
+    /* 置いた部屋・ゾーンと重ならない */
+    var rects = [];
+    (S.roomRecs || []).forEach(function(r){ rects.push(r); });
+    (S.zones || []).forEach(function(z){ if (z && typeof z.x0 === "number" && typeof z.x1 === "number" && typeof z.y0 === "number" && typeof z.y1 === "number") rects.push(z); });
+    for (i = 0; i < rects.length; i++){ var r = rects[i];
+      if (x < r.x1 - E && x1 > r.x0 + E && y < r.y1 - E && y1 > r.y0 + E) return false; }
+    /* 4辺とも既に壁、という場所は部屋にならないので除く */
+    if (!roomWalls({x0: x, y0: y, x1: x1, y1: y1}, S.mode === "zo").length) return false;
+    return true;
+  }
+  function findSpot365(W, D){
+    var b = bbox();
+    for (var y = b.y0; y + D <= b.y1 + 1; y += 455){
+      for (var x = b.x0; x + W <= b.x1 + 1; x += 455){
+        if (fits365(x, y, W, D)) return {x0: x, y0: y, x1: x + W, y1: y + D};
+      }
+    }
+    return null;
+  }
+
+  /* ---------- 部屋を置く（囲み→部屋と全く同じ作り方） ---------- */
+  function place365(sz){
+    var W = rot365 ? sz[2] : sz[1], D = rot365 ? sz[1] : sz[2];
+    var spot = findSpot365(W, D);
+    if (!spot){ toast(sz[0] + "は入りません"); return false; }
+    var add = roomWalls(spot, S.mode === "zo");
+    if (!add.length){ toast("もう壁で囲まれています"); return false; }
+    pushUndo(); S.parts2D = S.parts2D || [];
+    var rid = "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 4);
+    add.forEach(function(q){ q.rid = rid; S.parts2D.push(q); });
+    (S.roomRecs = S.roomRecs || []).push({rid: rid, x0: spot.x0, y0: spot.y0, x1: spot.x1, y1: spot.y1});
+    save(); drawPlan();
+    last365 = sz; after365 = true; drawRp365();
+    toast(sz[0] + "の部屋を置きました");
+    return true;
+  }
+
+  /* ---------- 見本の並び・置いた後の選択 ---------- */
+  function drawRp365(){
+    var g = G365("rpGrid365"); if (!g) return;
+    g.innerHTML = SIZES365.map(function(sz, i){
+      var W = rot365 ? sz[2] : sz[1], D = rot365 ? sz[1] : sz[2];
+      var sc = 40 / Math.max(W, D);
+      return '<button data-rp365="' + i + '" type="button"><svg viewBox="0 0 46 46"><rect x="' + (23 - W * sc / 2).toFixed(1) + '" y="' + (23 - D * sc / 2).toFixed(1) + '" width="' + (W * sc).toFixed(1) + '" height="' + (D * sc).toFixed(1) + '" fill="#EEF4FB" stroke="#2563B0" stroke-width="2"/></svg><span><b>' + sz[0] + '</b><small>' + fmt(W) + ' × ' + fmt(D) + '</small></span></button>';
+    }).join("");
+    g.querySelectorAll("[data-rp365]").forEach(function(b){
+      b.addEventListener("click", function(){ place365(SIZES365[+b.dataset.rp365]); });
+    });
+    var rb = G365("rpRot365");
+    if (rb) rb.textContent = "回転（今は" + (rot365 ? "横長" : "縦長") + "）";
+    var gw = G365("rpGridWrap365"), af = G365("rpAfter365");
+    if (gw) gw.hidden = after365;
+    if (af) af.hidden = !after365;
+    if (after365 && last365){ var m = G365("rpMsg365"); if (m) m.textContent = last365[0] + "の部屋を置きました"; }
+  }
+  G365("rpClose365").addEventListener("click", function(){ closed365 = true; sync365(); });
+  G365("rpRot365").addEventListener("click", function(){ rot365 = !rot365; drawRp365(); });
+  G365("rpSame365").addEventListener("click", function(){ if (last365 && !place365(last365)){ after365 = false; drawRp365(); } });
+  G365("rpChange365").addEventListener("click", function(){ after365 = false; drawRp365(); });
+  openBtn.addEventListener("click", function(){ closed365 = false; after365 = false; drawRp365(); sync365(); });
+
+  /* ---------- 表示の同期（間取り画面だけ／描く画面の坪決めの位置） ---------- */
+  function sync365(){
+    var hasE = false, tut = false;
+    try { hasE = !!(typeof S !== "undefined" && S.edges && S.edges.length); } catch(e){}
+    try { tut = document.body.classList.contains("nbtutRun"); } catch(e){}
+    var avail = stM && !stM.hidden && hasE && !tut;
+    box.hidden = !(avail && !closed365);
+    openBtn.hidden = !(avail && closed365);
+    /* 新築・増築の描く画面では、坪決め（#tsuboIn の .shp）を一番上へ */
+    var tb = G365("tsuboIn");
+    if (tb && tb.parentElement){
+      var want = "";
+      try { want = (typeof S !== "undefined" && S.mode === "zo") ? "-1" : ""; } catch(e){}
+      if (tb.parentElement.style.order !== want) tb.parentElement.style.order = want;
+    }
+  }
+  drawRp365(); sync365();
+  setInterval(sync365, 700);
 })();
 </script>
 
