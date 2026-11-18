@@ -5362,19 +5362,20 @@ function drawSec(){
   const s = Math.min(250 / (xR - xL), 420 / (zTop - zGL)), mL = 95, mT = 40;
   const X = x => mL + (x - xL) * s, Y = z => mT + (zTop - z) * s;
   const Hpx = mT + (zTop - zGL) * s + 30, Wpx = 360;
-  const rect = (x0, z0, x1, z1, fill, st = "#A88B62") => `<rect x="${X(Math.min(x0, x1))}" y="${Y(Math.max(z0, z1))}" width="${Math.abs(x1 - x0) * s}" height="${Math.abs(z1 - z0) * s}" fill="${fill}" stroke="${st}" stroke-width="1"/>`;
+  const rect = (x0, z0, x1, z1, fill, st = "#A87C4C") => `<rect x="${X(Math.min(x0, x1))}" y="${Y(Math.max(z0, z1))}" width="${Math.abs(x1 - x0) * s}" height="${Math.abs(z1 - z0) * s}" fill="${fill}" stroke="${st}" stroke-width="1"/>`;
   let h = "";
+  h += `<defs><pattern id="secWoodH351" width="90" height="26" patternUnits="userSpaceOnUse"><rect width="90" height="26" fill="#D9A862"/><path d="M0 5H90M0 12H90M0 19H90M0 24H90" stroke="#BE8A48" stroke-width="1" opacity=".5"/><path d="M0 8.5H90M0 15.5H90M0 22H90" stroke="#EBCB96" stroke-width="1" opacity=".55"/><ellipse cx="28" cy="12" rx="4.6" ry="2.1" fill="none" stroke="#96692F" stroke-width="1" opacity=".65"/><ellipse cx="28" cy="12" rx="2" ry=".9" fill="none" stroke="#96692F" stroke-width=".8" opacity=".65"/><ellipse cx="66" cy="6" rx="3.4" ry="1.5" fill="none" stroke="#96692F" stroke-width="1" opacity=".5"/></pattern><pattern id="secWoodV351" width="26" height="90" patternUnits="userSpaceOnUse"><rect width="26" height="90" fill="#E0B57A"/><path d="M5 0V90M12 0V90M19 0V90M24 0V90" stroke="#C79A58" stroke-width="1" opacity=".5"/><path d="M8.5 0V90M15.5 0V90M22 0V90" stroke="#F0D3A0" stroke-width="1" opacity=".55"/><ellipse cx="12" cy="30" rx="2.1" ry="4.6" fill="none" stroke="#96692F" stroke-width="1" opacity=".6"/><ellipse cx="7" cy="66" rx="1.5" ry="3.4" fill="none" stroke="#96692F" stroke-width="1" opacity=".5"/></pattern><pattern id="secWoodL351" width="26" height="90" patternUnits="userSpaceOnUse"><rect width="26" height="90" fill="#EAC88F"/><path d="M5 0V90M12 0V90M19 0V90M24 0V90" stroke="#D3AB6C" stroke-width="1" opacity=".5"/><path d="M8.5 0V90M15.5 0V90M22 0V90" stroke="#F6E2B8" stroke-width="1" opacity=".55"/><ellipse cx="12" cy="34" rx="2.1" ry="4.6" fill="none" stroke="#A5763C" stroke-width="1" opacity=".55"/></pattern><pattern id="secWoodHD351" width="90" height="26" patternUnits="userSpaceOnUse"><rect width="90" height="26" fill="#C99047"/><path d="M0 5H90M0 12H90M0 19H90M0 24H90" stroke="#A9763A" stroke-width="1" opacity=".55"/><path d="M0 8.5H90M0 15.5H90M0 22H90" stroke="#E3B878" stroke-width="1" opacity=".5"/><ellipse cx="34" cy="13" rx="4.6" ry="2.1" fill="none" stroke="#7E5525" stroke-width="1" opacity=".65"/><ellipse cx="70" cy="7" rx="3.4" ry="1.5" fill="none" stroke="#7E5525" stroke-width="1" opacity=".5"/></pattern></defs>`;  /* CAD-351：断面図の木目パターン（候補1の見た目が基準） */
   // GL・基礎・土台・柱・桁
   h += `<line x1="0" y1="${Y(zGL)}" x2="${Wpx}" y2="${Y(zGL)}" stroke="#8A96A3" stroke-width="2"/><text x="6" y="${Y(zGL) + 16}" style="font-size:12px;font-weight:700;fill:#5B6673">GL</text>`;
   [0, W].forEach(x => {
     h += rect(x - 75, zGL, x + 75, -105, "#D7DCE2", "#9AA5B1");
-    h += rect(x - 52.5, -105, x + 52.5, 0, "#D9B98A");
-    h += rect(x - 52.5, 0, x + 52.5, Lc, "#EAD6B0");
-    if (two){ h += rect(x - 52.5, Lc, x + 52.5, Hd, "#D9B98A"); h += rect(x - 52.5, Hd, x + 52.5, Hd + Lc2, "#EAD6B0"); }
-    h += rect(x - 52.5, Hk - S.keta, x + 52.5, Hk, "#D9B98A");
+    h += rect(x - 52.5, -105, x + 52.5, 0, "url(#secWoodH351)");
+    h += rect(x - 52.5, 0, x + 52.5, Lc, "url(#secWoodV351)");
+    if (two){ h += rect(x - 52.5, Lc, x + 52.5, Hd, "url(#secWoodH351)"); h += rect(x - 52.5, Hd, x + 52.5, Hd + Lc2, "url(#secWoodV351)"); }
+    h += rect(x - 52.5, Hk - S.keta, x + 52.5, Hk, "url(#secWoodH351)");
   });
   if (two){
-    h += rect(0, Hd - S.dosa, W, Hd, "#E3C99A");
+    h += rect(0, Hd - S.dosa, W, Hd, "url(#secWoodH351)");
     const f2 = Hd + 40, cx2 = X(W / 2);
     h += `<line x1="${X(0)}" y1="${Y(f2)}" x2="${X(W)}" y2="${Y(f2)}" stroke="#2563B0" stroke-width="1.5" stroke-dasharray="6 4"/><line x1="${X(0)}" y1="${Y(f2 + S.ch2)}" x2="${X(W)}" y2="${Y(f2 + S.ch2)}" stroke="#2563B0" stroke-width="1.5" stroke-dasharray="6 4"/>`;
     h += `<line x1="${cx2}" y1="${Y(f2) - 2}" x2="${cx2}" y2="${Y(f2 + S.ch2) + 2}" stroke="#2563B0" stroke-width="1.5"/><path d="M${cx2} ${Y(f2 + S.ch2)} l-4 7 h8z M${cx2} ${Y(f2)} l-4 -7 h8z" fill="#2563B0"/>`;
@@ -5383,7 +5384,7 @@ function drawSec(){
     h += `<text x="${lx2}" y="${Y(Hd + Lc2 / 2)}" transform="rotate(-90 ${lx2} ${Y(Hd + Lc2 / 2)})" text-anchor="middle" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">2階柱 ${fmt(Lc2)}</text>`;
     h += `<text x="${X(0) - 34}" y="${Y(Hd) + 4}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#18202A">胴差天 ${fmt(Hd)}</text>`;
   }
-  h += rect(0, Hk - S.hari, W, Hk, "#E3C99A");
+  h += rect(0, Hk - S.hari, W, Hk, "url(#secWoodH351)");
   // 床・天井
   h += `<line x1="${X(0)}" y1="${Y(S.dfl)}" x2="${X(W)}" y2="${Y(S.dfl)}" stroke="#2563B0" stroke-width="1.5" stroke-dasharray="6 4"/>`;
   h += `<line x1="${X(0)}" y1="${Y(S.dfl + S.ch)}" x2="${X(W)}" y2="${Y(S.dfl + S.ch)}" stroke="#2563B0" stroke-width="1.5" stroke-dasharray="6 4"/>`;
@@ -5392,15 +5393,19 @@ function drawSec(){
   h += `<text x="${cx + 6}" y="${(Y(S.dfl) + Y(S.dfl + S.ch)) / 2 + 5}" class="halo" style="font-size:14px;font-weight:900;fill:#2563B0">天井高 ${fmt(S.ch)}</text>`;
   // 束・母屋
   ms.forEach(m => {
-    if (m.L > 0) h += rect(m.x - S.tsuka / 2, Hk, m.x + S.tsuka / 2, Hk + m.L, "#F1E4CF");
-    h += rect(m.x - S.moya / 2, Hk + m.rise - S.moya, m.x + S.moya / 2, Hk + m.rise, m.top ? "#C9A36B" : "#D9B98A");
+    if (m.L > 0) h += rect(m.x - S.tsuka / 2, Hk, m.x + S.tsuka / 2, Hk + m.L, "url(#secWoodL351)");
+    h += rect(m.x - S.moya / 2, Hk + m.rise - S.moya, m.x + S.moya / 2, Hk + m.rise, m.top ? "url(#secWoodHD351)" : "url(#secWoodH351)");
   });
+  // 接合部の金物の点（CAD-351：候補1と同じ小さな青グレーの丸）
+  const dot351 = (px, py) => `<circle cx="${px}" cy="${py}" r="1.7" fill="#5C6B78" stroke="#39434D" stroke-width=".6"/>`;
+  [0, W].forEach(x => { h += dot351(X(x), Y(Hk - S.keta / 2)); if (two) h += dot351(X(x), Y(Hd - S.dosa / 2)); });
+  ms.forEach(m => { if (m.L > 0) h += dot351(X(m.x), Y(Hk) - 3.5); });
   // 垂木
   const th = 60 * R.n;
   const a0 = -nokiA, a1 = W + nokiB;
   const lines = kata ? [[[a0, Hk + a0 * t], [a1, Hk + a1 * t]]] : R.mune ? [[[a0, Hk + a0 * t], [R.mp, Hk + R.mp * t]], [[R.mp, Hk + (W - R.mp) * t], [a1, Hk + (W - a1) * t]]] : [[[a0, Hk + a0 * t], [W / 2, Hk + W / 2 * t], [a1, Hk + (W - a1) * t]]];
-  lines.forEach(line => { const up = line.map(([x, zz]) => [X(x), Y(zz + th)]), dn = line.map(([x, zz]) => [X(x), Y(zz)]).reverse(); h += `<polygon points="${up.concat(dn).map(q => q.join(",")).join(" ")}" fill="#E8742C" opacity=".85"/>`; });
-  if (R.mune) h += rect(R.mp - 15, Hk + R.mp * t + th, R.mp + 15, Hk + (W - R.mp) * t + th, "#BFC6CE", "#7C8794") + `<text x="${X(R.mp) - 8}" y="${Y(Hk + R.mp * t + th + R.step / 2)}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#5B6673">段差 ${fmt(R.step)}</text>`;
+  lines.forEach(line => { const up = line.map(([x, zz]) => [X(x), Y(zz + th)]), dn = line.map(([x, zz]) => [X(x), Y(zz)]).reverse(); h += `<polygon points="${up.concat(dn).map(q => q.join(",")).join(" ")}" fill="url(#secWoodH351)" stroke="#A87C4C" stroke-width=".8"/>`; const rp = up.map(q => [q[0], q[1] - 4.6]); h += `<polygon points="${rp.concat(up.slice().reverse()).map(q => q.join(",")).join(" ")}" fill="#32383F"/><polyline points="${rp.map(q => q.join(",")).join(" ")}" fill="none" stroke="#5D6771" stroke-width=".9"/>`; });
+  if (R.mune) h += rect(R.mp - 15, Hk + R.mp * t + th, R.mp + 15, Hk + (W - R.mp) * t + th, "#A7B0B9", "#67727C") + `<text x="${X(R.mp) - 8}" y="${Y(Hk + R.mp * t + th + R.step / 2)}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#5B6673">段差 ${fmt(R.step)}</text>`;
   // ラベル：束の長さ
   const shown = kata || R.mune ? ms : ms.filter(m => m.x <= W / 2 + 1);
   shown.forEach(m => {
@@ -5413,7 +5418,7 @@ function drawSec(){
   h += `<text x="${lx}" y="${Y(Lc / 2)}" transform="rotate(-90 ${lx} ${Y(Lc / 2)})" text-anchor="middle" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">${two ? "1階柱" : "柱"} ${fmt(Lc)}</text>`;
   h += `<text x="${X(0) - 34}" y="${Y(Hk) + 4}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">桁天 ${fmt(Hk)}</text>`;
   const topX = kata ? W : R.mune ? R.mp : W / 2, topZ = Hk + topRise;
-  h += `<text x="${Math.min(X(topX) + 30, 355)}" y="${Y(topZ + th) - 8}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#C2571A">${kata ? "上の母屋天" : "棟木天"} ${fmt(topZ)}</text>`;
+  h += `<text x="${Math.min(X(topX) + 30, 355)}" y="${Y(topZ + th) - 8}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#2F353C">${kata ? "上の母屋天" : "棟木天"} ${fmt(topZ)}</text>`;
   h += `<text x="6" y="18" style="font-size:12px;font-weight:700;fill:#5B6673">断面（高さは土台の上から・mm）</text>`;
   $("sec").setAttribute("viewBox", `0 0 ${Wpx} ${Hpx}`); $("sec").innerHTML = h;
   const tsk = (kata || R.mune ? ms : ms.filter(m => m.x <= W / 2 + 1)).map(m => m.L > 0 ? fmt(m.L) : "なし").join(" ／ ");
@@ -27170,6 +27175,7 @@ window.__len309txt = function(){ return null; };
  CAD-340：優先＋水回りの作り直し6枚と第6回前半6枚を 337〜339 と同じ変換（512・WebP q90）で収録。作り直し6枚は既存キーの差し替え：描く kaku（下の大きなボタン「描く・選ぶ」#toolTabs [data-tt='part']）・置く oku（「置く」）・床仕様 yuka（#floorBtn）・トイレ toilet・洗面台 senmen・キッチン kitchen。大きなボタン3つは SCALE/ORIGIN が無かったので今回から原本bbox算出で追加（1.00〜1.08、見え方はほぼ不変）。第6回前半6枚は新規キー＋RULES（#fxMenu）：ピクチャーレール picrail・ロールスクリーン roll・ブラインド blind・ダクトレール duct・スポットライト spot・ペンダントライト pendant。ICONS 95→101キー、SCALE/ORIGIN 78→87キー。入れられなかった物はなし。
  CAD-341：第9回の合格7枚と作り直し6枚を 337〜340 と同じ変換（512・WebP q90）で収録。第9回は新規キー＋RULES：大きさ size（選択バー #sbSize）・反転 flip（#sbFlip、339報告の予告どおり）・壁まで fit（#sbFit）・形 form（#sbForm292）・戸袋 tobukuro（#sbTob308）・見積書PDF pdf（#pdfBtn）・材料の本数 matnum（#estJumpMat271）。作り直しは既存キーの差し替え：片開き katahiraki・片引き katahiki・クローゼット closet・浴槽 yokuso（SCALE/ORIGIN は新絵の bbox から算出）。腰窓 koshi・小窓 komado は専用キーが無かったので新規キー＋RULES（#toolCh [data-tool='winK'/'winS']）。ICONS 101→110キー、SCALE/ORIGIN 87→96キー。入れられなかった物はなし。
  CAD-350：まとめ9（作り直し）の最後の2枚を 337〜341 と同じ変換（512・WebP q90）で収録し、まとめ9は全数完了。FIX窓 fix は新規キー＋RULES（#toolCh [data-tool='winF']、腰窓 koshi・小窓 komado と同じ並び。winF だけ RULES が無く絵が付いていなかった）。ダウンライトは既存キー downlight の差し替え（#toolCh3 [data-lt='down'] に付いた CAD-327 の旧絵が被写体小さくぼやける作り直し対象だった物。同じボタンへの二重付けはせず、SCALE/ORIGIN は新絵の bbox から算出：SCALE 3.45→1.08）。ICONS 110→111キー、SCALE/ORIGIN 96→97キー。入れられなかった物はなし。
+ CAD-351：屋根画面の断面図（#sec・drawSec）の見た目を、翔伍が選んだ候補1（materials/roof-section-candidates/屋根断面図_候補1.png）の色・質感に合わせた。絵そのものは貼らず、描画側を変えただけ：木材のベタ塗り（#D9B98A 等）を木目パターン（横材 secWoodH351・柱 secWoodV351・束 secWoodL351・棟木 secWoodHD351、地の色は候補1の自然な中褐色 #D9A862 系、木目線と節入り、輪郭 #A87C4C）に、垂木のオレンジ帯（#E8742C）は木目に変えて上に濃いグレー（#32383F）の屋根材の帯を重ね、接合部には候補1と同じ小さな金物の点（桁・胴差の両端と束の足元）を描いた。棟違いの段差の板は鋼板の色味に寄せ、「棟木天」ラベルの色は屋根の濃いグレーへ。形の計算・数字・寸法の重ね方・見積 digest・保存キーは不変のはず。
  CAD-342：図面の上の表示物すべての重なり回避を、CAD-316 の反発レイアウトと同じ仕組みに統一（本人の実機の指摘「全てを磁石の反発みたいにできないの？」）。tidyPlanLabels の配置の芯（重なった物だけ空きマスを探す貪欲な探索）を、アンカーへの引き寄せ＋文字同士の押し合い＋太い線・番号丸・光る円は静止障害物として押し出し＋反発だけの仕上げ＋viewBox 内クランプ、の反発ソルバへ作り替え。部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料として動かし、反発でも収まらない物は一番近い空きへ逃がす最終段を追加。対象は #plan に描かれる全 text（寸法の数字・部屋の名前と㎡・状態バッジ・物の名前・間仕切りラベル・ガイド文字・316の札の文字）。大きくずれた文字には 316 と同じ破線の引き出し線（lead342）を元の位置から引く。.zx252 の文字（全体表示では隠れている間仕切りラベル等）は getBBox が取れず材料にできないため、拡大で表示に切り替わった瞬間に tidy をかけ直す（縮小の二重がけ防止つき）。文字の内容・大きさ・見積・保存キーは不変。
  CAD-343：部屋全体の床適用で土間などの置いた範囲が飲み込まれる不具合の修正（本人の動画での指摘）。原因は部屋タップ（HB.__ltSeg50）の CAD-170 ロジックで、印なしレコードが部屋を全面覆っていると「旧版の部屋タップ記録」とみなして全体を置き換えていたため、囲みで置いた土間の床範囲（flDoma）・畳の範囲が無垢などと一緒に消えていた。土間ゾーン（S.zones）は fixAssign のゾーン優先で従来から守られていたが、部屋タップの対象計算でも床を別に払うゾーン（zoneCutQ198）を先に引く形にそろえた。全面置換は、覆う記録が単一の床種類で畳・土間・座上げ・ec印のいずれでもない時だけに限定し、それ以外はすき間だけに置く（すき間ゼロなら置かずトーストで知らせる）。指で囲む部分適用と、土間を後から指定する逆向き（CAD-287）は無変更。未操作の標準状態の見積 digest は不変。
  CAD-344：平面図で間取りと関係ない所に柱が立つ不具合の修正（本人の指摘）。壁まわりの柱（framePos）は壁ベースで正しく、問題は内部の柱だけだった：pvFrame が外形の等分格子に置き、455mm以内に間仕切りとの交点が無い所では格子点のまま残していたため、部屋の真ん中や間仕切りの端から離れた所に柱が浮き、壁の柱と重なる重複も出ていた。内部の柱の位置と本数の正本として intPostList() を新設し、位置は支持ライン（内部の桁の通り）×間仕切りの交点だけにした（framePos の柱と重なる交点・開口の中・開放形の間仕切り・外周は除く）。表示（pvFrame）と見積（内部の柱・金物・ご注意行の本数）はこの正本でそろえた。内部の桁と内部の基礎は支持ラインの列の物なので列数ベースのまま（基礎の説明文だけ「内部の桁の下」に変更、金額不変）。標準の練習の家（寄棟）の digest は不変。切妻・片流れでは浮いた柱の分だけ内部の柱と金物が減る（正当な変化）。
