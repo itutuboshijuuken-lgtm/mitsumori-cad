@@ -376,6 +376,11 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 /* CAD-329：選択のピンク点滅の波形を作り替え（本人の指定：濃い時間は短く・薄い時間は中くらい・消えている時間を長く）
  CAD-331：実機の追加の指摘で濃い時間をさらに短縮（約0.4秒→約0.2秒）。その分は消えている時間へ（約1.2秒→約1.4秒）。周期2.4秒・薄い約0.8秒・色は不変 */
 .selBlink{animation:selBlink 2.4s linear infinite}
+/* CAD-380（本人の決定 2026-11-18夜）：選択のピンクを点滅させる。線が細くなって見やすくなった分、ピンクが目立たなくなったため。形は CAD-373 のまま（選んだ物その物だけ・外にも内にも出さない・ハロー無し）で、不透明度だけを道具ボタンの黄色点滅（armBlink .8s ease-in-out）と同じ速さで上下させる。ピンク（#FF00C8）は選択表示専用の色なので、stroke がピンクの要素全部に当てる。辺の一回物の印（#edgeBlink316）は従来の .selBlink のままにするため除く */
+@keyframes selPink380{0%,100%{opacity:1}50%{opacity:.2}}
+#plan [stroke="#FF00C8"]:not(#edgeBlink316),#iso [stroke="#FF00C8"],#elevBox [stroke="#FF00C8"],#miniPlan219 [stroke="#FF00C8"]{animation:selPink380 .8s ease-in-out infinite}
+@keyframes mfPink380{0%,100%{outline-color:#FF00C8}50%{outline-color:rgba(255,0,200,.25)}}
+#elevBox .card.mfCard219{animation:mfPink380 .8s ease-in-out infinite}
 @keyframes selBlink{0%{opacity:0;animation-timing-function:ease-out}4.2%{opacity:1;animation-timing-function:linear}8.3%{opacity:1;animation-timing-function:ease-in-out}41.7%{opacity:0;animation-timing-function:linear}100%{opacity:0}}
 .armBlink{animation:armBlink .8s ease-in-out infinite}
 @keyframes armBlink{0%,100%{background:#FFF8DC;box-shadow:0 0 0 0 rgba(255,140,0,0)}50%{background:#FFC400;box-shadow:0 0 0 4px rgba(255,140,0,.5)}}
