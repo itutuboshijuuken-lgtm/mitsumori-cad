@@ -6210,10 +6210,12 @@ function calc(){
       const hasStair293 = parts.some((p, i) => { const sn293 = i === cur ? keep : (S.fl[i] && S.fl[i].snap); return sn293 && (sn293.tenken || []).some(o => o && o.k === "stair"); });
       if (!hasStair293){
         const w293 = workP("kaidan");
-        const row293 = {name: "階段", spec: `${fmt(1, 1)}か所 × ${fmt(w293.p)}円`, qty: "", cost: w293.p, avg: w293.avg, miss: !w293.p, fix: {kind: "work", key: "kaidan"}, q: 1, fl: ashAt291 >= 0 ? ashFl291 : (labAt291 >= 0 ? labFl291 : 0)};
+        const fl293 = ashAt291 >= 0 ? ashFl291 : (labAt291 >= 0 ? labFl291 : 0);
+        const rows293 = (typeof stairAuto389 === "function" && w293.avg) ? stairAuto389((S.ch || 2400) + (S.dosa || 240)) : [{name: "階段", spec: `${fmt(1, 1)}か所 × ${fmt(w293.p)}円`, qty: "", cost: w293.p, avg: w293.avg, miss: !w293.p, fix: {kind: "work", key: "kaidan"}, q: 1}];   /* CAD-389：自動の階段は積み上げ（材料）＋手間の2行。単価を自分で入れている時は従来の1行 */
+        rows293.forEach(r293 => { r293.fl = fl293; });
         let ins293 = rows.length;
         if (ashAt291 >= 0){ let j293 = ashAt291; while (j293 < rows.length && (rows[j293].ash || /^足場/.test(rows[j293].name || ""))) j293++; ins293 = j293; }
-        rows.splice(ins293, 0, row293);
+        rows.splice(ins293, 0, ...rows293);
       }
     } catch(e){}
     /* (a) 下屋：総2階の近道パスと同じ状態（1階＋2階の要素・S.floors=2）で calc0 を1回回し、下屋グループの行だけを抜き出して1階の節へ */
@@ -6589,9 +6591,11 @@ function calc00(){
     const nm = {s: ["kaidan", "階段（直階段）"], L: ["kaidanL", "階段（かね折れ）"], M: ["kaidanM", "階段（回り階段）"], D: ["kaidanM", "階段（下回り）"], U: ["kaidanM", "階段（上回り）"], B: ["kaidanM", "階段（上下回り）"]};   /* CAD-299：新形（下回り・上回り・上下回り）は回り系の単価 kaidanM に寄せ、行名だけ形の名前にする */
     const autoH = (S.ch || 2400) + (S.dosa || 240);
     const by = {};
-    st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0}; by[kk].c++; });   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
+    st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0, os: []}; by[kk].c++; by[kk].os.push(o); });   /* CAD-389：積み上げ用に階段そのものも集める */   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
     Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190), R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
-      work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
+      /* CAD-389：部品定価の積み上げ（材料）＋取付手間（別行）。階段の単価を自分で入れている時（仮でない時）は割り直さず従来の1行のまま */
+      if (typeof stairRows389 === "function" && workP(nm[g.t][0]).avg) stairRows389(rows, g, nm[g.t][1], n, railL);
+      else work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
       if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)){ const railN378 = Math.ceil(railL * 1000 / 910) + 1;   /* CAD-378：受け金具は流れごとに910mmピッチ・両端入り（翔伍の決定 2026-11-18）。手すりは片側1本＝1か所1流れ */
         work("kdBar35", "手すり丸棒35", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`);
         work("kdBracket", "手すり受け金具", railN378 * g.c, "個", `${g.c}か所 × ${railN378}個（910mmピッチ・両端入り）`); } });
@@ -7533,7 +7537,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (ashPro){ ashibaA = ashPro.A; rows.push({grp: "足場工事", ash: true}); }
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
-  if (two && !(S.tenken || []).some(o => o.k === "stair")) work("kaidan", "階段", 1, "か所");
+  if (two && !(S.tenken || []).some(o => o.k === "stair")){ if (typeof stairAuto389 === "function" && workP("kaidan").avg) rows.push(...stairAuto389((S.ch || 2400) + (S.dosa || 240))); else work("kaidan", "階段", 1, "か所"); }   /* CAD-389：自動の階段も直階段として積み上げ＋手間（単価を自分で入れている時は従来の1行） */
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
   const np1 = workP("ninku");
@@ -30401,5 +30405,92 @@ drawExtras = function(){
     });
   } catch(e){}
 };
+</script>
+
+<script>
+/* ===== CAD-389：階段の部品定価の積み上げ（材料）＋取付手間（別行） =====
+部品定価はノダ公式カタログ「2023カナエル」階段編（2024年5月印刷・税抜明記）の
+部品単価表から（teika-06-stairs.md で「そのまま入れる」判定済みのノダ分・確認日
+2026-11-18）。積み上げの式は study-floor-labor-2026-11-19.md 第3節、手間は
+study-stair-labor-2026-11-19.md 第3節（直＝1.0人工／その他＝1.5人工、金額は
+大工1人工 ninku の単価に連動）。巾木（KHST-11）は任意部品のため入れない
+（study の提案どおり初期値はオフ）。手すりは CAD-378 の別行のまま含めない。
+掛率と保存キー（gosei-kakeritsu-v1）は CAD-379 の仕組みを共用。 */
+const ST389 = {
+kg: [[2400, 13000, "KG-14"], [3300, 16000, "KG-13"], [4200, 20000, "KG-12"], [4500, 21000, "KG-11"], [4800, 23000, "KG-10"]], /* 側板（箱型）[長さmm, 定価, 品番] */
+kf: 6000, /* 踏板 KF-10（895×240×36） */
+kkm: 1700, /* 蹴込板 KKM-10（900×225×9） */
+ka: 4200, /* 上段框 KA-12（895×110×36） */
+kd: 32000, /* 踊り場板 KD-10（990×990） */
+km: {2: [32000, "KM2-10"], 3: [34000, "KM3-10"]}, /* 廻り踏板セット（990×990） */
+kgm: 17000, /* 廻り用側板 KGM-13（2,400×330） */
+kkmw: {2: [3500, "KKM-12"], 3: [2200, "KKM-11"]}, /* 廻り用蹴込板（2段廻り用／3段廻り用） */
+glue: 3400 /* 蹴込板用接着剤 FP-B06K */
+};
+function stParts389(o){
+try { if (window.__st306 && window.__st306.partsOf){ const p = window.__st306.partsOf(o); if (p && p.length) return p;}} catch (e) {}
+/* __st306 が無い時の予備：形（sf/st）から並びを組み立てる。直の段数は寸法から */
+let sf = "s", tn = 3, t2 = 3;
+if (o && o.sf){ sf = o.sf; tn = (o.tn === 1 || o.tn === 2 || o.tn === 3)? o.tn: (sf === "k"? (o.st === "L"? 1: o.st === "N"? 2: 3): 3); t2 = (o.t2 === 1 || o.t2 === 2 || o.t2 === 3)? o.t2: 3;}
+else if (o && o.st === "L"){ sf = "k"; tn = 1;}
+else if (o && o.st === "M"){ sf = "k"; tn = 3;}
+else if (o && o.st === "N"){ sf = "k"; tn = 2;}
+const TD = 227.5, MW = 910, len = Math.max(0, +(o && o.d) || 0), wid = Math.max(0, +(o && o.w) || 0);
+const sn = v => Math.max(0, Math.min(40, Math.round(v / TD)));
+if (sf === "d") return [{t: "m", kind: tn, dir: "L"}, {t: "s", n: sn(len - MW)}];
+if (sf === "u") return [{t: "s", n: sn(len - MW)}, {t: "m", kind: tn, dir: "L"}];
+if (sf === "b") return [{t: "m", kind: tn, dir: "L"}, {t: "s", n: sn(len - 2 * MW)}, {t: "m", kind: t2, dir: "L"}];
+if (sf === "k") return [{t: "s", n: sn(len - MW)}, {t: "m", kind: tn, dir: "L"}, {t: "s", n: sn(wid - MW)}];
+return [{t: "s", n: Math.max(1, sn(len))}];
+}
+/* 1か所分の部品定価の合計と内訳を返す。段数 N は見積側（階高÷190）で数え、
+形の内訳（廻り段数 W・踊り場 D・直の区間）だけ絵から取る */
+function stBuild389(o, H){
+const TD = 227.5, N = Math.max(1, Math.ceil(H / 190)), R = H / N;
+const parts = stParts389(o);
+let W = 0, D = 0; const turns = [];
+parts.forEach(q => { if (q.t === "m"){ if (q.kind === 1){ D++; turns.push(1);} else { W += q.kind; turns.push(q.kind);}}});
+const sIdx = []; parts.forEach((q, i) => { if (q.t === "s") sIdx.push(i);});
+const rem = Math.max(0, N - W - D), totDraw = sIdx.reduce((a, i) => a + (parts[i].n || 0), 0);
+const alloc = {}; let used = 0;
+sIdx.forEach((ix, j) => { let v; if (j === sIdx.length - 1) v = rem - used; else if (totDraw > 0) v = Math.round(rem * (parts[ix].n || 0) / totDraw); else v = Math.round(rem / sIdx.length); v = Math.max(0, v); alloc[ix] = v; used += v;});
+const treads = Math.max(0, N - 1 - W - D);
+const kgPick = slope => { for (let i = 0; i < ST389.kg.length; i++) if (slope <= ST389.kg[i][0]) return [ST389.kg[i][1], ST389.kg[i][2]]; const k = Math.ceil(slope / 4800); return [ST389.kg[4][1] * k, "KG-10×" + k];};
+let sum = 0; const det = [];
+if (!turns.length){
+const pk = kgPick(Math.hypot(H, TD * (N - 1))); sum += pk[0] * 2; det.push(`側板 ${pk[1]}×2`);
+} else {
+sIdx.forEach(ix => { const m = alloc[ix]; if (m <= 0) return; const pk = kgPick(Math.hypot(R, TD) * m); sum += pk[0] * 2; det.push(`側板 ${pk[1]}×2`);});
+turns.forEach(kind => {
+if (kind === 1){ sum += ST389.kd; det.push("踊り場板 KD-10×1");}
+else { const kp = ST389.km[kind] || ST389.km[3]; sum += kp[0]; det.push(`廻り踏板 ${kp[1]}×1`);
+sum += ST389.kgm; det.push("廻り用側板 KGM-13×1");
+const wp = ST389.kkmw[kind] || ST389.kkmw[3]; sum += wp[0] * kind; det.push(`廻り用蹴込板 ${wp[1]}×${kind}`);}
+});
+}
+if (treads > 0){ sum += ST389.kf * treads; det.push(`踏板 KF-10×${treads}`); sum += ST389.kkm * treads; det.push(`蹴込板 KKM-10×${treads}`);}
+sum += ST389.ka; det.push("上段框 KA-12×1");
+sum += ST389.glue; det.push("接着剤 FP-B06K×1");
+return { sum, det: det.join("・"), N, W, D};
+}
+/* 置いた階段のグループ分：材料行＋取付手間行を rows へ足す（stairRows から呼ぶ） */
+function stairRows389(rows, g, name, n, railL){
+const pct = tkRatePct379("ノダ");
+let sum = 0, b0 = null;
+(g.os || []).forEach(o => { const b = stBuild389(o, g.H); sum += b.sum; if (!b0) b0 = b;});
+if (!b0) b0 = stBuild389({sf: "s"}, g.H);
+const per = g.c > 0? Math.round(sum / g.c): sum;
+rows.push({name: `${name}（材料）`, spec: `${g.c}か所 × ${fmt(Math.round(per * pct / 100))}円（部品定価 ${fmt(per)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b0.det}／階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段・手すり 片側 約${railL}m）`, qty: "", cost: Math.round(sum * pct / 100), avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: g.c});
+const nin = g.t === "s"? 1: 1.5, np = workP("ninku"); /* 手間：直階段 1.0人工／その他 1.5人工（study-stair-labor）。金額は大工1人工の単価に連動 */
+rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${fmt(nin, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: nin * np.p * g.c, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: g.c});
+}
+/* 自動の階段（2階建て・階段なし）用：直階段として同じ2行を作る */
+function stairAuto389(H){
+const pct = tkRatePct379("ノダ"), b = stBuild389({sf: "s"}, H), mat = Math.round(b.sum * pct / 100), np = workP("ninku");
+return [
+{name: "階段（材料）", spec: `1か所 × ${fmt(mat)}円（部品定価 ${fmt(b.sum)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b.det}／階高 約${fmt(H)} ÷ 190 ＝ ${b.N}段）`, qty: "", cost: mat, avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: 1},
+{name: "階段（取付手間）", spec: `1か所 × ${fmt(1, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: np.p, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: 1}
+];
+}
 </script>
 </html>
