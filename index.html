@@ -26321,7 +26321,7 @@ function nameOf306(o){
   if (sf === "u") return "上回り・直" + ss[0].n + "段／" + kn(ms[0].kind);
   return "上下回り・下" + kn(ms[0].kind) + "／直" + ss[0].n + "段／上" + kn(ms[1].kind);
 }
-window.__st306 = { partsOf: partsOf306, dimsOf: dimsOf306, name: nameOf306, shapeOf: shapeOf306, sfOfParts: sfOfParts306 };
+window.__st306 = { partsOf: partsOf306, dimsOf: dimsOf306, name: nameOf306, shapeOf: shapeOf306, sfOfParts: sfOfParts306, totalOf: totalOf306, fit: fitParts370 };
 window.__st299 = { shapeOf: shapeOf306, name: fullName299, shapeName: shapeName306, tnName: tnName306 };
 
 /* ---- 絵の組み立て（mm・上が下端＝入口、下から上へ上がる向きで作り、dir で回す） ---- */
@@ -26513,17 +26513,48 @@ function applyStair306(o, bar, parts){
   save(); if (bar) bar.dataset.k = ""; drawPlan();
 }
 window.__st306.apply = applyStair306;
+/* CAD-370：合計段数（直の段数＋廻りの段数）。形を変えても合計は変えない */
+function totalOf306(parts){
+  var t = 0;
+  (parts || []).forEach(function(q){ t += q.t === "m" ? (q.kind || 0) : (q.n || 0); });
+  return t;
+}
+/* CAD-370：並びの形はそのままに、合計が total になる様に直の段数を配り直す。
+   直が2つある時は今の比率で配る。廻りだけで合計を超える時は null（変えられない）。 */
+function fitParts370(parts, total){
+  var turns = 0;
+  parts.forEach(function(q){ if (q.t === "m") turns += q.kind || 0; });
+  var budget = total - turns;
+  if (budget < 0) return null;
+  var sIdx = [];
+  parts.forEach(function(q, i){ if (q.t === "s") sIdx.push(i); });
+  if (!sIdx.length) return budget === 0 ? parts.map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; }) : null;
+  var out = parts.map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; });
+  if (sIdx.length === 1){ out[sIdx[0]].n = budget; return out; }
+  var ssum = 0;
+  sIdx.forEach(function(ix){ ssum += parts[ix].n || 0; });
+  var acc = 0;
+  sIdx.forEach(function(ix, j){
+    if (j === sIdx.length - 1){ out[ix].n = budget - acc; return; }
+    var v = ssum > 0 ? Math.round(budget * (parts[ix].n || 0) / ssum) : Math.round(budget / sIdx.length);
+    out[ix].n = v; acc += v;
+  });
+  return out;
+}
 function presetParts306(o, sf){
   var cur = partsOf306(o), sh = shapeOf306(o);
   var cms = cur.filter(function(q){ return q.t === "m"; }), css = cur.filter(function(q){ return q.t === "s"; });
   var kindAt = function(j, fb){ return cms[j] ? cms[j].kind : fb; };
   var dirAt = function(j){ return cms[j] ? cms[j].dir : "L"; };
-  var nC = css.length ? css[0].n : 4;
-  if (sf === "s") return [{t: "s", n: css.length ? css[0].n : 12}];
-  if (sf === "d") return [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: nC}];
-  if (sf === "u") return [{t: "s", n: nC}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}];
-  if (sf === "b") return [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: nC}, {t: "m", kind: kindAt(1, sh.t2), dir: dirAt(1)}];
-  return [{t: "s", n: nC}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: css.length > 1 ? css[1].n : nC}];
+  /* CAD-370：骨組みだけ作り、直の段数は合計段数から配り直す（廻りの分だけ直が減る）。
+     廻りだけで合計を超える時は null を返し、呼び出し側が理由を出して止める */
+  var skel;
+  if (sf === "s") skel = [{t: "s", n: 0}];
+  else if (sf === "d") skel = [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: 0}];
+  else if (sf === "u") skel = [{t: "s", n: 0}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}];
+  else if (sf === "b") skel = [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: 0}, {t: "m", kind: kindAt(1, sh.t2), dir: dirAt(1)}];
+  else skel = [{t: "s", n: css.length > 1 ? css[0].n : 1}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: css.length > 1 ? css[1].n : 1}];   /* かね折れ：直が2つある形からは比率で、1つしかない形からは均等に配る */
+  return fitParts370(skel, totalOf306(cur));
 }
 window.__st306.preset = presetParts306;
 
@@ -26542,7 +26573,9 @@ function openShapeSheet306(o, bar){
   ov.addEventListener("click", e => { if (e.target === ov) closeShapeSheet306(); });
   ov.querySelectorAll("[data-sf306]").forEach(b => b.onclick = () => {
     var v = b.dataset.sf306; closeShapeSheet306(); if (!v || v === cur) return;
-    applyStair306(o, bar, presetParts306(o, v));
+    var np370 = presetParts306(o, v);
+    if (!np370){ toast("廻りの段数だけで合計を超えるため変えられません"); return; }
+    applyStair306(o, bar, np370);
   });
   document.body.appendChild(ov);
 }
