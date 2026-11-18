@@ -5414,10 +5414,29 @@ function drawSec(){
   if (R.mune) h += rect(R.mp - 15, Hk + R.mp * t + th, R.mp + 15, Hk + (W - R.mp) * t + th, "#A7B0B9", "#67727C") + `<text x="${X(R.mp) - 8}" y="${Y(Hk + R.mp * t + th + R.step / 2)}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#5B6673">段差 ${fmt(R.step)}</text>`;
   // ラベル：束の長さ
   const shown = kata || R.mune ? ms : ms.filter(m => m.x <= W / 2 + 1);
-  shown.forEach(m => {
-    const tx = X(m.x), ty = Y(Hk + Math.max(m.L, 0) / 2);
-    const lab = m.L > 0 ? fmt(m.L) : "束なし";
-    h += `<text x="${tx}" y="${ty}" transform="rotate(-90 ${tx} ${ty})" text-anchor="middle" dy="5" class="halo" style="font-size:${m.L > 300 ? 13 : 11}px;font-weight:900;fill:#6B5233">${lab}</text>`;
+  /* CAD-360：束の間隔が狭い所（片流れの高側の端など）で数字同士が重なる時は、
+     重なる時だけ侵入の小さい軸方向へ半分ずつ離す。重ならない時は従来と完全に
+     同じ位置・同じ文字列。数字そのもの・出す束の範囲は変えない。 */
+  const sLabs = shown.map(m => {
+    const fs2 = m.L > 300 ? 13 : 11, lab = m.L > 0 ? fmt(m.L) : "束なし";
+    let len = 0; for (const ch of lab) len += ch >= "0" && ch <= "9" ? fs2 * 0.58 : ch === "," ? fs2 * 0.3 : fs2;
+    return { tx: X(m.x), ty: Y(Hk + Math.max(m.L, 0) / 2), fs: fs2, lab, w: fs2 + 6, h: len + 6 };
+  });
+  for (let pass = 0; pass < 40; pass++){
+    let moved = false;
+    for (let i = 0; i < sLabs.length; i++) for (let j = i + 1; j < sLabs.length; j++){
+      const A = sLabs[i], B = sLabs[j], dx = B.tx - A.tx, dy = B.ty - A.ty;
+      const px = (A.w + B.w) / 2 + 2 - Math.abs(dx), py = (A.h + B.h) / 2 + 2 - Math.abs(dy);
+      if (px > 0 && py > 0){
+        if (px <= py){ const sh = px / 2 * (dx >= 0 ? 1 : -1); A.tx -= sh; B.tx += sh; }
+        else { const sh = py / 2 * (dy >= 0 ? 1 : -1); A.ty -= sh; B.ty += sh; }
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  sLabs.forEach(o => {
+    h += `<text x="${o.tx}" y="${o.ty}" transform="rotate(-90 ${o.tx} ${o.ty})" text-anchor="middle" dy="5" class="halo" style="font-size:${o.fs}px;font-weight:900;fill:#6B5233">${o.lab}</text>`;
   });
   // 柱・桁の高さラベル
   const lx = X(0) - 10;
@@ -13609,6 +13628,19 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       placed.push([(A2[0] + B2[0]) / 2, (A2[1] + B2[1]) / 2, Math.abs(B2[0] - A2[0]) || 2, Math.abs(B2[1] - A2[1]) || 2]);
       singles.push({e, TP, horiz, ny});
     });
+    /* CAD-360：壁帯（外周・間仕切り、pvWalls が描く帯と同じ物差し）も障害物として
+       登録する。入隅の寸法数字が、ずらし先で壁の上に乗ってしまう事があったため。
+       数字そのもの・ずらしの仕組みは変えない。 */
+    const bandO360 = Math.max(8, 165 * s), bandP360 = Math.max(6.5, 120 * s);
+    const wallBox360 = (a, c, half) => { const A = P(a), C2 = P(c); placed.push([(A[0] + C2[0]) / 2, (A[1] + C2[1]) / 2, Math.abs(C2[0] - A[0]) + half * 2, Math.abs(C2[1] - A[1]) + half * 2]); };
+    for (let i2 = 0; i2 < p.length; i2++){ if (i2 !== S.noWall) wallBox360(p[i2], p[(i2 + 1) % p.length], bandO360 / 2); }
+    (S.parts2D || []).forEach(q => {
+      if (pState(q) === "remove" || partForm292(q) === "open") return;
+      const Lh = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (Lh < 30) return;
+      const ux = (q.x2 - q.x1) / Lh, uy = (q.y2 - q.y1) / Lh, ext = 40;
+      wallBox360([q.x1 - ux * ext, q.y1 - uy * ext], [q.x2 + ux * ext, q.y2 + uy * ext], bandP360 / 2);
+    });
+    (S.wallLines || []).forEach(w => { if (Math.hypot(w.x2 - w.x1, w.y2 - w.y1) >= 30) wallBox360([w.x1, w.y1], [w.x2, w.y2], bandP360 / 2); });
     singles.forEach(({e, TP, horiz, ny}) => {
       /* 数字が他の寸法線・数字と重なる時は、辺に沿ってずらす */
       const tw = dimTxtW319(fmtD319(e.v)) * 5.8 + 6, bw = horiz ? tw : 12, bh = horiz ? 12 : tw;
