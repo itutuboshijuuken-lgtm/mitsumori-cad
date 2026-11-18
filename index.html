@@ -453,7 +453,7 @@ function fmtDR319(v){ return unit319() === "shaku" ? shakuFmt319(Math.round(v)) 
 function dimTxtW319(t){ return String(t).replace(/[^\x00-\xff]/g, "##").length; }
 </script>
 <header class="top">
-  <div class="bar"><h1>見積即答CAD</h1><div style="display:flex;gap:6px"><button id="themeBtn227" type="button">◐ 色</button><button id="unitBtn319" type="button">単位：mm</button><button id="btnStyleBtn376" type="button" style="font-size:13px;padding:0 5px;flex:0 0 auto" title="ボタンの表示（絵／文字）の切り替え">絵</button><button id="saveBtn" type="button" style="background:#fff;color:var(--ai);border-color:#fff">保存</button><details class="mo"><summary>⋯</summary><div class="mm"><button id="photoBtn" type="button">写真</button><button id="shoruiBtn" type="button">書類</button><button id="priceBtn" type="button">単価表</button><button id="newBtn" type="button">現場一覧</button></div></details><script>
+  <div class="bar"><h1>見積即答CAD</h1><div style="display:flex;gap:6px"><button id="themeBtn227" type="button">◐ 色</button><button id="unitBtn319" type="button">単位：mm</button><button id="btnStyleBtn376" type="button" style="font-size:13px;padding:0 5px;flex:0 0 auto" title="ボタンの表示（絵／文字）の切り替え">絵</button><button id="saveBtn" type="button" style="background:#fff;color:var(--ai);border-color:#fff">保存</button><details class="mo"><summary>⋯</summary><div class="mm"><button id="photoBtn" type="button">写真</button><button id="shoruiBtn" type="button">書類</button><button id="priceBtn" type="button">単価表</button><button id="newBtn" type="button">現場一覧</button><button id="radSetBtn381" type="button">円メニューの登録</button></div></details><script>
 /* 段階1：受け渡し口の集約（HB）
    目的：ブロック間で受け渡してきた window.__名前（95種）の実体を、この HB 1か所に集める。
    （当初94種。__cleanZones187 は CAD-187 由来で、段階2・手順0で追加した。）
@@ -29434,4 +29434,242 @@ function drawKake379(){
 window.__drawKake379 = drawKake379;
 </script>
 
+
+<script id="rad381js">
+/* ===== CAD-381：ラジアルメニュー（モンハン式）。翔伍の発案・2026-11-17に設計承認済み
+   （「じゅうちゃんの方向で行こう」）なのに未着手だった物。
+   ・下の大きな「描く・選ぶ」ボタンを長押し（380ms）すると、指の周りに円が出る。
+     指をスライドして選んで、離すと「作業そのもの」が切り替わる（今までの
+     シート・道具の流れがそのまま開く）。1段だけ・最大12個。
+   ・中身は設定で入れ替えられる（モンハン式の登録変更）：ヘッダーの「⋯」→
+     「円メニューの登録」。保存は新しいキー gosei-radial-v1（変えた時だけ書く。
+     既存の保存キーは不変）。
+   ・通常のタップ（短い押し）は従来どおり。長押しの判定前に指が動いたら
+     長押しにしない。円が出た後の離しは、直後のクリックを1回だけ飲み込んで
+     「描く・選ぶ」の開閉が誤作動しないようにする。
+   ・円や項目は図面を見せるため半透明寄り。選んでいる項目は色を付けて
+     大きくし、名前は円の真ん中にも出す（指の下で分かるように）。
+     外側に大きく光る演出はしない。
+   ・切り替え時は「作業の切り替え」として、消す道具・照明の構えは落とす
+     （残っていると、次のタップが前の作業のままになってしまうため）。 */
+(function(){
+  "use strict";
+  var KEY = "gosei-radial-v1";
+  var ALL = [["part","間仕切り"],["door","建具"],["win","窓"],["gen","玄関"],["mizu","水まわり"],["light","電気"],["etc","造作"],["floor","床"],["del","消す"],["hg","解体"]];
+  var DEF = ["part","door","win","gen","mizu","light","etc","floor","del"];
+  var NAME = {}; ALL.forEach(function(p){ NAME[p[0]] = p[1]; });
+  function loadItems(){
+    try {
+      var v = JSON.parse(localStorage.getItem(KEY) || "null");
+      if (Array.isArray(v)){
+        var seen = {}, out = [];
+        v.forEach(function(k){ if (NAME[k] && !seen[k]){ seen[k] = 1; out.push(k); } });
+        if (out.length) return out.slice(0, 12);
+      }
+    } catch(e){}
+    return DEF.slice();
+  }
+  function saveItems(a){ try { localStorage.setItem(KEY, JSON.stringify(a)); } catch(e){} }
+  function buzz(ms){ try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){} }
+
+  var st = document.createElement("style"); st.id = "rad381css";
+  st.textContent =
+    "#toolTabs [data-tt='part']{touch-action:none;-webkit-touch-callout:none}"
+    + "#radial381{position:fixed;inset:0;z-index:40;pointer-events:none}"
+    + "#radial381 .ring381{position:absolute;border-radius:50%;background:rgba(255,255,255,.30);border:1.5px solid rgba(30,40,55,.28);box-shadow:0 4px 18px rgba(20,30,45,.18)}"
+    + "#radial381 .it381{position:absolute;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,.85);border:1.5px solid rgba(30,40,55,.35);color:#223;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;text-align:center;line-height:1.15;padding:2px;box-sizing:border-box}"
+    + "#radial381 .it381.on381{background:#2563B0;border-color:#2563B0;color:#fff;transform:scale(1.14)}"
+    + "#radial381 .cen381{position:absolute;transform:translate(-50%,-50%);background:rgba(255,255,255,.92);border:1.5px solid rgba(30,40,55,.30);border-radius:999px;padding:5px 12px;font-size:14px;font-weight:900;color:#223;white-space:nowrap}"
+    + "body.gold #radial381 .ring381{background:rgba(16,18,22,.35);border-color:rgba(242,231,200,.35)}"
+    + "body.gold #radial381 .it381{background:rgba(18,20,24,.88);border-color:rgba(242,231,200,.45);color:#F2E7C8}"
+    + "body.gold #radial381 .it381.on381{background:#2563B0;border-color:#2563B0;color:#fff}"
+    + "body.gold #radial381 .cen381{background:rgba(18,20,24,.92);border-color:rgba(242,231,200,.45);color:#F2E7C8}";
+  document.head.appendChild(st);
+
+  var HOLD_MS = 380, DEAD = 36, TRAVEL = 20;
+  var pend = null;   /* 長押しの判定待ち {id,x,y,timer} */
+  var open = null;   /* 円が出ている {id,cx,cy,sx,sy,items,sel,host,cen} */
+  var swallowUntil = 0;
+
+  function partBtnOf(e){
+    var t = e.target;
+    return (t && t.closest) ? t.closest("#toolTabs [data-tt='part']") : null;
+  }
+
+  document.addEventListener("pointerdown", function(e){
+    if (open){ if (e.pointerId !== open.id) closeRad(false); return; }
+    if (pend) return;
+    if (!partBtnOf(e)) return;
+    if (e.button !== undefined && e.button > 0) return;
+    var x = e.clientX, y = e.clientY, id = e.pointerId;
+    var timer = setTimeout(function(){ pend = null; openRad(id, x, y); }, HOLD_MS);
+    pend = { id: id, x: x, y: y, timer: timer };
+  }, true);
+
+  document.addEventListener("pointermove", function(e){
+    if (pend && e.pointerId === pend.id){
+      if (Math.hypot(e.clientX - pend.x, e.clientY - pend.y) > 14){ clearTimeout(pend.timer); pend = null; }
+      return;
+    }
+    if (open && e.pointerId === open.id) updSel(e.clientX, e.clientY);
+  }, { passive: true });
+
+  function endPtr(e){
+    if (pend && e.pointerId === pend.id){ clearTimeout(pend.timer); pend = null; return; }
+    if (open && e.pointerId === open.id){
+      updSel(e.clientX, e.clientY);
+      var key = open.sel >= 0 ? open.items[open.sel].key : null;
+      closeRad(true);
+      if (key) activate(key);
+    }
+  }
+  document.addEventListener("pointerup", endPtr, true);
+  document.addEventListener("pointercancel", endPtr, true);
+
+  /* 円が出た後の離しで来るクリック（「描く・選ぶ」の開閉）を1回だけ飲み込む */
+  document.addEventListener("click", function(e){
+    if (Date.now() < swallowUntil && partBtnOf(e)){
+      e.preventDefault(); e.stopPropagation(); swallowUntil = 0;
+    }
+  }, true);
+
+  document.addEventListener("contextmenu", function(e){
+    if ((pend || open) && e.target && e.target.closest && e.target.closest("#toolTabs")) e.preventDefault();
+  });
+
+  function openRad(id, x, y){
+    var items = loadItems();
+    var n = items.length;
+    var R = n <= 9 ? 102 : (n <= 11 ? 112 : 120);
+    var ext = R + 30;
+    var cx = Math.min(Math.max(x, ext + 4), window.innerWidth - ext - 4);
+    var cy = Math.min(Math.max(y, ext + 4), window.innerHeight - ext - 4);
+    var host = document.createElement("div"); host.id = "radial381";
+    var ring = document.createElement("div"); ring.className = "ring381";
+    ring.style.cssText = "left:" + (cx - R - 14) + "px;top:" + (cy - R - 14) + "px;width:" + (2 * (R + 14)) + "px;height:" + (2 * (R + 14)) + "px";
+    host.appendChild(ring);
+    var els = [];
+    items.forEach(function(k, i){
+      var a = -Math.PI / 2 + i * 2 * Math.PI / n;
+      var ix = cx + R * Math.cos(a), iy = cy + R * Math.sin(a);
+      var d = document.createElement("div"); d.className = "it381"; d.textContent = NAME[k];
+      d.style.left = ix + "px"; d.style.top = iy + "px";
+      host.appendChild(d);
+      els.push({ key: k, el: d, x: ix, y: iy });
+    });
+    var cen = document.createElement("div"); cen.className = "cen381"; cen.id = "radCen381";
+    cen.style.left = cx + "px"; cen.style.top = cy + "px"; cen.textContent = "道具を選ぶ";
+    host.appendChild(cen);
+    document.body.appendChild(host);
+    open = { id: id, cx: cx, cy: cy, sx: x, sy: y, items: els, sel: -1, host: host, cen: cen };
+    buzz(10);
+  }
+
+  function updSel(x, y){
+    if (!open) return;
+    var s = -1;
+    if (Math.hypot(x - open.sx, y - open.sy) > TRAVEL){
+      var dx = x - open.cx, dy = y - open.cy;
+      if (Math.hypot(dx, dy) > DEAD){
+        var a = Math.atan2(dy, dx), best = 1e9;
+        open.items.forEach(function(it, i){
+          var ia = Math.atan2(it.y - open.cy, it.x - open.cx);
+          var diff = Math.abs(Math.atan2(Math.sin(a - ia), Math.cos(a - ia)));
+          if (diff < best){ best = diff; s = i; }
+        });
+      }
+    }
+    if (s !== open.sel){
+      if (open.sel >= 0) open.items[open.sel].el.classList.remove("on381");
+      open.sel = s;
+      if (s >= 0){ open.items[s].el.classList.add("on381"); open.cen.textContent = NAME[open.items[s].key]; buzz(6); }
+      else open.cen.textContent = "道具を選ぶ";
+    }
+  }
+
+  function closeRad(swallow){
+    if (!open) return;
+    if (open.host.parentNode) open.host.parentNode.removeChild(open.host);
+    open = null;
+    if (swallow) swallowUntil = Date.now() + 600;
+  }
+
+  /* 作業そのものの切り替え（今までのタブ・ボタンの流れと同じ入口を使う） */
+  function activate(key){
+    try {
+      if (typeof enclMode !== "undefined" && enclMode && typeof enclReset === "function") enclReset();
+      if (key !== "del" && typeof HB !== "undefined" && HB.__delMode && HB.__delSet) HB.__delSet(false);
+      if (key === "del"){
+        var db = document.getElementById("delToolBtn");
+        if (db && !(typeof HB !== "undefined" && HB.__delMode)) db.click();
+        return;
+      }
+      if (key === "part"){
+        try { if (typeof ltTool !== "undefined" && ltTool) ltTool = null; } catch(e){}
+        if (toolOpen !== "part"){ toolOpen = "part"; if (typeof HB !== "undefined" && HB.__partDrawOn) HB.__partDrawOn(); }
+        drawToolsUI(); drawPlan(); return;
+      }
+      if (key === "floor"){
+        try { if (typeof ltTool !== "undefined" && ltTool) ltTool = null; } catch(e){}
+        toolOpen = null; if (typeof HB !== "undefined" && HB.__partDrawOff) HB.__partDrawOff(true);
+        drawToolsUI(); drawPlan();
+        toast("床：決めたい部屋をタップ");
+        return;
+      }
+      if (key === "hg"){
+        if (toolOpen !== "part"){ toolOpen = "part"; if (typeof HB !== "undefined" && HB.__partDrawOn) HB.__partDrawOn(); drawToolsUI(); drawPlan(); }
+        var hb2 = document.getElementById("hgBtn");
+        if (hb2 && !(typeof HB !== "undefined" && HB.__hgMode)) hb2.click();
+        return;
+      }
+      /* 建具・窓・玄関・水まわり・電気・造作（置くの葉） */
+      window.grp136 = "put"; window.putLeaf136 = key;
+      if (toolOpen !== key){ toolOpen = key; if (typeof HB !== "undefined" && HB.__partDrawOff) HB.__partDrawOff(true); }
+      drawToolsUI(); drawPlan();
+    } catch(e){ try { console.warn("rad381 activate", e); } catch(_){} }
+  }
+
+  /* 登録変更のシート（モンハン式）：ヘッダーの「⋯」→「円メニューの登録」 */
+  function radSheet(){
+    var mb = document.getElementById("mbox"), md = document.getElementById("modal");
+    if (!mb || !md) return;
+    var cur = loadItems();
+    var btn = "min-height:38px;padding:0 10px;font-size:14px";
+    var rowsIn = cur.map(function(k, i){
+      return "<div class='sprow'><div><b>" + (i + 1) + ".</b> " + NAME[k] + "</div><div style='display:flex;gap:4px'>"
+        + "<button class='btn sub' data-radup='" + i + "' type='button' style='" + btn + "'" + (i === 0 ? " disabled" : "") + ">↑</button>"
+        + "<button class='btn sub' data-raddn='" + i + "' type='button' style='" + btn + "'" + (i === cur.length - 1 ? " disabled" : "") + ">↓</button>"
+        + "<button class='btn sub' data-radout='" + i + "' type='button' style='" + btn + ";color:var(--ng)'>外す</button></div></div>";
+    }).join("");
+    var rest = ALL.filter(function(p){ return cur.indexOf(p[0]) < 0; });
+    var rowsOut = rest.map(function(p){
+      return "<div class='sprow'><div>" + p[1] + "</div><div><button class='btn' data-radin='" + p[0] + "' type='button' style='" + btn + "'" + (cur.length >= 12 ? " disabled" : "") + ">入れる</button></div></div>";
+    }).join("");
+    mb.innerHTML = "<h3>円メニューの登録</h3>"
+      + "<p class='hint' style='margin:0 0 8px'>下の「描く・選ぶ」を長押しした時に出る円の中身です（今 " + cur.length + " 個／最大12個）。円には、1番の物から時計回りに並びます。</p>"
+      + "<div class='sub2'>円に入っている物</div>" + (rowsIn || "<p class='hint'>ありません</p>")
+      + (rest.length ? "<div class='sub2' style='margin-top:10px'>入れられる物</div>" + rowsOut : "")
+      + "<div class='row'><button class='btn sub' id='radDef381' type='button'>最初の並びに戻す</button><button class='btn pri' id='radClose381' type='button'>閉じる</button></div>";
+    md.hidden = false;
+    mb.querySelectorAll("[data-radup]").forEach(function(b){ b.onclick = function(){ var i = +b.dataset.radup; var a = loadItems(); var t = a[i - 1]; a[i - 1] = a[i]; a[i] = t; saveItems(a); radSheet(); }; });
+    mb.querySelectorAll("[data-raddn]").forEach(function(b){ b.onclick = function(){ var i = +b.dataset.raddn; var a = loadItems(); var t = a[i + 1]; a[i + 1] = a[i]; a[i] = t; saveItems(a); radSheet(); }; });
+    mb.querySelectorAll("[data-radout]").forEach(function(b){ b.onclick = function(){ var a = loadItems(); a.splice(+b.dataset.radout, 1); saveItems(a); radSheet(); }; });
+    mb.querySelectorAll("[data-radin]").forEach(function(b){ b.onclick = function(){ var a = loadItems(); if (a.length < 12){ a.push(b.dataset.radin); saveItems(a); } radSheet(); }; });
+    var df = document.getElementById("radDef381");
+    if (df) df.onclick = function(){ try { localStorage.removeItem(KEY); } catch(e){} radSheet(); };
+    var cl = document.getElementById("radClose381");
+    if (cl) cl.onclick = function(){ md.hidden = true; };
+  }
+
+  var sb = document.getElementById("radSetBtn381");
+  if (sb) sb.addEventListener("click", function(){
+    var d = sb.closest ? sb.closest("details") : null;
+    if (d) d.removeAttribute("open");
+    radSheet();
+  });
+
+  window.__rad381 = { load: loadItems, sheet: radSheet, activate: activate };
+})();
+
+</script>
 </html>
