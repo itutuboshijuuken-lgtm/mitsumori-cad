@@ -745,6 +745,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="card"><div id="h3dBar254" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div class="seg" style="flex:1 1 140px;margin:0"><button data-h3d="fine" type="button" aria-pressed="false">きれい</button><button data-h3d="light" type="button" aria-pressed="true">軽い</button></div><div class="seg" id="h3dView254" style="flex:1 1 140px;margin:0;display:none"><button data-h3dv="out" type="button" aria-pressed="true">外観</button><button data-h3dv="doll" type="button" aria-pressed="false">断面</button><button data-h3dv="in" type="button" aria-pressed="false">室内</button></div><div class="chips" id="h3dRooms255" style="display:none;flex:1 1 100%;margin:0"></div></div><svg id="iso" viewBox="0 0 360 300" aria-label="完成図"></svg><canvas id="h3d" aria-label="完成図3D" style="display:none;width:100%;aspect-ratio:6/5;border-radius:8px"></canvas></div>
       <div class="card" id="pvCard"><svg id="pvSvg" viewBox="0 0 360 300" aria-label="平面図"></svg></div>
       <div class="card" id="cutBox368"><div id="cutList368"></div></div>
+      <div class="card" id="pcBox377"><div id="pcList377"></div></div>
     <div id="fxBar" hidden></div>
     <div class="row"><button class="btn" id="rotL" type="button">↺ 回す</button><button class="btn" id="rotR" type="button">回す ↻</button></div>
     <p class="hint">完成イメージ（概略）です。サッシは「仕様」で指定した壁に均等配置しています。</p>
@@ -29069,6 +29070,267 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
     };
     setTimeout(tick374, 110);
   };
+})();
+</script>
+
+<style>
+#pcBox377{display:none}
+#st6.pcOn377 #pcBox377{display:block}
+#st6.pcOn377 #pvCard{display:none}
+#st6.pcOn377 #pvStruct{display:none!important}
+#st6.pcOn377 #fsSeg{display:none!important}
+#st6.pcOn377 #cutBox368{display:none}
+#pcSeg377{display:none}
+#st6.pcOn377 #pcSeg377{display:flex}
+#pcList377{font-size:13.5px;line-height:1.65;color:#222}
+#pcList377 .pH{font-weight:700;font-size:14.5px;margin:14px 0 4px;padding-bottom:2px;border-bottom:2px solid #C9A227}
+#pcList377 .pH:first-child{margin-top:0}
+#pcList377 .pF{font-weight:700;margin:16px 0 2px;color:#7A5B00}
+#pcList377 .pM{margin:6px 0}
+#pcList377 .pN{color:#5B6673;font-size:12.5px;margin:4px 0}
+#pcList377 .pWarn{color:#B3261E;font-weight:700;margin:6px 0}
+#pcList377 .pSvg{width:100%;height:auto;display:block;background:#fff;border:1px solid #E3E7EC;border-radius:6px}
+#pcList377 table.pT{border-collapse:collapse;width:100%;margin:6px 0 2px}
+#pcList377 table.pT th{text-align:left;font-weight:600;color:#5B6673;font-size:12.5px;padding:3px 8px 3px 0;white-space:nowrap;vertical-align:top;width:32%}
+#pcList377 table.pT td{padding:3px 0;font-size:13.5px}
+</style>
+<script>
+/* ================= CAD-377：プレカット図面の欄（第1弾＝階段の発注図） =================
+   翔伍の指示（2026-11-18）：プレカット図面の欄を作って、階段の発注図・部屋ごとの
+   天井材カット寸法・刻み用の躯体/土台/柱の図・2階のプレカット図を全部用意する。
+   第1弾は階段の発注図。入口は完成図の切り替えに「プレカット図面」（CAD-368 と
+   同じ組み込み方）、中は #pcSeg377 の切り替え（今は「階段 発注図」だけ）。
+   図と数字はアプリが既に持っている値だけから作る：
+   ・形・構成・段数・全体寸法は __st306（partsOf／totalOf／dimsOf／name）
+   ・図の線と歩行線は __st306.layout（間取りの階段の絵と同じ幾何）
+   ・階高は o.kh か自動（天井高＋胴差。見積 stairRows と同じ）
+   ・蹴上は階高÷図面の段数。見積の段数（階高÷190）と違う時は注意を出す
+   ・幅は柱芯々910（メーカー発注の物差し）。踏面は 227.5
+   アプリが決めていない物（種類・踏板の実寸・上がり框・手すりの位置と高さ）は
+   推測で入れず、画面の下に「入れていない物」として書く。
+   見るだけで、見積・保存は一切変えない。 */
+(function(){
+  "use strict";
+  var pcOn = false, lastSig377 = "";
+  var MW377 = 910, TD377 = 227.5;
+  function i377(v){ return Math.round(v).toLocaleString("ja-JP"); }
+  function n377(v){ return (Math.round(v * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }); }
+  function esc377(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function r2(v){ return Math.round(v * 100) / 100; }
+
+  /* 階段を集める。今の階の S.tenken が正。他の階の控えは、今の階に階段が
+     無い時だけ見る（消した階段が控えから復活しない様に）。 */
+  function stairs377(){
+    var cur = [];
+    try { (S.tenken || []).forEach(function(o){ if (o && o.k === "stair") cur.push(o); }); } catch(e){}
+    if (cur.length) return cur;
+    var out = [], seen = {};
+    try { (S.fl || []).forEach(function(f){ if (!f || !f.snap) return; (f.snap.tenken || []).forEach(function(o){
+      if (!o || o.k !== "stair") return;
+      var k = Math.round(o.x || 0) + "," + Math.round(o.y || 0) + "," + (o.dir || "n");
+      if (seen[k]) return; seen[k] = 1; out.push(o);
+    }); }); } catch(e){}
+    return out;
+  }
+
+  function turnLbl377(q){ return q.kind === 1 ? "踊り場（910×910）" : "廻り" + q.kind + "段（" + (q.dir === "R" ? "右廻り" : "左廻り") + "）"; }
+  function compTxt377(parts){ return parts.map(function(q){ return q.t === "s" ? "直" + q.n + "段" : turnLbl377(q); }).join(" → "); }
+
+  /* 歩行線を弧長で等分した点と向き（段番号の置き場） */
+  function walkAt377(walk, frac){
+    var segs = [], L = 0, i, d;
+    for (i = 0; i + 1 < walk.length; i++){ d = Math.hypot(walk[i + 1][0] - walk[i][0], walk[i + 1][1] - walk[i][1]); segs.push(d); L += d; }
+    var tgt = frac * L;
+    for (i = 0; i < segs.length; i++){
+      if (tgt <= segs[i] || i === segs.length - 1){
+        var t = segs[i] > 0 ? Math.min(1, Math.max(0, tgt / segs[i])) : 0;
+        var x = walk[i][0] + (walk[i + 1][0] - walk[i][0]) * t, y = walk[i][1] + (walk[i + 1][1] - walk[i][1]) * t;
+        var dx = walk[i + 1][0] - walk[i][0], dy = walk[i + 1][1] - walk[i][1], m = Math.hypot(dx, dy) || 1;
+        return { x: x, y: y, dx: dx / m, dy: dy / m };
+      }
+      tgt -= segs[i];
+    }
+    var last = walk[walk.length - 1]; return { x: last[0], y: last[1], dx: 0, dy: -1 };
+  }
+
+  /* 廻りの四角の中心（中のラベルの置き場） */
+  function turnCenters377(parts, sf, fw, fd){
+    var MW = MW377, out = [];
+    if (sf === "k"){
+      var m = parts[1], bx = m.dir === "L" ? fw - MW : 0;
+      out.push({ x: bx + MW / 2, y: MW / 2, q: m });
+    } else {
+      if (parts[0] && parts[0].t === "m") out.push({ x: MW / 2, y: fd - MW / 2, q: parts[0] });
+      if (parts.length > 1 && parts[parts.length - 1].t === "m") out.push({ x: MW / 2, y: MW / 2, q: parts[parts.length - 1] });
+    }
+    return out;
+  }
+
+  function tri377(cx, cy, ux, uy, fill, stroke){
+    var bx = cx - ux * 7, by = cy - uy * 7, px = -uy, py = ux;
+    var p = (cx + ux * 5) + "," + (cy + uy * 5) + " " + (bx + px * 4.2) + "," + (by + py * 4.2) + " " + (bx - px * 4.2) + "," + (by - py * 4.2);
+    return "<polygon points='" + p + "' fill='" + fill + "'" + (stroke ? " stroke='" + stroke + "' stroke-width='1'" : "") + "/>";
+  }
+
+  function stairSvg377(o, parts, sf){
+    var A = window.__st306, lay = A.layout(parts), fw = lay.fw, fd = lay.fd;
+    var sc = 330 / Math.max(fw, fd);
+    var mL = 54, mT = 30, mR = 30, mB = 44;
+    var W = mL + fw * sc + mR, H = mT + fd * sc + mB;
+    var X = function(v){ return mL + v * sc; }, Y = function(v){ return mT + v * sc; };
+    var C = "#111", G = "#5B6B7A", g = "";
+    g += "<rect x='" + r2(X(0)) + "' y='" + r2(Y(0)) + "' width='" + r2(fw * sc) + "' height='" + r2(fd * sc) + "' fill='#fff' stroke='" + C + "' stroke-width='1.4'/>";
+    lay.lines.forEach(function(q){ g += "<line x1='" + r2(X(q[0])) + "' y1='" + r2(Y(q[1])) + "' x2='" + r2(X(q[2])) + "' y2='" + r2(Y(q[3])) + "' stroke='" + G + "' stroke-width='" + (q[4] >= 1.3 ? 1.2 : 0.8) + "'/>"; });
+    /* 歩行線（一点鎖線ふう）と向きの矢印 */
+    if (lay.walk.length > 1){
+      g += "<path d='M" + lay.walk.map(function(p){ return r2(X(p[0])) + " " + r2(Y(p[1])); }).join(" L") + "' fill='none' stroke='" + C + "' stroke-width='1' stroke-dasharray='7 2.5 1.8 2.5'/>";
+      var p0 = walkAt377(lay.walk, 0);
+      g += tri377(X(p0.x), Y(p0.y), p0.dx, p0.dy, "#fff", C);
+      if (lay.head) g += tri377(X(lay.head[0]), Y(lay.head[1]), lay.head[2], lay.head[3], C, null);
+      /* 上がり始め・上がり切りの文字（歩行線の横、白い縁取りで読める様に） */
+      var halo = "paint-order:stroke;stroke:#fff;stroke-width:3px;font-size:9.5px;font-weight:700;fill:#111";
+      var sPt = walkAt377(lay.walk, 0), ePt = walkAt377(lay.walk, 1);
+      g += "<text x='" + r2(X(sPt.x) - sPt.dy * 15) + "' y='" + r2(Y(sPt.y) + sPt.dx * 15 + 3) + "' text-anchor='middle' style='" + halo + "'>上がり始め</text>";
+      g += "<text x='" + r2(X(ePt.x) - ePt.dy * 15) + "' y='" + r2(Y(ePt.y) + ePt.dx * 15 + 3) + "' text-anchor='middle' style='" + halo + "'>上がり切り</text>";
+      /* 段番号（下から。歩行線の弧長で等分） */
+      var T = A.totalOf(parts);
+      for (var i = 1; i <= T; i++){
+        var pt = walkAt377(lay.walk, (i - 0.5) / T);
+        g += "<circle cx='" + r2(X(pt.x)) + "' cy='" + r2(Y(pt.y)) + "' r='7.6' fill='#fff' stroke='" + C + "' stroke-width='0.8'/><text x='" + r2(X(pt.x)) + "' y='" + r2(Y(pt.y) + 3) + "' text-anchor='middle' style='font-size:8.5px;font-weight:700;fill:#111'>" + i + "</text>";
+      }
+    }
+    /* 廻りのラベル */
+    turnCenters377(parts, sf, fw, fd).forEach(function(tc){
+      g += "<text x='" + r2(X(tc.x)) + "' y='" + r2(Y(tc.y) + 3) + "' text-anchor='middle' style='paint-order:stroke;stroke:#fff;stroke-width:3px;font-size:9.5px;font-weight:700;fill:#333'>" + (tc.q.kind === 1 ? "踊り場" : "廻り" + tc.q.kind + "段") + "</text>";
+    });
+    /* 寸法：下＝横の全体（直系は幅その物）、左＝縦の全体 */
+    var tick = function(x, y){ return "<line x1='" + r2(x - 3) + "' y1='" + r2(y + 3) + "' x2='" + r2(x + 3) + "' y2='" + r2(y - 3) + "' stroke='" + C + "' stroke-width='1'/>"; };
+    var yD = Y(fd) + 26;
+    g += "<line x1='" + r2(X(0)) + "' y1='" + r2(Y(fd) + 4) + "' x2='" + r2(X(0)) + "' y2='" + r2(yD + 4) + "' stroke='" + C + "' stroke-width='0.7'/><line x1='" + r2(X(fw)) + "' y1='" + r2(Y(fd) + 4) + "' x2='" + r2(X(fw)) + "' y2='" + r2(yD + 4) + "' stroke='" + C + "' stroke-width='0.7'/>";
+    g += "<line x1='" + r2(X(0)) + "' y1='" + r2(yD) + "' x2='" + r2(X(fw)) + "' y2='" + r2(yD) + "' stroke='" + C + "' stroke-width='1'/>" + tick(X(0), yD) + tick(X(fw), yD);
+    g += "<text x='" + r2((X(0) + X(fw)) / 2) + "' y='" + r2(yD - 4) + "' text-anchor='middle' style='font-size:10.5px;font-weight:700;fill:#111'>" + (sf === "k" ? "全体の幅 " : "幅（芯々） ") + i377(fw) + "</text>";
+    var xD = X(0) - 26;
+    g += "<line x1='" + r2(X(0) - 4) + "' y1='" + r2(Y(0)) + "' x2='" + r2(xD - 4) + "' y2='" + r2(Y(0)) + "' stroke='" + C + "' stroke-width='0.7'/><line x1='" + r2(X(0) - 4) + "' y1='" + r2(Y(fd)) + "' x2='" + r2(xD - 4) + "' y2='" + r2(Y(fd)) + "' stroke='" + C + "' stroke-width='0.7'/>";
+    g += "<line x1='" + r2(xD) + "' y1='" + r2(Y(0)) + "' x2='" + r2(xD) + "' y2='" + r2(Y(fd)) + "' stroke='" + C + "' stroke-width='1'/>" + tick(xD, Y(0)) + tick(xD, Y(fd));
+    g += "<text transform='rotate(-90 " + r2(xD - 5) + " " + r2((Y(0) + Y(fd)) / 2) + ")' x='" + r2(xD - 5) + "' y='" + r2((Y(0) + Y(fd)) / 2) + "' text-anchor='middle' style='font-size:10.5px;font-weight:700;fill:#111'>全体の長さ " + i377(fd) + "</text>";
+    return "<svg class='pSvg' viewBox='0 0 " + Math.ceil(W) + " " + Math.ceil(H) + "' role='img' aria-label='階段の発注図'>" + g + "</svg>";
+  }
+
+  function stairHtml377(o, idx){
+    var A = window.__st306; if (!A) return "";
+    var parts = A.partsOf(o), sf = A.sfOfParts(parts);
+    var T = A.totalOf(parts);
+    var Hgt = o.kh || ((S.ch || 2400) + (S.dosa || 240));
+    var nE = Math.max(1, Math.ceil(Hgt / 190)), RE = Hgt / nE;
+    var R = T > 0 ? Hgt / T : 0;
+    var dims = A.dimsOf(parts);
+    var dirName = { n: "上", e: "右", s: "下", w: "左" }[o.dir || "n"] || "上";
+    var railL = Math.round(((nE - 1) * Math.hypot(TD377, RE) + (sf === "k" && parts[1] && parts[1].kind === 1 ? 910 : 0)) / 100) / 10;
+    var ext = (typeof tkExt === "function") ? tkExt(o) : [dims[0] / 2, dims[1] / 2];
+    var x0 = Math.round((o.x || 0) - ext[0]), x1 = Math.round((o.x || 0) + ext[0]);
+    var y0 = Math.round((o.y || 0) - ext[1]), y1 = Math.round((o.y || 0) + ext[1]);
+    var rows = [
+      ["形", A.name(o)],
+      ["構成（下から）", compTxt377(parts)],
+      ["段数", T + "段"],
+      ["階高", i377(Hgt) + " mm" + (o.kh ? "（手入力）" : "（自動：天井高 " + i377(S.ch || 2400) + " ＋ 胴差 " + i377(S.dosa || 240) + "）")],
+      ["蹴上", "約 " + n377(R) + " mm（階高 ÷ 段数）"],
+      ["踏面", "227.5 mm（直の部分）"],
+      ["幅（柱芯々）", "910 mm"],
+      ["全体の大きさ", i377(dims[0]) + " × " + i377(dims[1]) + " mm"],
+      ["向き", "平面図で " + dirName + " 方向へ上がる"],
+      ["置いてある場所", "平面図の座標 X " + i377(x0) + "〜" + i377(x1) + "・Y " + i377(y0) + "〜" + i377(y1)],
+      ["参考", "手すり（片側）の長さ 約 " + n377(railL) + " m（見積の計算）"]
+    ];
+    var h = "<div class='pF'>階段 " + (idx + 1) + "：" + esc377(A.name(o)) + "</div>";
+    h += stairSvg377(o, parts, sf);
+    h += "<table class='pT'>" + rows.map(function(rw){ return "<tr><th>" + esc377(rw[0]) + "</th><td>" + esc377(rw[1]) + "</td></tr>"; }).join("") + "</table>";
+    if (nE !== T) h += "<div class='pWarn'>注意：見積では " + nE + " 段（蹴上 約 " + n377(RE) + " mm）で計算していて、図面の " + T + " 段と合っていません。発注の前に、段数をどちらかにそろえてください。</div>";
+    return h;
+  }
+
+  function render377(){
+    var box = document.getElementById("pcList377"); if (!box) return;
+    var sts = stairs377();
+    var h = "<div class='pH'>階段の発注図</div>";
+    h += "<div class='pN'>置いてある階段ごとに、メーカーへ出すための図と寸法です。幅は柱の芯々で出しています。丸の数字は下からの段数です。見るだけの画面で、見積と保存は変わりません。</div>";
+    if (!sts.length) h += "<div class='pM'>階段が置かれていません。間取りで階段を置くと、ここに発注図が出ます。</div>";
+    sts.forEach(function(o, i){ h += stairHtml377(o, i); });
+    h += "<div class='pH'>この図に入れていない物（未確認）</div>";
+    [
+      "階段の種類（箱型・ささら桁・スケルトン）は、アプリで決めていないので入れていません。発注の時にメーカーへ伝えてください。",
+      "踏板の実寸（有効幅・厚み・段鼻の形）はメーカーの決め方で変わるので、入れていません。幅は柱芯々（910mm）で出しています。",
+      "上がり框にするかどうかは、アプリで決めていないので入れていません。",
+      "手すりを付ける位置（内側・外側）と高さは決めていないので、入れていません。長さだけ参考で出しています。"
+    ].forEach(function(t){ h += "<div class='pM'>" + esc377(t) + "</div>"; });
+    box.innerHTML = h;
+    var lg = document.getElementById("pvLegend");
+    if (lg) lg.textContent = "プレカット図面：階段の発注図です。メーカーへ出す前に、寸法を確認してください。見積は変わりません。";
+  }
+
+  function segBtns377(){ var seg = document.getElementById("pvSeg"); return seg ? Array.prototype.slice.call(seg.querySelectorAll("[data-pv]")) : []; }
+  function pcSet377(on){
+    var st = document.getElementById("st6"); if (!st) return;
+    pcOn = !!on;
+    st.classList.toggle("pcOn377", pcOn);
+    if (pcOn){
+      try { if (HB.__fs347 && HB.__fs347.on()) HB.__fs347.set(false); } catch(e){}
+      try { if (HB.__cut368 && HB.__cut368.on()) HB.__cut368.set(false); } catch(e){}
+      st.classList.add("pvOn");
+      segBtns377().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "precut")); });
+      render377();
+      lastSig377 = sig377();
+    }
+  }
+  function pcOff377(full){
+    pcOn = false;
+    var st = document.getElementById("st6"); if (!st) return;
+    st.classList.remove("pcOn377");
+    if (full){
+      st.classList.remove("pvOn");
+      segBtns377().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "iso")); });
+    }
+  }
+  function sig377(){
+    try { return stairs377().map(function(o){ return [o.x, o.y, o.dir, o.st, o.sf, o.tn, o.t2, o.kh, o.w, o.d, JSON.stringify(o.parts || null)].join(","); }).join("|") + "#" + (S.ch || "") + "/" + (S.dosa || "") + "/" + S.mode; } catch(e){ return ""; }
+  }
+  function pcSegInit377(){
+    var bar = document.getElementById("pvBar");
+    if (!bar || document.getElementById("pcSeg377")) return;
+    var seg = document.createElement("div");
+    seg.className = "seg"; seg.id = "pcSeg377"; seg.style.margin = "0 0 6px";
+    seg.innerHTML = "<button data-pc='stair' type='button' aria-pressed='true'>階段 発注図</button>";
+    bar.insertBefore(seg, bar.firstChild);
+  }
+  function pcInit377(){
+    pcSegInit377();
+    var seg = document.getElementById("pvSeg");
+    if (!seg || document.getElementById("pcBtn377")) return;
+    var b = document.createElement("button");
+    b.type = "button"; b.id = "pcBtn377"; b.dataset.pv = "precut"; b.textContent = "プレカット図面";
+    b.setAttribute("aria-pressed", "false");
+    seg.appendChild(b);
+    b.addEventListener("click", function(){ if (pcOn) pcOff377(true); else pcSet377(true); });
+    seg.addEventListener("click", function(e){
+      var t = e.target && e.target.closest ? e.target.closest("[data-pv]") : null;
+      if (t && t.dataset.pv !== "precut" && pcOn) pcOff377(false);
+    }, true);
+  }
+  pcInit377();
+  setInterval(function(){
+    try {
+      pcInit377();
+      var b = document.getElementById("pcBtn377");
+      if (b && b.getAttribute("aria-pressed") !== String(pcOn)) b.setAttribute("aria-pressed", String(pcOn));
+      var st = document.getElementById("st6");
+      if (pcOn && st && !st.classList.contains("pvOn")) pcOff377(false);
+      if (pcOn && st && !st.hidden){
+        var sg = sig377();
+        if (sg && sg !== lastSig377){ lastSig377 = sg; render377(); }
+      }
+    } catch(e){}
+  }, 700);
+  HB.__pc377 = { on: function(){ return pcOn; }, render: render377, set: pcSet377 };
 })();
 </script>
 
