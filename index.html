@@ -13096,6 +13096,10 @@ document.addEventListener("click", function(e){
 /* ---------- CAD-96：選んだ物が透明パネルの裏に来る時、図面の位置だけずらして見える所に出す（大きさは変えない） ---------- */
 (function(){
   function panSel96(){
+    /* CAD-361：全画面で物を構えている間は、選択に付いてくる表示の追随を止める
+       （翔伍の指摘：構えたままドアの近くを触ると選択され、図面がずれて見えた）。
+       選択そのものは残し、図面（スクロール・PV）だけ動かさない。 */
+    if (document.body && document.body.classList.contains("fsDraw") && HB.__put) return;
     if (!HB.__pageM || !HB.__pinH) return;
     const bar = document.getElementById("selBar"); if (!bar || bar.hidden) return;
     if (typeof sel === "undefined" || !sel) return;
@@ -13121,7 +13125,9 @@ document.addEventListener("click", function(e){
     try {
       const bar = document.getElementById("selBar"), plan = document.getElementById("plan"), card = plan ? plan.parentNode : null;
       if (card){
-        if (HB.__pageM && bar && !bar.hidden && HB.__pinH) card.style.setProperty("padding-bottom", (bar.offsetHeight + 14) + "px", "important");
+        /* CAD-361：全画面で物を構えている間は padding-bottom も付けない（図面を動かさない）。
+           付けないだけで、バーを閉じた時の付け外しは従来どおり。 */
+        if (HB.__pageM && bar && !bar.hidden && HB.__pinH){ if (!(document.body.classList.contains("fsDraw") && HB.__put)) card.style.setProperty("padding-bottom", (bar.offsetHeight + 14) + "px", "important"); }
         else card.style.removeProperty("padding-bottom");
       }
     } catch(e){}
