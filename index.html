@@ -555,7 +555,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="hideFxBtn369" type="button" aria-pressed="false" title="物を隠す：置いた物を隠して、間仕切りと床を確かめます">物を隠す</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -3038,7 +3038,7 @@ function alignSvg(P, sc){
    段の実体は各ブロックに登録として残す（blk07 は HB.__peStage07、blk14 は IIFE 局所 hgList を使うため HB.__peStage14）。登録が無い読み込み途中は本体だけが走り、元の連鎖の段階と一致する。段が例外を投げれば伝播する点も元のまま。 */
 function planExtras(P, sc){
   let h = roomLabelsSvg(P, "tint");
-  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + dimOverlay(P, sc) + (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + ltSvg(P, sc) + selBlinkSvg(P) + alignSvg(P, sc);
+  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + dimOverlay(P, sc) + (window.__hide369 ? "" : (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + ltSvg(P, sc)) + selBlinkSvg(P) + alignSvg(P, sc);   /* CAD-369：物を隠すモードでは設備と照明を描かない */
   (S.parts2D || []).forEach((q, i) => {
     const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]), m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
     const isSel = sel && sel.t === "p" && sel.i === i;
@@ -3057,7 +3057,7 @@ function planExtras(P, sc){
     // 選んだ物は線の後ろの薄い四角だけで示す（上には何も重ねない）
     if (Date.now() - flashAt < 2500){ h += pulseAt([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2]); flashClear(); }
   }
-  S.sashes.forEach((sa, i) => {
+  (window.__hide369 ? [] : S.sashes).forEach((sa, i) => {   /* CAD-369：物を隠すモードでは建具を描かない */
     if (!sa.drawn || !sa.host) return;
     const seg = hostSeg(sa.host); if (!seg) return;
     const [a, c] = seg, L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L];
@@ -4370,6 +4370,7 @@ function jointMarks(P){
     const parts = (S.parts2D || []).filter(q => pState(q) !== "remove"); if (!parts.length) return "";
     const pol = pts(), wl = pol.map((a, i) => [a, pol[(i + 1) % pol.length]]); let h = "";
     parts.forEach(q => {
+      const oi369 = (S.parts2D || []).indexOf(q);   /* CAD-369：印をタップした時に選ぶための元の番号 */
       const vq = Math.abs(q.x1 - q.x2) < 1, hq = Math.abs(q.y1 - q.y2) < 1; if (!vq && !hq) return;
       const segs = wl.concat(parts.filter(z => z !== q).map(z => [[z.x1, z.y1], [z.x2, z.y2]]));
       [[q.x1, q.y1, q.x2, q.y2], [q.x2, q.y2, q.x1, q.y1]].forEach(([px, py, ox, oy]) => {
@@ -4381,9 +4382,9 @@ function jointMarks(P){
           if (hq && vs && py >= Math.min(a[1], d[1]) - 1 && py <= Math.max(a[1], d[1]) + 1){ const dd = (a[0] - px) * out; if (dd > 1.5) gap = Math.min(gap, dd); else if (dd < -1.5 && -dd <= 300 && (a[0] - ox) * out > 1.5) poke = Math.max(poke, -dd); }
         });
         const [sx, sy] = P([px, py]);
-        if (poke > 0) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="#D32F2F" stroke="#fff" stroke-width="1.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(poke)}</text>`;
+        if (poke > 0) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="#D32F2F" stroke="#fff" stroke-width="1.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
         else if (touch) h += `<circle cx="${sx}" cy="${sy}" r="3.5" fill="#1B9E4B" stroke="#fff" stroke-width="1" pointer-events="none"/>`;
-        else if (gap <= 300) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="none" stroke="#E8742C" stroke-width="2.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(gap)}</text>`;
+        else if (gap <= 300) h += `<circle cx="${sx}" cy="${sy}" r="6" fill="none" stroke="#E8742C" stroke-width="2.5" pointer-events="none"/><text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
         else h += `<circle cx="${sx}" cy="${sy}" r="4" fill="none" stroke="#8A96A3" stroke-width="2" pointer-events="none"/>`;
       });
     });
@@ -9014,7 +9015,7 @@ function ltPlanClick(mm){
   /* 段3（旧 blk50・床チップ構え中の部屋タップ：部屋全体をその床にする） */
   if (HB.__ltSeg50 && HB.__ltSeg50(mm)) return true;
   /* 段4（旧 blk22・置いてある照明の選択。本文 verbatim） */
-  if (HB.__ltSeg22){
+  if (HB.__ltSeg22 && !window.__hide369){   /* CAD-369：物を隠している間は照明を選ばない */
     const i = ltNear(mm);
     if (i >= 0){ sel = {t: "lt", i}; drawPlan(); return true; }
   }
@@ -9060,7 +9061,7 @@ function ltPlanClick(mm){
     pickOne(`${LTN[ltTool]}：どうしますか`, ltOpts147(false), act => { HB.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
     return true;
   }
-  const i = ltNear(mm); if (i < 0) return false;
+  const i = ltNear(mm); if (i < 0 || window.__hide369) return false;   /* CAD-369：物を隠している間は照明の状態変更を出さない */
   const l = S.lights[i];
   pickOne(`${LTN[l.k]}（今は${LTA[l.act || "new"]}）`, ltOpts147(true), v => {
     pushUndo(); if (v === "erase") S.lights.splice(i, 1); else l.act = v; save(); drawPlan();
@@ -17834,7 +17835,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var mm = d.mm;
     /* 照明は pickCands の対象外で別に選ぶ物なので、その近くは任せる */
     var nearLight = false;
-    try { nearLight = (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); } catch(er){}
+    try { nearLight = !window.__hide369 && (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); } catch(er){}   /* CAD-369：物を隠している間は照明の近くの床も触れる */
     if (nearLight) return;
     var rm = roomAtPt176(mm);
     if (!d.cands.length){
@@ -20735,6 +20736,7 @@ setInterval(gkSync208, 600);
   /* --- 平面図の後加工：突き抜け警告＋蛇口の強調 --- */
   function planFix285(){
     try {
+      if (window.__hide369){ var oh369 = document.getElementById("bathPoke285"); if (oh369) oh369.remove(); return; }   /* CAD-369：物を隠している間は浴槽の突き抜け枠も出さない */
       var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
       if (typeof S === "undefined" || !S || !S.tenken) return;
       var baths = [];
@@ -28746,6 +28748,117 @@ body.gold #rpOpen365{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,
     } catch(e){}
   }, 700);
   HB.__cut368 = {on: function(){ return cutOn; }, render: render368, set: cutSet368};
+})();
+</script>
+<style>
+#planBar #hideFxBtn369{width:auto!important;height:32px;padding:0 3px!important;font-size:11px!important;white-space:nowrap}
+#planBar #hideFxBtn369[aria-pressed="true"]{background:var(--ai);color:#fff;border-color:var(--ai)}
+body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#14161A;border-color:#C9A227}
+#plan .jmHit369{cursor:pointer}
+</style>
+<script>
+/* ================= CAD-369：物を隠して間仕切りを確かめる =================
+   翔伍の困り事（2026-11-18）：間取りで物（キッチン・便器・浴槽・洗面台・
+   下駄箱など）が被って、床や間仕切りが触れない・見えない。突き抜けや
+   すき間といった間仕切りのズレを、物を隠して詳しく見て、その場で直したい。
+   ・入口は間取りの上の列（#planBar）の「物を隠す」ボタン（切り替え式）。
+     隠している間はボタンの文字が「物を出す」になり、押下表示も付く。
+   ・隠す対象は設備（tenken）・建具（sashes）・照明（lights）。
+     間仕切り・外壁・床・部屋の名前・突き抜け/すき間の印は残る。
+   ・触る方も止める：pickCands の包みで建具（o）・設備（k）を候補から外し、
+     照明の選択・状態変更も受けない。だから物のあった場所の床が触れて
+     部屋の編集が開き、間仕切りは従来どおり選んで直せる。
+   ・印のタップ：jointMarks が印の上に重ねた当たり判定（.jmHit369）を
+     document の capture で先に受け、その間仕切りを選んで
+     コントローラー（長さ寸法・壁まで伸ばす・形）を出す。
+   ・間取りの画面を離れたら自動で戻す（ボタンは間取りの列にしか無い）。
+   ・見るだけの切り替えで、見積・保存は一切変えない。 */
+(function(){
+  "use strict";
+  var on369 = false;
+  window.__hide369 = false;
+
+  /* pickCands を包む：隠している間は建具（o）と設備（k）を候補から外す。
+     間仕切り（p）・垂れ壁（r）は残す（fix289 と同じ包み方） */
+  if (typeof pickCands === "function" && !pickCands.__w369){
+    var origPC369 = pickCands;
+    var wrappedPC369 = function(pt){
+      var c = origPC369(pt);
+      if (on369 && c && c.length) c = c.filter(function(x){ return x.t !== "o" && x.t !== "k"; });
+      return c;
+    };
+    wrappedPC369.__w369 = 1;
+    pickCands = wrappedPC369;
+  }
+
+  function btn369(){ return document.getElementById("hideFxBtn369"); }
+  function syncBtn369(){
+    var b = btn369(); if (!b) return;
+    b.setAttribute("aria-pressed", String(on369));
+    b.textContent = on369 ? "物を出す" : "物を隠す";
+  }
+  function set369(v, silent){
+    on369 = !!v;
+    window.__hide369 = on369;
+    syncBtn369();
+    if (on369){
+      /* 隠れる物を掴んだまま・構えたままにしない */
+      try { if (window.HB){ HB.__put = null; HB.__sashAct = null; HB.__ltAct = null; } } catch(e){}
+      try { ltTool = null; } catch(e){}
+      try { if (sel && (sel.t === "o" || sel.t === "k" || sel.t === "lt")) sel = null; } catch(e){}
+      try { drawToolsUI(); } catch(e){}
+    }
+    try { drawPlan(); } catch(e){}
+    try { drawSelBar(); } catch(e){}
+    if (on369 && !silent){ try { toast("物を隠しました。間仕切りと床を確かめられます"); } catch(e){} }
+  }
+
+  function init369(){
+    var b = btn369(); if (!b || b.__w369) return;
+    b.__w369 = 1;
+    b.addEventListener("click", function(){ set369(!on369); });
+    syncBtn369();
+  }
+
+  /* 印のタップ：その間仕切りを選んでコントローラーを出す。
+     本体の pointerdown（#plan の capture）より先に受けるため document の
+     capture で受けて止める。pointerup / click も同じ場所では止めて、
+     部屋バーのタップ判定などに渡さない。 */
+  function markHit369(e){
+    if (!on369) return null;
+    var t = e.target && e.target.closest ? e.target.closest(".jmHit369") : null;
+    return t || null;
+  }
+  document.addEventListener("pointerdown", function(e){
+    var t = markHit369(e); if (!t) return;
+    var i = +t.getAttribute("data-jp");
+    e.stopPropagation(); e.preventDefault();
+    if (typeof S === "undefined" || !S.parts2D || !S.parts2D[i]) return;
+    sel = {t: "p", i: i};
+    try { flashAt = Date.now(); } catch(er){}
+    try { drawPlan(); } catch(er){}
+    try { drawSelBar(); } catch(er){}
+  }, true);
+  document.addEventListener("pointerup", function(e){ if (markHit369(e)){ e.stopPropagation(); e.preventDefault(); } }, true);
+  document.addEventListener("click", function(e){ if (markHit369(e)){ e.stopPropagation(); e.preventDefault(); } }, true);
+
+  init369();
+  setInterval(function(){
+    try {
+      init369();
+      /* 間取りの画面を離れたら自動で戻す（ボタンは間取りの列にしか無いため） */
+      if (on369 && !(window.HB && HB.__pageM)) set369(false, true);
+      /* 隠れている種類の物が選択されたままなら選択を落とす（構え直し等） */
+      if (on369 && typeof sel !== "undefined" && sel && (sel.t === "o" || sel.t === "k" || sel.t === "lt")){
+        sel = null;
+        try { drawPlan(); } catch(e){}
+        try { drawSelBar(); } catch(e){}
+      }
+      var b = btn369();
+      if (b && b.getAttribute("aria-pressed") !== String(on369)) syncBtn369();
+    } catch(e){}
+  }, 700);
+  HB.__hide369 = {on: function(){ return on369; }, set: set369};
 })();
 </script>
 
