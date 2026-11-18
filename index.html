@@ -27994,5 +27994,87 @@ if (typeof HB !== "undefined" && HB.__ltSeg50 && !HB.__ltSeg50.__d352){
 }
 })();
 </script>
+<script id="fs358js">
+/* ===== CAD-358 全画面の余白は触れない（fsDraw の #plan だけ） =====
+   図面の判定は getIntersectionList：タッチ点の近く（約24単位＝画面で約26px、
+   pickCands の拾い半径と同じ）に描かれた要素が1つでもあれば「図面の上」。
+   余白と判定した指は、その指の pointer・touch・click を全部止める。
+   153（ピンチ）の門番より後に登録されるので、ピンチ確定の指はここに来ない。
+   ピンチ中・チュートリアル中・家が無い時は止めない。判定の例外時は素通し。 */
+(function(){
+  var D358 = 24;
+  var blocked358 = {};   /* pointerId または "t"+touch.identifier → {t:時刻} */
+  function fsOn358(){ try { return !!(document.body && document.body.classList.contains("fsDraw")); } catch(e){ return false; } }
+  function tut358(){ try { return !!(document.body && document.body.classList.contains("nbtutRun")); } catch(e){ return false; } }
+  function pinchBusy358(){ try { if (typeof HB !== "undefined" && HB.__pinch153State){ var s = HB.__pinch153State(); if (s && (s.mode === "pinch" || s.mode === "dead")) return true; } } catch(e){} return false; }
+  function hasHouse358(){ try { if (typeof bbox === "function"){ var b = bbox(); return !!(b && (b.w > 1 || b.h > 1)); } } catch(e){} return true; }
+  function planSvg358(){ return document.getElementById("plan"); }
+  function inPlan358(t){
+    if (!t) return false;
+    try { if (t.closest && t.closest("#plan")) return true; } catch(e){}
+    try { var sv = planSvg358(); if (sv && sv.parentElement && t === sv.parentElement) return true; } catch(e){}
+    return false;
+  }
+  function onDrawing358(sv, cx, cy){
+    try {
+      var pt = sv.createSVGPoint(); pt.x = cx; pt.y = cy;
+      var q = pt.matrixTransform(sv.getScreenCTM().inverse());
+      var r = sv.createSVGRect(); r.x = q.x - D358; r.y = q.y - D358; r.width = D358 * 2; r.height = D358 * 2;
+      var list = sv.getIntersectionList(r, null);
+      return !!(list && list.length);
+    } catch(e){ return true; }
+  }
+  function margin358(cx, cy, target){
+    if (!fsOn358() || tut358() || pinchBusy358() || !hasHouse358()) return false;
+    if (!inPlan358(target)) return false;
+    var sv = planSvg358(); if (!sv) return false;
+    if (typeof cx !== "number" || typeof cy !== "number") return false;
+    return !onDrawing358(sv, cx, cy);
+  }
+  function purge358(){
+    var now = Date.now();
+    for (var k in blocked358) if (now - blocked358[k].t > 5000) delete blocked358[k];
+    try { if (typeof HB !== "undefined" && HB.__pinch153State && HB.__pinch153State().n === 0) blocked358 = {}; } catch(e){}
+  }
+  function stop358(e){ try { e.stopPropagation(); } catch(_){} try { e.preventDefault(); } catch(_){} }
+
+  window.addEventListener("pointerdown", function(e){
+    purge358();
+    if (e.pointerType !== "touch") return;
+    if (margin358(e.clientX, e.clientY, e.target)){ blocked358[e.pointerId] = {t: Date.now()}; stop358(e); }
+  }, true);
+  window.addEventListener("pointermove", function(e){
+    if (e.pointerType !== "touch") return;
+    if (blocked358[e.pointerId]) stop358(e);
+  }, true);
+  function up358(e){
+    if (e.pointerType !== "touch") return;
+    if (blocked358[e.pointerId]){ stop358(e); delete blocked358[e.pointerId]; }
+  }
+  window.addEventListener("pointerup", up358, true);
+  window.addEventListener("pointercancel", up358, true);
+  window.addEventListener("click", function(e){
+    if (margin358(e.clientX, e.clientY, e.target)) stop358(e);
+  }, true);
+  window.addEventListener("touchstart", function(e){
+    for (var i = 0; i < e.changedTouches.length; i++){
+      var t = e.changedTouches[i];
+      if (margin358(t.clientX, t.clientY, e.target)){ blocked358["t" + t.identifier] = {t: Date.now()}; stop358(e); }
+    }
+  }, {capture: true, passive: false});
+  window.addEventListener("touchmove", function(e){
+    for (var i = 0; i < e.changedTouches.length; i++)
+      if (blocked358["t" + e.changedTouches[i].identifier]) stop358(e);
+  }, {capture: true, passive: false});
+  function tend358(e){
+    for (var i = 0; i < e.changedTouches.length; i++){
+      var k = "t" + e.changedTouches[i].identifier;
+      if (blocked358[k]){ stop358(e); delete blocked358[k]; }
+    }
+  }
+  window.addEventListener("touchend", tend358, {capture: true, passive: false});
+  window.addEventListener("touchcancel", tend358, {capture: true, passive: false});
+})();
+</script>
 
 </html>
