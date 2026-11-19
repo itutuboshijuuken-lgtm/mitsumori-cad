@@ -29743,6 +29743,468 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
   HB.__pc377 = { on: function(){ return pcOn; }, render: render377, set: pcSet377 };
 })();
 </script>
+<style>
+#st6.knOn392 #pvStruct{display:none!important}
+#st6.knOn392 #pcBox377{display:none}
+#st6.knOn392 #cutBox368{display:none}
+#st6.knOn392 #fsSeg{display:none!important}
+#st6.knOn392 #pcSeg377{display:none!important}
+</style>
+<script>
+/* ===== CAD-392：矩計図（図面一式の追加） =====
+   翔伍の基準（2026-11-19）：学校教材（総合資格）の矩計図の実物写真の
+   「形・表示・線の太さ」に合わせる。外壁を通る縦断面を1枚に描き、
+   左に寸法列（区間＋通し）と水準の印（GL・1FL・2FL・軒高）、
+   部材と仕上げの注記は引き出し線で付ける。通り芯の符号は出さない
+   （平面図だけ、という本人の決まり CAD-345）。
+   寸法・間隔・高さは全てアプリの設定値と間取りから取る（教材の数字は写さない）。
+   アプリが持っていない物は描かない：基礎パッキン（アプリに無い）、
+   アンカーボルト（見積で数えていない）、基礎の配筋・底盤の厚み（設定が無い）、
+   サッシ・窓（この断面では内法の決めが無い）。見るだけで、見積・保存は一切変えない。 */
+(function(){
+"use strict";
+var knOn = false, knSig = "";
+
+function knEsc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function danNm392(key, base){ try { return danName266(key, base); } catch(e){ return base; } }
+
+/* 断面が通る位置（間取りの中心）の部屋名。取れなければ空（注記は外壁まわりだけにする） */
+function knCenterRoom(){
+  try {
+    var b = bbox(); if (!b || !(b.w > 0)) return "";
+    var cx = b.x0 + b.w / 2, cy = b.y0 + b.h / 2;
+    var ms = roomStats(S.ch || 2400);
+    for (var i = 0; i < ms.length; i++){
+      var m = ms[i];
+      if (cx > m.bb.x0 + 1 && cx < m.bb.x1 - 1 && cy > m.bb.y0 + 1 && cy < m.bb.y1 - 1) return roomLbl(m.r);
+    }
+  } catch(e){}
+  return "";
+}
+
+function knDraw(svg, roomNm){
+  var PIL = +S.pil || 105;
+  var kisoN = !!S.kisoNew, kiso = kisoN ? (+S.kiso || 0) : 0;
+  var zT = kiso + 105;                       /* 土台天（GLから） */
+  var R = roof();
+  var two = R.two, Lc = R.Lc, Lc2 = R.Lc2, Hd = R.Hd, Hk = R.Hk, t = R.t, nn = R.n;
+  var FL1 = zT + S.dfl, CE1 = FL1 + S.ch;
+  var FL2 = two ? zT + Hd + 40 : 0, CE2 = two ? FL2 + S.ch2 : 0;
+  var zKT = zT + Hk;                          /* 桁天（GLから） */
+  var banT = S.floorKoho === "neda" ? 28 : 24;
+  var gbW = gbParse(S.gbW), gbC = gbParse(S.gbC);
+  var cutX = 1820;                            /* 室内側はここで断ち切る */
+  var ridgeX = S.roof === "kata" ? Infinity : (R.mune ? R.mp : R.W / 2);
+  var slopeEndX = Math.min(cutX, isFinite(ridgeX) ? ridgeX : cutX);
+  var roofEnd = Math.min(cutX, isFinite(ridgeX) ? ridgeX + 360 : cutX);
+  var zMin = kisoN ? -110 : -10;
+  var zMax = zKT + slopeEndX * t + (60 + 12 + 14) * nn + 60;
+  var Wpx = 360, wallX = 168, mT = 52;
+  var s = Math.min((Wpx - wallX - 6) / cutX, 620 / (zMax - zMin));
+  var H = Math.round(mT + (zMax - zMin) * s + 30);
+  svg.setAttribute("viewBox", "0 0 " + Wpx + " " + H);
+  var X = function(mm){ return wallX + mm * s; };
+  var Y = function(z){ return mT + (zMax - z) * s; };
+  var C = "#111";
+  function R1(v){ return Math.round(v * 10) / 10; }
+  function rect(x0, z0, x1, z1, fill, sw){
+    return "<rect x=\"" + R1(X(Math.min(x0, x1))) + "\" y=\"" + R1(Y(Math.max(z0, z1))) + "\" width=\"" + R1(Math.abs(x1 - x0) * s) + "\" height=\"" + R1(Math.abs(z1 - z0) * s) + "\" fill=\"" + fill + "\" stroke=\"" + C + "\" stroke-width=\"" + sw + "\"/>";
+  }
+  function ln(x0, z0, x1, z1, sw){
+    return "<line x1=\"" + R1(X(x0)) + "\" y1=\"" + R1(Y(z0)) + "\" x2=\"" + R1(X(x1)) + "\" y2=\"" + R1(Y(z1)) + "\" stroke=\"" + C + "\" stroke-width=\"" + sw + "\"/>";
+  }
+  function lnPx(x0, y0, x1, y1, sw){
+    return "<line x1=\"" + R1(x0) + "\" y1=\"" + R1(y0) + "\" x2=\"" + R1(x1) + "\" y2=\"" + R1(y1) + "\" stroke=\"" + C + "\" stroke-width=\"" + sw + "\"/>";
+  }
+  function tx(x, y, str, size, anchor, wgt){
+    return "<text x=\"" + R1(x) + "\" y=\"" + R1(y) + "\" text-anchor=\"" + (anchor || "start") + "\" style=\"font-size:" + size + "px;font-weight:" + (wgt || 400) + ";fill:#111\">" + knEsc(str) + "</text>";
+  }
+  function band(x0, x1, zb0, zb1, thick, fill, sw){
+    var pts = [[x0, zb0], [x1, zb1], [x1, zb1 + thick], [x0, zb0 + thick]];
+    return "<polygon points=\"" + pts.map(function(p){ return R1(X(p[0])) + "," + R1(Y(p[1])); }).join(" ") + "\" fill=\"" + fill + "\" stroke=\"" + C + "\" stroke-width=\"" + sw + "\"/>";
+  }
+  function brk(zTop, zBot){
+    var cxp = X(cutX);
+    return "<path d=\"M" + R1(cxp - 4) + " " + R1(Y(zTop) - 2) + " L" + R1(cxp + 3) + " " + R1((Y(zTop) + Y(zBot)) / 2) + " L" + R1(cxp - 4) + " " + R1(Y(zBot) + 2) + "\" fill=\"none\" stroke=\"#111\" stroke-width=\"0.9\"/>";
+  }
+
+  /* 壁の層（柱芯からの片側距離 mm） */
+  var xP0 = -PIL / 2, xP1 = PIL / 2;
+  var menzai = S.tr === "menzai";
+  var xM0 = menzai ? xP0 - 9 : xP0;
+  var hasDob = S.gaiheki !== "nuri";
+  var xD0 = hasDob ? xM0 - 15 : xM0;
+  var xG0 = hasDob ? xD0 - 15 : xM0 - 12;
+  var xOut = xG0, xIn = xP1 + gbW[1];
+  var extTop = zKT - S.keta;
+  var wood = S.floor === "wood";
+  var danFT = 45; try { if (typeof danActive266 === "function" && danActive266()) danFT = danT266("danF"); } catch(e){}
+
+  var g = "<defs>"
+    + "<pattern id=\"knDan392\" width=\"6\" height=\"6\" patternUnits=\"userSpaceOnUse\" patternTransform=\"rotate(45)\"><rect width=\"6\" height=\"6\" fill=\"#fff\"/><line x1=\"0\" y1=\"0\" x2=\"0\" y2=\"6\" stroke=\"#9a9a9a\" stroke-width=\"1\"/></pattern>"
+    + "<pattern id=\"knConc392\" width=\"7\" height=\"7\" patternUnits=\"userSpaceOnUse\"><rect width=\"7\" height=\"7\" fill=\"#EFEFEF\"/><circle cx=\"2\" cy=\"2\" r=\"0.7\" fill=\"#9a9a9a\"/><circle cx=\"5.5\" cy=\"5.5\" r=\"0.7\" fill=\"#9a9a9a\"/></pattern>"
+    + "</defs>";
+  g += tx(4, 24, "矩計図", 16, "start", 900);
+  g += tx(62, 24, "縮尺 1/20", 10, "start", 400);
+
+  /* 上の寸法：軒の出と母屋の間隔（写真の上の寸法列と同じ考え） */
+  var rb = function(x){ return zKT + x * t; };
+  var topPts = [];
+  if (R.nokiA > 0) topPts.push(-R.nokiA);
+  topPts.push(0);
+  for (var mp1 = S.moyaP; mp1 <= roofEnd && topPts.length < 5; mp1 += S.moyaP) topPts.push(mp1);
+  if (topPts.length > 1){
+    topPts.forEach(function(px){
+      g += lnPx(X(px), 47, X(px), Y(rb(px) + (60 + 12 + 14) * nn) + 3, 0.5);
+    });
+    g += lnPx(X(topPts[0]), 44, X(topPts[topPts.length - 1]), 44, 0.9);
+    topPts.forEach(function(px){
+      g += "<line x1=\"" + R1(X(px) - 3) + "\" y1=\"47\" x2=\"" + R1(X(px) + 3) + "\" y2=\"41\" stroke=\"#111\" stroke-width=\"0.9\"/>";
+    });
+    for (var ti = 1; ti < topPts.length; ti++){
+      g += tx((X(topPts[ti - 1]) + X(topPts[ti])) / 2, 40, fmt(topPts[ti] - topPts[ti - 1]), 8.5, "middle", 700);
+    }
+  }
+
+  /* GL と地盤のハッチ */
+  g += lnPx(2, Y(0), Wpx - 2, Y(0), 1.6);
+  for (var gx = 6; gx < Wpx - 6; gx += 11){
+    var mmx = (gx - wallX) / s;
+    if (kisoN && mmx > -330 && mmx < 570) continue;
+    g += "<line x1=\"" + gx + "\" y1=\"" + R1(Y(0) + 1) + "\" x2=\"" + (gx - 5) + "\" y2=\"" + R1(Y(0) + 6) + "\" stroke=\"#111\" stroke-width=\"0.6\"/>";
+  }
+
+  /* 基礎（ベタ基礎：立ち上がり幅150は伏図と同じ。底盤の厚みは設定が無いので数字は付けない） */
+  if (kisoN){
+    g += rect(-320, -100, 560, 0, "#fff", 1.6);
+    g += rect(-75, 0, 75, kiso, "#fff", 1.6);
+  }
+  /* 土台 */
+  g += rect(xP0, kiso, xP1, zT, "#fff", 1.8);
+
+  /* 床組と1階の床 */
+  if (wood){
+    if (S.danF) g += rect(xP1, zT - danFT, cutX, zT, "url(#knDan392)", 0.7);
+    if (S.floorKoho === "neda"){
+      g += rect(120, zT - 105, cutX, zT, "#fff", 1.4);
+      var jp = S.joistP === 455 ? 455 : 303;
+      for (var jx = 200; jx + 45 <= cutX; jx += jp) g += rect(jx, zT - 45, jx + 45, zT, "#fff", 1);
+    } else {
+      g += rect(180, zT - 105, 180 + PIL, zT, "#fff", 1.6);
+      g += rect(560, zT - 105, cutX, zT, "#fff", 1.4);
+    }
+    g += rect(1235, 0, 1265, zT - 105, "#fff", 1.2);       /* 鋼製束 */
+    g += rect(1190, 0, 1310, 10, "#fff", 1.2);
+    g += rect(xP1, zT, cutX, zT + banT, "#F2F2F2", 0.8);   /* 床合板 */
+    g += rect(xP1, zT + banT, cutX, FL1, "#fff", 0.8);      /* 仕上げ */
+  } else if (S.floor === "doma"){
+    g += rect(xP1, kisoN ? 0 : zT - 105, cutX, FL1, "url(#knConc392)", 1);
+  } else {
+    g += rect(xP1, zT, cutX, FL1, "#fff", 0.8);
+  }
+
+  /* 壁の層（外→内） */
+  if (S.danW) g += rect(xP0, zT, xP1, extTop, "url(#knDan392)", 0.7);
+  g += rect(xG0, zT, hasDob ? xD0 : xM0, extTop, "#fff", 1);
+  if (hasDob) g += rect(xD0, zT, xM0, extTop, "#F7F7F7", 0.7);
+  if (menzai) g += rect(xM0, zT, xP0, extTop, "#EFEFEF", 0.9);
+  g += rect(xP0, zT, xP1, zKT, "none", 1.8);                       /* 柱 */
+  if (two) g += rect(xP0, zT + Lc, xP1, zT + Hd, "#fff", 1.8);     /* 胴差 */
+  g += rect(xP0, zKT - S.keta, xP1, zKT, "#fff", 1.8);             /* 軒桁 */
+  g += rect(xP1, FL1, xIn, CE1, "#F2F2F2", 0.9);                   /* 1階 壁ボード */
+  if (two) g += rect(xP1, FL2, xIn, CE2, "#F2F2F2", 0.9);          /* 2階 壁ボード */
+
+  /* 天井（野縁・受け・吊木は tenjo() と同じ断面と間隔） */
+  function ceilGrp(ceZ, isTop, capZ){
+    var o = "", gbT = gbC[1];
+    if (isTop && S.danC) o += rect(xP1, ceZ + gbT, cutX, ceZ + gbT + 81, "url(#knDan392)", 0.6);
+    o += rect(xP1, ceZ, cutX, ceZ + gbT, "#F2F2F2", 0.9);
+    if (S.ceilFrame !== "lgs"){
+      var sec = S.tenjoSec === 30 ? 30 : 36;
+      for (var nx = 250; nx + sec <= cutX; nx += 303) o += rect(nx, ceZ + gbT, nx + sec, ceZ + gbT + 45, "#fff", 0.9);
+      o += rect(150, ceZ + gbT + 45, cutX, ceZ + gbT + 45 + 36, "#fff", 0.9);
+      var tl = +S.tsuriLen || 250;
+      [700, 1610].forEach(function(px){ o += rect(px, ceZ + gbT + 81, px + 36, Math.min(ceZ + gbT + 81 + tl, capZ), "#fff", 0.9); });
+    }
+    return o;
+  }
+  g += ceilGrp(CE1, !two, two ? zT + Hd : zKT - S.hari);
+  if (two) g += ceilGrp(CE2, true, zKT - S.hari);
+
+  /* 2階の床 */
+  if (two){
+    [300, 1210].forEach(function(bx){ g += rect(bx, zT + Lc, bx + PIL, zT + Hd, "#fff", 1.5); });
+    g += rect(xP1, zT + Hd, cutX, zT + Hd + banT, "#F2F2F2", 0.8);
+    g += rect(xP1, zT + Hd + banT, cutX, FL2, "#fff", 0.8);
+  }
+
+  /* 小屋組と屋根 */
+  g += rect(xP0, zKT - S.hari, cutX, zKT, "#fff", 1.6);            /* 小屋梁 */
+  var firstTsuka = null, firstMoya = null;
+  R.ms.forEach(function(m){
+    if (m.x <= 0 || m.x > slopeEndX + 1) return;
+    g += rect(m.x - S.moya / 2, zKT + m.rise - S.moya, m.x + S.moya / 2, zKT + m.rise, "#fff", 1.5);
+    if (!firstMoya) firstMoya = m;
+    if (m.L > 0 && !firstTsuka) firstTsuka = m;
+  });
+  if (firstTsuka) g += rect(firstTsuka.x - S.tsuka / 2, zKT, firstTsuka.x + S.tsuka / 2, zKT + firstTsuka.L, "#fff", 1.5);
+  var rx0 = -R.nokiA;
+  function roofBands(xa, xb, down){
+    var b0 = down ? function(x){ return zKT + (2 * ridgeX - x) * t; } : rb;
+    g += band(xa, xb, b0(xa), b0(xb), 60 * nn, "#fff", 1.2);
+    g += band(xa, xb, b0(xa) + 60 * nn, b0(xb) + 60 * nn, 12 * nn, "#EFEFEF", 0.8);
+    g += band(xa, xb, b0(xa) + 72 * nn, b0(xb) + 72 * nn, 10 * nn, "#DDDDDD", 0.8);
+  }
+  if (isFinite(ridgeX) && ridgeX < cutX){ roofBands(rx0, ridgeX, false); roofBands(ridgeX, roofEnd, true); }
+  else roofBands(rx0, roofEnd, false);
+
+  /* 軒まわり（軒天・鼻隠し・軒樋は見積の行がある物だけ） */
+  var zSoff = zKT - S.keta;
+  if (R.nokiA > 0){
+    g += ln(xOut, zSoff, -R.nokiA, zSoff, 1.1);
+    g += rect(-R.nokiA - 24, zSoff, -R.nokiA, rb(-R.nokiA) + 82 * nn, "#fff", 1.2);
+    var gx1 = X(-R.nokiA) + 2, gy1 = Y(zSoff) + 3;
+    g += "<path d=\"M" + R1(gx1 - 20) + " " + R1(gy1) + " L" + R1(gx1 - 20) + " " + R1(gy1 + 9) + " Q" + R1(gx1 - 10) + " " + R1(gy1 + 13) + " " + R1(gx1) + " " + R1(gy1 + 9) + " L" + R1(gx1) + " " + R1(gy1) + "\" fill=\"none\" stroke=\"#111\" stroke-width=\"1.1\"/>";
+  }
+
+  /* 断ち切り（室内側） */
+  g += brk(FL1, zT);
+  g += brk(CE1 + gbC[1] + 81, CE1);
+  g += brk(zKT, zKT - S.hari);
+  if (two){ g += brk(FL2, zT + Hd); g += brk(CE2 + gbC[1] + 81, CE2); }
+  if (roofEnd === cutX) g += brk(rb(cutX) + 82 * nn, rb(cutX));
+
+  /* 部屋名（断面が通る部屋） */
+  if (roomNm[0]) g += tx(X(760), Y(FL1 + S.ch * 0.52), roomNm[0], 11.5, "middle", 700);
+  if (two && roomNm[1]) g += tx(X(760), Y(FL2 + S.ch2 * 0.52), roomNm[1], 11.5, "middle", 700);
+
+  /* 屋根の層の名前（勾配に沿わせる。写真の屋根まわりの注記と同じ考え） */
+  var ang = -Math.atan(t) * 180 / Math.PI;
+  function slopeTx(xmm, zBandTop, str, lift){
+    if (xmm > slopeEndX - 60) return "";
+    var px = X(xmm), py = Y(rb(xmm) + 82 * nn) - 5 - (lift || 0);
+    return "<line x1=\"" + R1(px) + "\" y1=\"" + R1(py + 2) + "\" x2=\"" + R1(px) + "\" y2=\"" + R1(Y(zBandTop)) + "\" stroke=\"#111\" stroke-width=\"0.6\"/>"
+      + "<text x=\"" + R1(px) + "\" y=\"" + R1(py) + "\" text-anchor=\"middle\" transform=\"rotate(" + R1(ang) + " " + R1(px) + " " + R1(py) + ")\" style=\"font-size:8.5px;fill:#111;paint-order:stroke;stroke:#fff;stroke-width:2.5px\">" + knEsc(str) + "</text>";
+  }
+  g += slopeTx(480, rb(480) + 82 * nn, roofLbl("屋根"), 0);
+  g += slopeTx(900, rb(900) + 72 * nn, "野地板：構造用合板 12mm", 15);
+  g += slopeTx(1320, rb(1320) + 60 * nn, "垂木：45×60 @" + fmt(S.taruP), 30);
+
+  /* 水準の印 */
+  var levels = [{z: 0, n: "GL"}, {z: FL1, n: "1FL"}];
+  if (two) levels.push({z: FL2, n: "2FL"});
+  levels.push({z: zKT, n: "軒高"});
+  levels.forEach(function(L){
+    var y = Y(L.z);
+    g += lnPx(88, y, X(xOut) - 1, y, 0.5);
+    g += "<path d=\"M52 " + R1(y - 5) + " L64 " + R1(y - 5) + " L58 " + R1(y) + " Z\" fill=\"#111\"/>";
+    g += tx(68, y + 3, L.n, 8.5, "start", 700);
+  });
+
+  /* 左の寸法列：外側＝通し（GLからの高さ）、内側＝区間の積み上げ */
+  function tickPx(x, y){ return "<line x1=\"" + R1(x - 3) + "\" y1=\"" + R1(y + 3) + "\" x2=\"" + R1(x + 3) + "\" y2=\"" + R1(y - 3) + "\" stroke=\"#111\" stroke-width=\"0.9\"/>"; }
+  var segs = [];
+  if (kisoN) segs.push([0, kiso]);
+  segs.push([kiso, zT]);
+  segs.push([zT, FL1]);
+  segs.push([FL1, CE1]);
+  segs.push([CE1, zT + Lc]);
+  if (two){ segs.push([zT + Lc, zT + Hd]); segs.push([zT + Hd, FL2]); segs.push([FL2, CE2]); segs.push([CE2, zKT - S.keta]); }
+  segs.push([zKT - S.keta, zKT]);
+  g += lnPx(30, Y(0), 30, Y(zKT), 0.9);
+  var bnds = [0]; segs.forEach(function(sg){ bnds.push(sg[1]); });
+  var lvSet = {0: 1}; lvSet[FL1] = 1; if (two) lvSet[FL2] = 1; lvSet[zKT] = 1;
+  bnds.forEach(function(z){ g += tickPx(30, Y(z)); if (!lvSet[z]) g += lnPx(34, Y(z), X(xOut) - 2, Y(z), 0.45); });
+  segs.forEach(function(sg){
+    var v = sg[1] - sg[0]; if (v <= 0) return;
+    var yMid = (Y(sg[0]) + Y(sg[1])) / 2, hPx = Math.abs(Y(sg[0]) - Y(sg[1])), str = fmt(v);
+    if (hPx >= str.length * 5.6 + 6){
+      g += "<text transform=\"rotate(-90 25 " + R1(yMid) + ")\" x=\"25\" y=\"" + R1(yMid + 3) + "\" text-anchor=\"middle\" style=\"font-size:8.5px;font-weight:700;fill:#111\">" + str + "</text>";
+    } else {
+      g += tx(19, yMid + 2.5, str, 7.5, "middle", 700);
+    }
+  });
+  g += lnPx(10, Y(0), 10, Y(zKT), 0.9);
+  var cb = [0, FL1]; if (two) cb.push(FL2); cb.push(zKT);
+  cb.forEach(function(z){ g += tickPx(10, Y(z)); });
+  for (var ci = 1; ci < cb.length; ci++){
+    var yM = (Y(cb[ci - 1]) + Y(cb[ci])) / 2;
+    g += "<text transform=\"rotate(-90 5 " + R1(yM) + ")\" x=\"5\" y=\"" + R1(yM + 3) + "\" text-anchor=\"middle\" style=\"font-size:8.5px;font-weight:700;fill:#111\">" + fmt(cb[ci]) + "</text>";
+  }
+
+  /* 注記（引き出し線） */
+  var notes = [];
+  function note(anchor, txv, tyv, lines, targets, dir){ notes.push({anchor: anchor, tx: txv, ty: tyv, lines: lines, targets: targets, dir: dir || (anchor === "end" ? "R" : "L")}); }
+  var LFT = 162, RGT = X(1120);
+  var gaiNm = {siding: "サイディング", yakisugi: "焼杉", nuri: "塗り壁"}[S.gaiheki] || "サイディング";
+  var leftNotes = [];
+  function lnote(tyv, lines, targets){ leftNotes.push({ty: tyv, lines: lines, targets: targets}); }
+  lnote(Y(zT + Lc * 0.30) + 3, ["外壁：" + gaiNm], [[xG0 + 7, zT + Lc * 0.30]]);
+  if (hasDob) lnote(Y(zT + Lc * 0.66) + 3, ["透湿防水シート・胴縁"], [[xD0 + 7, zT + Lc * 0.66]]);
+  if (menzai) lnote(Y(CE1 + S.fuko * 0.5) + 3, ["耐力面材：構造用合板 9mm"], [[xM0 + 4, CE1 + S.fuko * 0.5]]);
+  if (S.danW) lnote(Y(zT + Lc * 0.88) + 3, [danNm392("danW", "断熱 壁")], [[0, zT + Lc * 0.88]]);
+  lnote(Y(zT + Lc * 0.47) + 3, ["柱：" + PIL + "×" + PIL], [[xP0, zT + Lc * 0.47]]);
+  if (two) lnote(Y(zT + Lc + S.dosa / 2) + 3, ["胴差：" + PIL + "×" + S.dosa], [[xP0, zT + Lc + S.dosa / 2]]);
+  lnote(Y(zKT - S.keta / 2) + 3, ["軒桁：" + PIL + "×" + S.keta], [[xP0, zKT - S.keta / 2]]);
+  lnote(Y(kiso + 52) + 3, ["土台：" + PIL + "×105"], [[xP0, kiso + 52]]);
+  if (R.nokiA > 0){
+    lnote(Y(zKT) - 4, ["鼻隠し：24×180"], [[-R.nokiA - 12, zSoff + 60]]);
+    lnote(Y(zSoff) + 16, ["軒天：ケイカル板", "軒樋"], [[-R.nokiA / 2, zSoff], [-R.nokiA - 10, zSoff - 15]]);
+  }
+  if (kisoN) note("start", X(620), Y(-50) + 3, ["ベタ基礎"], [[380, -50]]);
+  /* 左の注記は重ならないよう間隔を空ける */
+  leftNotes.sort(function(a, b){ return a.ty - b.ty; });
+  for (var ni = 1; ni < leftNotes.length; ni++){ var need = leftNotes[ni - 1].lines.length * 11 + 3; if (leftNotes[ni].ty < leftNotes[ni - 1].ty + need) leftNotes[ni].ty = leftNotes[ni - 1].ty + need; }
+  if (leftNotes.length && leftNotes[leftNotes.length - 1].ty > H - 14){
+    var over = leftNotes[leftNotes.length - 1].ty - (H - 14);
+    leftNotes.forEach(function(n){ n.ty -= over; });
+  }
+  leftNotes.forEach(function(n){ note("end", LFT, n.ty, n.lines, n.targets); });
+
+  var flNm = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"}[S.flType] || "フロアタイル";
+  var wallNm = "壁：" + gbW[0] + " " + gbW[1] + (S.cloth ? "＋クロス" : "");
+  var ceilNm = "天井：" + gbC[0] + " " + gbC[1] + (S.cloth ? "＋クロス" : "");
+  note("end", 356, Y(FL1 + S.ch * 0.30) + 3, [wallNm], [[xIn, FL1 + S.ch * 0.30]], "L");
+  note("end", 340, Y(CE1) + 3, [ceilNm], [[1000, CE1 + gbC[1] / 2]], "L");
+  if (two) note("end", 340, Y(CE2) + 3, [ceilNm], [[1000, CE2 + gbC[1] / 2]], "L");
+  if (two) note("end", 356, Y(zT + Lc + S.dosa / 2) + 3, ["2階床梁：" + PIL + "×" + S.dosa + " @910"], [[1210 + PIL / 2, zT + Lc + S.dosa / 2]], "L");
+  var ceTop = two ? CE2 : CE1;
+  if (S.danC) note("end", 348, Y(ceTop) - 13, [danNm392("danC", "断熱 天井")], [[760, ceTop + gbC[1] + 40]], "L");
+  if (wood) note("end", 356, Y(zT - 70) + 3, ["床：" + flNm + "（合板 " + banT + "mm）"], [[1000, FL1 - S.dfl / 2]], "L");
+  else if (S.floor === "doma") note("end", 356, Y(zT - 70) + 3, ["床：土間コンクリート"], [[1000, FL1 / 2]], "L");
+  else note("end", 356, Y(zT - 70) + 3, ["床：" + flNm], [[1000, FL1 - S.dfl / 2]], "L");
+  if (wood){
+    var dl = ["大引：" + PIL + "×105 @910"], dtg = [[800, zT - 52], [1250, zT - 130]];
+    if (S.floorKoho === "neda") dl.push("根太：45×45 @" + (S.joistP === 455 ? 455 : 303));
+    dl.push("鋼製束");
+    if (S.danF){ dl.push(danNm392("danF", "断熱 床")); dtg.push([600, zT - danFT / 2]); }
+    note("start", X(430), Y(zT - 210) + 3, dl, dtg);
+  }
+  /* 小屋組の注記（小屋梁の下の空きにまとめる） */
+  var atticLines = ["小屋梁：" + PIL + "×" + S.hari + " @" + fmt(S.hariP)], atticTg = [[cutX - 300, zKT - S.hari / 2]];
+  if (firstMoya){ atticLines.push("母屋・棟木：" + S.moya + "×" + S.moya + " @" + fmt(S.moyaP)); atticTg.push([firstMoya.x, zKT + firstMoya.rise - S.moya / 2]); }
+  if (firstTsuka){ atticLines.push("小屋束：" + S.tsuka + "×" + S.tsuka); atticTg.push([firstTsuka.x, zKT + firstTsuka.L / 2]); }
+  note("middle", X(830), Y(zKT - S.hari) + 30, atticLines, atticTg);
+
+  notes.forEach(function(n){
+    var maxLen = 0; n.lines.forEach(function(li){ if (li.length > maxLen) maxLen = li.length; });
+    var lx = n.dir === "R" ? n.tx + 4 : n.anchor === "middle" ? n.tx : n.anchor === "start" ? n.tx - 4 : n.tx - maxLen * 6.0 - 3;
+    n.targets.forEach(function(tg){
+      g += "<line x1=\"" + R1(lx) + "\" y1=\"" + R1(n.ty - 3) + "\" x2=\"" + R1(X(tg[0])) + "\" y2=\"" + R1(Y(tg[1])) + "\" stroke=\"#111\" stroke-width=\"0.6\"/>";
+      g += "<circle cx=\"" + R1(X(tg[0])) + "\" cy=\"" + R1(Y(tg[1])) + "\" r=\"1.6\" fill=\"#111\"/>";
+    });
+    n.lines.forEach(function(li, i){
+      g += "<text x=\"" + R1(n.tx) + "\" y=\"" + R1(n.ty + i * 11) + "\" text-anchor=\"" + n.anchor + "\" style=\"font-size:8.8px;fill:#111;paint-order:stroke;stroke:#fff;stroke-width:3px\">" + knEsc(li) + "</text>";
+    });
+  });
+
+  var legend = "矩計図：外壁を通る断面です。部材の寸法・間隔と高さは、仕様と間取りの設定から出しています。窓・建具と基礎の配筋は描いていません。見積は変わりません。";
+  if (!kisoN) legend += "この家は基礎の新設が無いので、基礎は描いていません。";
+  if (S.geya && S.geya.length) legend += "下屋の分は描いていません。";
+  return {html: g, legend: legend};
+}
+
+function knRender(){
+  var svg = document.getElementById("pvSvg"); if (!svg) return;
+  var lg = document.getElementById("pvLegend");
+  if (!S.edges || !S.edges.length){ svg.innerHTML = ""; if (lg) lg.textContent = "矩計図：まだ図面がありません。"; return; }
+  var keep = null, fl0 = S.floors;
+  try {
+    try { flEnsure(); } catch(e){}
+    var roomNm = {};
+    if (S.fl && S.fl.length > 1){
+      keep = flSnap();
+      for (var fi2 = 0; fi2 < S.fl.length; fi2++){
+        var snap = S.fl[fi2] && S.fl[fi2].snap;
+        if (snap){ try { flLoad(snap); roomNm[fi2] = knCenterRoom(); } catch(e){} }
+      }
+      try { flLoad(keep); } catch(e){}
+    }
+    roomNm[S.fi] = knCenterRoom();
+    var out = knDraw(svg, roomNm);
+    svg.innerHTML = out.html;
+    if (lg) lg.textContent = out.legend;
+  } catch(e){
+    svg.setAttribute("viewBox", "0 0 360 300");
+    svg.innerHTML = "<text x=\"180\" y=\"120\" text-anchor=\"middle\" style=\"font-size:12px;fill:#111\">矩計図を描けませんでした</text>";
+    if (lg) lg.textContent = "矩計図：この家の形では描けませんでした。見積は変わりません。";
+  } finally {
+    if (keep){ try { flLoad(keep); } catch(e){} S.floors = fl0; }
+  }
+}
+
+function segBtns392(){ var seg = document.getElementById("pvSeg"); return seg ? Array.prototype.slice.call(seg.querySelectorAll("[data-pv]")) : []; }
+function knSet(on){
+  var st = document.getElementById("st6"); if (!st) return;
+  knOn = !!on;
+  st.classList.toggle("knOn392", knOn);
+  if (knOn){
+    try { if (HB.__fs347 && HB.__fs347.on()) HB.__fs347.set(false); } catch(e){}
+    try { if (HB.__pc377 && HB.__pc377.on()) HB.__pc377.set(false); } catch(e){}
+    try { if (HB.__cut368 && HB.__cut368.on()) HB.__cut368.set(false); } catch(e){}
+    st.classList.add("pvOn");
+    segBtns392().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "kanakei")); });
+    knRender();
+    knSig = knSig392();
+  }
+}
+function knOff(full){
+  knOn = false;
+  var st = document.getElementById("st6"); if (!st) return;
+  st.classList.remove("knOn392");
+  if (full){
+    st.classList.remove("pvOn");
+    segBtns392().forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.pv === "iso")); });
+  }
+}
+function knSig392(){
+  try {
+    return [S.mode, S.floors, S.fi, S.ch, S.ch2, S.dfl, S.fuko, S.kiso, S.kisoNew ? 1 : 0, S.keta, S.dosa, S.hari, S.moya, S.tsuka, S.moyaP, S.taruP, S.hariP, S.k, S.roof, S.high, S.ridge, S.noki, S.keraba, S.gaiheki, S.tr, S.gbW, S.gbC, S.cloth ? 1 : 0, S.danF ? 1 : 0, S.danW ? 1 : 0, S.danC ? 1 : 0, S.floor, S.floorKoho, S.joistP, S.flType, S.tenjoSec, S.tsuriLen, S.ceilFrame, S.roofW, S.pil,
+      (S.edges || []).length, (S.edges || []).reduce(function(a, e){ return a + (e.v || 0); }, 0), (S.geya || []).length, (S.fl || []).length].join("|");
+  } catch(e){ return ""; }
+}
+function knInit(){
+  var seg = document.getElementById("pvSeg");
+  if (!seg || document.getElementById("knBtn392")) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.id = "knBtn392"; b.dataset.pv = "kanakei"; b.textContent = "矩計図";
+  b.setAttribute("aria-pressed", "false"); b.style.display = "none";
+  seg.appendChild(b);
+  b.addEventListener("click", function(){
+    if (knOn) knOff(true);
+    else { if (S.mode !== "zo") return; knSet(true); }
+  });
+  seg.addEventListener("click", function(e){
+    var t = e.target && e.target.closest ? e.target.closest("[data-pv]") : null;
+    if (t && t.dataset.pv !== "kanakei" && knOn) knOff(false);
+  }, true);
+}
+knInit();
+var prevPost392 = HB.__isoPost63;
+HB.__isoPost63 = function(){ try { if (prevPost392) prevPost392(); } catch(e){} try { if (knOn) knRender(); } catch(e){} };
+setInterval(function(){
+  try {
+    knInit();
+    var b = document.getElementById("knBtn392");
+    if (b){
+      var zo = S.mode === "zo";
+      b.style.display = zo ? "" : "none";
+      if (!zo && knOn) knOff(true);
+      if (b.getAttribute("aria-pressed") !== String(knOn)) b.setAttribute("aria-pressed", String(knOn));
+    }
+    var st = document.getElementById("st6");
+    if (knOn && st && !st.classList.contains("pvOn")) knOff(false);
+    if (knOn && st && (st.classList.contains("fsOn") || st.classList.contains("pcOn377") || st.classList.contains("cutOn368"))) knOff(false);
+    if (knOn && st && !st.hidden){
+      var sg = knSig392();
+      if (sg && sg !== knSig){ knSig = sg; knRender(); }
+    }
+  } catch(e){}
+}, 600);
+HB.__kn392 = { on: function(){ return knOn; }, render: knRender, set: knSet };
+})();
+</script>
+
 
 <script>
 /* ===== CAD-379：定価×掛率（第1弾） =====
