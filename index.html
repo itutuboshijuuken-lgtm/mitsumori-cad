@@ -13090,10 +13090,19 @@ document.addEventListener("click", function(e){
           else if (cover343.some(o => !o.fk || o.fk === "flDoma" || o.za || o.ec) || new Set(cover343.map(o => o.fk || "")).size > 1) targets170 = gaps170;
           kept383 = targets170 !== rects && gapA170 < roomA170 * 0.999;
         }
+        /* CAD-397：置き換わった範囲の実態も見る。rm印つきの畳・土間・座上げが
+           対象に含まれて置き換わる時は、kept383 が立っていても「置いた範囲は
+           そのまま」とは言わない（診断の S3・S4：守られた範囲が他にあると
+           kept383 だけで判定して実態と違うトーストが出ていた）。 */
+        let replaced397 = false;
+        if (kept383) (S.tatami || []).forEach(o => {
+          if (replaced397 || !o.rm || !(!o.fk || o.fk === "flDoma" || o.za)) return;
+          if (targets170.some(rc => Math.min(o.x1, rc.x1) - Math.max(o.x0, rc.x0) > 1 && Math.min(o.y1, rc.y1) - Math.max(o.y0, rc.y0) > 1)) replaced397 = true;
+        });
         let placed343 = 0;
         targets170.forEach(rc => { pushFloor(rc, HB.__floorArm); const rec170 = S.tatami[S.tatami.length - 1]; if (rec170) rec170.rm = 1; placed343++; });
         fixAssign(); save(); drawPlan();
-        toast(placed343 ? "床を" + FLN[HB.__floorArm] + "にしました" + (kept383 ? "（置いた範囲はそのまま）" : "（部屋全体）") : "この部屋は、置いた床の範囲で決まっています");
+        toast(placed343 ? "床を" + FLN[HB.__floorArm] + "にしました" + (kept383 ? (replaced397 ? "（置いた範囲の一部は変わりました）" : "（置いた範囲はそのまま）") : "（部屋全体）") : "この部屋は、置いた床の範囲で決まっています");
       } else toast("部屋の上をタップしてください");
       return true;
     }
@@ -17875,8 +17884,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   /* CAD-375：まとめて指定を終わる（構えも落とす） */
   function endMulti375(){
     multi375 = false;
-    disarmFloor176();
-    renderRoomBar176();
+    closeRoom176();   /* CAD-397：「終了」では構えだけでなくシート（バー）まで閉じる（従来は構えが落ちるだけでシートが残った） */
     toast("まとめて指定を終了しました");
   }
   function disarmFloor176(){
@@ -17957,6 +17965,29 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     barSig176 = "";
   }
   HB.__closeRoom176 = closeRoom176;
+
+  /* CAD-397：通常モードでは、バーを開いている部屋への床の適用が終わったら、
+     その場でシートを閉じて構えも落とす（翔伍の実機指摘 2026-11-19：
+     「フローリング選んだら表示消さないと図面みえない」。あわせて、適用後に
+     構えが残って次の部屋タップが意図せず同じ床を入れてしまう事も無くなる）。
+     適用の実体（__ltSeg50）は道具の列からの連続指定でも使うため、閉じる処理は
+     実体の中ではなく、バー文脈の適用を検出した側（ここ）に置く。
+     まとめて指定中は閉じない（続けて部屋をタップして入れるのが役目）。 */
+  if (HB.__ltSeg50 && !HB.__ltSeg50.__d397){
+    var origLt397 = HB.__ltSeg50;
+    var wrappedLt397 = function(mm){
+      var r397 = origLt397.apply(this, arguments);
+      try {
+        if (r397 && roomSel176 && !multi375){
+          var appliedRm397 = roomAtPt176(mm), barRm397 = roomAtPt176(roomSel176.pt);
+          if (appliedRm397 && barRm397 && appliedRm397.cid === barRm397.cid) closeRoom176();
+        }
+      } catch(e){}
+      return r397;
+    };
+    wrappedLt397.__d397 = true;
+    HB.__ltSeg50 = wrappedLt397;
+  }
 
   /* 画面を移動したら閉じる：旧 go ラッパー（別名 _go176）は段階1で blk02 の統合 go へ畳み込み済み（前段として取り込み。
      閉じる実体は HB.__closeRoom176（上で登録済み）を統合 go が使う）。 */
@@ -32050,4 +32081,77 @@ function daikuBaseRows391(nobeT){
   if (w.p > 0) return [{name: "大工手間（基本）", spec: `${fmt(nobeT, 2)}坪 × ${fmt(w.p)}円/坪（基本の坪単価 × 延床）`, qty: `${fmt(nobeT, 2)}坪`, cost: w.p * nobeT, avg: false, fix: {kind: "daikuBase391"}, nin391: nin}];
   return [{name: "大工手間（基本）", spec: "坪単価 未入力（単価表で自分の坪単価を入れてください）", qty: `${fmt(nobeT, 2)}坪（単価未入力）`, cost: 0, avg: false, mu391: true, fix: {kind: "daikuBase391"}, nin391: 0}];
 }
+</script>
+
+<script id="unrm397js">
+/* ===== CAD-397：部屋が合体したら、旧い部屋の床レコードの rm 印を外す =====
+   診断 diag-floor-sheet-2026-11-19 の主案（翔伍の実機動画 2026-11-19）。
+   rm 印は「部屋タップで決めた範囲＝その部屋の決め直しで置き換えてよい」の印。
+   畳コーナーや玄関土間は、作る時点では独立した部屋として作られ、部屋タップで
+   決めると rm 印が付く。その後、間仕切りを消して大部屋に取り込むと、見た目も
+   役割も「置いた範囲」なのに rm 印のまま残り、保護（CAD-383）から外れて、
+   部屋全体への適用で畳・土間まで上書きされていた。
+   合体の瞬間に、旧い部屋の範囲だったレコードの rm を外して「置いた範囲」に
+   そろえる。合体の判定は「操作の前は別々の部屋だった2つが、操作の後に同じ
+   部屋になっているか」。部屋の中の仕切り（両側が同じ部屋）や、片側だけの
+   部屋では外れない。入口は間仕切り削除の唯一の入口 delPart と、部屋の壁の
+   作り直し enclRoomApply。見積は rm を読まないため、金額は変わらない。 */
+(function(){
+  "use strict";
+  function roomList397(){
+    try { return roomsCalc().rooms.map(function(r){ return {cid: r.cid, p: [r.p[0], r.p[1]]}; }); }
+    catch(e){ return []; }
+  }
+  function recRoomCid397(rec){
+    var pts = [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]];
+    for (var i = 0; i < pts.length; i++){
+      var r = null;
+      try { r = roomAt(rec.x0 + (rec.x1 - rec.x0) * pts[i][0], rec.y0 + (rec.y1 - rec.y0) * pts[i][1]); } catch(e){}
+      if (r) return r.cid;
+    }
+    return null;
+  }
+  function snap397(){
+    var snap = {rooms: roomList397(), recCid: new Map()};
+    (S.tatami || []).forEach(function(rec){
+      if (!rec || !rec.rm) return;
+      var cid = recRoomCid397(rec);
+      if (cid != null) snap.recCid.set(rec, cid);
+    });
+    return snap;
+  }
+  function apply397(snap){
+    if (!snap || !snap.rooms.length || !snap.recCid.size) return;
+    var afterCid = {};
+    snap.rooms.forEach(function(o){
+      var r = null; try { r = roomAt(o.p[0], o.p[1]); } catch(e){}
+      afterCid[o.cid] = r ? r.cid : null;
+    });
+    var merged = {};
+    snap.rooms.forEach(function(o){
+      if (afterCid[o.cid] == null) return;
+      snap.rooms.forEach(function(o2){
+        if (o2.cid !== o.cid && afterCid[o2.cid] === afterCid[o.cid]) merged[o.cid] = 1;
+      });
+    });
+    if (!Object.keys(merged).length) return;
+    var changed = false;
+    snap.recCid.forEach(function(cid, rec){
+      if (merged[cid] && rec.rm){ delete rec.rm; changed = true; }
+    });
+    if (changed){ try { save(); } catch(e){} }
+  }
+  function wrap397(fn){
+    var w = function(){
+      var snap = null; try { snap = snap397(); } catch(e){}
+      var r = fn.apply(this, arguments);
+      try { apply397(snap); } catch(e){}
+      return r;
+    };
+    w.__d397 = true;
+    return w;
+  }
+  try { if (typeof delPart === "function" && !delPart.__d397) delPart = wrap397(delPart); } catch(e){}
+  try { if (typeof enclRoomApply === "function" && !enclRoomApply.__d397) enclRoomApply = wrap397(enclRoomApply); } catch(e){}
+})();
 </script>
