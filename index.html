@@ -30751,9 +30751,14 @@ return [
     if (tsukaN > 0){ anyFloor = true; h += "<div class='pM'><b>鋼製束</b><br>" + n390(tsukaN) + "本（910間隔・見積の行から）</div>"; }
     if (!anyFloor && D.floors.length) h += "<div class='pM'>（ありません）</div>";
 
-    /* 部屋ごと（野縁・ボード） */
-    var roomSecs = [];
-    D.floors.forEach(function(fl){ (fl.rooms || []).forEach(function(rm){ roomSecs.push({fl: fl.label, rm: rm}); }); });
+    /* 部屋ごと（野縁・ボード）。部屋は今開いている階の物だけ取れるので、
+       階を分けて計算できなかった時（まとめて計算）は階の名札を付けない */
+    var roomSecs = [], merged390 = false;
+    D.floors.forEach(function(fl){
+      var mrg = fl.label === "1〜2階（まとめて計算）";
+      if (mrg) merged390 = true;
+      (fl.rooms || []).forEach(function(rm){ roomSecs.push({fl: mrg ? null : fl.label, rm: rm}); });
+    });
     h += "<div class='pH'>天井の野縁（部屋ごと）</div>";
     var anyNoji = false;
     roomSecs.forEach(function(rs){
@@ -30784,6 +30789,7 @@ return [
     });
     if (!anyBoard) h += "<div class='pM'>（部屋が取れていないか、ボードの工事がありません）</div>";
     h += "<div class='pN'>割り付けはパターンA（部屋の芯から芯・両端の余りは同じ寸法）で、ジョイントは910ずらしています。天井先行の時は端の列を切らずに張り出し、壁先行の時は900×1,820から始めます。開口（窓・ドア）の分は引いていないので、枚数は見積（面積から出した数）より多くなります。</div>";
+    if (merged390) h += "<div class='pN'>部屋ごとの寸法（野縁・ボード）は、今開いている階の部屋で計算しています。もう1つの階は、階を切り替えてから開き直してください。</div>";
 
     box.innerHTML = h;
     var lg = document.getElementById("pvLegend");
