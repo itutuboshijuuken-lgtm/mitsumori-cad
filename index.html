@@ -1081,7 +1081,7 @@ const WORK = [
   ["kaidanL", "階段（かね折れ）", "円/か所", 0, 200000],
   ["kaidanM", "階段（回り階段）", "円/か所", 0, 220000],
   ["ninkuT", "大工の人工（建方・造作・仕上げ全部／坪・刻みは別）", "人工/坪", 0, 5]   /* CAD-248：刻みは含まない事を明記 */,
-  ["daikuTsubo", "大工手間 基本坪単価（仮なし・自分で入力）", "円/坪", 0, 0],   /* CAD-391：ハウスメーカー方式の基本。仮単価は置かない（翔伍の決定 2026-11-19）。0＝未入力 */
+  ["daikuTsubo", "大工手間 基本坪単価", "円/坪", 0, 45000],   /* CAD-398：販売までの間、翔伍の単価（棟上げ込み 坪¥45,000・本人の決定 2026-11-19）を初期値として入れる。workP の既定値として未設定の時だけ効き、自分で入れた値が常に優先。⚠️販売時には初期値を外す事（0に戻す＝未入力） */
   ["kdDanS", "階段 取付手間（直階段）", "円/段", 0, 1700],   /* CAD-391：CAD-389 の 1.0人工/か所 を段数で割った換算（study-daiku-tema） */
   ["kdDanM", "階段 取付手間（廻り・かね折れ等）", "円/段", 0, 2500],   /* CAD-391：1.5人工/か所 の換算 */
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
@@ -7644,7 +7644,7 @@ function drawEst(){
 function fixRow(r){
   if (!r || !r.fix) return;
   const f = r.fix;
-  if (f.kind === "daikuBase391"){ openPad({title: "大工手間 基本坪単価", sub: "仮単価はありません。自分の坪単価を入れてください（空のまま決定で未入力に戻ります）", unit: "円/坪", value: PR.work.daikuTsubo || "", done: v => { PR.work.daikuTsubo = v || 0; saveP(); drawEst(); }}); }
+  if (f.kind === "daikuBase391"){ openPad({title: "大工手間 基本坪単価", sub: PR.work.daikuTsubo ? "原価の単価（空のまま決定で初期値に戻ります）" : `初期値 ${fmt(workP("daikuTsubo").p)}円/坪（棟上げ込み）で計算しています。自分の単価に変えられます`, unit: "円/坪", value: workP("daikuTsubo").p || "", done: v => { PR.work.daikuTsubo = v || 0; saveP(); drawEst(); }}); }
   else if (f.kind === "work"){ const w = WORK.find(x => x[0] === f.key); openPad({title: w[1], sub: PR.work[f.key] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[f.key] || "", done: v => { PR.work[f.key] = v || 0; saveP(); drawEst(); }}); }
   else if (f.kind === "teika379"){ const mk = f.maker; openPad({title: `${mk} の掛率`, sub: KAKE379.by[mk] ? "メーカー別の掛率です（空のまま決定で、全体の掛率に戻ります）" : `今は全体の掛率 ${fmt(KAKE379.all, 1)}% を使っています`, unit: "%", value: KAKE379.by[mk] || "", done: v => { if (v == null || !(v > 0)) delete KAKE379.by[mk]; else KAKE379.by[mk] = v; saveKake379(); drawEst(); }}); }
   else if (f.kind === "ninku") openPad({title: "大工の人工（この現場）", sub: `空のまま決定で、坪${fmt(workP("ninkuT").p, 1)}人工の自動に戻ります`, unit: "人工", value: S.ninkuN || "", done: v => { S.ninkuN = v || null; save(); drawEst(); }});
@@ -9570,8 +9570,8 @@ function drawPrice(){
     return `<div class="pgrp">${cat}</div>` + list.map(([it, i]) => `<button class="prow" data-it="${i}" type="button"><span>${it.kari ? `<span class="kari">仮</span> ` : ""}${esc(it.name)}<small>${esc(itemSpec(it))}</small></span><b>${fmt(it.price)}円/${esc(it.unit)}</b></button>`).join("");
   }).join("");
   $("priceList").querySelectorAll("[data-it]").forEach(b => b.onclick = () => editItem(+b.dataset.it, null, drawPrice));
-  $("workList").innerHTML = WORK.map(([k, n, u]) => `<button class="set" data-wk="${k}" type="button"><span>${n}<small>${u}</small></span><b>${k === "daikuTsubo" && !PR.work[k] ? "未入力" : PR.work[k] ? fmt(PR.work[k]) : `<span class="kari">仮</span> ${fmt(WORK.find(x => x[0] === k)[4])}`}</b></button>`).join("") + `<p class="hint">「仮」は山口県あたりの平均の目安です。自分の単価を入れると置き換わります。</p><p class="hint">「大工手間 基本坪単価」は仮単価がありません。自分の坪単価を入れてください（新築・増築の大工手間の基本になります）。階段の取付手間は段あたりの単価です。</p>`;   /* CAD-391 */
-  $("workList").querySelectorAll("[data-wk]").forEach(b => b.onclick = () => { const w = WORK.find(x => x[0] === b.dataset.wk); openPad({title: w[1], sub: w[0] === "daikuTsubo" ? (PR.work[w[0]] ? "原価の単価" : "仮単価はありません。自分の坪単価を入れてください（空のまま決定で未入力に戻ります）") : PR.work[w[0]] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[w[0]] || "", done: v => { PR.work[w[0]] = v || 0; saveP(); drawPrice(); }}); });   /* CAD-391：基本坪単価の案内 */
+  $("workList").innerHTML = WORK.map(([k, n, u]) => `<button class="set" data-wk="${k}" type="button"><span>${n}<small>${u}</small></span><b>${k === "daikuTsubo" ? fmt(PR.work[k] || WORK.find(x => x[0] === k)[4]) : PR.work[k] ? fmt(PR.work[k]) : `<span class="kari">仮</span> ${fmt(WORK.find(x => x[0] === k)[4])}`}</b></button>`).join("") + `<p class="hint">「仮」は山口県あたりの平均の目安です。自分の単価を入れると置き換わります。</p><p class="hint">「大工手間 基本坪単価」には初期値（坪${fmt(WORK.find(x => x[0] === "daikuTsubo")[4])}円・棟上げ込み）が入っています。自分の単価に変えられます（新築・増築の大工手間の基本になります）。階段の取付手間は段あたりの単価です。</p>`;   /* CAD-391 */
+  $("workList").querySelectorAll("[data-wk]").forEach(b => b.onclick = () => { const w = WORK.find(x => x[0] === b.dataset.wk); openPad({title: w[1], sub: w[0] === "daikuTsubo" ? (PR.work[w[0]] ? "原価の単価（空のまま決定で初期値に戻ります）" : `初期値 ${fmt(w[4])}円/坪（棟上げ込み）で計算しています。自分の単価に変えられます`) : PR.work[w[0]] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[w[0]] || (w[0] === "daikuTsubo" ? w[4] : ""), done: v => { PR.work[w[0]] = v || 0; saveP(); drawPrice(); }}); });   /* CAD-391：基本坪単価の案内 */
   if (window.__drawKake379) window.__drawKake379();
 }
 function editItem(i, preset, after){
@@ -32103,7 +32103,11 @@ lab391
    （study-daiku-tema-housemaker-2026-11-19.md）の推奨どおり、0円の行に
    「未入力」と表示して見積書にも残す。
    換算人工（nin391）は応援大工の原価計算と工程表の大工日数のためだけに持つ
-   （金額には使わない）。 */
+   （金額には使わない）。
+   CAD-398：販売までの間、初期値として翔伍の単価（棟上げ込み 坪¥45,000）を
+   WORK の既定値に入れた（本人の決定 2026-11-19）。未設定の間は workP が
+   45,000 を返すため、下の未入力（mu391）の分岐には通常入らない。
+   ⚠️販売時には初期値を外す事（WORK の daikuTsubo 既定値を 0 に戻す）。 */
 function daikuBaseRows391(nobeT){
   const w = workP("daikuTsubo");
   const np = workP("ninku").p;
