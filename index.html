@@ -7301,15 +7301,16 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   /* CAD-264: 床の工法（翔伍の決定 2026-11-15）。剛床＝大引＋小つなぎの田の字（どちらも105角・芯々910ピッチ）、床合板24mm、鋼製束は格子の交点。
      根太工法＝大引は一方向だけ、根太は大引と直交に土台の外面まで（線分＋105）、根太受けは新築・増築では拾わない。 */
   const FKO264 = S.floorKoho === "neda" ? "neda" : "goushou", banT264 = FKO264 === "neda" ? 28 : 24;
-  let koNeeds264 = [], gridPosts264 = JR2.posts; const nedaNeeds264 = [];
+  let koNeeds264 = [], gridPosts264 = JR2.posts, gridPostsEx264 = 0; const nedaNeeds264 = [];
   if (wood && FKO264 === "goushou"){
     const alongX264 = b.w >= b.h, A264 = gridLines264(alongX264, 910), B264 = gridLines264(!alongX264, 910);
     gridPosts264 = 0;
+    const EX264 = kisoEx264(A264, B264, alongX264);
     B264.lines.forEach(L264 => L264.segs.forEach(sg => {
       const cuts = A264.pos.filter(p => p > sg[0] + 1 && p < sg[1] - 1);
       const pp = [sg[0], ...cuts, sg[1]];
       for (let i = 0; i + 1 < pp.length; i++){ const len = pp[i + 1] - pp[i] - 105; if (len > 100) koNeeds264.push(Math.round(len)); }
-      gridPosts264 += cuts.length;
+      { const onK = cuts.filter(p => kisoOn264(EX264, p, L264.c)).length; gridPosts264 += cuts.length - onK; gridPostsEx264 += onK; }
     }));
   }
   if (wood && FKO264 === "neda"){
@@ -7434,7 +7435,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   grp("合板・ボード・金物");
   if (wood) sheet("構造用合板", banT264, `1階 床合板 ${banT264}mm`, 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
   if (two) sheet("構造用合板", banT264, `2階 床合板 ${banT264}mm`, 910, 1820, Math.ceil(area / 1.6562 * 1.05), `床 ${fmt(area, 1)}㎡`);
-  if (wood){ const p = simplePrice("鋼製束"); rows.push({name: "鋼製束", spec: "910間隔", qty: `${gridPosts264}本`, ...ap(p, gridPosts264), fix: {kind: "simple", cat: "鋼製束", name: "鋼製束"}}); }
+  if (wood){ const p = simplePrice("鋼製束"); rows.push({name: "鋼製束", spec: "910間隔" + (gridPostsEx264 ? `（内部の基礎の上${gridPostsEx264}本は除く）` : ""), qty: `${gridPosts264}本`, ...ap(p, gridPosts264), fix: {kind: "simple", cat: "鋼製束", name: "鋼製束"}}); }
   if (kata && S.parapet && !PT){
     const effH = paraEffH || Math.max(S.paraH || 1350, Math.round(R.topRise) + 300), len3 = D + 2 * W;
     const inA = Math.max(0, (D * (effH - R.topRise) + 2 * W * (effH - R.topRise / 2)) / 1e6);
@@ -7505,7 +7506,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const w3 = workP("kisoPump"); rows.push({name: "基礎 生コン・ポンプ最低料金", spec: `少量の割増 ${fmt(w3.p)}円`, qty: "1式", cost: w3.p, avg: w3.avg, fix: {kind: "work", key: "kisoPump"}}); }   /* CAD-248：生コン・ポンプの最低料金（新設） */
-    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・内部の桁の下`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }  /* CAD-344：基礎は内部の桁の下に連続で入る物なので列数ベースのまま。文言だけ実態に合わせた（金額不変） */
+    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・内部の桁の下（位置は目安・構造計算の後で確定）`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }  /* CAD-344：基礎は内部の桁の下に連続で入る物なので列数ベースのまま。文言だけ実態に合わせた（金額不変） */
   }
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
   else { work("domaCon", "土間コンクリート", area, "㎡"); if (S.floor === "oki"){ okiRows(area, per); floorFin(Math.max(0, area - tatArea()), "1階 "); } else work("domaFin", "土間仕上げ", area, "㎡"); if (two) floorFin(area, "2階 "); }
@@ -11365,6 +11366,30 @@ function zoInt(W, D, yose, two){
     return {n: rows * per, rows: per > 0 ? rows : 0, per, lim, W, D};
   } catch(e){ return {n: 0, rows: 0}; }
 }
+/* CAD-400案：鋼製束は、内部の基礎（内部の桁の通りの下）に大引が乗るので、その線の上には要らない。
+   基礎の線の決め方は intPostList と同じ（等分→910通りに寄せ→端から455以上）。位置は構造計算の前の目安。
+   最寄りの格子線（剛床の大引・小つなぎ）に寄せて、その線上の交点を束から除く（見積と床伏図でそろえる）。 */
+function kisoEx264(A, B, alongX){
+  const ex = {A: [], B: []};
+  try {
+    if (S.mode !== "zo") return ex;
+    const R = roof(); if (R.two) return ex;
+    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
+    if (!(zi.rows > 0) || !(zi.per > 0)) return ex;
+    const b = bbox(), M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
+    const useA = (spanY === !!alongX), arr = useA ? A.pos : B.pos, dst = useA ? ex.A : ex.B;
+    for (let i2 = 1; i2 <= zi.rows; i2++){
+      let lc = org + span * i2 / (zi.rows + 1);
+      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+      let best = null;
+      arr.forEach(v => { if (Math.abs(v - lc) <= 455 && (best === null || Math.abs(v - lc) < Math.abs(best - lc))) best = v; });
+      if (best !== null) dst.push(best);
+    }
+  } catch(e){}
+  return ex;
+}
+function kisoOn264(ex, p, c){ return ex.A.some(v => Math.abs(v - p) < 1) || ex.B.some(v => Math.abs(v - c) < 1); }
 /* CAD-344：内部の柱の位置と本数の正本。支持ライン（内部の桁の通り）と
    間仕切りの交点だけに立てる（決まり：内部の柱は梁の交点・壁の上にだけ。
    部屋の真ん中の等分格子には立てない）。
@@ -29065,14 +29090,14 @@ for (var k = 1; k <= n; k++){ var pt = segA(alongX, Ln.c, sg[0] + L * k / NN); g
 } else {
 /* 剛床：小つなぎは大引と直交の格子を大引の位置で区切る（calc の koNeeds264 と同じ割り）。
 鋼製束は格子の交点（calc の gridPosts264 と同じ数え方） */
-var kotLbl393 = 0;
+var kotLbl393 = 0, EX393 = kisoEx264(A, B, alongX);
 B.lines.forEach(function(Ln){
 Ln.segs.forEach(function(sg){
 var cuts = A.pos.filter(function(p){ return p > sg[0] + 1 && p < sg[1] - 1;});
 var pp = [sg[0]].concat(cuts, [sg[1]]);
 for (var i = 0; i + 1 < pp.length; i++) g += band(fr, segA(!alongX, Ln.c, pp[i]), segA(!alongX, Ln.c, pp[i + 1]), 105, "fsKotsunagi");
 if (!kotLbl393 && pp.length > 1){ kotLbl393 = 1; g += sizeLbl393(fr, segA(!alongX, Ln.c, pp[0]), segA(!alongX, Ln.c, pp[1]), "105×105");}
-cuts.forEach(function(p){ var pt = segA(!alongX, Ln.c, p); g += bunMk(fr, pt[0], pt[1]);});
+cuts.forEach(function(p){ if (kisoOn264(EX393, p, Ln.c)) return; var pt = segA(!alongX, Ln.c, p); g += bunMk(fr, pt[0], pt[1]);});
 });
 });
 }
