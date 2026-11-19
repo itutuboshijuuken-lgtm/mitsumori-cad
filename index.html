@@ -30450,21 +30450,24 @@ var knOn = false, knSig = "";
 function knEsc(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
 function danNm392(key, base){ try { return danName266(key, base); } catch(e){ return base; } }
 
-/* 断面が通る位置（間取りの中心）の部屋名。取れなければ空（注記は外壁まわりだけにする） */
-function knCenterRoom(){
+/* 断面が通る位置（間取りの中心）の部屋。名前と中心点を返す（CAD-396：仕上げの注記も同じ部屋から取る） */
+function knCenterInfo(){
   try {
-    var b = bbox(); if (!b || !(b.w > 0)) return "";
+    var b = bbox(); if (!b || !(b.w > 0)) return { name: "", cx: null, cy: null };
     var cx = b.x0 + b.w / 2, cy = b.y0 + b.h / 2;
     var ms = roomStats(S.ch || 2400);
     for (var i = 0; i < ms.length; i++){
       var m = ms[i];
-      if (cx > m.bb.x0 + 1 && cx < m.bb.x1 - 1 && cy > m.bb.y0 + 1 && cy < m.bb.y1 - 1) return roomLbl(m.r);
+      if (cx > m.bb.x0 + 1 && cx < m.bb.x1 - 1 && cy > m.bb.y0 + 1 && cy < m.bb.y1 - 1) return { name: roomLbl(m.r), cx: cx, cy: cy };
     }
+    return { name: "", cx: cx, cy: cy };
   } catch(e){}
-  return "";
+  return { name: "", cx: null, cy: null };
 }
+function knCenterRoom(){ return knCenterInfo().name; }
 
 function knDraw(svg, roomNm){
+  var rm0 = roomNm[0] || {}, rm1 = roomNm[1] || {};   /* CAD-396：断面の部屋（名前＋中心点） */
   var PIL = +S.pil || 105;
   var kisoN = !!S.kisoNew, kiso = kisoN ? (+S.kiso || 0) : 0;
   var zT = kiso + 105;                       /* 土台天（GLから） */
@@ -30475,12 +30478,22 @@ function knDraw(svg, roomNm){
   var zKT = zT + Hk;                          /* 桁天（GLから） */
   var banT = S.floorKoho === "neda" ? 28 : 24;
   var gbW = gbParse(S.gbW), gbC = gbParse(S.gbC);
-  var cutX = 1820;                            /* 室内側はここで断ち切る */
-  var ridgeX = S.roof === "kata" ? Infinity : (R.mune ? R.mp : R.W / 2);
-  var slopeEndX = Math.min(cutX, isFinite(ridgeX) ? ridgeX : cutX);
-  var roofEnd = Math.min(cutX, isFinite(ridgeX) ? ridgeX + 360 : cutX);
+  var cutX = 1820;                            /* 室内側はここで断ち切る（基本） */
+  /* CAD-396：屋根は roof() の物差しでタイプ別に描く。棟（top）の位置・高さは roof() の値そのまま。
+     棟が断ち切りの近くにある時は、棟木が端に張り付かないよう、棟と下り側が見える所まで断ち切りを伸ばす */
+  var topX = S.roof === "kata" ? R.W : (R.mune ? R.mp : R.W / 2);
+  if (isFinite(topX) && topX > cutX - 455 && topX <= cutX + 455) cutX = Math.max(cutX, Math.round(topX + (S.roof === "kata" ? 180 : 360)));
+  var profE = function(x){                    /* 屋根の下端の上がり（roof() の rise と同じ物差し） */
+    if (x <= 0) return x * t;
+    if (S.roof === "kata") return x * t;
+    if (R.mune) return x < R.mp ? x * t : (R.W - x) * t;
+    return Math.min(x, R.W - x) * t;
+  };
+  var bandEnd = S.roof === "kata" ? Math.min(cutX, R.W) : Math.min(cutX, isFinite(topX) ? topX + 360 : cutX);
+  var slopeEndX = Math.min(cutX, isFinite(topX) ? topX : cutX);
+  var profMax = (S.roof !== "kata" && isFinite(topX) && topX <= bandEnd) ? R.topRise : profE(bandEnd);
   var zMin = kisoN ? -110 : -10;
-  var zMax = zKT + slopeEndX * t + (60 + 12 + 14) * nn + 60;
+  var zMax = zKT + profMax + (60 + 12 + 14) * nn + 60;
   var Wpx = 360, wallX = 168, mT = 52;
   var s = Math.min((Wpx - wallX - 6) / cutX, 620 / (zMax - zMin));
   var H = Math.round(mT + (zMax - zMin) * s + 30);
@@ -30534,10 +30547,10 @@ function knDraw(svg, roomNm){
   var topPts = [];
   if (R.nokiA > 0) topPts.push(-R.nokiA);
   topPts.push(0);
-  for (var mp1 = S.moyaP; mp1 <= roofEnd && topPts.length < 5; mp1 += S.moyaP) topPts.push(mp1);
+  for (var mp1 = S.moyaP; mp1 <= bandEnd && topPts.length < 5; mp1 += S.moyaP) topPts.push(mp1);
   if (topPts.length > 1){
     topPts.forEach(function(px){
-      g += lnPx(X(px), 47, X(px), Y(rb(px) + (60 + 12 + 14) * nn) + 3, 0.5);
+      g += lnPx(X(px), 47, X(px), Y(zKT + profE(px) + (60 + 12 + 14) * nn) + 3, 0.5);
     });
     g += lnPx(X(topPts[0]), 44, X(topPts[topPts.length - 1]), 44, 0.9);
     topPts.forEach(function(px){
@@ -30622,23 +30635,30 @@ function knDraw(svg, roomNm){
 
   /* 小屋組と屋根 */
   g += rect(xP0, zKT - S.hari, cutX, zKT, "#fff", 1.6);            /* 小屋梁 */
-  var firstTsuka = null, firstMoya = null;
+  var firstTsuka = null, firstMoya = null, topDrawn = null, kataTop = null;
   R.ms.forEach(function(m){
-    if (m.x <= 0 || m.x > slopeEndX + 1) return;
+    if (m.x <= 0 || m.x > bandEnd + 1) return;
     g += rect(m.x - S.moya / 2, zKT + m.rise - S.moya, m.x + S.moya / 2, zKT + m.rise, "#fff", 1.5);
-    if (!firstMoya) firstMoya = m;
+    if (m.top){ if (S.roof === "kata") kataTop = m; else topDrawn = m; }   /* CAD-396：棟木は top の位置だけ。片流れの最上部は棟木と呼ばない */
+    else if (!firstMoya) firstMoya = m;
     if (m.L > 0 && !firstTsuka) firstTsuka = m;
   });
   if (firstTsuka) g += rect(firstTsuka.x - S.tsuka / 2, zKT, firstTsuka.x + S.tsuka / 2, zKT + firstTsuka.L, "#fff", 1.5);
   var rx0 = -R.nokiA;
-  function roofBands(xa, xb, down){
-    var b0 = down ? function(x){ return zKT + (2 * ridgeX - x) * t; } : rb;
-    g += band(xa, xb, b0(xa), b0(xb), 60 * nn, "#fff", 1.2);
-    g += band(xa, xb, b0(xa) + 60 * nn, b0(xb) + 60 * nn, 12 * nn, "#EFEFEF", 0.8);
-    g += band(xa, xb, b0(xa) + 72 * nn, b0(xb) + 72 * nn, 10 * nn, "#DDDDDD", 0.8);
+  function roofBands(xa, xb){
+    var za = zKT + profE(xa);
+    var zb = zKT + ((R.mune && xb === R.mp) ? R.mp * t : profE(xb));   /* CAD-396：棟段差のA側の帯は段差の手前の高さで止める */
+    g += band(xa, xb, za, zb, 60 * nn, "#fff", 1.2);
+    g += band(xa, xb, za + 60 * nn, zb + 60 * nn, 12 * nn, "#EFEFEF", 0.8);
+    g += band(xa, xb, za + 72 * nn, zb + 72 * nn, 10 * nn, "#DDDDDD", 0.8);
   }
-  if (isFinite(ridgeX) && ridgeX < cutX){ roofBands(rx0, ridgeX, false); roofBands(ridgeX, roofEnd, true); }
-  else roofBands(rx0, roofEnd, false);
+  (function(){
+    var pts = [rx0, 0];
+    if (isFinite(topX) && topX > 0 && topX < bandEnd) pts.push(topX);
+    pts.push(bandEnd);
+    for (var bi = 1; bi < pts.length; bi++) if (pts[bi] > pts[bi - 1]) roofBands(pts[bi - 1], pts[bi]);
+    if (R.mune && R.mp > 0 && R.mp <= bandEnd) g += rect(R.mp - (60 + 12 + 14) * nn, zKT + R.mp * t, R.mp, zKT + (R.W - R.mp) * t, "#fff", 1.2);   /* CAD-396：棟段差の段差壁 */
+  })();
 
   /* 軒まわり（軒天・鼻隠し・軒樋は見積の行がある物だけ） */
   var zSoff = zKT - S.keta;
@@ -30654,11 +30674,11 @@ function knDraw(svg, roomNm){
   g += brk(CE1 + gbC[1] + 81, CE1);
   g += brk(zKT, zKT - S.hari);
   if (two){ g += brk(FL2, zT + Hd); g += brk(CE2 + gbC[1] + 81, CE2); }
-  if (roofEnd === cutX) g += brk(rb(cutX) + 82 * nn, rb(cutX));
+  if (bandEnd >= cutX && cutX < R.W) g += brk(zKT + profE(cutX) + 82 * nn, zKT + profE(cutX));   /* CAD-396 */
 
   /* 部屋名（断面が通る部屋） */
-  if (roomNm[0]) g += tx(X(760), Y(FL1 + S.ch * 0.52), roomNm[0], 11.5, "middle", 700);
-  if (two && roomNm[1]) g += tx(X(760), Y(FL2 + S.ch2 * 0.52), roomNm[1], 11.5, "middle", 700);
+  if (rm0.name) g += tx(X(760), Y(FL1 + S.ch * 0.52), rm0.name, 11.5, "middle", 700);
+  if (two && rm1.name) g += tx(X(760), Y(FL2 + S.ch2 * 0.52), rm1.name, 11.5, "middle", 700);
 
   /* 屋根の層の名前（勾配に沿わせる。写真の屋根まわりの注記と同じ考え） */
   var ang = -Math.atan(t) * 180 / Math.PI;
@@ -30743,7 +30763,13 @@ function knDraw(svg, roomNm){
   }
   leftNotes.forEach(function(n){ note("end", LFT, n.ty, n.lines, n.targets); });
 
-  var flNm = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"}[S.flType] || "フロアタイル";
+  /* CAD-396：床の名前は見積と同じ優先順位（断面の部屋の床ゾーン fk → 家全体の S.flType） */
+  var flKey = S.flType, flTat = false;
+  if (rm0.cx != null){
+    var fz = (S.tatami || []).find(function(z){ return z && rm0.cx > z.x0 && rm0.cx < z.x1 && rm0.cy > z.y0 && rm0.cy < z.y1; });
+    if (fz){ if (fz.fk) flKey = fz.fk; else flTat = true; }
+  }
+  var flNm = flTat ? "畳" : ({flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"}[flKey] || "フロアタイル");
   var wallNm = "壁：" + gbW[0] + " " + gbW[1] + (S.cloth ? "＋クロス" : "");
   var ceilNm = "天井：" + gbC[0] + " " + gbC[1] + (S.cloth ? "＋クロス" : "");
   note("end", 356, Y(FL1 + S.ch * 0.30) + 3, [wallNm], [[xIn, FL1 + S.ch * 0.30]], "L");
@@ -30764,7 +30790,9 @@ function knDraw(svg, roomNm){
   }
   /* 小屋組の注記（小屋梁の下の空きにまとめる） */
   var atticLines = ["小屋梁：" + PIL + "×" + S.hari + " @" + fmt(S.hariP)], atticTg = [[cutX - 300, zKT - S.hari / 2]];
-  if (firstMoya){ atticLines.push("母屋・棟木：" + S.moya + "×" + S.moya + " @" + fmt(S.moyaP)); atticTg.push([firstMoya.x, zKT + firstMoya.rise - S.moya / 2]); }
+  var moyaTg = firstMoya || kataTop;
+  if (moyaTg){ atticLines.push("母屋：" + S.moya + "×" + S.moya + " @" + fmt(S.moyaP)); atticTg.push([moyaTg.x, zKT + moyaTg.rise - S.moya / 2]); }
+  if (topDrawn){ atticLines.push("棟木：" + S.moya + "×" + S.moya); atticTg.push([topDrawn.x, zKT + topDrawn.rise - S.moya / 2]); }   /* CAD-396：棟木の注記は描いた棟木だけ */
   if (firstTsuka){ atticLines.push("小屋束：" + S.tsuka + "×" + S.tsuka); atticTg.push([firstTsuka.x, zKT + firstTsuka.L / 2]); }
   note("middle", X(830), Y(zKT - S.hari) + 30, atticLines, atticTg);
 
@@ -30781,6 +30809,9 @@ function knDraw(svg, roomNm){
   });
 
   var legend = "矩計図：外壁を通る断面です。部材の寸法・間隔と高さは、仕様と間取りの設定から出しています。窓・建具と基礎の配筋は描いていません。見積は変わりません。";
+  if (S.roof === "yose") legend += "寄棟は、棟に直角・家の中央の断面です。";
+  if (S.roof === "mune") legend += "棟段差は、段差のある実物の形で描いています。";
+  if (S.roof === "kata") legend += "片流れは、低い側の壁からの断面です。";
   if (!kisoN) legend += "この家は基礎の新設が無いので、基礎は描いていません。";
   if (S.geya && S.geya.length) legend += "下屋の分は描いていません。";
   return {html: g, legend: legend};
@@ -30798,11 +30829,11 @@ function knRender(){
       keep = flSnap();
       for (var fi2 = 0; fi2 < S.fl.length; fi2++){
         var snap = S.fl[fi2] && S.fl[fi2].snap;
-        if (snap){ try { flLoad(snap); roomNm[fi2] = knCenterRoom(); } catch(e){} }
+        if (snap){ try { flLoad(snap); roomNm[fi2] = knCenterInfo(); } catch(e){} }
       }
       try { flLoad(keep); } catch(e){}
     }
-    roomNm[S.fi] = knCenterRoom();
+    roomNm[S.fi] = knCenterInfo();
     var out = knDraw(svg, roomNm);
     svg.innerHTML = out.html;
     if (lg) lg.textContent = out.legend;
@@ -30842,7 +30873,7 @@ function knOff(full){
 function knSig392(){
   try {
     return [S.mode, S.floors, S.fi, S.ch, S.ch2, S.dfl, S.fuko, S.kiso, S.kisoNew ? 1 : 0, S.keta, S.dosa, S.hari, S.moya, S.tsuka, S.moyaP, S.taruP, S.hariP, S.k, S.roof, S.high, S.ridge, S.noki, S.keraba, S.gaiheki, S.tr, S.gbW, S.gbC, S.cloth ? 1 : 0, S.danF ? 1 : 0, S.danW ? 1 : 0, S.danC ? 1 : 0, S.floor, S.floorKoho, S.joistP, S.flType, S.tenjoSec, S.tsuriLen, S.ceilFrame, S.roofW, S.pil,
-      (S.edges || []).length, (S.edges || []).reduce(function(a, e){ return a + (e.v || 0); }, 0), (S.geya || []).length, (S.fl || []).length].join("|");
+      (S.edges || []).length, (S.edges || []).reduce(function(a, e){ return a + (e.v || 0); }, 0), (S.geya || []).length, (S.fl || []).length, (S.tatami || []).map(function(z){ return z ? (z.fk || "tat") : ""; }).join(",")].join("|");
   } catch(e){ return ""; }
 }
 function knInit(){
