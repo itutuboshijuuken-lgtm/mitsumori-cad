@@ -13082,7 +13082,25 @@ document.addEventListener("click", function(e){
         {
           let gaps170 = rects.slice();
           const cover343 = [];
-          (S.tatami || []).forEach(o => { if (!o.rm){ gaps170 = gaps170.flatMap(p => subFloor140(p, o)); cover343.push(o); } });
+          /* CAD-397（追加）：rm印つきの記録も、全部合わせても今の部屋全体を
+             覆っていない時は「置いた範囲」として守る。既に合体した状態で保存
+             された家では、合体の操作がもう起きず、合体時の rm 外し（主案）だけ
+             では直らないため。部屋全体を覆っている時は従来どおり rm の扱いに
+             して、部屋全体の決め直しを塞がない。 */
+          const rmRecs397 = (S.tatami || []).filter(o => o.rm);
+          let rmWhole397 = false;
+          if (rmRecs397.length){
+            let left397 = rects.slice();
+            rmRecs397.forEach(o => { left397 = left397.flatMap(p => subFloor140(p, o)); });
+            /* ゾーン（土間・浴室）は元々すき間計算で別に引かれる範囲なので、
+               全体判定でも引いておく（読み込み時にゾーンで分割された記録でも
+               「部屋全体を覆っている」と正しく判定するため） */
+            (S.zones || []).forEach(z => { if (typeof zoneCutQ198 === "function" && zoneCutQ198(z)) left397 = left397.flatMap(p => subFloor140(p, z)); });
+            const roomA397 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+            const leftA397 = left397.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+            rmWhole397 = leftA397 <= Math.max(1, roomA397 * 0.001);
+          }
+          (S.tatami || []).forEach(o => { if (!o.rm || !rmWhole397){ gaps170 = gaps170.flatMap(p => subFloor140(p, o)); cover343.push(o); } });
           (S.zones || []).forEach(z => { if (typeof zoneCutQ198 === "function" && zoneCutQ198(z)) gaps170 = gaps170.flatMap(p => subFloor140(p, z)); });
           const roomA170 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
           const gapA170 = gaps170.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
@@ -18185,8 +18203,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try {
       var rr = roomRectAt(pt[0], pt[1]);
       if (!rr || rr.bad) return false;
-      return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
-             Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+      /* CAD-397：許容は壁厚＋余裕（200mm）。壁の内面に沿って囲んだ記録は
+         壁厚の分だけ部屋より小さく、6mm では「部屋全面」と判定されずに
+         囲み編集バーが開いて部屋バーへ辿り着けなかった。四辺とも部屋の
+         四辺から 200mm 以内なら、その記録は部屋全面の床とみなす。
+         一部だけを覆う記録は、どれか一辺が大きく離れるため従来どおり。 */
+      return Math.abs(r.x0 - rr.x0) < 200 && Math.abs(r.y0 - rr.y0) < 200 &&
+             Math.abs(r.x1 - rr.x1) < 200 && Math.abs(r.y1 - rr.y1) < 200;
     } catch(e){ return false; }
   }
   function isFloorRec177(r){
@@ -18687,8 +18710,13 @@ CAD-176 が部屋バーを先に開き、CAD-177 の入口が「部屋バー表�
     try {
       var rr = roomRectAt(pt[0], pt[1]);
       if (!rr || rr.bad) return false;
-      return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
-             Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+      /* CAD-397：許容は壁厚＋余裕（200mm）。壁の内面に沿って囲んだ記録は
+         壁厚の分だけ部屋より小さく、6mm では「部屋全面」と判定されずに
+         囲み編集バーが開いて部屋バーへ辿り着けなかった。四辺とも部屋の
+         四辺から 200mm 以内なら、その記録は部屋全面の床とみなす。
+         一部だけを覆う記録は、どれか一辺が大きく離れるため従来どおり。 */
+      return Math.abs(r.x0 - rr.x0) < 200 && Math.abs(r.y0 - rr.y0) < 200 &&
+             Math.abs(r.x1 - rr.x1) < 200 && Math.abs(r.y1 - rr.y1) < 200;
     } catch(e){ return false; }
   }
   function hit182(mm){
@@ -21461,8 +21489,10 @@ function fillsRoom287(r, pt){
 try {
 var rr = roomRectAt(pt[0], pt[1]);
 if (!rr || rr.bad) return false;
-return Math.abs(r.x0 - rr.x0) < 6 && Math.abs(r.y0 - rr.y0) < 6 &&
-Math.abs(r.x1 - rr.x1) < 6 && Math.abs(r.y1 - rr.y1) < 6;
+/* CAD-397：許容は壁厚＋余裕（200mm）。fillsRoom177 と同じ理由（壁の内面に沿って
+   囲んだ記録も「部屋全面」とみなし、囲み編集ではなく部屋バーへ進めるため）。 */
+return Math.abs(r.x0 - rr.x0) < 200 && Math.abs(r.y0 - rr.y0) < 200 &&
+Math.abs(r.x1 - rr.x1) < 200 && Math.abs(r.y1 - rr.y1) < 200;
 } catch(e){ return false;}
 }
 function hit287(mm){
