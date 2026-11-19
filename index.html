@@ -1081,6 +1081,9 @@ const WORK = [
   ["kaidanL", "階段（かね折れ）", "円/か所", 0, 200000],
   ["kaidanM", "階段（回り階段）", "円/か所", 0, 220000],
   ["ninkuT", "大工の人工（建方・造作・仕上げ全部／坪・刻みは別）", "人工/坪", 0, 5]   /* CAD-248：刻みは含まない事を明記 */,
+  ["daikuTsubo", "大工手間 基本坪単価（仮なし・自分で入力）", "円/坪", 0, 0],   /* CAD-391：ハウスメーカー方式の基本。仮単価は置かない（翔伍の決定 2026-11-19）。0＝未入力 */
+  ["kdDanS", "階段 取付手間（直階段）", "円/段", 0, 1700],   /* CAD-391：CAD-389 の 1.0人工/か所 を段数で割った換算（study-daiku-tema） */
+  ["kdDanM", "階段 取付手間（廻り・かね折れ等）", "円/段", 0, 2500],   /* CAD-391：1.5人工/か所 の換算 */
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
   ["kaitai", "解体（床・壁・天井）", "円/㎡", 0, 2500],
   ["caulkM", "サッシまわり・目地コーキング", "円/m", 0, 660],
@@ -5715,7 +5718,7 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   segBind("[data-gh]", "gaiheki", v => v, drawSpec);
   $("ghHint").textContent = S.gaiheki === "siding" ? "防水シート・胴縁＋サイディング＋コーナー役物＋コーキングを㎡で、水切りをmで出します。" : S.gaiheki === "yakisugi" ? "防水シート・胴縁＋焼杉＋役物を㎡で、水切りをmで出します。" : "塗り壁を㎡で、水切りをmで出します。";
   renderGai();
-  $("pcHint").textContent = S.precut ? "材木は単価表の材木の値段で全部出します（工場で長さ通りに切って配達する前提で、継ぎの見込みと4mの制限はかけません）。違いは「プレカット加工費」1行だけです（坪単価×延床坪数。最低額を設定した場合は、その額が下限になります）。" : "単価表の材木の値段で全部出します。違いは「刻み人工」1行だけです（人工/坪 × 延床坪数 × 大工単価）。";
+  $("pcHint").textContent = S.precut ? "材木は単価表の材木の値段で全部出します（工場で長さ通りに切って配達する前提で、継ぎの見込みと4mの制限はかけません）。違いは「プレカット加工費」と「プレカット運搬費」の行だけです（加工費は坪単価×延床坪数。最低額を設定した場合は、その額が下限になります）。大工手間は「基本（坪単価×延床）＋箇所ごと」で、刻みも基本に含まれます。" : "単価表の材木の値段で全部出します。大工手間は「基本（坪単価×延床）＋箇所ごと」で出します（刻みも基本に含まれます）。";   /* CAD-391：文言を新しい方式に */
   if (S.tr === "suji"){
     const n = S.sujiN ?? sujiAuto();
     $("trBox").innerHTML = `<div class="seg" style="margin-top:6px"><button data-sj="kata" aria-pressed="${S.suji === "kata"}" type="button">片筋交い</button><button data-sj="tasuki" aria-pressed="${S.suji === "tasuki"}" type="button">たすき掛け</button></div>
@@ -6146,7 +6149,7 @@ function calc(){
       /* CAD-291: 足場は建物全体で1回だけ（階ごと分は全部落とし、合算の後で建物全体の行を差し込む） */
       if (r.ash || /^足場/.test(r.name || "")){ if (ashAt291 < 0){ ashAt291 = rows.length; ashFl291 = i; ashSeq291 = ++seq291; } return; }
       /* CAD-291: 延床で決まる人工（刻み・プレカット加工費・大工手間）は階ごと分を落とし、合算の後で延床の合計から作り直す */
-      if (S.mode === "zo" && (r.name === "刻み人工" || r.name === "プレカット加工費" || r.name === "大工手間")){ if (labAt291 < 0){ labAt291 = rows.length; labFl291 = i; labSeq291 = ++seq291; } labKind291[r.name] = true; return; }
+      if (S.mode === "zo" && (r.name === "刻み人工" || r.name === "プレカット加工費" || r.name === "大工手間" || r.name === "大工手間（基本）")){ if (labAt291 < 0){ labAt291 = rows.length; labFl291 = i; labSeq291 = ++seq291; } labKind291[r.name] = true; return; }
       /* CAD-291: プレカット運搬費（1式）は最初の1行だけ残す */
       if (r.name === "プレカット運搬費"){ if (unpSeen291) return; unpSeen291 = true; }
       if (!r.grp){
@@ -6163,6 +6166,7 @@ function calc(){
   if (S.mode === "zo" && labAt291 >= 0){
     const nobeT291 = num("nobeT"), labRows291 = [];
     if (labKind291["プレカット加工費"]){ const w = workP("precut"), wm = workP("precutMin"), raw = w.p * nobeT291; labRows291.push({name: "プレカット加工費", spec: raw < wm.p ? `最低額 ${fmt(wm.p)}円（${fmt(w.p)}円/坪 × ${fmt(nobeT291, 2)}坪 ＝ ${fmt(Math.round(raw))}円のため）` : `${fmt(w.p)}円/坪 × ${fmt(nobeT291, 2)}坪`, qty: `${fmt(nobeT291, 2)}坪`, cost: Math.max(raw, wm.p), avg: w.avg || wm.avg, fix: {kind: "work", key: "precut"}}); }
+    if (labKind291["大工手間（基本）"]) labRows291.push(...daikuBaseRows391(nobeT291));   /* CAD-391：基本は建物全体の延床で1回だけ */
     if (labKind291["刻み人工"]){ const wk = workP("kizami"), wn = workP("ninku"), kRate291 = wk.avg && nobeT291 <= 15 ? 2 : wk.p, nk291 = kRate291 * nobeT291; labRows291.push({name: "刻み人工", spec: `${fmt(nk291, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate291, 1)}人工/坪 × ${fmt(nobeT291, 2)}坪${kRate291 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk291 * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }
     if (labKind291["大工手間"]){ const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT291 * w.p * 2) / 2, avg: true}; })();
       const np1 = workP("ninku"), note291 = `${S.precut ? "・プレカット加工費は別行" : "・刻み人工は別行"}・間仕切りは${rows.some(r => r.name === "大工手間（新設間仕切り）") ? "別行" : "この人工に含む"}`;
@@ -6296,7 +6300,7 @@ const C = calc0(); if (extra){ Object.assign(C, extra.fields); C.rows = extra.ro
   C.mitsu = 0; C.genEq = 0;
   C.rows.forEach(r => { if (r.grp || !r.cost) return; const eq = isEq(r); r.mk = 1 / (1 - (eq ? mE : mM) / 100); if (eq) C.genEq += r.cost; C.mitsu += r.cost * r.mk; });
   // 応援大工：お客様の金額はそのまま、原価だけ下がる
-  let T = 0; C.rows.forEach(r => { if (/^大工手間/.test(r.name)){ const m = String(r.spec).match(/([\d.]+)人工/); if (m) T += +m[1]; } });
+  let T = 0; C.rows.forEach(r => { if (r.nin391 != null){ T += r.nin391; return; } if (/^大工手間/.test(r.name)){ const m = String(r.spec).match(/([\d.]+)人工/); if (m) T += +m[1]; } });   /* CAD-391：基本の行は換算人工（nin391）で数える */
   const H = Math.min(S.ouenN || 0, T), wN = workP("ninku").p, wO = workP("ouen").p, diff = H * (wN - wO);
   C.ouen = {T, H, diff, wN, wO};
   C.genkaReal = C.genka - diff;
@@ -6766,7 +6770,7 @@ function calc00(){
     if (pi.fukaLens && pi.fukaLens.length){ const [fa385, fb385] = mabaSecP(); lum("mabashira", "ふかし壁 間柱", fa385, fb385, pi.fukaLens, `${fa385}×${fb385}・455間隔・片面の下地・壁 ${fmt(pi.lenFuka / 1000, 2)}m`, false); lum("suji", "ふかし壁 上下枠", 45, 105, Array(Math.ceil(pi.lenFuka * 2 / 3900)).fill(4000), "45×105", false); }   /* CAD-385: ふかしの下地は間仕切りと同じ物差し */
     lum("suji", "新設間仕切り 上下枠", 45, 105, Array(Math.ceil(pi.newLenEff * 2 / 3900)).fill(4000), "45×105", false);   /* CAD-292: 上下枠は高さ割合 */
     const w = workP("ninku"), nin = Math.ceil((pi.newLenEff + (pi.lenFuka || 0)) / 1000 * 0.4 * 2) / 2;   /* CAD-385: ふかしの下地の手間も同じ物差し（1mあたり0.4人工）に含める */   /* CAD-292: 大工手間も高さ割合 */
-    if (nin > 0 && !(S.mode === "zo" && !zoAttached())) rows.push({name: pi.newLen > 0 ? "大工手間（新設間仕切り）" : "大工手間（ふかし壁）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
+    if (nin > 0 && S.mode !== "zo") rows.push({name:   /* CAD-391：新築・増築の間仕切り・ふかし壁の手間は「大工手間（基本）」に含める（材料の行は従来どおり）。RF は従来どおり */ pi.newLen > 0 ? "大工手間（新設間仕切り）" : "大工手間（ふかし壁）", spec: `${fmt(nin, 1)}人工 × ${fmt(w.p)}円（1mあたり0.4人工で計算）`, qty: "", cost: nin * w.p, avg: true, fix: {kind: "work", key: "ninku"}});   /* CAD-248：新築は坪あたりの大工の人工に間仕切りを含むので出さない（二重計算の解消。増築・リフォームは従来どおり） */
   }
   function exRows(){
     S.extras.forEach(normEx);
@@ -7492,7 +7496,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   }
   grp("工事");
   if (S.precut){ const w = workP("precut"), wm = workP("precutMin"), raw = w.p * nobeT; rows.push({name: "プレカット加工費", spec: raw < wm.p ? `最低額 ${fmt(wm.p)}円（${fmt(w.p)}円/坪 × ${fmt(nobeT, 2)}坪 ＝ ${fmt(Math.round(raw))}円のため）` : `${fmt(w.p)}円/坪 × ${fmt(nobeT, 2)}坪`, qty: `${fmt(nobeT, 2)}坪`, cost: Math.max(raw, wm.p), avg: w.avg || wm.avg, fix: {kind: "work", key: "precut"}}); }
-  else { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT; rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
+  else if (S.mode !== "zo") { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT;   /* CAD-391：新築・増築の刻みは「大工手間（基本）」に含める（行を出さない） */ rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
   if (S.precut){ const wu = workP("precutUnpan"); rows.push({name: "プレカット運搬費", spec: `工場からの配達 ${fmt(wu.p)}円`, qty: "1式", cost: wu.p, avg: wu.avg, fix: {kind: "work", key: "precutUnpan"}}); }   // CAD-122: 運搬費は交通費・移動とは別の行（プレカット方法だけ）
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
   if (S.kisoNew){
@@ -7540,10 +7544,8 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two && !(S.tenken || []).some(o => o.k === "stair")){ if (typeof stairAuto389 === "function" && workP("kaidan").avg) rows.push(...stairAuto389((S.ch || 2400) + (S.dosa || 240))); else work("kaidan", "階段", 1, "か所"); }   /* CAD-389：自動の階段も直階段として積み上げ＋手間（単価を自分で入れている時は従来の1行） */
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
-  const nk = S.ninkuN ? {n: S.ninkuN, avg: false} : (() => { const w = workP("ninkuT"); return {n: Math.ceil(nobeT * w.p * 2) / 2, avg: true}; })();
-  const np1 = workP("ninku");
-  const note248 = `${S.precut ? "・プレカット加工費は別行" : "・刻み人工は別行"}・間仕切りは${rows.some(r => r.name === "大工手間（新設間仕切り）") ? "別行" : "この人工に含む"}`;   /* CAD-248：刻み・間仕切りの扱いを明示 */
-  rows.push({name: "大工手間", spec: `${fmt(nk.n, 1)}人工 × ${fmt(np1.p)}円${nk.avg ? `（坪${fmt(workP("ninkuT").p, 1)}人工で計算）` : ""}${note248}`, qty: "", cost: nk.n * np1.p, avg: nk.avg, fix: {kind: "ninku"}});
+  /* CAD-391：従来の大工手間（人工の積み上げ）の計算は廃止。下の行で「大工手間（基本）」に置き換えた */   /* CAD-248：刻み・間仕切りの扱いを明示 */
+  rows.push(...daikuBaseRows391(nobeT));   /* CAD-391：大工手間（基本）＝基本坪単価×延床（ハウスメーカー方式・翔伍の決定 2026-11-19） */
   exRows();
   bisouRow(nobe);
   rows.push({name: "処分費", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
@@ -7590,12 +7592,14 @@ function drawEst(){
   $("areaBox4").innerHTML = C.pt ? "" : `<div><span>${C.two ? "延床" : "床"}</span><b>${fmt(C.nobeT, 2)}<small>坪</small></b></div><div><span>外壁（窓を引く）</span><b>${fmt(C.wallA, 1)}<small>㎡</small></b></div><div><span>屋根</span><b>${fmt(C.roofA, 1)}<small>㎡</small></b></div>`;
   const gm = C.gomi || {}, gL = GCAT.filter(([k]) => gm[k] && gm[k].m3 > 0), gT = gL.reduce((x, [k]) => x + gm[k].m3, 0), gK = gL.reduce((x, [k]) => x + gm[k].kg, 0);
   const gomiBox = gT > 0 ? `<div class="card" style="margin-top:10px;font-size:14px"><b>🗑 解体廃材の目安：約${fmt(gT, 1)}立米・約${fmt(Math.round(gK))}kg</b>${gL.map(([k, nm]) => `<div>・${nm} ${fmt(gm[k].m3, 2)}立米／${fmt(Math.round(gm[k].kg))}kg</div>`).join("")}<div style="color:var(--sub);font-size:12px;margin-top:4px">軽トラ（約1立米・350kg）なら約${Math.max(Math.ceil(gT), Math.ceil(gK / 350))}杯、2tダンプ（約2立米・2t）なら約${Math.max(Math.ceil(gT / 2), Math.ceil(gK / 2000))}台</div></div>` : "";
-  $("matWarn").innerHTML = (C.frameErr154 ? `<div class="warn"><b>柱・間柱を数えられなかったので、その分が見積に入っていません。</b>図面を確かめてから、もう一度見積を開いてください。</div>` : "") + gomiBox + (avgN ? `<div class="warn"><b>「仮」の行（${avgN}か所）は、単価表にないので山口県あたりの平均単価（目安）で入れています。</b>タップすると自分の単価に直せます。</div>` : "") + (missN ? `<div class="warn">単価が出せない所が ${missN} か所あります。</div>` : "") + (isRect() || S.mode !== "zo" ? "" : `<div class="warn">L字などは、屋根・小屋組・大引を外まわりの四角で出した目安です。</div>`);
+  $("matWarn").innerHTML = (C.rows.some(r => r && r.mu391) ? `<div class="warn"><b>大工手間（基本）の坪単価が未入力です。</b>単価表で自分の坪単価を入れてください。<button type="button" id="muGo391" style="margin-left:8px">単価表を開く</button></div>` : "") + (C.frameErr154 ? `<div class="warn"><b>柱・間柱を数えられなかったので、その分が見積に入っていません。</b>図面を確かめてから、もう一度見積を開いてください。</div>` : "") + gomiBox + (avgN ? `<div class="warn"><b>「仮」の行（${avgN}か所）は、単価表にないので山口県あたりの平均単価（目安）で入れています。</b>タップすると自分の単価に直せます。</div>` : "") + (missN ? `<div class="warn">単価が出せない所が ${missN} か所あります。</div>` : "") + (isRect() || S.mode !== "zo" ? "" : `<div class="warn">L字などは、屋根・小屋組・大引を外まわりの四角で出した目安です。</div>`);
+  const mg391 = $("muGo391"); if (mg391) mg391.onclick = () => go("P");   /* CAD-391：未入力の誘導ボタン */
   let sub = 0, html = `<tr><th>項目</th><th style="text-align:right">原価</th></tr>`;
   const subRow = () => { const r = sub ? `<tr class="sum"><td>小計</td><td class="cost">${fmt(Math.round(sub))}</td></tr>` : ""; sub = 0; return r; };
   const TR0 = TRADES[HB.__trade];
   const rowOrder = () => { const all = C.rows.map((r, i) => [r, i]); if (!TR0) return all; const el = all.filter(([r]) => !r.grp && !r.hide && TR0.re.test(r.name || "")); if (!el.length) return all; const ss = el.reduce((a, [r]) => a + (r.cost || 0), 0); return [[{grp: `${TR0.i} ${TR0.n}の工事　原価 ${fmt(Math.round(ss))}円`}, -1]].concat(el, [[{grp: "■ そのほかの工事"}, -1]], all.filter(x => !el.includes(x))); };
   const d249 = (() => {   /* CAD-249：手刻み／プレカットの差額（表示だけ・合計には入れない。式は calc00 の行と同一） */
+    if (S.mode === "zo") return null;   /* CAD-391：新築・増築では刻み人工の行が無くなった（基本に含まれる）ため、差額の出しようがない */
     if (!C.rows.some(r => r.name === "刻み人工" || r.name === "プレカット加工費")) return null;
     const wk = workP("kizami"), wn = workP("ninku"), kRate = wk.avg && C.nobeT <= 15 ? 2 : wk.p, kizami = kRate * C.nobeT * wn.p;
     const wp = workP("precut"), wm = workP("precutMin"), wu = workP("precutUnpan"), precut = Math.max(wp.p * C.nobeT, wm.p) + wu.p;
@@ -7640,7 +7644,8 @@ function drawEst(){
 function fixRow(r){
   if (!r || !r.fix) return;
   const f = r.fix;
-  if (f.kind === "work"){ const w = WORK.find(x => x[0] === f.key); openPad({title: w[1], sub: PR.work[f.key] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[f.key] || "", done: v => { PR.work[f.key] = v || 0; saveP(); drawEst(); }}); }
+  if (f.kind === "daikuBase391"){ openPad({title: "大工手間 基本坪単価", sub: "仮単価はありません。自分の坪単価を入れてください（空のまま決定で未入力に戻ります）", unit: "円/坪", value: PR.work.daikuTsubo || "", done: v => { PR.work.daikuTsubo = v || 0; saveP(); drawEst(); }}); }
+  else if (f.kind === "work"){ const w = WORK.find(x => x[0] === f.key); openPad({title: w[1], sub: PR.work[f.key] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[f.key] || "", done: v => { PR.work[f.key] = v || 0; saveP(); drawEst(); }}); }
   else if (f.kind === "teika379"){ const mk = f.maker; openPad({title: `${mk} の掛率`, sub: KAKE379.by[mk] ? "メーカー別の掛率です（空のまま決定で、全体の掛率に戻ります）" : `今は全体の掛率 ${fmt(KAKE379.all, 1)}% を使っています`, unit: "%", value: KAKE379.by[mk] || "", done: v => { if (v == null || !(v > 0)) delete KAKE379.by[mk]; else KAKE379.by[mk] = v; saveKake379(); drawEst(); }}); }
   else if (f.kind === "ninku") openPad({title: "大工の人工（この現場）", sub: `空のまま決定で、坪${fmt(workP("ninkuT").p, 1)}人工の自動に戻ります`, unit: "人工", value: S.ninkuN || "", done: v => { S.ninkuN = v || null; save(); drawEst(); }});
   else if (f.kind === "kotsu"){ const K = S.kotsu = S.kotsu || {}; openPad({title: "現場までの距離（片道）", unit: "km", value: K.km || "", done: v => { K.km = v || 0; save(); drawEst(); }}); }
@@ -7677,7 +7682,7 @@ function pdfData(mode){
   const C = calc(), k = C.genka > 0 ? C.mitsu / C.genka : 1, groups = []; let cur = null;
   C.rows.forEach(r => { if (r.hide) return;
     if (r.grp){ cur = {name: String(r.grp).replace(/　?原価.*$/, ""), items: []}; groups.push(cur); return; }
-    if (!(r.cost > 0)) return;
+    if (!(r.cost > 0) && !r.mu391) return;   /* CAD-391：基本の未入力行は0円でも見積書に残す */
     if (!cur){ cur = {name: "工事", items: []}; groups.push(cur); }
     cur.items.push({name: r.name, qty: r.qty || "", amt: r.cost * k}); });
   const gs = groups.filter(g => g.items.length), total = Math.round(C.mitsu);
@@ -7871,6 +7876,7 @@ function drawKoutei(C){
   const d = {}; PH.forEach(([k]) => d[k] = 0);
   C.rows.forEach(r => {
     const k = r.fix && r.fix.key, q = r.q;
+    if (r.nin391 != null){ d.daiku += r.nin391; return; }   /* CAD-391：基本の行は換算人工 */
     if (/^大工手間/.test(r.name)){ const m = String(r.spec).match(/([\d.]+)人工/); if (m) d.daiku += +m[1]; return; }
     if (k && PH_RATE[k] && q > 0){ const [ph, per] = PH_RATE[k]; d[ph] += q / per; }
     if (k === "ashiba" || k === "ashibaW"){ d.ashiba1 = d.ashiba2 = 1; try { const x = window.ASH230D && window.ASH230D(); if (x){ d.ashiba1 = x.a; d.ashiba2 = x.b; } } catch(e){} }
@@ -9564,8 +9570,8 @@ function drawPrice(){
     return `<div class="pgrp">${cat}</div>` + list.map(([it, i]) => `<button class="prow" data-it="${i}" type="button"><span>${it.kari ? `<span class="kari">仮</span> ` : ""}${esc(it.name)}<small>${esc(itemSpec(it))}</small></span><b>${fmt(it.price)}円/${esc(it.unit)}</b></button>`).join("");
   }).join("");
   $("priceList").querySelectorAll("[data-it]").forEach(b => b.onclick = () => editItem(+b.dataset.it, null, drawPrice));
-  $("workList").innerHTML = WORK.map(([k, n, u]) => `<button class="set" data-wk="${k}" type="button"><span>${n}<small>${u}</small></span><b>${PR.work[k] ? fmt(PR.work[k]) : `<span class="kari">仮</span> ${fmt(WORK.find(x => x[0] === k)[4])}`}</b></button>`).join("") + `<p class="hint">「仮」は山口県あたりの平均の目安です。自分の単価を入れると置き換わります。</p>`;
-  $("workList").querySelectorAll("[data-wk]").forEach(b => b.onclick = () => { const w = WORK.find(x => x[0] === b.dataset.wk); openPad({title: w[1], sub: PR.work[w[0]] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[w[0]] || "", done: v => { PR.work[w[0]] = v || 0; saveP(); drawPrice(); }}); });
+  $("workList").innerHTML = WORK.map(([k, n, u]) => `<button class="set" data-wk="${k}" type="button"><span>${n}<small>${u}</small></span><b>${k === "daikuTsubo" && !PR.work[k] ? "未入力" : PR.work[k] ? fmt(PR.work[k]) : `<span class="kari">仮</span> ${fmt(WORK.find(x => x[0] === k)[4])}`}</b></button>`).join("") + `<p class="hint">「仮」は山口県あたりの平均の目安です。自分の単価を入れると置き換わります。</p><p class="hint">「大工手間 基本坪単価」は仮単価がありません。自分の坪単価を入れてください（新築・増築の大工手間の基本になります）。階段の取付手間は段あたりの単価です。</p>`;   /* CAD-391 */
+  $("workList").querySelectorAll("[data-wk]").forEach(b => b.onclick = () => { const w = WORK.find(x => x[0] === b.dataset.wk); openPad({title: w[1], sub: w[0] === "daikuTsubo" ? (PR.work[w[0]] ? "原価の単価" : "仮単価はありません。自分の坪単価を入れてください（空のまま決定で未入力に戻ります）") : PR.work[w[0]] ? "原価の単価" : `今は平均 ${fmt(w[4])}（仮）`, unit: w[2], value: PR.work[w[0]] || "", done: v => { PR.work[w[0]] = v || 0; saveP(); drawPrice(); }}); });   /* CAD-391：基本坪単価の案内 */
   if (window.__drawKake379) window.__drawKake379();
 }
 function editItem(i, preset, after){
@@ -30483,14 +30489,16 @@ if (!b0) b0 = stBuild389({sf: "s"}, g.H);
 const per = g.c > 0? Math.round(sum / g.c): sum;
 rows.push({name: `${name}（材料）`, spec: `${g.c}か所 × ${fmt(Math.round(per * pct / 100))}円（部品定価 ${fmt(per)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b0.det}／階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段・手すり 片側 約${railL}m）`, qty: "", cost: Math.round(sum * pct / 100), avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: g.c});
 const nin = g.t === "s"? 1: 1.5, np = workP("ninku"); /* 手間：直階段 1.0人工／その他 1.5人工（study-stair-labor）。金額は大工1人工の単価に連動 */
-rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${fmt(nin, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: nin * np.p * g.c, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: g.c});
+if (S.mode === "zo"){ const dk = g.t === "s" ? "kdDanS" : "kdDanM", dw = workP(dk); rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${n}段 × ${fmt(dw.p)}円/段`, qty: `${n * g.c}段`, cost: dw.p * n * g.c, avg: dw.avg, miss: !dw.p, fix: {kind: "work", key: dk}, q: n * g.c}); }   /* CAD-391：取付手間は段単価（箇所側）。直 ¥1,700/段・その他 ¥2,500/段（study の換算・段数は材料と同じ見積段数） */
+    else rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${fmt(nin, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: nin * np.p * g.c, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: g.c});
 }
 /* 自動の階段（2階建て・階段なし）用：直階段として同じ2行を作る */
 function stairAuto389(H){
 const pct = tkRatePct379("ノダ"), b = stBuild389({sf: "s"}, H), mat = Math.round(b.sum * pct / 100), np = workP("ninku");
+const lab391 = S.mode === "zo" ? {name: "階段（取付手間）", spec: `1か所 × ${b.N}段 × ${fmt(workP("kdDanS").p)}円/段`, qty: `${b.N}段`, cost: workP("kdDanS").p * b.N, avg: workP("kdDanS").avg, miss: !workP("kdDanS").p, fix: {kind: "work", key: "kdDanS"}, q: b.N} : {name: "階段（取付手間）", spec: `1か所 × ${fmt(1, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: np.p, avg: np.avg, miss: !np.p, fix: {kind: "work", key: "ninku"}, q: 1};   /* CAD-391：自動の階段（直階段）も段単価（zo のみ） */
 return [
 {name: "階段（材料）", spec: `1か所 × ${fmt(mat)}円（部品定価 ${fmt(b.sum)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b.det}／階高 約${fmt(H)} ÷ 190 ＝ ${b.N}段）`, qty: "", cost: mat, avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: 1},
-{name: "階段（取付手間）", spec: `1か所 × ${fmt(1, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: np.p, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: 1}
+lab391
 ];
 }
 </script>
@@ -30850,4 +30858,21 @@ return [
   }, 700);
   HB.__pc390 = {tab: function(){ return tab390; }, setTab: setTab390, render: render390};
 })();
+</script>
+
+<script>
+/* ===== CAD-391：大工手間（基本）＝基本坪単価 × 延床（ハウスメーカー方式） =====
+   翔伍の決定（2026-11-19）：基本坪単価には仮単価を置かない。使う人が単価表で
+   自分で入れる項目にし、初期状態は未入力。未入力の時は study
+   （study-daiku-tema-housemaker-2026-11-19.md）の推奨どおり、0円の行に
+   「未入力」と表示して見積書にも残す。
+   換算人工（nin391）は応援大工の原価計算と工程表の大工日数のためだけに持つ
+   （金額には使わない）。 */
+function daikuBaseRows391(nobeT){
+  const w = workP("daikuTsubo");
+  const np = workP("ninku").p;
+  const nin = w.p > 0 && np > 0 ? (w.p * nobeT) / np : 0;
+  if (w.p > 0) return [{name: "大工手間（基本）", spec: `${fmt(nobeT, 2)}坪 × ${fmt(w.p)}円/坪（基本の坪単価 × 延床）`, qty: `${fmt(nobeT, 2)}坪`, cost: w.p * nobeT, avg: false, fix: {kind: "daikuBase391"}, nin391: nin}];
+  return [{name: "大工手間（基本）", spec: "坪単価 未入力（単価表で自分の坪単価を入れてください）", qty: `${fmt(nobeT, 2)}坪（単価未入力）`, cost: 0, avg: false, mu391: true, fix: {kind: "daikuBase391"}, nin391: 0}];
+}
 </script>
