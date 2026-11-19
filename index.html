@@ -6545,7 +6545,8 @@ function calc00(){
   const R = PT ? {b: {w: 0, h: 0}} : roof(), {W, D, n, Lc, Lc2, Hd, two, Hk, ms, kerA, kerB, nokiA, nokiB, t} = R, kata = S.roof === "kata", yose = S.roof === "yose";
   const F = two ? 2 : 1;
   const lens = PT ? [] : S.edges.map(e => e.v), per = lens.reduce((a, b) => a + b, 0);
-  const lensD = PT ? [] : lens.filter((v, i) => i !== S.house);   // CAD-232: 土台用（母屋側の辺は土台を拾わない。本人の決定 2026-11-14）
+  const lensD = PT ? [] : lens.filter((v, i) => i !== S.house);
+  const DODAI390 = 105;   /* CAD-390：土台の幅（土台の行と同じ105角）。大引の長さ＝芯々−土台幅＋大入れ両端30（翔伍の決定 2026-11-19） */   // CAD-232: 土台用（母屋側の辺は土台を拾わない。本人の決定 2026-11-14）
   const GY = (!PT && S.mode === "zo" && two) ? (S.geya || []).map(g => geyaDim(g, R)) : [];
   const gyA = GY.reduce((x, g) => x + g.L * g.d, 0) / 1e6;
   const area = PT ? 0 : areaMM() / 1e6, tsubo = area * 0.3025, nobe = area * F + gyA, nobeT = nobe * 0.3025, wood = S.floor !== "doma" && S.floor !== "oki";   /* CAD-183: 床の種別は図面の記録から拾う。S.floor は全面土間・土間+置き床で作った旧物件の互換のためだけに残す */
@@ -7149,7 +7150,7 @@ function calc00(){
       };
       if (ff === "frame" || ff === "new"){
         const JR = sc.jr();
-        lum("obiki", "大引", 90, 90, JR.raw.map(L => L + 100), "90角・910間隔", false);
+        lum("obiki", "大引", 90, 90, JR.raw.map(L => L - (+S.pil || 105) + 30), "90角・910間隔", false);   /* CAD-390：柱面間＋大入れ両端30（相手は柱・柱幅は S.pil） */
         { const p = simplePrice("鋼製束"); rows.push({name: "鋼製束", spec: "910間隔", qty: `${JR.posts}本`, ...ap(p, JR.posts), fix: {kind: "simple", cat: "鋼製束", name: "鋼製束"}}); }
         sheet("構造用合板", 28, "床合板 28mm", 910, 1820, Math.ceil(a0 / 1.6562 * 1.05), `床 ${fmt(a0, 1)}㎡`);
       }
@@ -7343,7 +7344,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
 
   grp("木材");
   lum("dodai", "土台", 105, 105, jtA(lensD, 150), "105角", true);
-  if (wood) lum("obiki", "大引", 105, 105, JR2.raw.map(L => L + 100), "105角・910間隔", true);
+  if (wood) lum("obiki", "大引", 105, 105, JR2.raw.map(L => L - DODAI390 + 30), "105角・910間隔", true);   /* CAD-390：土台の内面間＋大入れ両端30。従来の芯々＋100では土台の内側に入らなかった */
   if (wood && FKO264 === "goushou" && koNeeds264.length) lum("obiki", "小つなぎ", 105, 105, koNeeds264, "105角・大引と大引の間・910ピッチ", false);
   if (wood && FKO264 === "neda" && nedaNeeds264.length) lum("taruki", "床根太", 45, S.joistSec === "60" ? 60 : 45, nedaNeeds264, `45×${S.joistSec === "60" ? 60 : 45}・@${S.joistP === 455 ? 455 : 303}・土台の外面まで`, false);
   if (two){
@@ -29270,8 +29271,8 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
     h += lines.length ? lines.join("") : "<div class='cM'>（ありません）</div>";
     h += "<div class='cH'>まだ分からない物</div>";
     [
-      "ボードの割り付け：壁と天井のボードは、面積から枚数だけ出しています。壁ごとに何枚を何mmに切るかは、まだ計算していません。",
-      "部屋ごとの天井下地：新築では家全体を1つの長方形で計算しています。部屋ごとには分けていません。",
+      "ボードの割り付け：部屋ごとのカット寸法は「プレカット図面」の「カット寸法・本数」に出しています（パターンA・開口の分は引いていません）。見積の枚数は面積から出しています。",
+      "部屋ごとの天井下地：部屋ごとの野縁の寸法は「プレカット図面」の「カット寸法・本数」に出しています。見積は家全体で計算しています。",
       "床の仕上げ材：フローリング・フロアタイル・クッションフロアは㎡だけです。板の並べ方（割り付け）はまだです。",
       "基礎の材料：生コンの量・鉄筋の長さと本数・型枠の面積は、まだ計算していません。",
       "桁と梁の太さ：設定の値で決まっています。スパンから自動では決めていません。",
@@ -30494,3 +30495,353 @@ return [
 }
 </script>
 </html>
+
+<style>
+#pcList390{font-size:13.5px;line-height:1.65;color:#222}
+#pcList390 .pH{font-weight:700;font-size:14.5px;margin:14px 0 4px;padding-bottom:2px;border-bottom:2px solid #C9A227}
+#pcList390 .pH:first-child{margin-top:0}
+#pcList390 .pF{font-weight:700;margin:16px 0 2px;color:#7A5B00}
+#pcList390 .pM{margin:6px 0}
+#pcList390 .pN{color:#5B6673;font-size:12.5px;margin:4px 0}
+#pcList390 .pS{color:#5B6673;font-size:12px}
+</style>
+<script>
+/* ================= CAD-390：プレカット図面「カット寸法・本数」 =================
+   翔伍の指示（2026-11-19）：プレカット図面の欄に、各部屋の天井の縁（野縁）の
+   カット寸法と本数、大引、骨組みのカット寸法と本数、ボードのカット寸法と
+   枚数を入れる。階段 発注図（CAD-377）は無変更で、切り替えに
+   「カット寸法・本数」を足す形。
+   ・骨組み・床組み（階ごと）：見積の材料取り（__capCut368・CAD-368 と同じ
+     窓口）をそのまま使うので、見積と全く同じ長さ・本数になる。
+     大引は CAD-390 の新しい長さ（芯々−土台幅＋大入れ両端30）。
+   ・天井の野縁（部屋ごと）：見積の tenjo() と同じ式を、部屋の寸法
+     （roomStats の外形）で部屋ごとに回す。新築の見積は家全体で計算して
+     いるため、本数は見積と合わない事がある（画面に明記）。
+   ・ボード（部屋ごと）：割り付けは本人の確定ルール
+     （study-board-layout-2026-11-18）＝パターンA（部屋の芯から芯・
+     両端の余りは同じ寸法）／ジョイントは910ずらす／天井先行の時は
+     端のボードを切らずにそのまま張り出す／壁先行の時は910を10mm
+     切って900から始める。AとBの使い分け基準は未確定のため、
+     標準はパターンA（画面に明記）。開口（窓・ドア）の分は引いて
+     いないので、枚数は見積（面積から）より多くなる（画面に明記）。
+   見るだけで、見積・保存は一切変えない。保存キーは追加しない。 */
+(function(){
+  "use strict";
+  var tab390 = "stair", lastSig390 = "";
+  var POST120 = {"柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1};
+  var FLOORGRP = {"大引": 1, "小つなぎ": 1, "床根太": 1, "置き床 際根太": 1};
+  function n390(v){ return Math.round(v).toLocaleString("ja-JP"); }
+  function esc390(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+  function lenTxt390(needs){
+    var m = {}, ks = [];
+    needs.forEach(function(v){ var r = Math.round(v); if (!(r in m)){ m[r] = 0; ks.push(r); } m[r]++; });
+    ks.sort(function(a, b){ return b - a; });
+    return ks.map(function(r){ return n390(r) + " × " + m[r] + "本"; }).join("／");
+  }
+
+  /* 窓枠（窓ごと）：CAD-368 の sashParts368 と同じ取り方 */
+  function sashParts390(){
+    var out = [];
+    try {
+      (S.sashes || []).forEach(function(s){
+        if (typeof wakuLen206 !== "function" || !(wakuLen206(s) > 0)) return;
+        var w = +s.w || 0, h = +s.h || 0;
+        out.push({cat: s.cat || "窓", w: w, h: h, n: s.n || 1, ue: w, shita: /掃き出し/.test(s.cat || "") ? 0 : w, tate: h + 40});
+      });
+    } catch(e){}
+    return out;
+  }
+
+  /* 部屋の控え（roomStats を表示用に整える） */
+  function rooms390(){
+    try {
+      if (typeof roomStats !== "function") return [];
+      return roomStats(S.ch || 2400).map(function(m){
+        var ch = S.ch || 2400;
+        try { ch = (typeof roomChOf === "function" && roomChOf(m.r)) || ch; } catch(e){}
+        return {lbl: roomLbl(m.r), w: Math.round(m.bb.w), h: Math.round(m.bb.h), cw: m.w, cc: m.c, ch: ch};
+      });
+    } catch(e){ return []; }
+  }
+
+  /* calc() を1回回して材料取りを階ごとに集める（CAD-368 の collect368 と同じ窓口＋部屋の控え） */
+  function collect390(){
+    var caps = [], sashSnaps = [sashParts390()], roomSnaps = [rooms390()];
+    window.__capCut368 = caps;
+    var origLoad = window.flLoad;
+    window.flLoad = function(o){
+      var r = origLoad.apply(this, arguments);
+      try { sashSnaps.push(sashParts390()); } catch(e){ sashSnaps.push([]); }
+      try { roomSnaps.push(rooms390()); } catch(e){ roomSnaps.push([]); }
+      if (window.__capCut368) window.__capCut368.push({mark368: 1});
+      return r;
+    };
+    var C = null;
+    try { C = calc(); } catch(e){ C = null; }
+    window.flLoad = origLoad;
+    window.__capCut368 = null;
+    var segs = [[]];
+    caps.forEach(function(c){ if (c.mark368) segs.push([]); else segs[segs.length - 1].push(c); });
+    var nonEmpty = [];
+    segs.forEach(function(s, i){ if (s.length) nonEmpty.push({caps: s, sash: sashSnaps[i] || [], rooms: roomSnaps[i] || []}); });
+    var nf = 1; try { if (S.fl && S.fl.length) nf = S.fl.length; } catch(e){}
+    var floors = [], geya = [];
+    if (nf > 1 && nonEmpty.length >= 2){
+      nonEmpty.forEach(function(x, k){
+        if (k < nf) floors.push({label: (S.fl[k] && S.fl[k].name) || (k + 1) + "階", caps: x.caps, sash: x.sash, rooms: x.rooms});
+        else x.caps.forEach(function(c){ if (/^下屋/.test(c.name) || c.name === "垂木掛け") geya.push(c); });
+      });
+      if (geya.length) floors.splice(1, 0, {label: "下屋", caps: geya, sash: [], rooms: []});
+    } else if (nonEmpty.length){
+      var all = []; nonEmpty.forEach(function(x){ all = all.concat(x.caps); });
+      floors.push({label: nf > 1 ? "1〜2階（まとめて計算）" : null, caps: all, sash: nonEmpty[0].sash, rooms: nonEmpty[0].rooms});
+    }
+    return {floors: floors, rows: C && C.rows ? C.rows : []};
+  }
+
+  /* 天井の野縁：見積の tenjo() と同じ式を部屋の寸法で回す */
+  function noji390(w, h){
+    if (!(w > 0 && h > 0)) return null;
+    var sec = S.tenjoSec === 30 ? 30 : 36;
+    var PIL = +S.pil || 105, wall = S.ceilOrder === "wall", bd = wall ? (gbParse(S.gbW)[1] || 12.5) : 0;
+    var cut = PIL + 2 * bd, wf = w - cut, hf = h - cut, T = 45, TL = +S.tsuriLen || 250;
+    if (wf <= 0 || hf <= 0) return null;
+    var kata = S.ceilKata === "chote" ? "chote" : "tante";
+    var sh = Math.min(wf, hf), lo = Math.max(wf, hf);
+    var nLen = kata === "tante" ? sh : lo, nSpan = kata === "tante" ? lo : sh;
+    var nN = Math.max(0, Math.ceil(nSpan / 303) - 1), nU = Math.max(0, Math.ceil(nLen / 910) - 1);
+    var lN = nLen - 2 * T, lU = nSpan - 2 * T, nT = nU * Math.max(0, Math.ceil(nSpan / 910) - 1);
+    return {sec: sec, fuchi: [nSpan, nSpan, lN, lN],
+      noji: nN > 0 ? {len: lN, n: nN} : null,
+      uke: nU > 0 ? {len: lU, n: nU} : null,
+      tsuri: nT > 0 ? {len: TL, n: nT} : null};
+  }
+
+  /* 長さ方向の割り付け（パターンA：両端の余りは同じ。stag=true の列はジョイントを910ずらす） */
+  function segsA390(lo, stag){
+    var nF = Math.floor(lo / 1820), rem = lo - nF * 1820, e = rem / 2, s = [], i;
+    if (!stag){
+      if (e > 0) s.push(e);
+      for (i = 0; i < nF; i++) s.push(1820);
+      if (e > 0) s.push(e);
+      if (!s.length) s.push(lo);
+      return s;
+    }
+    if (nF >= 1){ s.push(e + 910); for (i = 0; i < nF - 1; i++) s.push(1820); s.push(910 + e); return s; }
+    if (lo > 910) return [910, lo - 910];
+    return [lo];
+  }
+
+  /* 天井ボード（910×1820）の割り付け。柱面（野縁と同じ寸法）で割る */
+  function ceilBoard390(w, h){
+    var PIL = +S.pil || 105, wallFirst = S.ceilOrder === "wall";
+    var bd = wallFirst ? (gbParse(S.gbW)[1] || 12.5) : 0;
+    var cut = PIL + 2 * bd, wf = w - cut, hf = h - cut;
+    if (wf <= 0 || hf <= 0) return null;
+    var lo = Math.max(wf, hf), sh = Math.min(wf, hf), strips = [], i;
+    if (!wallFirst){
+      var nS = Math.max(1, Math.ceil(sh / 910));
+      for (i = 0; i < nS; i++) strips.push(910);   /* 天井先行：端の列も切らずに張り出す */
+    } else if (sh <= 900){
+      strips.push(Math.round(sh));
+    } else {
+      strips.push(900);                            /* 壁先行：900×1820 がスタート */
+      var rest = sh - 900;
+      while (rest >= 910){ strips.push(910); rest -= 910; }
+      if (rest > 0) strips.push(Math.round(rest));
+    }
+    var pieces = {}, order = [], tot = 0;
+    strips.forEach(function(sw, si){
+      segsA390(lo, si % 2 === 1).forEach(function(sl){
+        var key = Math.round(sw) + "×" + Math.round(sl);
+        if (!(key in pieces)){ pieces[key] = 0; order.push(key); }
+        pieces[key]++; tot++;
+      });
+    });
+    return {pieces: pieces, order: order, tot: tot, wallFirst: wallFirst};
+  }
+
+  /* 壁ボード（910×規格長さ）の割り付け。壁の長さは芯々（パターンA） */
+  function wallBoard390(w, h, ch){
+    var gs = ch <= 2420 ? 2420 : 2730;
+    var pieces = {}, order = [], tot = 0;
+    [w, h, w, h].forEach(function(L){
+      if (!(L > 0)) return;
+      var nF = Math.floor(L / 910), rem = L - nF * 910, e = rem / 2, ws = [], i;
+      if (e > 0) ws.push(e);
+      for (i = 0; i < nF; i++) ws.push(910);
+      if (e > 0) ws.push(e);
+      if (!ws.length) ws.push(L);
+      ws.forEach(function(bw){
+        var key = Math.round(bw) + "×" + gs;
+        if (!(key in pieces)){ pieces[key] = 0; order.push(key); }
+        pieces[key]++; tot++;
+      });
+    });
+    return {pieces: pieces, order: order, tot: tot, gs: gs};
+  }
+
+  function piecesTxt390(P){
+    return P.order.map(function(k){ var ab = k.split("×"); return n390(+ab[0]) + " × " + n390(+ab[1]) + " … " + P.pieces[k] + "枚"; }).join("／");
+  }
+
+  /* 1階分の材料取りを「骨組み」「床組み」「筋かい」に分ける */
+  function segGroups390(fl){
+    var order = [], map = {};
+    fl.caps.forEach(function(c){
+      if (/天井 (縁|野縁受け|野縁|吊木)$/.test(c.name)) return;   /* 天井下地は部屋ごとの節で出す */
+      var needs = c.needs.slice();
+      if (POST120[c.name]) needs = needs.map(function(v){ return v - 120; });
+      var k = c.name + "|" + c.a + "x" + c.b + "|" + c.sp;
+      if (!map[k]){ map[k] = {name: c.name, key: c.key, a: c.a, b: c.b, sp: c.sp, needs: []}; order.push(map[k]); }
+      map[k].needs = map[k].needs.concat(needs);
+    });
+    var frame = [], floorG = [], suji = null;
+    order.forEach(function(e){
+      if (e.key === "suji"){ suji = e; return; }
+      if (FLOORGRP[e.name]) floorG.push(e); else frame.push(e);
+    });
+    return {frame: frame, floorG: floorG, suji: suji};
+  }
+
+  function entry390(e){
+    return "<div class='pM'><b>" + esc390(e.name) + "</b> <span class='pS'>" + esc390(e.sp) + " " + n390(e.a) + "×" + n390(e.b) + "</span><br>" + lenTxt390(e.needs) + "</div>";
+  }
+
+  function render390(){
+    var box = document.getElementById("pcList390"); if (!box) return;
+    var D = collect390();
+    var rf = S.mode === "rf";
+    var h = "<div class='pH'>カット寸法と本数</div>";
+    h += "<div class='pN'>プレカットと刻みに出すための、材料ごとの長さと本数です。見るだけの画面で、見積と保存は変わりません。</div>";
+    h += "<div class='pN'>大引の長さは「土台の芯々 − 土台の厚み ＋ 大入れ分（両端15mmずつ）」で出しています。</div>";
+    if (!D.floors.length) h += "<div class='pM'>まだ図面がありません。</div>";
+
+    /* 骨組み（階ごと） */
+    h += "<div class='pH'>骨組み（階ごと・刻み用）</div>";
+    var anyFrame = false;
+    D.floors.forEach(function(fl){
+      var G = segGroups390(fl);
+      if (!G.frame.length && !fl.sash.length && !G.suji) return;
+      anyFrame = true;
+      if (fl.label) h += "<div class='pF'>■ " + esc390(fl.label) + "</div>";
+      G.frame.forEach(function(e){ h += entry390(e); });
+      if (fl.sash && fl.sash.length){
+        h += "<div class='pM'><b>窓枠</b> <span class='pS'>窓ごと・1台分</span></div>";
+        fl.sash.forEach(function(w){
+          h += "<div class='pM'>" + esc390(w.cat) + " " + n390(w.w) + "×" + n390(w.h) + (w.n > 1 ? "（" + w.n + "台）" : "") + "<br>上枠 " + n390(w.ue) + (w.shita ? "・下枠 " + n390(w.shita) : "・下枠なし") + "・縦枠 " + n390(w.tate) + " × 2本</div>";
+        });
+      }
+      if (G.suji) h += "<div class='pM'><b>筋かい</b> <span class='pS'>" + n390(G.suji.a) + "×" + n390(G.suji.b) + "</span><br>" + G.suji.needs.length + "本（1本の長さ " + n390(G.suji.needs[0] || 0) + "・入れる位置はまだ決めていません）</div>";
+    });
+    if (!anyFrame && D.floors.length) h += "<div class='pM'>（ありません）</div>";
+
+    /* 床組み（階ごと） */
+    h += "<div class='pH'>床組み（階ごと）</div>";
+    var anyFloor = false;
+    D.floors.forEach(function(fl){
+      var G = segGroups390(fl);
+      if (!G.floorG.length) return;
+      anyFloor = true;
+      if (fl.label) h += "<div class='pF'>■ " + esc390(fl.label) + "</div>";
+      G.floorG.forEach(function(e){ h += entry390(e); });
+    });
+    var tsukaN = 0;
+    (D.rows || []).forEach(function(r){ if (r && r.name === "鋼製束"){ var q = parseInt(String(r.qty || "0"), 10); if (q > 0) tsukaN += q; } });
+    if (tsukaN > 0){ anyFloor = true; h += "<div class='pM'><b>鋼製束</b><br>" + n390(tsukaN) + "本（910間隔・見積の行から）</div>"; }
+    if (!anyFloor && D.floors.length) h += "<div class='pM'>（ありません）</div>";
+
+    /* 部屋ごと（野縁・ボード） */
+    var roomSecs = [];
+    D.floors.forEach(function(fl){ (fl.rooms || []).forEach(function(rm){ roomSecs.push({fl: fl.label, rm: rm}); }); });
+    h += "<div class='pH'>天井の野縁（部屋ごと）</div>";
+    var anyNoji = false;
+    roomSecs.forEach(function(rs){
+      if (rf && rs.rm.cc !== "frame") return;
+      var nj = noji390(rs.rm.w, rs.rm.h);
+      if (!nj) return;
+      anyNoji = true;
+      h += "<div class='pF'>" + esc390(rs.rm.lbl) + (rs.fl ? "（" + esc390(rs.fl) + "）" : "") + " <span class='pS'>" + n390(rs.rm.w) + "×" + n390(rs.rm.h) + "</span></div>";
+      h += "<div class='pM'><b>縁</b> <span class='pS'>" + nj.sec + "×45</span><br>" + lenTxt390(nj.fuchi) + "</div>";
+      if (nj.noji) h += "<div class='pM'><b>野縁</b> <span class='pS'>" + nj.sec + "×45・@303</span><br>" + n390(nj.noji.len) + " × " + nj.noji.n + "本</div>";
+      if (nj.uke) h += "<div class='pM'><b>野縁受け</b> <span class='pS'>" + nj.sec + "×45・@910</span><br>" + n390(nj.uke.len) + " × " + nj.uke.n + "本</div>";
+      if (nj.tsuri) h += "<div class='pM'><b>吊木</b> <span class='pS'>" + nj.sec + "×45・@910×910</span><br>" + n390(nj.tsuri.len) + " × " + nj.tsuri.n + "本</div>";
+    });
+    if (!anyNoji) h += "<div class='pM'>（部屋が取れていないか、天井下地の工事がありません）</div>";
+    h += "<div class='pN'>野縁は見積と同じ式で部屋ごとに計算しています。新築の見積は家全体で計算しているため、本数は見積と合わない事があります。</div>";
+
+    h += "<div class='pH'>ボード（部屋ごと）</div>";
+    var anyBoard = false;
+    roomSecs.forEach(function(rs){
+      var cb = null, wb = null;
+      if (!rf || ["board", "frame", "base"].indexOf(rs.rm.cc) >= 0) cb = ceilBoard390(rs.rm.w, rs.rm.h);
+      if (!rf || ["board", "base"].indexOf(rs.rm.cw) >= 0) wb = wallBoard390(rs.rm.w, rs.rm.h, rs.rm.ch);
+      if (!cb && !wb) return;
+      anyBoard = true;
+      h += "<div class='pF'>" + esc390(rs.rm.lbl) + (rs.fl ? "（" + esc390(rs.fl) + "）" : "") + " <span class='pS'>" + n390(rs.rm.w) + "×" + n390(rs.rm.h) + "</span></div>";
+      if (cb) h += "<div class='pM'><b>天井ボード</b> <span class='pS'>" + esc390(S.gbC) + "（910×1,820）" + (cb.wallFirst ? "・壁先行" : "・天井先行") + "</span><br>" + piecesTxt390(cb) + "<br>合計 " + cb.tot + "枚</div>";
+      if (wb) h += "<div class='pM'><b>壁ボード</b> <span class='pS'>" + esc390(S.gbW) + "（910×" + n390(wb.gs) + "）</span><br>" + piecesTxt390(wb) + "<br>合計 " + wb.tot + "枚</div>";
+    });
+    if (!anyBoard) h += "<div class='pM'>（部屋が取れていないか、ボードの工事がありません）</div>";
+    h += "<div class='pN'>割り付けはパターンA（部屋の芯から芯・両端の余りは同じ寸法）で、ジョイントは910ずらしています。天井先行の時は端の列を切らずに張り出し、壁先行の時は900×1,820から始めます。開口（窓・ドア）の分は引いていないので、枚数は見積（面積から出した数）より多くなります。</div>";
+
+    box.innerHTML = h;
+    var lg = document.getElementById("pvLegend");
+    if (lg) lg.textContent = "プレカット図面：カット寸法と本数です。見積は変わりません。";
+  }
+
+  function sig390(){
+    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length, S.ch || "", S.ch2 || "", S.ceilOrder || "", S.ceilKata || "", S.gbW || "", S.gbC || "", (S.roomFin || []).length].join("|"); } catch(e){ return ""; }
+  }
+
+  function setTab390(t){
+    tab390 = t;
+    var cut = t === "cut";
+    var l377 = document.getElementById("pcList377"), bx = document.getElementById("pcBox390");
+    if (l377) l377.style.display = cut ? "none" : "";
+    if (bx) bx.style.display = cut ? "block" : "none";
+    var sb = document.querySelector("#pcSeg377 [data-pc='stair']"), cb = document.getElementById("pcCutBtn390");
+    if (sb) sb.setAttribute("aria-pressed", String(!cut));
+    if (cb) cb.setAttribute("aria-pressed", String(cut));
+    if (cut){ render390(); lastSig390 = sig390(); }
+  }
+
+  function init390(){
+    var host = document.getElementById("pcBox377");
+    if (host && !document.getElementById("pcBox390")){
+      var d = document.createElement("div");
+      d.id = "pcBox390"; d.style.display = "none";
+      d.innerHTML = "<div id='pcList390'></div>";
+      host.appendChild(d);
+    }
+    var seg = document.getElementById("pcSeg377");
+    if (seg && !document.getElementById("pcCutBtn390")){
+      var b = document.createElement("button");
+      b.type = "button"; b.id = "pcCutBtn390"; b.dataset.pc = "cut"; b.textContent = "カット寸法・本数";
+      b.setAttribute("aria-pressed", "false");
+      seg.appendChild(b);
+      b.addEventListener("click", function(){ setTab390("cut"); });
+      seg.addEventListener("click", function(e){
+        var t = e.target && e.target.closest ? e.target.closest("[data-pc]") : null;
+        if (t && t.dataset.pc === "stair") setTab390("stair");
+      });
+    }
+  }
+
+  init390();
+  setInterval(function(){
+    try {
+      init390();
+      var on = false;
+      try { on = !!(window.HB && HB.__pc377 && HB.__pc377.on()); } catch(e){}
+      if (on && tab390 === "cut"){
+        var bx = document.getElementById("pcBox390");
+        if (bx && bx.style.display !== "block") setTab390("cut");
+        var sg = sig390();
+        if (sg && sg !== lastSig390){ lastSig390 = sg; render390(); }
+      }
+    } catch(e){}
+  }, 700);
+  HB.__pc390 = {tab: function(){ return tab390; }, setTab: setTab390, render: render390};
+})();
+</script>
