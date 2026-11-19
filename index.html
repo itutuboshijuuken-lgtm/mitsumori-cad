@@ -26920,7 +26920,7 @@ function fullName299(o){
 /* ---- 部分の並び（o.parts） ---- */
 function clampN306(n, lo, hi){ n = Math.round(+n || 0); return Math.max(lo, Math.min(hi, n)); }
 function normParts306(p){
-  if (!Array.isArray(p) || !p.length || p.length > 5) return null;
+  if (!Array.isArray(p) || !p.length || p.length > 9) return null;
   var out = [];
   for (var i = 0; i < p.length; i++){
     var q = p[i]; if (!q || typeof q !== "object") return null;
@@ -26935,7 +26935,7 @@ function sfOfParts306(parts){
   return p === "s" ? "s" : p === "ms" ? "d" : p === "sm" ? "u" : p === "msm" ? "b" : p === "sms" ? "k" : null;
 }
 function partsOf306(o){
-  var p = normParts306(o && o.parts); if (p && sfOfParts306(p)) return p;
+  var p = normParts306(o && o.parts); if (p) return p;   /* CAD-395：汎用の並びも受け付ける */
   var sh = shapeOf306(o), len = Math.max(0, +o.d || 0), wid = Math.max(0, +o.w || 0);
   var sn = function(v){ return clampN306(v / TD, 0, 40); };
   if (sh.sf === "d") return [{t: "m", kind: sh.tn, dir: "L"}, {t: "s", n: sn(len - MW)}];
@@ -26945,6 +26945,7 @@ function partsOf306(o){
   return [{t: "s", n: Math.max(1, sn(len))}];
 }
 function dimsOf306(parts){
+  if (!sfOfParts306(parts)){ var lg = layoutGen395(parts); return [lg.fw, lg.fd]; }   /* CAD-395：汎用の並び */
   if (sfOfParts306(parts) === "k") return [MW + TD * parts[2].n, MW + TD * parts[0].n];
   var L = 0; parts.forEach(function(q){ L += q.t === "m" ? MW : TD * q.n; });
   return [MW, L];
@@ -26952,13 +26953,14 @@ function dimsOf306(parts){
 function nameOf306(o){
   var parts = partsOf306(o), sf = sfOfParts306(parts), kn = tnName306;
   var ms = parts.filter(function(q){ return q.t === "m"; }), ss = parts.filter(function(q){ return q.t === "s"; });
+  if (!sf) return parts.map(function(q){ return q.t === "s" ? "直" + q.n + "段" : (q.kind === 1 ? "踊り場" : (q.dir === "R" ? "右廻り" : "左廻り") + q.kind + "段"); }).join("・");   /* CAD-395：汎用の並び */
   if (sf === "s") return "直階段";
   if (sf === "k") return "かね折れ・" + kn(ms[0].kind);
   if (sf === "d") return "下回り・" + kn(ms[0].kind) + "／直" + ss[0].n + "段";
   if (sf === "u") return "上回り・直" + ss[0].n + "段／" + kn(ms[0].kind);
   return "上下回り・下" + kn(ms[0].kind) + "／直" + ss[0].n + "段／上" + kn(ms[1].kind);
 }
-window.__st306 = { partsOf: partsOf306, dimsOf: dimsOf306, name: nameOf306, shapeOf: shapeOf306, sfOfParts: sfOfParts306, totalOf: totalOf306, fit: fitParts370 };
+window.__st306 = { partsOf: partsOf306, dimsOf: dimsOf306, name: nameOf306, shapeOf: shapeOf306, sfOfParts: sfOfParts306, totalOf: totalOf306, fit: fitParts370, layoutGen: layoutGen395 };
 window.__st299 = { shapeOf: shapeOf306, name: fullName299, shapeName: shapeName306, tnName: tnName306 };
 
 /* ---- 絵の組み立て（mm・上が下端＝入口、下から上へ上がる向きで作り、dir で回す） ---- */
@@ -26984,7 +26986,94 @@ function arcPts306(C, d0, d1){
     pts.push([C[0] + 455 * (d0[0] * ca + perp[0] * sa), C[1] + 455 * (d0[1] * ca + perp[1] * sa)]); }
   return pts;
 }
+function layoutGen395(parts){
+  /* CAD-395：5形プリセット以外の並びの絵。歩行フレームで組み立てる：
+     入口の辺の左角 A と進む向き h を持ち、直は向きに沿って進み、
+     廻りは 910×910 の箱の中で向きを90°変える。最初の部分が廻りの時は
+     箱へ横から入る（従来の下回りの絵と同じ）。preset の絵は従来分岐が描く。 */
+  var HV = [[0, -1], [1, 0], [0, 1], [-1, 0]];   /* 北・東・南・西 */
+  var hi = 0, A = [0, 0];
+  if (parts.length && parts[0].t === "m") hi = parts[0].dir === "R" ? 3 : 1;
+  var rects = [], lines = [], walk = [], turns = [], entries = [];
+  var pushW = function(p){ var l = walk[walk.length - 1]; if (!l || Math.abs(l[0] - p[0]) > .01 || Math.abs(l[1] - p[1]) > .01) walk.push([p[0], p[1]]); };
+  var lastStr = null;
+  parts.forEach(function(q, idx){
+    var h = HV[hi], r = HV[(hi + 1) % 4];
+    entries.push({ a: [A[0], A[1]], b: [A[0] + MW * r[0], A[1] + MW * r[1]], idx: idx });
+    if (q.t === "s"){
+      var len = TD * (q.n || 0);
+      var cs = [[A[0], A[1]], [A[0] + MW * r[0], A[1] + MW * r[1]], [A[0] + MW * r[0] + len * h[0], A[1] + MW * r[1] + len * h[1]], [A[0] + len * h[0], A[1] + len * h[1]]];
+      var xs = cs.map(function(c){ return c[0]; }), ys = cs.map(function(c){ return c[1]; });
+      var xmn = Math.min.apply(null, xs), xmx = Math.max.apply(null, xs), ymn = Math.min.apply(null, ys), ymx = Math.max.apply(null, ys);
+      rects.push({ x: xmn, y: ymn, w: xmx - xmn, h: ymx - ymn });
+      for (var k = 1; k < (q.n || 0); k++) lines.push([cs[0][0] + TD * k * h[0], cs[0][1] + TD * k * h[1], cs[1][0] + TD * k * h[0], cs[1][1] + TD * k * h[1], .9]);
+      if (idx === 0) pushW([A[0] + 455 * r[0] + len * .06 * h[0], A[1] + 455 * r[1] + len * .06 * h[1]]);
+      pushW([A[0] + len * h[0] + 455 * r[0], A[1] + len * h[1] + 455 * r[1]]);
+      A = [A[0] + len * h[0], A[1] + len * h[1]];
+      lastStr = { len: len, h: h };
+    } else {
+      var cs2 = [[A[0], A[1]], [A[0] + MW * r[0], A[1] + MW * r[1]], [A[0] + MW * r[0] + MW * h[0], A[1] + MW * r[1] + MW * h[1]], [A[0] + MW * h[0], A[1] + MW * h[1]]];
+      var xs2 = cs2.map(function(c){ return c[0]; }), ys2 = cs2.map(function(c){ return c[1]; });
+      var bx = Math.min.apply(null, xs2), by = Math.min.apply(null, ys2);
+      rects.push({ x: bx, y: by, w: MW, h: MW });
+      var C = q.dir === "R" ? [A[0] + MW * r[0], A[1] + MW * r[1]] : [A[0], A[1]];
+      var d0 = q.dir === "R" ? [-r[0], -r[1]] : [r[0], r[1]];
+      lines = lines.concat(fanLines306(C, d0, [h[0], h[1]], q.kind, { x: bx, y: by, w: MW, h: MW }));
+      turns.push({ x: bx + MW / 2, y: by + MW / 2, q: q });
+      arcPts306(C, d0, [h[0], h[1]]).forEach(pushW);
+      if (q.dir === "R"){ A = [A[0] + MW * r[0] + MW * h[0], A[1] + MW * r[1] + MW * h[1]]; hi = (hi + 1) % 4; }
+      else hi = (hi + 3) % 4;
+      lastStr = null;
+    }
+  });
+  if (lastStr && walk.length > 1){ var lp = walk[walk.length - 1]; lp[0] -= lastStr.h[0] * lastStr.len * .08; lp[1] -= lastStr.h[1] * lastStr.len * .08; }
+  var minX = 0, minY = 0, maxX = MW, maxY = MW;
+  if (rects.length){
+    minX = 1e18; minY = 1e18; maxX = -1e18; maxY = -1e18;
+    rects.forEach(function(rc){ minX = Math.min(minX, rc.x); minY = Math.min(minY, rc.y); maxX = Math.max(maxX, rc.x + rc.w); maxY = Math.max(maxY, rc.y + rc.h); });
+  }
+  var fw = maxX - minX, fd = maxY - minY, ox = -minX, oy = -minY;
+  var rectsT = rects.map(function(rc){ return { x: rc.x + ox, y: rc.y + oy, w: rc.w, h: rc.h }; });
+  lines = lines.map(function(q){ return [q[0] + ox, q[1] + oy, q[2] + ox, q[3] + oy, q[4]]; });
+  walk = walk.map(function(p){ return [p[0] + ox, p[1] + oy]; });
+  turns = turns.map(function(t){ return { x: t.x + ox, y: t.y + oy, q: t.q }; });
+  entries = entries.map(function(e){ return { a: [e.a[0] + ox, e.a[1] + oy], b: [e.b[0] + ox, e.b[1] + oy], idx: e.idx }; });
+  /* 部分同士の境目（2つ目以降の入口の辺）を太線で引く */
+  entries.forEach(function(e){ if (e.idx > 0) lines.push([e.a[0], e.a[1], e.b[0], e.b[1], 1.3]); });
+  /* 占有形の内側の輪郭（全体の枠に重なる部分は枠が描くので除く） */
+  var edOf = function(rc){ return [
+    { f: rc.y, a: "x", from: rc.x, to: rc.x + rc.w }, { f: rc.y + rc.h, a: "x", from: rc.x, to: rc.x + rc.w },
+    { f: rc.x, a: "y", from: rc.y, to: rc.y + rc.h }, { f: rc.x + rc.w, a: "y", from: rc.y, to: rc.y + rc.h } ]; };
+  var allE = [];
+  rectsT.forEach(function(rc, i){ edOf(rc).forEach(function(e){ e.i = i; allE.push(e); }); });
+  allE.forEach(function(e){
+    var ivs = [[e.from, e.to]];
+    allE.forEach(function(e2){
+      if (e2.i === e.i || e2.a !== e.a || Math.abs(e2.f - e.f) > .01) return;
+      var lo = Math.max(e.from, e2.from), hi2 = Math.min(e.to, e2.to);
+      if (hi2 - lo <= .01) return;
+      var out = [];
+      ivs.forEach(function(iv){
+        if (hi2 <= iv[0] || lo >= iv[1]){ out.push(iv); return; }
+        if (lo > iv[0]) out.push([iv[0], lo]);
+        if (hi2 < iv[1]) out.push([hi2, iv[1]]);
+      });
+      ivs = out;
+    });
+    var onB = e.a === "x" ? (Math.abs(e.f) < .01 || Math.abs(e.f - fd) < .01) : (Math.abs(e.f) < .01 || Math.abs(e.f - fw) < .01);
+    if (onB) return;
+    ivs.forEach(function(iv){
+      if (iv[1] - iv[0] <= .5) return;
+      if (e.a === "x") lines.push([iv[0], e.f, iv[1], e.f, 1.3]); else lines.push([e.f, iv[0], e.f, iv[1], 1.3]);
+    });
+  });
+  var head = null;
+  if (walk.length){ var wp = walk[walk.length - 1], hv = HV[hi]; head = [wp[0], wp[1], hv[0], hv[1]]; }
+  return { fw: fw, fd: fd, lines: lines, walk: walk, head: head, turns: turns };
+}
+
 function layout306(parts){
+  if (!sfOfParts306(parts)) return layoutGen395(parts);   /* CAD-395：汎用の並び */
   var sf = sfOfParts306(parts), lines = [], walk = [], head = null, fw, fd;
   var pushW = function(pts){ pts.forEach(function(p){ var l = walk[walk.length - 1]; if (!l || Math.abs(l[0] - p[0]) > .01 || Math.abs(l[1] - p[1]) > .01) walk.push(p); }); };
   if (sf === "s"){
@@ -27135,7 +27224,7 @@ function applyStair306(o, bar, parts){
   o.parts = JSON.parse(JSON.stringify(parts));
   o.sf = sf;
   o.tn = ms.length ? ms[0].kind : 3;
-  o.t2 = sf === "b" && ms[1] ? ms[1].kind : (snap.t2 || 3);
+  o.t2 = ms[1] ? ms[1].kind : (snap.t2 || 3);   /* CAD-395：2つ目の廻りがあればその段数 */
   o.st = effSt306(sf, o.tn);
   var dm = dimsOf306(parts); o.w = dm[0]; o.d = dm[1];
   moveTenken(o, 0, 0);
@@ -27341,6 +27430,281 @@ if (typeof drawSelBarK === "function" && !drawSelBarK.__st306){
   var wrappedBarK306 = function(bar){ var r = origBarK306.apply(this, arguments); fixBar306(bar || document.getElementById("selBar")); return r; };
   wrappedBarK306.__st306 = true;
   drawSelBarK = wrappedBarK306;
+}
+})();
+</script>
+
+<script id="stair395js">
+/* ===== CAD-395：階段の決め方を作り替え（本人の決定 2026-11-19） =====
+   階段は1段目から順に聞く：「最初はまっすぐ何段？ それとも最初から回る？
+   回るなら何段で、左回りか右回りか」。決めた部分からその場で絵を描いて
+   形を見せ、合っているか確かめながら進める（組み立て画面は全画面）。
+   真ん中の直の段数は聞かない：階高から決まる目標段数（階高÷190・切り上げ）
+   へ、残りを自動の直で埋める。階高は通常は今の設定（自動）を使い、
+   変更の入口だけ置く。
+   部屋に収まらなくても取り消さない：警告を出して、はみ出した形のまま
+   図面に表示する（本人が見て「この作りじゃダメだ」と気づけるため）。
+   並びのデータは既存の o.parts（{t:"s",n}／{t:"m",kind,dir} の列）そのまま。
+   ・新しく置いた階段：置いたら組み立て画面が開く（最初から聞く）
+   ・既存の階段：選択バーの「階段の形」ボタンが組み立て画面を開く
+     （5形プリセットのシートは廃止。既存の階段もその並びとして開ける） */
+(function(){ "use strict";
+var A306 = window.__st306;
+if (!A306) return;
+var B = null;   /* {o, bar, draft, q, pk:{kind, dir}} */
+
+function esc395(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+function fd319(v){ try { if (typeof fmtD319 === "function") return fmtD319(v); } catch(e){} return fmt(v); }
+function H395(){ var o = B && B.o; return (o && o.kh) || ((typeof S !== "undefined" && S) ? (S.ch || 2400) + (S.dosa || 240) : 2640); }
+function T395(){ return Math.max(1, Math.ceil(H395() / 190)); }
+function tot395(){ return (B ? B.draft : []).reduce(function(a, q){ return a + (q.t === "m" ? (q.kind || 0) : (q.n || 0)); }, 0); }
+function partLbl395(q){ return q.t === "s" ? "直" + q.n + "段" : (q.kind === 1 ? "踊り場" : (q.dir === "R" ? "右廻り" : "左廻り") + q.kind + "段"); }
+function cloneParts395(p){ return (p || []).map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; }); }
+function complete395(){ return !!B && B.draft.length > 0 && tot395() === T395(); }
+
+/* ---- 組み立て途中の絵（__st306.layout の幾何をそのまま使う） ---- */
+function svgOf395(parts){
+  if (!parts.length) return "<div style='height:100%;display:flex;align-items:center;justify-content:center;color:#8A97A5;font-size:14px'>ここに形が出ます</div>";
+  var lay = A306.layout(parts), fw = lay.fw, fd = lay.fd, M = Math.max(fw, fd);
+  var sw = M / 300, C = "#5B6B7A", g = "";
+  g += "<rect x='0' y='0' width='" + fw + "' height='" + fd + "' fill='#fff' stroke='" + C + "' stroke-width='" + (sw * 1.7) + "'/>";
+  lay.lines.forEach(function(q){ g += "<line x1='" + q[0] + "' y1='" + q[1] + "' x2='" + q[2] + "' y2='" + q[3] + "' stroke='" + C + "' stroke-width='" + (q[4] >= 1.3 ? sw * 1.3 : sw * .9) + "'/>"; });
+  if (lay.walk.length > 1){
+    g += "<path d='M" + lay.walk.map(function(p){ return p[0] + " " + p[1]; }).join(" L") + "' fill='none' stroke='" + C + "' stroke-width='" + (sw * 1.5) + "'/>";
+    if (lay.head){
+      var hx = lay.head[0], hy = lay.head[1], dx = lay.head[2], dy = lay.head[3], L = M * .05, Wd = M * .022, px = -dy, py = dx;
+      g += "<polygon points='" + (hx + dx * L) + "," + (hy + dy * L) + " " + (hx + px * Wd) + "," + (hy + py * Wd) + " " + (hx - px * Wd) + "," + (hy - py * Wd) + "' fill='" + C + "'/>";
+    }
+    var fs = Math.max(34, M / 17), halo = "paint-order:stroke;stroke:#fff;stroke-width:" + (fs * .18) + "px;font-size:" + fs + "px;font-weight:700;fill:#3E4A57";
+    var w0 = lay.walk[0];
+    g += "<text x='" + w0[0] + "' y='" + (w0[1] + fs * 1.15) + "' text-anchor='middle' style='" + halo + "'>登り口</text>";
+    if (lay.head) g += "<text x='" + lay.head[0] + "' y='" + (lay.head[1] - fs * .35) + "' text-anchor='middle' style='" + halo + "'>上がり切り</text>";
+  }
+  return "<svg viewBox='" + (-M * .06) + " " + (-M * .06) + " " + (fw + M * .12) + " " + (fd + M * .12) + "' style='width:100%;height:100%;display:block' role='img' aria-label='階段の形'>" + g + "</svg>";
+}
+
+/* ---- 画面の組み立て ---- */
+function ensureDom395(){
+  if (document.getElementById("stBuild395")) return;
+  /* 組み立て中は、浮動シート用の「閉じる」（z-index 9000）が画面の上に残らない様にする */
+  var sty = document.createElement("style");
+  sty.textContent = "body.stB395open #closeAllFloat{display:none!important}";
+  document.head.appendChild(sty);
+  var ov = document.createElement("div");
+  ov.id = "stBuild395";
+  ov.hidden = true;
+  ov.style.cssText = "position:fixed;inset:0;z-index:30;background:#F7F9FC;display:none;flex-direction:column";
+  ov.innerHTML =
+    "<div style='background:var(--ai);color:#fff;display:flex;align-items:center;gap:8px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px'>" +
+      "<div style='font-weight:800;font-size:16px;flex:1'>階段を組み立てる</div>" +
+      "<button id='stB395KH' type='button' style='min-height:40px;padding:0 12px;font-size:13.5px;font-weight:700;border-radius:9px;border:1px solid rgba(255,255,255,.55);background:transparent;color:#fff'></button>" +
+      "<button id='stB395X' type='button' style='min-height:40px;padding:0 12px;font-size:13.5px;font-weight:700;border-radius:9px;border:1px solid rgba(255,255,255,.55);background:transparent;color:#fff'>やめる</button>" +
+    "</div>" +
+    "<div id='stB395Stat' style='padding:8px 12px 2px;font-size:13.5px;line-height:1.55;color:#1B2430'></div>" +
+    "<div id='stB395Warn' style='padding:2px 12px;font-size:13.5px;font-weight:700;color:#C22'></div>" +
+    "<div id='stB395Svg' style='flex:1;min-height:110px;padding:2px 10px'></div>" +
+    "<div id='stB395List' style='padding:2px 12px 6px;font-size:13px;line-height:1.5;color:#3E4A57'></div>" +
+    "<div id='stB395Q' style='padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));background:#fff;border-top:1px solid #D5DBE2'></div>";
+  document.body.appendChild(ov);
+  document.getElementById("stB395X").onclick = function(){ closeBuilder395(); };
+  document.getElementById("stB395KH").onclick = function(){
+    if (!B) return;
+    var o = B.o, aH = (S.ch || 2400) + (S.dosa || 240);
+    openPad({ title: "階段の階高", sub: "段数の計算に使います（自動は天井高＋胴差 ＝ " + fmt(aH) + "）", value: Math.round(o.kh || aH),
+      extra: [{ label: "自動に戻す", fn: function(){ try { if (typeof closePad === "function") closePad(); } catch(e){} if (o.kh){ pushUndo(); delete o.kh; save(); drawPlan(); } if (B) render395(); } }],
+      done: function(v){ if (v){ pushUndo(); if (Math.round(v) === aH) delete o.kh; else o.kh = Math.round(v); save(); drawPlan(); } if (B) render395(); } });
+  };
+}
+function openBuilder395(o, bar, isNew){
+  if (!o || o.k !== "stair") return;
+  ensureDom395();
+  B = { o: o, bar: bar || null, draft: isNew ? [] : cloneParts395(A306.partsOf(o)), q: "menu", pk: { kind: 3, dir: "L" } };
+  render395();
+  document.body.classList.add("stB395open");
+  var el395 = document.getElementById("stBuild395");
+  el395.hidden = false;
+  el395.style.display = "flex";
+}
+function closeBuilder395(){
+  document.body.classList.remove("stB395open");
+  var el = document.getElementById("stBuild395");
+  if (el){ el.hidden = true; el.style.display = "none"; }
+  B = null;
+}
+window.__st395 = { open: openBuilder395 };
+
+/* ---- 描き直し ---- */
+function btn395(attr, val, label, on, dis){
+  return "<button type='button' data-" + attr + "='" + val + "'" + (dis ? " disabled" : "") +
+    " style='min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid " + (on ? "#2563B0" : "#C9D2DC") +
+    ";background:" + (dis ? "#EDF1F5" : on ? "#E8F1FB" : "#fff") + ";color:" + (dis ? "#8A97A5" : "#1B2430") + "'>" + label + "</button>";
+}
+function render395(){
+  if (!B) return;
+  var o = B.o, T = T395(), tot = tot395(), R = T - tot, H = H395();
+  document.getElementById("stB395KH").textContent = "階高 " + fd319(H) + (o.kh ? "" : "（自動）") + " ▸";
+  /* 状態 */
+  var stat = "";
+  if (B.draft.length){
+    stat = "下から：" + B.draft.map(function(q){ return partLbl395(q) + (q.auto395 ? "（自動）" : ""); }).join(" → ");
+    stat += "<br>今 " + tot + " 段／目標 " + T + " 段（階高 " + fmt(H) + (o.kh ? "" : "・自動") + "）";
+    if (complete395()) stat += "・蹴上 " + (Math.round(H / tot * 10) / 10) + "mm";
+    else if (R > 0) stat += "・あと " + R + " 段で上に届きます";
+  } else stat = "まだ何も決まっていません。下の質問に答えてください。";
+  document.getElementById("stB395Stat").innerHTML = stat;
+  /* 警告（収まらない・段数の超過。どちらも止めずに知らせるだけ） */
+  var warn = "";
+  if (B.draft.length){
+    try {
+      var dm = A306.dimsOf(B.draft), ow = o.w, od = o.d;
+      o.w = dm[0]; o.d = dm[1];
+      var pk = (window.__guard298 && window.__guard298.poke) ? window.__guard298.poke(o) : 0;
+      o.w = ow; o.d = od;
+      if (pk > 0) warn = "この形は壁に当たって収まりません（決定すると、はみ出したまま図面に表示されます）";
+    } catch(e){}
+    if (tot > T) warn = (warn ? warn + "／" : "") + "段数が目標（" + T + "段）を超えています";
+  }
+  document.getElementById("stB395Warn").textContent = warn;
+  /* 絵と並びの一覧 */
+  document.getElementById("stB395Svg").innerHTML = svgOf395(B.draft);
+  document.getElementById("stB395List").innerHTML = B.draft.length
+    ? B.draft.map(function(q, i){ return (i + 1) + ". " + partLbl395(q) + (q.auto395 ? "（自動）" : ""); }).join("　")
+    : "";
+  renderQ395(T, tot, R);
+}
+function renderQ395(T, tot, R){
+  var q = document.getElementById("stB395Q"), h = "";
+  var grid2 = "display:grid;grid-template-columns:1fr 1fr;gap:8px";
+  var lbl = "font-size:14.5px;font-weight:700;margin:0 2px 8px;color:#1B2430";
+  if (complete395()){
+    h += "<div style='" + lbl + "'>形ができました。合っていますか。「決定」で図面に反映します。</div>";
+  } else if (tot > T){
+    h += "<div style='" + lbl + "'>段数が目標を超えました。「1つ戻す」で減らしてください。</div>";
+  } else if (B.q === "s"){
+    h += "<div style='" + lbl + "'>まっすぐ何段上がりますか</div><div style='display:flex;flex-wrap:wrap;gap:6px'>";
+    var mx = Math.min(R, 12);
+    for (var n = 1; n <= mx; n++) h += "<button type='button' data-n395='" + n + "' style='min-width:52px;min-height:46px;font-size:15px;font-weight:700;border-radius:9px;border:2px solid #C9D2DC;background:#fff;color:#1B2430'>" + n + "段</button>";
+    if (R > 12) h += "<button type='button' data-n395='" + R + "' style='min-height:46px;padding:0 12px;font-size:14.5px;font-weight:700;border-radius:9px;border:2px solid #C9D2DC;background:#fff;color:#1B2430'>残り全部（" + R + "段）</button>";
+    h += "</div><div style='margin-top:8px'>" + btn395("q395", "menu", "もどる", false) + "</div>";
+  } else if (B.q === "m" || B.q === "mt"){
+    var top = B.q === "mt", mid = R - B.pk.kind;
+    h += "<div style='" + lbl + "'>" + (top ? "上で回ります。何段で回りますか" : "何段で回りますか") + "</div>";
+    h += "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px'>" + [1, 2, 3].map(function(k){ return btn395("k395", k, k === 1 ? "踊り場" : k + "段", B.pk.kind === k); }).join("") + "</div>";
+    h += "<div style='font-size:12px;color:#5B6B7A;margin:10px 2px 4px'>向き（上がる人から見た向き）</div>";
+    h += "<div style='" + grid2 + "'>" + btn395("d395", "L", "左廻り", B.pk.dir === "L") + btn395("d395", "R", "右廻り", B.pk.dir === "R") + "</div>";
+    if (top) h += "<div style='font-size:13px;color:#3E4A57;margin:10px 2px 0'>" + (mid > 0 ? "間は自動でまっすぐ（" + mid + "段）になります" : mid === 0 ? "間はありません（今の段数のまま上で回ります）" : "残りの段数が足りません（「1つ戻す」で減らしてください）") + "</div>";
+    h += "<div style='" + grid2 + ";margin-top:10px'>" + btn395("q395", "menu", "もどる", false) + btn395("q395", top ? "mtok" : "mok", top ? "上で回って終わる" : "この内容で回る", true, top && mid < 0) + "</div>";
+  } else {
+    h += "<div style='" + lbl + "'>" + (B.draft.length ? "次はどう上がりますか（あと " + R + " 段で上に届きます）" : "最初はどう上がりますか") + "</div>";
+    h += "<div style='" + grid2 + "'>" + btn395("q395", "s", "まっすぐ上がる", false) + btn395("q395", "m", B.draft.length ? "回る" : "最初から回る", false);
+    if (B.draft.length) h += btn395("q395", "mt", "上で回って終わる", false) + btn395("q395", "fin", "まっすぐで終わる（残りは自動）", false);
+    h += "</div>";
+  }
+  /* 下段：戻す・最初から・決定 */
+  h += "<div style='display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px;margin-top:12px'>" +
+    btn395("f395", "back1", "1つ戻す", false, !B.draft.length) +
+    btn395("f395", "clear", "最初から", false, !B.draft.length) +
+    "<button type='button' data-f395='done'" + (complete395() ? "" : " disabled") + " style='min-height:48px;font-size:15.5px;font-weight:800;border-radius:10px;border:2px solid " + (complete395() ? "#2563B0" : "#C9D2DC") + ";background:" + (complete395() ? "#2563B0" : "#EDF1F5") + ";color:" + (complete395() ? "#fff" : "#8A97A5") + "'>決定</button></div>";
+  q.innerHTML = h;
+  q.querySelectorAll("[data-q395]").forEach(function(b){ b.onclick = function(){ actQ395(b.dataset.q395); }; });
+  q.querySelectorAll("[data-n395]").forEach(function(b){ b.onclick = function(){ if (!B) return; B.draft.push({t: "s", n: +b.dataset.n395}); B.q = "menu"; render395(); }; });
+  q.querySelectorAll("[data-k395]").forEach(function(b){ b.onclick = function(){ if (!B) return; B.pk.kind = +b.dataset.k395; render395(); }; });
+  q.querySelectorAll("[data-d395]").forEach(function(b){ b.onclick = function(){ if (!B) return; B.pk.dir = b.dataset.d395; render395(); }; });
+  q.querySelectorAll("[data-f395]").forEach(function(b){ b.onclick = function(){ actF395(b.dataset.f395); }; });
+}
+function actQ395(v){
+  if (!B) return;
+  if (v === "s" || v === "m" || v === "mt"){ B.q = v; if (v !== "s"){ B.pk = { kind: 3, dir: "L" }; } render395(); return; }
+  if (v === "menu"){ B.q = "menu"; render395(); return; }
+  if (v === "mok"){ B.draft.push({t: "m", kind: B.pk.kind, dir: B.pk.dir}); B.q = "menu"; render395(); return; }
+  if (v === "mtok"){
+    var R = T395() - tot395(), mid = R - B.pk.kind;
+    if (mid < 0) return;
+    if (mid > 0) B.draft.push({t: "s", n: mid, auto395: true});
+    B.draft.push({t: "m", kind: B.pk.kind, dir: B.pk.dir});
+    B.q = "menu"; render395(); return;
+  }
+  if (v === "fin"){
+    var R2 = T395() - tot395();
+    if (R2 > 0) B.draft.push({t: "s", n: R2, auto395: true});
+    B.q = "menu"; render395(); return;
+  }
+}
+function actF395(v){
+  if (!B) return;
+  if (v === "back1"){
+    if (!B.draft.length) return;
+    var last = B.draft.pop();
+    if (last.t === "m" && B.draft.length && B.draft[B.draft.length - 1].auto395) B.draft.pop();
+    B.q = "menu"; render395(); return;
+  }
+  if (v === "clear"){ B.draft = []; B.q = "menu"; render395(); return; }
+  if (v === "done"){ if (complete395()) applyBuild395(); return; }
+}
+
+/* ---- 決定：並びを階段へ反映する。収まらなくても取り消さず、警告だけ出す ---- */
+function applyBuild395(){
+  var o = B.o;
+  var parts = B.draft.map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; });
+  var ms = parts.filter(function(q){ return q.t === "m"; });
+  var sf = A306.sfOfParts(parts);
+  pushUndo();
+  o.parts = parts;
+  o.sf = sf;
+  o.tn = ms.length ? ms[0].kind : 3;
+  o.t2 = ms[1] ? ms[1].kind : (o.t2 || 3);
+  o.st = sf === "s" ? "s" : sf === "k" ? (o.tn === 1 ? "L" : o.tn === 2 ? "N" : "M") : "M";
+  var dm = A306.dimsOf(parts); o.w = dm[0]; o.d = dm[1];
+  moveTenken(o, 0, 0);
+  var pk = 0;
+  try { if (window.__guard298 && window.__guard298.poke) pk = window.__guard298.poke(o); } catch(e){}
+  if (B.bar) B.bar.dataset.k = "";
+  save(); drawPlan();
+  closeBuilder395();
+  toast(pk > 0 ? "収まりません：壁に当たっています（形はそのまま表示しています）" : "階段を作りました");
+}
+
+/* ---- 入口1：選択バーの「階段の形」ボタンを組み立て画面へ付け替える ---- */
+if (typeof drawSelBarK === "function" && !drawSelBarK.__st395){
+  var origBar395 = drawSelBarK;
+  var wrappedBar395 = function(bar){
+    var r = origBar395.apply(this, arguments);
+    try {
+      if (typeof sel !== "undefined" && sel && sel.t === "k" && typeof S !== "undefined" && S && S.tenken){
+        var o = S.tenken[sel.i];
+        if (o && o.k === "stair"){
+          var ks = document.getElementById("sbKS");
+          if (ks){
+            ks.onclick = function(){ openBuilder395(o, bar || document.getElementById("selBar"), false); };
+            if (!A306.sfOfParts(A306.partsOf(o))) ks.textContent = "組み立て ▸";
+          }
+        }
+      }
+    } catch(e){}
+    return r;
+  };
+  wrappedBar395.__st395 = true;
+  drawSelBarK = wrappedBar395;
+}
+/* ---- 入口2：新しく階段を置いたら組み立て画面を開く（チュートリアル中は開かない） ---- */
+if (typeof addTenken === "function" && !addTenken.__st395){
+  var origAdd395 = addTenken;
+  var wrappedAdd395 = function(k){
+    var n0 = (typeof S !== "undefined" && S && S.tenken) ? S.tenken.length : 0;
+    var r = origAdd395.apply(this, arguments);
+    try {
+      if (k === "stair" && !(typeof HB !== "undefined" && HB && HB.__nbtut)){
+        var arr = (typeof S !== "undefined" && S && S.tenken) || [];
+        if (arr.length > n0){
+          var o = arr[arr.length - 1];
+          if (o && o.k === "stair") setTimeout(function(){ openBuilder395(o, null, true); }, 350);
+        }
+      }
+    } catch(e){}
+    return r;
+  };
+  wrappedAdd395.__st395 = true;
+  addTenken = wrappedAdd395;
 }
 })();
 </script>
@@ -29880,6 +30244,10 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
   /* 廻りの四角の中心（中のラベルの置き場） */
   function turnCenters377(parts, sf, fw, fd){
     var MW = MW377, out = [];
+    try {   /* CAD-395：汎用の並びは layoutGen395 の廻り中心 */
+      var lg377 = window.__st306 && window.__st306.layoutGen ? window.__st306.layoutGen(parts) : null;
+      if (lg377 && lg377.turns && lg377.turns.length) return lg377.turns.map(function(t){ return { x: t.x, y: t.y, q: t.q }; });
+    } catch(e){}
     if (sf === "k"){
       var m = parts[1], bx = m.dir === "L" ? fw - MW : 0;
       out.push({ x: bx + MW / 2, y: MW / 2, q: m });
