@@ -557,6 +557,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
   <section id="stM" hidden>
     <div class="mtools">
       <div class="seg modeSeg" style="flex:0 0 auto"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
+      <div class="mrow" id="stepBar399"></div>
       <div class="mrow" id="toolTabs"></div>
       <div class="mrow" id="partCh" hidden></div>
       <div class="mrow" id="toolCh2" hidden></div>
@@ -17734,6 +17735,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   "use strict";
   var roomSel176 = null;      // {pt:[x,y]} 部屋はタップした点で都度引き直す
   var tapDown176 = null;      // pointerdown の記録（タップ判定用）
+  var guardTap176 = null;     // CAD-399：バーを開いたタップの座標（そのタップの click の着地止め）
   var spot176 = {x: 0, y: 0, sig: "", n: 0};
   var zaForRoom176 = false;   // 部屋の編集から座上げの選択欄を開いている
   var multi375 = false;        // CAD-375：まとめて指定中（同じ床を続けて部屋へ入れる状態）
@@ -17839,6 +17841,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var br = $("flBranch"); if (br) host.appendChild(br);
     p.hidden = false; p.style.display = "flex";
   }
+  /* CAD-399：今の手順（手順モジュールが無い時は従来どおり「床」＝全部入りで扱う） */
+  function stepNow176(){ try { return HB.__step399 ? HB.__step399() : "floor"; } catch(e){ return "floor"; } }
   function renderRoomBar176(){
     var bar = $("roomBar176"); if (!bar) return;
     parkFl367();   /* CAD-367：作り直す前に床パネルを元の場所へ戻す */
@@ -17848,13 +17852,19 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var nm = roomLbl(rm);
     var entries = roomEntries176(roomSel176.pt);
     var fl = roomFloorLabel176(roomSel176.pt);
-    barSig176 = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "|" + (zaForRoom176 ? "z" : "") + "|" + (HB.__floorArm || "");
+    barSig176 = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "|" + (zaForRoom176 ? "z" : "") + "|" + (HB.__floorArm || "") + "|s" + stepNow176();
     var h = "<div class='r1'><button id='rmName176' type='button' style='background:none;border:none;font:inherit;font-weight:900;color:inherit;padding:4px 0;text-align:left'>🚪" + nm + "の部屋</button><span><button id='rmClose176' type='button'>閉じる</button></span></div>";   /* CAD-366：題名を押すと名前を変えるシートが開く */
     if (entries.length){
       h += "<div class='rmDims176'>" + entries.map(function(en, ix){
         return "<button type='button' data-rmdim='" + ix + "'>🚪" + nm + (en.dim === "w" ? "横幅 " : "奥行 ") + fmt(en.cur) + "</button>";
       }).join("") + "</div>";
     }
+    var slim399 = stepNow176() !== "floor";
+    if (slim399){
+      /* CAD-399：床の手順以外では床まわりを出さない（床は床の手順だけ、の線引き）。
+         床パネルは parkFl367 で元の場所へ戻したまま（移さない）。 */
+      h += "<div class='rmMulti375'><button type='button' id='rmGoFloor399'>床を決める</button></div>";
+    } else {
     h += "<div class='rmFlT176'>床の仕上げ" + (fl ? "（今：" + fl + "）" : "") + "</div>";
     /* CAD-375：まとめて指定の行。まとめ中は状態と「終了」、止めている時は入口ボタン。
        置き場所はラベルの直下：バーの最下行は下の大きなボタンに被さって押せないため */
@@ -17866,11 +17876,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     }
     h += "<div id='rmFlHost367'></div>";   /* CAD-367：ここへ本物の床パネル（背景の絵つき・畳と小上がり入り）を移す。文字だけのチップ並びは廃止 */
     if (zaForRoom176) h += "<div class='rmZaHint176'>座上げの選択欄が、道具の列の所に出ています。工法と上の仕上げを選ぶと、この部屋に入ります。</div>";
+    }
     bar.innerHTML = h;
     bar.hidden = false;
+    try { bar.style.paddingBottom = slim399 ? "78px" : ""; } catch(e){}   /* CAD-399：細いバーは短く、最下行のボタンが下の固定ボタン帯（#toolTabs・z45）に被さって押せなくなるため、細い時だけ下に余白を足してボタンを持ち上げる */
     try { document.body.classList.add("rmSel367"); } catch(e){}   /* CAD-367：部屋の選択中は下の「置く」を隠す */
-    hostFl367();   /* CAD-367：床パネルをバーの中へ移す */
+    if (!slim399) hostFl367();   /* CAD-367：床パネルをバーの中へ移す（CAD-399：床の手順の時だけ） */
     bar.querySelector("#rmClose176").onclick = function(){ closeRoom176(); };
+    var gf399 = bar.querySelector("#rmGoFloor399");
+    if (gf399) gf399.onclick = function(){ if (HB.__setStep399) HB.__setStep399("floor"); renderRoomBar176(); };
     var mb375 = bar.querySelector("#rmMultiBtn375");
     if (mb375) mb375.onclick = function(){
       if (!HB.__floorArm){ toast("先に床の種類を選んでください"); return; }
@@ -18116,7 +18130,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var rm = roomAtPt176(mm);
     if (!d.cands.length){
       spot176.n = 0;
-      if (rm) openRoom176(mm);
+      if (rm){ guardTap176 = {x: d.cx, y: d.cy, t: Date.now()}; openRoom176(mm); }
       else if (roomSel176) closeRoom176();
       return;
     }
@@ -18126,10 +18140,24 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       else { spot176.x = d.cx; spot176.y = d.cy; spot176.sig = sig; spot176.n = 1; }
       if (spot176.n >= d.cands.length){
         spot176.n = 0;
+        guardTap176 = {x: d.cx, y: d.cy, t: Date.now()};
         openRoom176(mm);
       }
     } else spot176.n = 0;
   }, false);
+
+  /* CAD-399：バーを開いたタップの click が、開いた直後のバーのボタン（題名など）に
+     着地して「部屋の名前シート」が勝手に開く事がある（CAD-397 の確認で発見）。
+     開いたタップと同じ座標・直後の click がバー内へ届いた時だけ、その click を止める。
+     本物の次のタップは座標か時間で外れるため、止めるのは開いたタップの続きだけ。 */
+  document.addEventListener("click", function(e){
+    if (!guardTap176) return;
+    var g = guardTap176; guardTap176 = null;
+    if (Date.now() - g.t > 800) return;
+    if (Math.abs(e.clientX - g.x) > 6 || Math.abs(e.clientY - g.y) > 6) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("#roomBar176")){ e.stopPropagation(); e.preventDefault(); }
+  }, true);
 
   /* 状態の追随: 物が選ばれた・画面が変わった・部屋が無くなったら閉じる */
   setInterval(function(){
@@ -18142,7 +18170,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var rm = roomAtPt176(roomSel176.pt);
       if (!rm){ closeRoom176(); return; }
       var nm = roomLbl(rm), entries = roomEntries176(roomSel176.pt), fl = roomFloorLabel176(roomSel176.pt);
-      var sig = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "||" + (HB.__floorArm || "");
+      var sig = rm.cid + "|" + nm + "|" + entries.map(function(en){ return en.dim + en.cur; }).join(",") + "|" + fl + "||" + (HB.__floorArm || "") + "|s" + stepNow176();
       if (sig !== barSig176) renderRoomBar176();
     } catch(e){}
   }, 300);
@@ -32187,5 +32215,130 @@ function daikuBaseRows391(nobeT){
   }
   try { if (typeof delPart === "function" && !delPart.__d397) delPart = wrap397(delPart); } catch(e){}
   try { if (typeof enclRoomApply === "function" && !enclRoomApply.__d397) enclRoomApply = wrap397(enclRoomApply); } catch(e){}
+})();
+</script>
+
+<script>
+/* ================= CAD-399：間取りの手順分け（段階A：手順バー＋出し分け） =================
+   翔伍の決定（2026-11-19）：間取りの中を 間仕切り → 床 → ドア・サッシ → 置く物 の
+   4つの手順に分け、1つの画面では1つの事だけ出す。行き来は自由（ロックしない）。
+   置ける物は手順で絞るが、既にある物を選んで直すのはどの手順でもできる
+   （選択バー・部屋バーの名前/寸法は無変更。部屋バーの床まわりは CAD-176 側で
+   手順を見て出し分ける）。設計書 design-stepflow-2026-11-19.md の段階A。
+   状態はメモリだけに持つ（保存キーは追加しない）。見積・保存データには触らない。
+   ラジアルメニュー（CAD-381）の付け替えは段階B。ここでは toolOpen の同期で
+   従来どおり動く事だけ守る（ラジアルで道具を持ち替えたら手順も付いていく）。 */
+(function(){
+  "use strict";
+  var STEPS399 = ["part", "floor", "ds", "put"];
+  var LABEL399 = {part: "① 間仕切り", floor: "② 床", ds: "③ ドア・サッシ", put: "④ 置く物"};
+  var step399 = "part";
+  var barEl399 = null;
+
+  var st399 = document.createElement("style");
+  st399.textContent = "#stepBar399 button{font-size:12.5px;white-space:nowrap}"
+    + "#stepBar399 button[aria-pressed=\"true\"]{background:var(--ai);color:#fff;border-color:var(--ai)}"
+    + "body.gold #stepBar399 button[aria-pressed=\"true\"]{background:var(--gold);color:#1B1405;border-color:#F1D98A}";
+  document.head.appendChild(st399);
+
+  function tutOn399(){ try { return !!HB.__nbtut; } catch(e){ return false; } }
+  /* 道具（toolOpen／置くの構えの組）が、どの手順の物か */
+  function stepOfTool399(k){
+    if (k === "part") return "part";
+    if (k === "door" || k === "win" || k === "gen") return "ds";
+    if (k === "mizu" || k === "etc" || k === "light") return "put";
+    return null;
+  }
+  HB.__step399 = function(){ return step399; };
+
+  function paintBar399(){
+    if (!barEl399) return;
+    barEl399.querySelectorAll("[data-step399]").forEach(function(b){
+      b.setAttribute("aria-pressed", b.dataset.step399 === step399 ? "true" : "false");
+    });
+  }
+  function buildBar399(){
+    barEl399 = document.getElementById("stepBar399");
+    if (!barEl399) return;
+    barEl399.innerHTML = "";
+    STEPS399.forEach(function(k){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = LABEL399[k]; b.dataset.step399 = k;
+      b.setAttribute("aria-pressed", k === step399 ? "true" : "false");
+      b.onclick = function(){ setStep399(k); };
+      barEl399.appendChild(b);
+    });
+  }
+
+  /* 手順を移る：他の手順の構えだけ静かに落とし、道具の列を描き直す。
+     部屋バーは閉じない（開いていれば、追随の描き直しで形が手順に合う）。 */
+  function setStep399(ns){
+    if (STEPS399.indexOf(ns) < 0) return;
+    if (ns === step399){ paintBar399(); return; }
+    step399 = ns;
+    try {
+      if (typeof enclMode !== "undefined" && enclMode && typeof enclReset === "function") enclReset();
+      var to = (typeof toolOpen !== "undefined") ? toolOpen : null;
+      var owner = stepOfTool399(to);
+      if (owner && owner !== ns){
+        if (to === "part" && HB.__partDrawOff) HB.__partDrawOff(true);
+        toolOpen = null;
+      }
+      if (HB.__put && stepOfTool399(HB.__put.g) && stepOfTool399(HB.__put.g) !== ns){
+        HB.__put = null; HB.__sashAct = null;   /* __putOff は「やめました」の表示を出すため、移動では直接落とす */
+      }
+      if (typeof ltTool !== "undefined" && ltTool && ns !== "put"){ ltTool = null; HB.__ltAct = null; }
+      if (ns !== "floor" && HB.__floorOff384) HB.__floorOff384(false);   /* 床の構え・まとめて・座上げを落とす（バーが開いていれば細い形に描き直される） */
+    } catch(e){}
+    try { drawToolsUI(); } catch(e){}
+    try { drawPlan(); } catch(e){}
+    paintBar399();
+  }
+  HB.__setStep399 = setStep399;
+
+  function vis399(el, on){ if (el) el.style.display = on ? "" : "none"; }
+  /* 道具の列の出し分け（drawToolsUI の後に毎回かける）。データには触らない。 */
+  function applyStep399(){
+    if (tutOn399()) return;   /* チュートリアル中は従来の出し方を守る（合わせ直しは段階C） */
+    /* タブ・ラジアル等の他の入口で道具が持ち替わっていたら、手順も合わせる */
+    try {
+      var owner = stepOfTool399((typeof toolOpen !== "undefined") ? toolOpen : null);
+      if (owner && owner !== step399) step399 = owner;
+    } catch(e){}
+    paintBar399();
+    var s = step399;
+    var tabs = document.getElementById("toolTabs");
+    if (tabs) tabs.querySelectorAll("[data-tt]").forEach(function(b){
+      var k = b.dataset.tt;
+      vis399(b, (s === "part" && k === "part") || ((s === "ds" || s === "put") && k === "put"));
+    });
+    var sub = document.getElementById("grpSub");
+    if (sub){
+      if (s === "part" || s === "floor") sub.hidden = true;
+      else if (window.grp136 === "put"){
+        sub.hidden = false;
+        sub.querySelectorAll("[data-tt]").forEach(function(b){
+          var k = b.dataset.tt;
+          vis399(b, s === "ds" ? (k === "door" || k === "win" || k === "gen")
+                               : (k === "mizu" || k === "light" || k === "etc"));
+        });
+      }
+    }
+    var pc = document.getElementById("partCh"); if (pc && s !== "part") pc.hidden = true;
+    var tc = document.getElementById("toolCh"); if (tc && s !== "ds") tc.hidden = true;
+    var tc2 = document.getElementById("toolCh2"); if (tc2 && s !== "put") tc2.hidden = true;
+    var tc3 = document.getElementById("toolCh3"); if (tc3 && s !== "put") tc3.hidden = true;
+    var nz = document.getElementById("nazoruBtn");   /* 囲み（床の範囲作り）は床の手順だけ。今の版にボタンが無い場合は何もしない */
+    if (nz) vis399(nz, s === "floor" || (typeof enclMode !== "undefined" && enclMode));
+  }
+
+  if (typeof drawToolsUI === "function" && !drawToolsUI.__d399){
+    var origDT399 = drawToolsUI;
+    var wrappedDT399 = function(){ var r = origDT399.apply(this, arguments); try { applyStep399(); } catch(e){} return r; };
+    wrappedDT399.__d399 = true;
+    drawToolsUI = wrappedDT399;
+  }
+  buildBar399();
+  try { applyStep399(); } catch(e){}
 })();
 </script>
