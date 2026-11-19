@@ -26502,7 +26502,156 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 })();
 </script>
 
-
+<script id="dir394js">
+/* ===== CAD-394：部屋をまたぐ床レコードの向き（またいだ先の部屋の分を上描き） =====
+   本人の実機（2026-11-19）：階段横の帯だけ横向きのまま残り、床を置き直したら
+   直った。原因：向きの最終判定（CAD-295）は rect の中心が属する部屋で決める
+   ため、間仕切りをまたぐ床レコード（例：帯がトイレ側まで伸びている）は、
+   中心の部屋の向きが全体に付き、別の部屋に入っている部分まで違う向きに
+   なった。置き直すと直るのは、部屋タップの置き直しでレコードが部屋の
+   セル四角に分け直されるため。
+   直し：データ・見積・保存は変えず、表示だけ。部屋をまたぐ木の床レコードに
+   ついて、中心の部屋と向きが違う部屋に入っている部分を、その部屋の向きの
+   pattern で上描きする（セル単位の行ラン。CAD-281 の上描きと同じ考え方、
+   pattern は userSpaceOnUse なので木目は切れ目なくつながる）。
+   間取り・完成図の両方。部屋の外の部分は従来通り（CAD-387：範囲自身の形）。 */
+(function(){ "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var WOOD = { flComp: "fl", flMuku: "muku", flMuku30: "muku" };
+  function finOf(r){
+    if (!r) return null;
+    if (r.fk && WOOD[r.fk]) return WOOD[r.fk];
+    if (r.za && r.det && WOOD[r.det.fin]) return WOOD[r.det.fin];
+    if ((r.fk === "flAge" || r.fk === "flOki" || r.fk === "flPura") && WOOD[r.fin]) return WOOD[r.fin];
+    return null;
+  }
+  function isVert(w, d){ return w > 0 && d > w * 1.05; }
+  /* 部屋ごとの向き（CAD-295/387 と同じ物差し：部屋の外形だけ）で、
+     レコードがまたぐ部屋のうち、中心の部屋と向きが違う部分の行ラン（mm）を出す */
+  function runs394(){
+    if (typeof S === "undefined" || !S || typeof roomsCalc !== "function") return null;
+    var R = null; try { R = roomsCalc(); } catch(e){ return null; }
+    if (!R || !R.rooms || !R.comp) return null;
+    var st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0, NX = R.NX, NY = R.NY;
+    var vert = {};
+    R.rooms.forEach(function(room){
+      var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
+      room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
+        if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
+      vert[room.cid] = (mxx < 0) ? null : isVert((mxx - mnx + 1) * st, (mxy - mny + 1) * st);
+    });
+    function roomIdxAt(mx, my){
+      var i = Math.floor((mx - bx0) / st), j = Math.floor((my - by0) / st);
+      if (i < 0 || j < 0 || i >= NX) return -1;
+      var idx = j * NX + i;
+      if (idx < 0 || idx >= R.comp.length) return -1;
+      return R.comp[idx];
+    }
+    var out = [];
+    (S.tatami || []).forEach(function(r, ri){
+      var mk = finOf(r); if (!mk) return;
+      var x0 = Math.min(r.x0, r.x1), x1 = Math.max(r.x0, r.x1), y0 = Math.min(r.y0, r.y1), y1 = Math.max(r.y0, r.y1);
+      if (!(x1 > x0) || !(y1 > y0)) return;
+      var ccid = roomIdxAt((x0 + x1) / 2, (y0 + y1) / 2);
+      if (ccid < 0 || vert[ccid] === null || vert[ccid] === undefined) return;
+      var baseVert = vert[ccid];
+      var i0 = Math.max(0, Math.floor((x0 - bx0) / st)), i1 = Math.min(NX - 1, Math.floor((x1 - bx0) / st));
+      var j0 = Math.max(0, Math.floor((y0 - by0) / st)), j1 = Math.min(NY - 1, Math.floor((y1 - by0) / st));
+      var byRoom = {};
+      for (var j = j0; j <= j1; j++) for (var i = i0; i <= i1; i++){
+        var cxm = bx0 + (i + 0.5) * st, cym = by0 + (j + 0.5) * st;
+        if (cxm < x0 || cxm > x1 || cym < y0 || cym > y1) continue;
+        var cid = R.comp[j * NX + i];
+        if (cid < 0 || vert[cid] === null || vert[cid] === undefined || vert[cid] === baseVert) continue;
+        ((byRoom[cid] = byRoom[cid] || {})[j] = (byRoom[cid][j] || [])).push(i);
+      }
+      var runs = [];
+      Object.keys(byRoom).forEach(function(cid){
+        var rows = byRoom[cid];
+        Object.keys(rows).forEach(function(j){
+          var xs = rows[j].sort(function(a, b){ return a - b; }), s0 = xs[0], pr = xs[0];
+          function flush(){
+            var rx = Math.max(x0, bx0 + s0 * st), ry = Math.max(y0, by0 + (+j) * st);
+            var rw = Math.min(x1, bx0 + (pr + 1) * st) - rx, rh = Math.min(y1, by0 + (+j + 1) * st) - ry;
+            if (rw > 0 && rh > 0) runs.push({ x: rx, y: ry, w: rw, h: rh, vert: vert[cid], mk: mk });
+          }
+          for (var k = 1; k < xs.length; k++){ if (xs[k] !== pr + 1){ flush(); s0 = xs[k]; } pr = xs[k]; }
+          flush();
+        });
+      });
+      if (runs.length) out.push({ idx: ri, x0: x0, y0: y0, x1: x1, y1: y1, mk: mk, runs: runs });
+    });
+    return out;
+  }
+  function sigOf(e){ return e.runs.map(function(r){ return [r.x, r.y, r.w, r.h, r.vert ? 1 : 0].join(","); }).join(";"); }
+  function paint(svg, list, cls, pats, toPx, findHosts){
+    var want = {};
+    list.forEach(function(e){ want["r" + e.idx] = e; });
+    svg.querySelectorAll("g." + cls).forEach(function(g){
+      var e = want[g.getAttribute("data-r394")];
+      if (!e || g.getAttribute("data-sig394") !== sigOf(e)) g.remove();
+    });
+    list.forEach(function(e){
+      var key = "r" + e.idx, sig = sigOf(e);
+      if (svg.querySelector('g.' + cls + '[data-r394="' + key + '"]')) return;
+      var A = toPx([e.x0, e.y0]), B = toPx([e.x1, e.y1]);
+      var x = Math.min(A[0], B[0]), y = Math.min(A[1], B[1]), w = Math.abs(B[0] - A[0]), h = Math.abs(B[1] - A[1]);
+      var host = null;
+      findHosts(svg).forEach(function(rc){
+        if (host) return;
+        var f = rc.getAttribute("fill") || "";
+        if (!/pFl|pMuku/.test(f)) return;
+        if (Math.abs(parseFloat(rc.getAttribute("x")) - x) < 1.2 && Math.abs(parseFloat(rc.getAttribute("y")) - y) < 1.2 &&
+            Math.abs(parseFloat(rc.getAttribute("width")) - w) < 1.2 && Math.abs(parseFloat(rc.getAttribute("height")) - h) < 1.2) host = rc;
+      });
+      if (!host || !host.parentNode) return;
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("class", cls); g.setAttribute("data-r394", key); g.setAttribute("data-sig394", sig);
+      g.setAttribute("pointer-events", "none");
+      e.runs.forEach(function(rn){
+        var C = toPx([rn.x, rn.y]), D = toPx([rn.x + rn.w, rn.y + rn.h]);
+        var el = document.createElementNS(NS, "rect");
+        el.setAttribute("x", Math.min(C[0], D[0])); el.setAttribute("y", Math.min(C[1], D[1]));
+        el.setAttribute("width", Math.abs(D[0] - C[0]) + 0.3); el.setAttribute("height", Math.abs(D[1] - C[1]) + 0.3);
+        el.setAttribute("fill", pats[rn.mk][rn.vert ? 1 : 0]);
+        g.appendChild(el);
+      });
+      host.parentNode.insertBefore(g, host.nextSibling);
+    });
+  }
+  var PLANF = { fl: ["url(#pFl)", "url(#pFlV)"], muku: ["url(#pMuku279)", "url(#pMuku279V)"] };
+  function plan394(list){
+    var svg = document.getElementById("plan"); if (!svg || !svg.firstChild) return;
+    if (typeof HB === "undefined" || !HB.__pageM) return;
+    if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+    if (document.body.classList.contains("pz262")) return;
+    var T = HB.__planT; if (!T || !(T.s > 0)) return;
+    paint(svg, list, "dir394", PLANF,
+      function(q){ return [q[0] * T.s + T.ox, q[1] * T.s + T.oy]; },
+      function(s2){ var a = []; s2.querySelectorAll("rect").forEach(function(rc){ if (!rc.closest("pattern") && !rc.closest("defs") && !rc.closest("g.dir394")) a.push(rc); }); return a; });
+  }
+  var PVF = { fl: ["url(#p263Fl)", "url(#p263FlV)"], muku: ["url(#p263Muku)", "url(#p263MukuV)"] };
+  function pv394(list){
+    var svg = document.getElementById("pvSvg"); if (!svg) return;
+    if (!svg.querySelector("#d263")) return;
+    if (typeof bbox !== "function" || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
+    var b = bbox(), s = Math.min((360 - 68 - 42) / b.w, (470 - 68 - 38) / b.h);
+    if (!(s > 0)) return;
+    paint(svg, list, "dir394pv", PVF,
+      function(q){ return [68 + (q[0] - b.x0) * s, 68 + (q[1] - b.y0) * s]; },
+      function(s2){ var a = []; s2.querySelectorAll("#g282Fl rect, #g279Muku rect").forEach(function(rc){ a.push(rc); }); return a; });
+  }
+  function both394(){
+    try {
+      var list = runs394(); if (!list) return;
+      plan394(list); pv394(list);
+    } catch(e){}
+  }
+  setInterval(both394, 400); both394();
+  var prev394 = window.tidyPlanLabels;
+  if (typeof prev394 === "function"){ window.tidyPlanLabels = function(){ var r = prev394.apply(this, arguments); both394(); return r; }; }
+})();
+</script>
 
 <script id="guard298js">
 /* ===== CAD-298：突き抜け防止の一般化＋起点の角（本人の決め 2026-11-16） =====
@@ -27035,16 +27184,45 @@ function presetParts306(o, sf){
   var kindAt = function(j, fb){ return cms[j] ? cms[j].kind : fb; };
   var dirAt = function(j){ return cms[j] ? cms[j].dir : "L"; };
   /* CAD-370：骨組みだけ作り、直の段数は合計段数から配り直す（廻りの分だけ直が減る）。
-     廻りだけで合計を超える時は null を返し、呼び出し側が理由を出して止める */
+     廻りだけで合計を超える時は null を返し、呼び出し側が理由を出して止める
+     CAD-394：かね折れが絡む変更は この合わせ方のまま。それ以外（直・下回り・
+     上回り・上下回りの行き来）は、壁沿いの全長を変えずに真ん中の直の段数で
+     合わせる（fitLen394・本人の決定 2026-11-19）。収まらない時は
+     presetErr394 に理由を入れて null を返す */
   var skel;
   if (sf === "s") skel = [{t: "s", n: 0}];
   else if (sf === "d") skel = [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: 0}];
   else if (sf === "u") skel = [{t: "s", n: 0}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}];
   else if (sf === "b") skel = [{t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: 0}, {t: "m", kind: kindAt(1, sh.t2), dir: dirAt(1)}];
   else skel = [{t: "s", n: css.length > 1 ? css[0].n : 1}, {t: "m", kind: kindAt(0, sh.tn), dir: dirAt(0)}, {t: "s", n: css.length > 1 ? css[1].n : 1}];   /* かね折れ：直が2つある形からは比率で、1つしかない形からは均等に配る */
-  return fitParts370(skel, totalOf306(cur));
+  presetErr394 = "";
+  var curSf394 = sfOfParts306(cur);
+  if (sf === "k" || curSf394 === "k") return fitParts370(skel, totalOf306(cur));
+  return fitLen394(skel, dimsOf306(cur)[1], o);
 }
 window.__st306.preset = presetParts306;
+/* CAD-394：壁沿いの全長 L0 を変えず、直の段数だけで合わせる。
+   廻りの箱（910）が長さに収まらない時と、蹴上＝階高÷合計段数が 230 を
+   超える時だけ null（presetErr394 に理由）。階高は見積と同じ物差し
+   （o.kh か自動＝天井高＋胴差）。直階段への変更は段数が一番増える向き
+   なので蹴上の判定はしない */
+var presetErr394 = "";
+function fitLen394(skel, L0, o){
+  var B = 0, T = 0, si = -1;
+  skel.forEach(function(q, i){ if (q.t === "m"){ B += MW; T += q.kind || 0; } else si = i; });
+  var n = Math.round((L0 - B) / TD);
+  if (n < 0){ presetErr394 = "長さが足りないため変えられません"; return null; }
+  if (T > 0){
+    var total = T + n;
+    var H = (o && o.kh) || ((typeof S !== "undefined" && S) ? (S.ch || 2400) + (S.dosa || 240) : 2640);
+    if (total < 1 || H / total > 230){ presetErr394 = "蹴上が230を超えるため変えられません"; return null; }
+  }
+  if (si >= 0 && T === 0 && n < 1) n = 1;
+  var out = skel.map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; });
+  if (si >= 0) out[si].n = n;
+  return out;
+}
+window.__st306.fitLen = fitLen394;
 
 /* ---- 形シート ---- */
 function closeShapeSheet306(){ var ov = document.getElementById("stShapeSheet306"); if (ov) ov.remove(); }
@@ -27062,7 +27240,7 @@ function openShapeSheet306(o, bar){
   ov.querySelectorAll("[data-sf306]").forEach(b => b.onclick = () => {
     var v = b.dataset.sf306; closeShapeSheet306(); if (!v || v === cur) return;
     var np370 = presetParts306(o, v);
-    if (!np370){ toast("廻りの段数だけで合計を超えるため変えられません"); return; }
+    if (!np370){ toast(presetErr394 || "廻りの段数だけで合計を超えるため変えられません"); return; }
     applyStair306(o, bar, np370);
   });
   document.body.appendChild(ov);
