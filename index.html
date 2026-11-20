@@ -35490,7 +35490,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     + ".ov439 button{min-height:44px;border-radius:10px;border:1.5px solid #1a73e8;background:#fff;color:#1a73e8;font-weight:900;font-size:14px;padding:0 12px}.ov439 button.pri{background:#1a73e8;color:#fff}"
     + ".ov439 table{width:100%;border-collapse:collapse}.ov439 td,.ov439 th{border-bottom:1px solid #e3e8ef;padding:6px 4px;text-align:right}.ov439 td:first-child,.ov439 th:first-child{text-align:left}"
     + ".ov439 input[type=text],.ov439 input[type=number]{width:100%;min-height:40px;font-size:16px;border:1px solid #c7cfd9;border-radius:8px;padding:0 8px;box-sizing:border-box;text-align:right}"
-    + ".ov439 textarea{width:100%;min-height:200px;font-size:13px;border:1px solid #c7cfd9;border-radius:8px;padding:8px;box-sizing:border-box}"
+    + ".ov439 textarea,.ov439 input{font-size:16px!important}.ov439 textarea{width:100%;min-height:200px;font-size:16px;border:1px solid #c7cfd9;border-radius:8px;padding:8px;box-sizing:border-box}"
     + ".ov439 .note{color:#546e7a;font-size:12.5px;line-height:1.6}.ov439 .bad{color:#C62828;font-weight:800}.ov439 .ok{color:#2e7d32;font-weight:800}"
     + "#cal439btn,#imp439btn{width:100%;min-height:48px;border-radius:12px;border:2px solid #1a73e8;background:#fff;color:#1a73e8;font-size:15px;font-weight:900;margin:8px 0}";
   document.head.appendChild(css);
@@ -35663,7 +35663,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
       (D.unsure || []).forEach(function(t){ h += '<p style="color:#E8742C">？ AIの自信がない所：' + String(t).replace(/[<>&]/g, "") + '</p>'; });
       if (!r.bad.length) h += '<p class="ok">✓ 入れられます。入れた後、「？」の所は図面で確かめてください（「戻す」で元に戻せます）。</p>';
       ck.innerHTML = h; D.__bad445 = !!r.bad.length; try { ck.scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} };
-    bI.onclick = function(){ /* CAD-445.1: no hidden disabled state - pressing it checks first, then imports */ if (!bd.querySelector("#ta439").value.trim()){ need("先に②の枠に、AIの答えを貼ってください"); return; } if (bK.onclick() === false) return; if (!D || D.__bad445){ toast("✕ の所を直してから入れてください"); return; } d.remove(); applyD(D); };
+    bI.onclick = function(){ /* CAD-445.1: no hidden disabled state - pressing it checks first, then imports */ if (!bd.querySelector("#ta439").value.trim()){ need("先に②の枠に、AIの答えを貼ってください"); return; } if (bK.onclick() === false) return; if (!D || D.__bad445){ toast("✕ の所を直してから入れてください"); return; } try { document.activeElement && document.activeElement.blur(); } catch(e){} d.remove(); applyD(D); /* CAD-445.2: undo the phone's auto-zoom / scroll from typing in the box */ [0, 300, 900].forEach(function(t){ setTimeout(function(){ try { window.scrollTo(0, 0); document.documentElement.scrollTop = 0; document.body.scrollTop = 0; } catch(e){} }, t); }); };
     var bM = document.createElement("button"); bM.textContent = "✏ 見せたくない所を塗る"; bM.onclick = function(){ if (HB.__mask440) HB.__mask440(); };
     [bM, bC, bK, bI].forEach(function(b){ b.style.cssText += ";min-height:46px;font-size:15px"; });
     bd.querySelector("#s0_445").appendChild(bM); bd.querySelector("#s1_445").appendChild(bC);
