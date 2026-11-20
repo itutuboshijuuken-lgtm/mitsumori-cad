@@ -35057,7 +35057,7 @@ nav.steps{padding:1px 6px 3px}
   var FURN = [["ベッド S", 970, 1950], ["ベッド SD", 1200, 1950], ["ベッド D", 1400, 1950], ["ソファ 2人", 1500, 850], ["ソファ 3人", 2000, 850], ["テーブル", 1350, 800], ["冷蔵庫", 700, 700], ["洗濯機", 640, 640], ["机", 1000, 600], ["タンス", 900, 450]];
   var arm = null, fsel = -1, drag = null;
   var css = document.createElement("style");
-  css.textContent = "#chips434{position:absolute;left:6px;z-index:8;display:flex;gap:6px;top:var(--cb434,600px)}"
+  css.textContent = "#chips434{position:absolute;left:6px;right:6px;z-index:8;display:flex;gap:6px;top:var(--cb434,600px);overflow-x:auto;scrollbar-width:none;pointer-events:none}#chips434 button{pointer-events:auto;flex:0 0 auto}"
     + "#chips434 button{min-height:38px;border:1.5px solid #1a73e8;border-radius:19px;background:rgba(255,255,255,.96);color:#1a73e8;font-size:13px;font-weight:900;padding:0 11px;white-space:nowrap}"
     + "#chips434 button.on{background:#1a73e8;color:#fff}#chips434 button.red{border-color:#C62828;color:#C62828}"
     + ".sh434 h3{margin:0 0 6px}.sh434 .gr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sh434 .gr button{min-height:48px;border:1.5px solid #1a73e8;border-radius:10px;background:#fff;color:#1a73e8;font-size:14px;font-weight:900}"
@@ -35159,15 +35159,17 @@ nav.steps{padding:1px 6px 3px}
     if (!box){ box = document.createElement("div"); box.id = "chips434"; m.appendChild(box); }
     if (!onM()){ box.style.display = "none"; return; } box.style.display = "";
     var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
-    var sig = want.join(",") + "|" + (arm ? arm.kind : "");
+    try { if (HB.__extra437) want = HB.__extra437(s, fsel, want); } catch(e){}   /* CAD-437：下絵・ひな形・声のボタン */
+    var sig = want.join(",") + "|" + (arm ? arm.kind : "") + "|" + (HB.__sig437 ? HB.__sig437() : "");
     if (box.dataset.sig !== sig){
       box.dataset.sig = sig; box.innerHTML = "";
-      var lab = {parts: "🚽 部品", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", del: "消す", done: "OK"};
+      var lab = {parts: "🚽 部品", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", del: "消す", done: "OK"}; try { if (HB.__lab437) Object.assign(lab, HB.__lab437); } catch(e){}
       want.forEach(function(w){ var b = document.createElement("button"); b.type = "button"; b.textContent = lab[w]; b.dataset.w = w; if (arm && ((w === "parts" && arm.kind === "part") || (w === "furn" && arm.kind === "furn"))) b.className = "on"; if (w === "del") b.className = "red"; b.onclick = function(e){ e.stopPropagation(); act(w); }; box.appendChild(b); });
     }
     var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
   }
   function act(w){
+    try { if (HB.__act437 && HB.__act437(w)) { chips(); return; } } catch(e){}
     if (w === "check") return showCheck();
     if (w === "cust") return cust();
     if (w === "parts" || w === "furn"){
@@ -35272,5 +35274,147 @@ nav.steps{padding:1px 6px 3px}
   };
   w.__n436 = true;
   try { roomDispNm366 = w; } catch(e){}
+})();
+</script>
+<script id="ux437js">
+/* ===== CAD-437（Opus）：①写真の下絵をなぞる ②部屋をタップで工事金額の目安 ③ドア・窓の角からの寸法 ④間取りのひな形 ⑤声で寸法。翔伍「全部採用」（2026-11-20）。
+   下絵の写真は見積データ（S）に入れず、端末に縮めて保存（localStorage trace437:案件ID、長辺1200px・JPEG）。ひな形は外形・間仕切り・部屋名を入れる（入れる前に確認）。
+   ②は「全体の見積 ÷ 延床」×部屋の広さの目安（税抜）。③は表示だけ。⑤は選んだ間仕切りの位置（左・上の外壁から）を声の数字にする。 */
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  function onM(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && S && S.edges); }
+  function pid(){ try { return PJ.cur || "x"; } catch(e){ return "x"; } }
+  /* ---------- ① 下絵 ---------- */
+  var TR = null, adj = false;   /* {src, x, y, w, op}  x,y,w は mm */
+  function trLoad(){ try { TR = JSON.parse(localStorage.getItem("trace437:" + pid()) || "null"); } catch(e){ TR = null; } TR && (TR.pid = pid()); }
+  function trSave(){ try { if (TR) localStorage.setItem("trace437:" + pid(), JSON.stringify(TR)); else localStorage.removeItem("trace437:" + pid()); } catch(e){ toast("写真が大きすぎて保存できません（この画面の間だけ使えます）"); } }
+  function pickPhoto(){
+    var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
+    inp.onchange = function(){ var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader();
+      rd.onload = function(){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1200 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        var b = bbox(); TR = {src: c.toDataURL("image/jpeg", 0.6), ar: c.height / c.width, x: b.x0, y: b.y0, w: b.w || 9100, op: 0.45, pid: pid()}; trSave(); adj = true; drawPlan(); toast("下絵を入れました。下のボタンで大きさ・位置を合わせます"); }; im.src = rd.result; };
+      rd.readAsDataURL(f); };
+    inp.click();
+  }
+  /* ---------- ② 部屋の金額の目安 ---------- */
+  var costC = {k: "", v: null};
+  function unitCost(){ var key = JSON.stringify(S).length + "|" + (S.parts2D || []).length; if (costC.k === key) return costC.v; var v = null; try { var C = calc(); if (C && C.nobe > 0) v = C.mitsu / C.nobe; } catch(e){} costC = {k: key, v: v}; return v; }
+  /* ---------- ④ ひな形 ---------- */
+  var TPL = [
+    ["6坪の離れ（洋室＋トイレ＋玄関）", 3640, 5460, [[0, 3640, 3640, 3640], [910, 3640, 910, 5460]], [["洋室", 1820, 1820], ["トイレ", 455, 4550], ["玄関", 2275, 4550]]],
+    ["4.5畳＋押入", 3640, 2730, [[2730, 0, 2730, 2730]], [["洋室", 1365, 1365], ["押入", 3185, 1365]]],
+    ["6畳＋押入", 4550, 3640, [[3640, 0, 3640, 3640]], [["洋室", 1820, 1820], ["押入", 4095, 1820]]],
+    ["2LDK（約22坪）", 10010, 7280, [[3640, 0, 3640, 7280], [0, 3640, 3640, 3640], [3640, 4550, 10010, 4550], [7280, 0, 7280, 4550], [7280, 2275, 10010, 2275], [4550, 0, 4550, 1820], [3640, 1820, 7280, 1820]], [["洋室1", 1820, 1820], ["洋室2", 1820, 5460], ["LDK", 6825, 5915], ["浴室", 8645, 1137], ["洗面所", 8645, 3412], ["トイレ", 4095, 910], ["玄関", 5915, 910], ["廊下", 5460, 3185]]]
+  ];
+  function applyTpl(t){
+    pushUndo();
+    S.edges = [{d: "R", v: t[1], set: true}, {d: "D", v: t[2], set: true}, {d: "L", v: t[1], set: true}, {d: "U", v: t[2], set: true}];
+    try { solve(); } catch(e){}
+    var b = bbox();
+    S.parts2D = t[3].map(function(q){ return {x1: b.x0 + q[0], y1: b.y0 + q[1], x2: b.x0 + q[2], y2: b.y0 + q[3], isNew: S.mode === "zo"}; });
+    S.roomNames = t[4].map(function(r){ return {p: [b.x0 + r[1], b.y0 + r[2]], name: r[0]}; });
+    S.sashes = (S.sashes || []).filter(function(sa){ return !sa.drawn; });
+    save(); try { HB.__pinH = 0; } catch(e){} drawPlan(); toast(t[0] + "を入れました。壁は選んで動かせます");
+  }
+  function tplSheet(){
+    var mb = document.getElementById("mbox"), md = document.getElementById("modal"), h = '<div class="sh434"><h3>間取りのひな形から始める</h3><p class="hint" style="margin:0 0 8px">外形・間仕切り・部屋名が入ります。今の間取りは置き換わります（「戻す」で元に戻せます）。</p><div class="gr">';
+    TPL.forEach(function(t, i){ h += '<button type="button" data-i="' + i + '">' + t[0] + '<br><small style="font-weight:700">' + fmt(t[1]) + "×" + fmt(t[2]) + "</small></button>"; });
+    h += '</div><button class="btn sub" type="button" id="tp437c" style="width:100%;margin-top:8px">やめる</button></div>';
+    mb.innerHTML = h; md.hidden = false; mb.querySelector("#tp437c").onclick = function(){ md.hidden = true; };
+    mb.querySelectorAll("[data-i]").forEach(function(b){ b.onclick = function(){ md.hidden = true; applyTpl(TPL[+b.dataset.i]); }; });
+  }
+  /* ---------- ⑤ 声 ---------- */
+  function jaNum(t){
+    t = String(t).replace(/[,，、\s]/g, "").replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+    var m = t.match(/\d+(\.\d+)?/); if (m) return parseFloat(m[0]);
+    var D = {"〇": 0, "零": 0, "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}, U = {"十": 10, "百": 100, "千": 1000}, tot = 0, sec = 0, cur = 0, hit = false;
+    for (var i = 0; i < t.length; i++){ var c = t[i]; if (c in D){ cur = D[c]; hit = true; } else if (c in U){ sec += (cur || 1) * U[c]; cur = 0; hit = true; } else if (c === "万"){ tot += (sec + cur) * 10000; sec = 0; cur = 0; hit = true; } }
+    return hit ? tot + sec + cur : null;
+  }
+  function voice(){
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR){ toast("この端末では声の入力が使えません"); return; }
+    if (!(typeof sel !== "undefined" && sel && sel.t === "p" && S.parts2D[sel.i])){ toast("先に間仕切りをタップして選んでください"); return; }
+    var r = new SR(); r.lang = "ja-JP"; r.interimResults = false; r.maxAlternatives = 3;
+    toast("🎤 寸法を言ってください（例：さんぜんろっぴゃくよんじゅう）");
+    r.onresult = function(ev){
+      var v = null, said = ""; for (var i = 0; i < ev.results[0].length && v === null; i++){ said = ev.results[0][i].transcript; v = jaNum(said); }
+      if (v === null || !(v > 0)){ toast("聞き取れませんでした：" + said); return; }
+      var z = S.parts2D[sel.i], b = bbox(), h = Math.abs(z.y1 - z.y2) < 1;
+      if (h){ if (v >= b.h){ toast(fmt(v) + " は家の奥行より大きいです"); return; } pushUndo(); z.y1 = z.y2 = b.y0 + v; }
+      else { if (v >= b.w){ toast(fmt(v) + " は家の幅より大きいです"); return; } pushUndo(); z.x1 = z.x2 = b.x0 + v; }
+      save(); drawPlan(); try { drawSelBar(); } catch(e){} toast((h ? "上から " : "左から ") + fmt(v) + " にしました");
+    };
+    r.onerror = function(){ toast("声の入力ができませんでした（マイクの許可を確認してください）"); };
+    try { r.start(); } catch(e){ toast("声の入力を始められませんでした"); }
+  }
+  /* ---------- ボタン（CAD-434 のボタン列に足す） ---------- */
+  HB.__lab437 = {trace: "📷 下絵", tadj: "下絵を合わせる", tok: "下絵OK", tbig: "＋", tsml: "－", tl: "←", tr: "→", tu: "↑", td: "↓", top: "濃さ", tdel: "下絵を消す", tpl: "📐 ひな形", mic: "🎤 声で寸法"};
+  HB.__sig437 = function(){ return (TR ? "T" : "") + (adj ? "A" : "") + (typeof sel !== "undefined" && sel ? sel.t : ""); };
+  HB.__extra437 = function(s, fsel, want){
+    if (TR && TR.pid !== pid()) trLoad();
+    if (adj) return ["tbig", "tsml", "tl", "tr", "tu", "td", "top", "tdel", "tok"];
+    var x = [];
+    if (s === "part"){ x.push(TR ? "tadj" : "trace"); x.push("tpl"); if (typeof sel !== "undefined" && sel && sel.t === "p") x.push("mic"); }
+    return x.concat(want);
+  };
+  HB.__act437 = function(w){
+    var st = 0.04;
+    if (w === "trace"){ pickPhoto(); return true; }
+    if (w === "tadj"){ adj = true; return true; }
+    if (w === "tok"){ adj = false; return true; }
+    if (w === "tpl"){ tplSheet(); return true; }
+    if (w === "mic"){ voice(); return true; }
+    if (!TR) return false;
+    var cx = TR.x + TR.w / 2, cy = TR.y + TR.w * TR.ar / 2;
+    if (w === "tbig" || w === "tsml"){ TR.w *= (w === "tbig" ? 1 + st : 1 - st); TR.x = cx - TR.w / 2; TR.y = cy - TR.w * TR.ar / 2; }
+    else if (w === "tl") TR.x -= 100; else if (w === "tr") TR.x += 100; else if (w === "tu") TR.y -= 100; else if (w === "td") TR.y += 100;
+    else if (w === "top") TR.op = TR.op > 0.6 ? 0.25 : TR.op + 0.2;
+    else if (w === "tdel"){ TR = null; adj = false; trSave(); drawPlan(); return true; }
+    else return false;
+    trSave(); paint(); return true;
+  };
+  /* ---------- 図面に描く ---------- */
+  function paint(){
+    try {
+      var sv = document.getElementById("plan"); if (!sv) return;
+      ["#t437", "#e437"].forEach(function(id){ var o = sv.querySelector(id); if (o) o.remove(); });
+      if (!onM()) return;
+      if (!TR || TR.pid !== pid()) trLoad();
+      var ctm = sv.getScreenCTM(); if (!ctm || !ctm.a) return; var k = 1 / ctm.a, a = toMM([0, 0]), c = toMM([100, 100]), sx = 100 / (c[0] - a[0]), sy = 100 / (c[1] - a[1]);
+      var P = function(x, y){ return [(x - a[0]) * sx, (y - a[1]) * sy]; };
+      if (TR){
+        var q = P(TR.x, TR.y), im = document.createElementNS(NS, "image"); im.id = "t437"; im.setAttribute("href", TR.src); im.setAttribute("x", q[0]); im.setAttribute("y", q[1]); im.setAttribute("width", TR.w * sx); im.setAttribute("height", TR.w * TR.ar * sx); im.setAttribute("opacity", TR.op); im.setAttribute("preserveAspectRatio", "none"); im.setAttribute("pointer-events", "none");
+        var fl = sv.querySelector("#flDefs"); sv.insertBefore(im, fl ? fl.nextSibling : sv.firstChild);
+      }
+      var g = document.createElementNS(NS, "g"); g.id = "e437"; g.setAttribute("pointer-events", "none");
+      /* 丸い札＝文字に太い縁取り（文字の長さに自動で合う） */
+      var chip = function(cx, cy, t, col){ g.insertAdjacentHTML("beforeend", '<text x="' + cx.toFixed(1) + '" y="' + (cy + 5 * k).toFixed(1) + '" text-anchor="middle" style="font-size:' + (13.5 * k).toFixed(2) + 'px;font-weight:900;fill:#fff;stroke:' + col + ';stroke-width:' + (9 * k).toFixed(2) + 'px;stroke-linejoin:round;paint-order:stroke">' + t + '</text>'); };
+      /* ② 部屋の金額 */
+      var rp = HB.__roomPt433 && HB.__roomPt433();
+      if (rp){ try { var R = roomsCalc(), i = Math.floor((rp[0] - R.b.x0) / R.st), j = Math.floor((rp[1] - R.b.y0) / R.st), cid = R.comp[j * R.NX + i], rm = R.rooms.find(function(r){ return r.cid === cid; }), u = unitCost();
+        if (rm && u){ var cp = P(rm.p[0], rm.p[1]), man = Math.round(u * rm.area / 1000) * 1000; chip(cp[0], cp[1] - 30 * k, "この部屋 約" + (man >= 10000 ? (man / 10000).toFixed(1) + "万円" : fmt(man) + "円") + "（目安）", "#2e7d32"); }
+      } catch(e){} }
+      /* ③ ドア・窓：角からの寸法 */
+      if (typeof sel !== "undefined" && sel && sel.t === "o" && S.sashes[sel.i] && S.sashes[sel.i].host){
+        var sa = S.sashes[sel.i], seg = hostSeg(sa.host);
+        if (seg){ var A = seg[0], B = seg[1], L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1, uu = [(B[0] - A[0]) / L, (B[1] - A[1]) / L], n = [-uu[1], uu[0]], p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L);
+          var pol = pts(), mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; if (sa.host.t === "e" && !inside([mid[0] + n[0] * 50, mid[1] + n[1] * 50], pol)) n = [-n[0], -n[1]];
+          var off = 380, at = function(t0){ return [A[0] + uu[0] * t0 + n[0] * off, A[1] + uu[1] * t0 + n[1] * off]; };
+          [[0, p0, -1], [p0 + w, L, 1]].forEach(function(sgm){ var d = Math.round(sgm[1] - sgm[0]); if (d < 1) return; var q1 = P.apply(null, at(sgm[0])), q2 = P.apply(null, at(sgm[1]));
+            g.insertAdjacentHTML("beforeend", '<line x1="' + q1[0].toFixed(1) + '" y1="' + q1[1].toFixed(1) + '" x2="' + q2[0].toFixed(1) + '" y2="' + q2[1].toFixed(1) + '" stroke="#E8742C" stroke-width="' + (1.3 * k).toFixed(2) + '" stroke-dasharray="' + (4 * k) + ' ' + (3 * k) + '"/>');
+            var t0 = fmt(d), cw = (t0.length * 8.2 + 10) * k, segPx = Math.hypot(q2[0] - q1[0], q2[1] - q1[1]), cx0 = (q1[0] + q2[0]) / 2, cy0 = (q1[1] + q2[1]) / 2;
+            if (segPx < cw + 4 * k){ var ux = (q2[0] - q1[0]) / (segPx || 1), uy = (q2[1] - q1[1]) / (segPx || 1), base = sgm[2] < 0 ? q1 : q2, sh = (cw / 2 + 4 * k) * sgm[2]; if (!segPx){ ux = uu[0]; uy = uu[1]; } cx0 = base[0] + ux * sh; cy0 = base[1] + uy * sh; }   /* 短い時は線の外に出す（重ねない） */
+            chip(cx0, cy0, t0, "#E8742C"); });
+        }
+      }
+      sv.appendChild(g);
+    } catch(e){}
+  }
+  try { if (typeof drawPlan === "function" && !drawPlan.__p437){ var d0 = drawPlan; window.drawPlan = function(){ var r = d0.apply(this, arguments); try { paint(); } catch(e){} return r; }; window.drawPlan.__p437 = true; } } catch(e){}
+  var lastS = "";
+  setInterval(function(){ try { var sv = document.getElementById("plan"), sg = [onM(), typeof sel !== "undefined" && sel ? sel.t + sel.i : "", (HB.__roomPt433 && HB.__roomPt433() || []).join(","), sv && sv.getScreenCTM() ? sv.getScreenCTM().a.toFixed(4) : 0, !!(sv && sv.querySelector("#e437"))].join("|"); if (sg !== lastS){ lastS = sg; paint(); } } catch(e){} }, 400);
+  HB.__jaNum437 = jaNum; HB.__tpl437 = applyTpl; HB.__TPL437 = TPL;
 })();
 </script>
