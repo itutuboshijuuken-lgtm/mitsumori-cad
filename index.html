@@ -6323,9 +6323,11 @@ function calc(){
 
   /* --- 後段：旧 blk30（別名 c0）--- 筋交い（壁量）の行を、最後の zoNote の直後へ */
     try {
-      if (S.mode === "zo" && S.tr === "suji" && C && Array.isArray(C.rows) && !C.rows.some(r => r.sjNote)){
-        const w = sujiWall(), n = S.sujiN ?? w.n, have = n * 2 * 91 / 2;   // 縦横に半々に振り分けた存在壁量(cm)
-        const row = {name: "筋交い（壁量）", spec: `${w.two ? "2階建の1階" : "平屋"}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"} ${w.coef}cm/㎡ × 床面積${fmt(w.area, 1)}㎡ ＝ 必要壁量${fmt(w.req)}cm（縦・横それぞれ）→ 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`, qty: "", cost: 0, note: "簡易計算（配置のバランス・開口は未確認）", sjNote: true, zoNote: true};
+      if (S.mode === "zo" && (S.tr === "suji" || S.tr === "menzai") && C && Array.isArray(C.rows) && !C.rows.some(r => r.sjNote)){
+        const w = sujiWall(), n = S.tr === "menzai" ? w.n : (S.sujiN ?? w.n);
+        const base = `${w.two ? "2階建の1階" : "平屋"}・${S.roofW === "light" ? "ガルバ屋根" : "瓦屋根"}・${S.gaiheki === "nuri" ? "塗り壁" : "サイディング等"} ${w.coef}cm/㎡ × 床面積${fmt(w.area, 1)}㎡ ＝ 必要壁量${fmt(w.req)}cm（縦・横それぞれ・2025年の新基準）`;
+        const tail = w.menzai ? ` → 面材（倍率2.5）で 横${fmt(w.hx)}・縦${fmt(w.hy)}cm${n > 0 ? `、足りない分は筋交い${n}本（横${w.nx}・縦${w.ny}）` : "で足ります"}（余裕1.2倍）` : ` → 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`;
+        const row = {name: w.menzai ? "耐力面材＋筋交い（壁量）" : "筋交い（壁量）", spec: base + tail, qty: "", cost: 0, note: "簡易計算（配置のバランス・風の力は未確認）", sjNote: true, zoNote: true};
         let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; });
         if (last >= 0) C.rows.splice(last + 1, 0, row); else C.rows.unshift({grp: "ご注意"}, row);
       }
@@ -7399,7 +7401,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     const hh = two && !any2 ? Hd + 105 + S.kiso : topGL;
     ashibaA = L > 0 ? (L + 2000 * Math.max(1, runs)) * (hh + 1000) / 1e6 : 0; ashG = {L, runs, hh, full: false};
   }
-  const sujiN = (S.sujiN ?? sujiAuto()) * F, sujiL = Math.hypot(910, Lc);
+  const sujiN = (S.tr === "menzai" ? sujiAuto() : (S.sujiN ?? sujiAuto())) * F, sujiL = Math.hypot(910, Lc);
 
   grp("木材");
   lum("dodai", "土台", 105, 105, jtA(lensD, 150), "105角", true);
@@ -7432,6 +7434,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
       rows.push({name: "入隅 ボード受け スギ", spec: `36×45・フル${ukF}本${ukS.length ? `＋短い物${ukS.length}本（まぐさ上）` : ""}${two ? "・1〜2階分" : ""}・${stockTxt(pk.m)}`, qty: `${nStk}本`, cost, avg, conv, miss, fix: {kind: "lumber", sp: "スギ", a: 36, b: 45, len: +Object.keys(pk.m).sort((a, b) => b - a)[0] || 3000, name: "入隅 ボード受け"}});
     }
   }
+  if (S.tr === "menzai" && sujiN > 0){ lum("suji", "筋交い（面材の不足分）", 45, 105, Array(sujiN).fill(sujiL), `45×105・片・長さ${fmt(sujiL)}・面材だけでは壁量が足りない分（間仕切りに入れる）`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
   if (S.tr === "suji"){ lum("suji", "筋交い", 45, 105, Array(sujiN).fill(sujiL), `45×105・${S.suji === "tasuki" ? "たすき" : "片"}・長さ${fmt(sujiL)}`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
   if (two){
     lum("keta", "胴差", 105, S.dosa, jtA(lens, 300), `105×${fmt(S.dosa)}`, true);
@@ -11405,10 +11408,15 @@ function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
 /* ---------- 屋根の仕様（瓦／軽い）と、梁間を飛ばせない時の「内部の柱・桁・基礎」 ---------- */
 function roofKey(){ return (S.mode === "zo" && S.roofW !== "light") ? "roofKawara" : "roofFin"; }
 function roofLbl(n){ return S.mode === "zo" ? n + (S.roofW === "light" ? "（ガルバ）" : "（瓦）") : n; }
-// 小屋梁（梁幅105）の、飛ばせる梁間の目安：曲げとたわみ(L/200・変形増大係数2)。上限×0.8、455mm単位（±1割は丸める）
+/* CAD-406（Opus）：梁の材料と、たわみの決まり。
+   たわみは平12建告1459号（変形増大係数2を掛けて L/250 以下）に合わせる（以前は L/200 で甘かった）。
+   材料は米松（無等級：E=10000・長期fb=1.1/3×28.2=10.3）が標準。S.hariMat==="glu" で集成材（E105-F300：E=10500・fb=11.0）。 */
+function beamMat406(){ return S.hariMat === "glu" ? {E: 10500, fb: 11.0, nm: "集成材"} : {E: 10000, fb: 10.3, nm: "米松"}; }
+const DEFL406 = 250;
+// 小屋梁（梁幅105）の、飛ばせる梁間の目安：曲げとたわみ(L/250・変形増大係数2)。上限×0.8（仕口の欠き込み分の余裕）、455mm単位
 function beamLimit(h){
-  const hh = h || +S.hari || 180, b = 105, E = 11000, fb = 9.8, q = S.roofW === "light" ? 0.9 : 1.5, w = q * (+S.hariP || 1820) / 1000;
-  const Z = b * hh * hh / 6, I = b * hh * hh * hh / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * 200));
+  const MT = beamMat406(), hh = h || +S.hari || 180, b = 105, E = MT.E, fb = MT.fb, q = S.roofW === "light" ? 0.9 : 1.5, w = q * (+S.hariP || 1820) / 1000;
+  const Z = b * hh * hh / 6, I = b * hh * hh * hh / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * DEFL406));
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
 function beamNeeded(span){ for (let h = 150; h <= 390; h += 30) if (beamLimit(h) >= span) return h; return null; }
@@ -11487,8 +11495,8 @@ function intPostList(){
    荷重の幅（受け持ち幅＝梁間÷(列数+1)）で計算し直す。柱と柱の間（柱が無ければ壁から壁まで）が飛ばせない時は、柱を足さず
    （部屋の真ん中に独立柱が出るため）梁せいを大きくする。390でも足りない・4m材を超える時は、足りないことを見積に出す（目安）。 */
 function girderLimit402(h, trib){
-  const b = 105, E = 11000, fb = 9.8, q = S.roofW === "light" ? 0.9 : 1.5, w = q * Math.max(910, trib) / 1000;
-  const Z = b * h * h / 6, I = b * h * h * h / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * 200));
+  const MT = beamMat406(), b = 105, E = MT.E, fb = MT.fb, q = S.roofW === "light" ? 0.9 : 1.5, w = q * Math.max(910, trib) / 1000;
+  const Z = b * h * h / 6, I = b * h * h * h / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * DEFL406));
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
 function intGirderH(){
@@ -11523,14 +11531,45 @@ function intGirderH(){
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：内部の柱・基礎の行）。この IIFE はラッパーだけだったため除去のみ。相方の roofKey/roofLbl/beamLimit/beamNeeded/zoInt はこのブロックに残る。 */
 </script>
 <script>
-/* ---------- 筋交い：本数は壁量計算（令46条）から。必要壁量＝床面積×係数（平屋 瓦15・軽11／2階建の1階 瓦33・軽29）。縦・横それぞれ。
-   筋交い 45×105 の壁倍率は2（たすき掛けは4）、1本が受け持つ長さは910mm。余裕1.2倍。大工の手間は「大工の人工」に含みます。 ---------- */
+/* ---------- CAD-406（Opus）：壁量は2025年4月改正の基準（経過措置は2026/3/31で終了）。
+   必要壁量 Lw＝Ai・C0・Σwi／(0.0196・Afi)（cm/㎡）。「軽い屋根・重い屋根」の係数（15・11・33・29）は廃止。
+   荷重は国の早見表（在来軸組・太陽光なし・標準の階高）から逆算した床面積あたりの値（kN/㎡）：
+     屋根 X：瓦（ふき土無）1.50／金属板（ガルバ）0.81、外壁 Y：サイディング・焼杉 1.08／塗り壁（モルタル等）1.53、床＋積載 F：1.20
+   平屋＝10.204×(X＋0.5Y)、2階建の1階＝10.204×(X＋1.5Y＋F)。早見表と一致（瓦＋サイディング 平屋21・1階44、瓦＋モルタル 平屋23・1階51）。
+   筋交い 45×105 の壁倍率は2（たすき掛けは4）、1本が受け持つ長さは910mm。余裕1.2倍。
+   面材（構造用合板9mm・N50@150）の壁倍率は2.5。開口の無い所で、幅910以上の所だけ数える。足りない分は筋交いを足す。 ---------- */
+function wallCoef406(){
+  const two = roof().two, X = S.roofW === "light" ? 0.81 : 1.50, Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
+  return Math.round(10.204 * (two ? X + 1.5 * Y + F : X + 0.5 * Y));
+}
+// 外まわりの面材の効く長さ（cm）：X方向の壁・Y方向の壁それぞれ。開口を除き、幅910以上の所だけ
+function menzaiLen406(){
+  const out = {x: 0, y: 0};
+  try {
+    const F = framePos();
+    (F.runs || []).filter(r => r.kind === "e").forEach(r => {
+      const ops = (r.ops || []).slice().sort((a, c) => a[0] - c[0]);
+      let t = 0, solid = 0;
+      ops.forEach(o => { const seg = o[0] - t; if (seg >= 910) solid += seg; t = Math.max(t, o[1]); });
+      if (r.L - t >= 910) solid += r.L - t;
+      if (Math.abs(r.ux) >= Math.abs(r.uy)) out.x += solid / 10; else out.y += solid / 10;
+    });
+  } catch(e){}
+  return out;
+}
 function sujiWall(){
-  const area = areaMM() / 1e6, two = roof().two, light = S.roofW === "light", coef = two ? (light ? 29 : 33) : (light ? 11 : 15);
+  const area = areaMM() / 1e6, two = roof().two, coef = wallCoef406();
   const req = area * coef;                     // cm（縦・横それぞれ）
-  let n = Math.max(4, Math.ceil(2 * req * 1.2 / (2 * 91) - 1e-9));
-  if (S.suji === "tasuki" && n % 2) n++;
-  return {n, area, two, coef, req, have: n * 2 * 91 / 2 * (S.suji === "tasuki" ? 1 : 1)};
+  const tas = S.suji === "tasuki", per1 = 2 * 91;   // 片筋交い1本＝壁倍率2×91cm
+  if (S.tr === "menzai"){
+    const M = menzaiLen406(), hx = M.x * 2.5, hy = M.y * 2.5;
+    const nx = Math.max(0, Math.ceil((req * 1.2 - hx) / per1 - 1e-9)), ny = Math.max(0, Math.ceil((req * 1.2 - hy) / per1 - 1e-9));
+    let n = nx + ny; if (tas && n % 2) n++;
+    return {n, area, two, coef, req, menzai: true, mx: M.x, my: M.y, hx, hy, nx, ny, have: Math.min(hx + nx * per1, hy + ny * per1)};
+  }
+  let n = Math.max(4, Math.ceil(2 * req * 1.2 / per1 - 1e-9));
+  if (tas && n % 2) n++;
+  return {n, area, two, coef, req, have: n * per1 / 2};
 }
 /* 旧 sujiAuto ラッパー（別名 sa0・フォールバック型）は段階1で blk02 の統合 sujiAuto へ畳み込み済み（冒頭で sujiWall() を試し、例外時のみ旧方式へ）。相方の sujiWall はこのブロックの全局関数のまま残してある。 */
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：筋交い（壁量）の行）。ここでは除去のみ。 */
