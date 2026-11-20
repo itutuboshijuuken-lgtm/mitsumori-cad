@@ -1068,6 +1068,13 @@ const WORK = [
   ["tsugite", "継手加工（腰掛け鎌継ぎ・手刻み）（仮）", "円/か所", 0, 1500],   /* CAD-406：単価は未決（翔伍が決める） */
   ["tanzaku", "短冊金物（ボルト・ビス共）（仮）", "円/枚", 0, 500],
   ["kisoNuno", "布基礎（フーチング・立ち上がり）（仮）", "円/m", 0, 25000],
+  /* CAD-408：柱頭・柱脚の金物（N値計算・告示1460号の表の(い)〜(ぬ)）。単価はすべて仮 */
+  ["kanaI", "柱頭柱脚 (い) かすがい（仮）", "円/個", 0, 150], ["kanaRo", "柱頭柱脚 (ろ) かど金物 CP・L（仮）", "円/個", 0, 300],
+  ["kanaHa", "柱頭柱脚 (は) 山形プレート VP（仮）", "円/個", 0, 400], ["kanaNi", "柱頭柱脚 (に) 羽子板ボルト（仮）", "円/個", 0, 800],
+  ["kanaHo", "柱頭柱脚 (ほ) 羽子板ボルト＋スクリュー釘（仮）", "円/個", 0, 1000], ["kanaHe", "柱頭柱脚 (へ) ホールダウン10kN（仮）", "円/個", 0, 1800],
+  ["kanaTo", "柱頭柱脚 (と) ホールダウン15kN（仮）", "円/個", 0, 2200], ["kanaChi", "柱頭柱脚 (ち) ホールダウン20kN（仮）", "円/個", 0, 2800],
+  ["kanaRi", "柱頭柱脚 (り) ホールダウン25kN（仮）", "円/個", 0, 3300], ["kanaNu", "柱頭柱脚 (ぬ) ホールダウン15kN×2（仮）", "円/個", 0, 4400],
+  ["hdAnchor", "ホールダウン用アンカーボルト M16（仮）", "円/本", 0, 1200],
   ["kisoBoshitsu", "防湿コンクリート（布基礎の床下）（仮）", "円/㎡", 0, 4500],
   ["cloth", "クロス", "円/㎡", 0, 1680],
   ["ashiba", "足場（くさび式）", "円/㎡", 0, 1000],
@@ -6333,7 +6340,7 @@ function calc(){
         const windT = w.wind ? `。風の力（見付面積×${+S.windC || 50}）の方が大きいので 横${fmt(w.rx)}・縦${fmt(w.ry)}cmで計算` : "";
         const colT = w.col120 ? "　⚠ 2階建の1階・瓦＋塗り壁は、1階の柱（杉）は120角が目安です（ヒノキ等の強い材なら105角でも可の場合あり）" : "";
         const tail = windT + (w.menzai ? ` → 面材（倍率2.5）で 横${fmt(w.hx)}・縦${fmt(w.hy)}cm${n > 0 ? `、足りない分は筋交い${n}本（横${w.nx}・縦${w.ny}）` : "で足ります"}（余裕1.2倍）` : ` → 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`);
-        const row = {name: w.menzai ? "耐力面材＋筋交い（壁量）" : "筋交い（壁量）", spec: base + (S.solar ? "・太陽光パネルあり" : "") + tail, qty: "", cost: 0, note: "簡易計算（配置のバランス＝四分割法は未確認）" + colT, sjNote: true, zoNote: true};
+        const row = {name: w.menzai ? "耐力面材＋筋交い（壁量）" : "筋交い（壁量）", spec: base + (S.solar ? "・太陽光パネルあり" : "") + tail, qty: "", cost: 0, note: "簡易計算（配置のバランス＝四分割法は未確認）" + colT + (() => { try { const NV = nValue406(); return (NV.unplaced > 0 ? `　⚠ 筋交いを置ける壁が${NV.unplaced}本分足りません。たすき掛けか耐力面材にしてください` : "") + (NV.over > 0 ? `　⚠ 金物の強さが足りない柱が${NV.over}か所あります（N値5.6超・構造計算が必要）` : "") + (NV.n ? `　柱頭・柱脚の金物はN値計算（筋交いは外まわりの角から置いた仮の配置）` : ""); } catch(e){ return ""; } })(), sjNote: true, zoNote: true};
         let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; });
         if (last >= 0) C.rows.splice(last + 1, 0, row); else C.rows.unshift({grp: "ご注意"}, row);
       }
@@ -7432,7 +7439,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120).concat(two ? Array(ipn).fill(Lc2 + 120) : []), `105角・間仕切りとの交点${G402.prop.length ? `＋柱か壁の提案${G402.prop.length}か所` : ""}（${IL406.rows}列${two ? "・1階と2階の真上" : ""}）`, true);
     lum("keta", two ? "内部の桁（2階床梁の受け・柱の上）" : "内部の桁（柱の上）", 105, G402.h, jtA(lens406, 300), `105×${fmt(G402.h)}・${IL406.rows}列${IL406.sup.some(l => l.wall) ? "・間仕切りの上" : ""}${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true);
     const zR = zoInt(W, D, yose, two); if (two && zR.rowsR > 0) lum("keta", "内部の桁（2階 小屋梁の受け）", 105, Math.max(+S.hari || 180, G402.h), jtA(lens406.slice(0, Math.min(lens406.length, zR.rowsR * Math.max(1, Math.round(lens406.length / IL406.rows)))), 300), `105×${fmt(Math.max(+S.hari || 180, G402.h))}・2階の柱の上`, true);
-    if (ipn > 0) work("kanamono", "内部の柱の金物", ipn * nF, "本"); } }
+    if (ipn > 0 && !(S.tr === "suji" || S.tr === "menzai")) work("kanamono", "内部の柱の金物", ipn * nF, "本"); } }   /* CAD-408：金物は N値計算の行（nValue406）にまとめる
   /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
      余り材は専用プールで拾う（lum の共有プール POOL を使うと、ほかの行の本数が動いてしまうため）。 */
   { const ukF = F6.ukeFull || 0, ukS = F6.ukeShorts || [];
@@ -7448,6 +7455,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     }
   }
   if (S.tr === "menzai" && sujiN > 0){ lum("suji", "筋交い（面材の不足分）", 45, 105, Array(sujiN).fill(sujiL), `45×105・片・長さ${fmt(sujiL)}・面材だけでは壁量が足りない分（間仕切りに入れる）`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
+  { const NV = nValue406(); if (NV.n > 0){ NTYPES406.forEach(t => { const c = NV.cnt[t[3]]; if (c) work(t[3], `柱頭・柱脚の金物 (${t[1]}) ${t[2]}・N値≦${t[0]}`, c, "個"); }); if (NV.anchors) work("hdAnchor", "ホールダウン用アンカーボルト M16（1階の柱脚）", NV.anchors, "本"); } }   /* CAD-408 */
   if (S.tr === "suji"){ lum("suji", "筋交い", 45, 105, Array(sujiN).fill(sujiL), `45×105・${S.suji === "tasuki" ? "たすき" : "片"}・長さ${fmt(sujiL)}`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
   if (two){
     lum("keta", "胴差", 105, S.dosa, jtA(lens, 300), `105×${fmt(S.dosa)}`, true);
@@ -11682,6 +11690,68 @@ function sujiWall(){
   let n = Math.max(4, nx + ny);
   if (tas && n % 2) n++;
   return Object.assign(base, {n, nx, ny, have: n * per1 / 2});
+}
+/* CAD-408（Opus）：柱頭・柱脚の金物（平12建告1460号 N値計算）。
+   平屋・2階：N＝A1×B1−L、2階建の1階：N＝A1×B1＋A2×B2−L。B＝出隅0.8・その他0.5。L＝平屋/2階 出隅0.4・その他0.6、2階建の1階 出隅1.0・その他1.6。
+   A＝柱の左右の壁の倍率の差。片筋交いは柱頭側＋0.5・柱脚側−0.5の補正（たすきは補正なし）。
+   壁の倍率：面材（外まわり・開口の無い所）2.5、筋交い 片2.0・たすき4.0。筋交いの位置は図面に無いので、外まわりの角に近い所から置いた仮の配置（安全側）。
+   2階は1階と同じ壁の並び（総2階・直下）とみる。出隅は外周の角すべて（入隅も出隅として数える＝安全側）。 */
+const NTYPES406 = [[0, "い", "かすがい", "kanaI"], [0.65, "ろ", "かど金物 CP・L", "kanaRo"], [1.0, "は", "山形プレート VP", "kanaHa"], [1.4, "に", "羽子板ボルト", "kanaNi"], [1.6, "ほ", "羽子板ボルト＋スクリュー釘", "kanaHo"], [1.8, "へ", "ホールダウン10kN", "kanaHe"], [2.8, "と", "ホールダウン15kN", "kanaTo"], [3.7, "ち", "ホールダウン20kN", "kanaChi"], [4.7, "り", "ホールダウン25kN", "kanaRi"], [5.6, "ぬ", "ホールダウン15kN×2", "kanaNu"]];
+function nType406(N){ for (let i = 0; i < NTYPES406.length; i++) if (N <= NTYPES406[i][0] + 1e-9) return i; return -1; }
+function nValue406(){
+  const out = {cols: [], cnt: {}, over: 0, anchors: 0, unplaced: 0, two: false, n: 0};
+  try {
+    if (S.mode !== "zo" || !(S.tr === "suji" || S.tr === "menzai")) return out;
+    const R = roof(), two = !!R.two, F = framePos(), w = sujiWall(); out.two = two;
+    const K = p => Math.round(p.x * 2) + "," + Math.round(p.y * 2);
+    const runs = (F.runs || []).filter(r => r.kind === "e" || (r.kind === "p" && !r.op));
+    const pm = new Map();
+    (F.posts || []).forEach(p => pm.set(K(p), {x: p.x, y: p.y}));
+    (intPostList().list || []).concat(intGirderH().prop || []).forEach(p => { if (!pm.has(K(p))) pm.set(K(p), {x: p.x, y: p.y}); });
+    const posts = Array.from(pm.entries());
+    const corner = new Set(); runs.filter(r => r.kind === "e").forEach(r => { corner.add(K({x: r.ax, y: r.ay})); corner.add(K({x: r.bx, y: r.by})); });
+    const segs = [], onRunK = new Map();
+    runs.forEach((r, ri) => {
+      const u = [];
+      posts.map(([k, p]) => { const t = (p.x - r.ax) * r.ux + (p.y - r.ay) * r.uy, d = Math.hypot(p.x - (r.ax + r.ux * t), p.y - (r.ay + r.uy * t)); return (t >= -1.5 && t <= r.L + 1.5 && d <= 1.5) ? {t, k} : null; })
+        .filter(Boolean).sort((a, c) => a.t - c.t).forEach(q => { if (!u.length || q.t - u[u.length - 1].t > 1) u.push(q); });
+      const dirX = Math.abs(r.ux) >= Math.abs(r.uy);
+      for (let k = 0; k + 1 < u.length; k++){
+        const t0 = u[k].t, t1 = u[k + 1].t, L = t1 - t0;
+        const solid = L >= 600 && !(r.ops || []).some(o => o[0] < t1 - 1 && o[1] > t0 + 1);
+        const sg = {ext: r.kind === "e", dirX, a: u[k].k, b: u[k + 1].k, L, solid, f: 0, br: 0, end: k === 0 || k + 2 === u.length, ri};
+        segs.push(sg);
+        [sg.a, sg.b].forEach(kk => { if (!onRunK.has(kk)) onRunK.set(kk, []); onRunK.get(kk).push(sg); });
+      }
+    });
+    if (w.menzai) segs.forEach(sg => { if (sg.ext && sg.solid) sg.f = 2.5; });
+    const tas = S.suji === "tasuki";
+    let nx = w.nx || 0, ny = w.ny || 0; const extra = Math.max(0, (w.n || 0) - nx - ny); if (nx >= ny) nx += extra; else ny += extra;
+    const place = (n, dirX) => {
+      let left = tas ? Math.ceil(n / 2) : n;
+      const cand = segs.filter(sg => sg.solid && sg.dirX === dirX && (w.menzai ? !sg.ext : true));
+      cand.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (c.L - a.L));
+      for (let i = 0; i < cand.length && left > 0; i++){ const sg = cand[i]; sg.br = tas ? 4.0 : 2.0; sg.f += sg.br; left--;
+        if (!tas){ const ca = corner.has(sg.a), cb = corner.has(sg.b); sg.head = (ca || !cb) ? sg.a : sg.b; } }
+      out.unplaced += left;
+    };
+    place(nx, true); place(ny, false);
+    const eff = (sg, k) => sg.f + (sg.br === 2.0 && sg.head ? (k === sg.head ? 0.5 : -0.5) : 0);
+    posts.forEach(([k, p]) => {
+      const list = onRunK.get(k) || [];
+      let A = 0;
+      const byRun = {}; list.forEach(sg => { (byRun[sg.ri] = byRun[sg.ri] || []).push(sg); });
+      Object.values(byRun).forEach(arr => { const v = arr.map(sg => eff(sg, k)); const a1 = v.length >= 2 ? Math.abs(v[0] - v[1]) : Math.abs(v[0] || 0); if (a1 > A) A = a1; });
+      const cn = corner.has(k), B = cn ? 0.8 : 0.5;
+      const N1 = two ? A * B + A * B - (cn ? 1.0 : 1.6) : A * B - (cn ? 0.4 : 0.6);
+      const N2 = two ? A * B - (cn ? 0.4 : 0.6) : null;
+      const t1 = nType406(N1), t2 = N2 === null ? null : nType406(N2);
+      out.cols.push({x: p.x, y: p.y, A: +A.toFixed(2), corner: cn, N1: +N1.toFixed(2), t1, N2: N2 === null ? null : +N2.toFixed(2), t2});
+      [[t1, 1], [t2, 2]].forEach(([t, fl]) => { if (t === null) return; if (t < 0){ out.over++; return; } const key = NTYPES406[t][3]; out.cnt[key] = (out.cnt[key] || 0) + 2; if (fl === 1 && t >= 5) out.anchors++; });
+    });
+    out.n = out.cols.length;
+  } catch(e){ out.err = String(e); }
+  return out;
 }
 /* 旧 sujiAuto ラッパー（別名 sa0・フォールバック型）は段階1で blk02 の統合 sujiAuto へ畳み込み済み（冒頭で sujiWall() を試し、例外時のみ旧方式へ）。相方の sujiWall はこのブロックの全局関数のまま残してある。 */
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：筋交い（壁量）の行）。ここでは除去のみ。 */
