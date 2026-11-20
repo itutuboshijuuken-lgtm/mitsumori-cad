@@ -6503,6 +6503,10 @@ function framePos(){
       r.opsD.push({h: +sa.h || 0, cat: sa.cat || ""});   // CAD-161: 短い間柱の長さの根拠（サッシの高さ・種類）
     });
     const inOp = (r, t) => r.ops.some(o => t > o[0] + 1 && t < o[1] - 1);
+    const bb454 = bbox();
+    /* CAD-454：ランの上の位置 f から、dir（−1＝手前・＋1＝先）の方向で一番近い「455の割り付け」の位置（外形の左上の角から455ごと）。ランの外に出る時は null */
+    const snapT454 = (r, f, dir) => { if (Math.abs(r.ux) > 0.99 || Math.abs(r.uy) > 0.99){ const hx = Math.abs(r.ux) > 0.99, s0 = hx ? r.ax : r.ay, sg = hx ? Math.sign(r.ux) : Math.sign(r.uy), o0 = hx ? bb454.x0 : bb454.y0;
+        const c = s0 + sg * f, k = (c - o0) / M2, kk = (sg * dir > 0) ? Math.ceil(k - 1e-6) : Math.floor(k + 1e-6), t = sg * (o0 + kk * M2 - s0); return (t >= -0.5 && t <= r.L + 0.5) ? Math.max(0, Math.min(r.L, t)) : null; } return null; };
     // 交点・取り合い（他のランの端点が触れる所＋交差）
     for (let i = 0; i < runs.length; i++) for (let j = i + 1; j < runs.length; j++){
       const r = runs[i], q = runs[j];
@@ -6526,7 +6530,11 @@ function framePos(){
       r.junc.forEach(t => ts.add(t));
       const base = [...ts];
       // CAD-199: 新設間仕切りのドア・建具なし開口・クローゼット開口の両脇は柱ではなく間柱にする（本人の決定）。基礎柱から105mm以内は従来通り柱が兼ねる
-      r.ops.forEach((o, oi) => { const dc = r.opsD[oi] ? r.opsD[oi].cat : ""; const jambOp = r.kind === "p" && r.isNew && (dc === "室内ドア" || dc === "開口" || dc === "クローゼット"); [o[0], o[1]].forEach(f => { if (base.some(t => Math.abs(t - f) <= 105)) return; if (jambOp) r.jambs.push(f); else ts.add(f); }); });
+      r.ops.forEach((o, oi) => { const dc = r.opsD[oi] ? r.opsD[oi].cat : ""; const jambOp = r.kind === "p" && r.isNew && (dc === "室内ドア" || dc === "開口" || dc === "クローゼット"); [o[0], o[1]].forEach((f, side) => { if (base.some(t => Math.abs(t - f) <= 105)) return; if (jambOp){ r.jambs.push(f); return; }
+        /* CAD-454（Opus）：窓・ドアの脇の柱は、455の割り付け（外形の角から）の上に立てる。開口の外側の一番近い割り付けへ（サッシは柱の間に納め、すき間は窓まぐさ・窓台・間柱で受ける）。
+           割り付けから外れた所に柱を立てると、455より狭い柱の間ができて筋交いが入らず、構造図としても不自然になる */
+        const gT = snapT454(r, f, side ? 1 : -1); if (gT !== null && !base.some(t => Math.abs(t - gT) <= 105) && !inOp(r, gT)) ts.add(gT); else if (gT === null) ts.add(f);
+        if (gT !== null && Math.abs(gT - f) > 50) (r.jambs454 = r.jambs454 || []).push(f); }); });   /* 柱から離れたサッシの脇は、窓柱（太い間柱）で受ける */
       [...ts].forEach(t => { if (t > 0 && t < r.L && inOp(r, t)) ts.delete(t); });
       const arr = [...new Set([...ts, ...r.jambs])].sort((a, b) => a - b);   // CAD-199: 埋め処理は jamb の位置も区切りにする（長い間仕切りで開口の遠端に柱が戻らないように）
       for (let i = 0; i + 1 < arr.length; i++){
@@ -6537,7 +6545,7 @@ function framePos(){
           if (cand >= b - 0.5) break;
           if (inOp(r, cand)){
             const op = r.ops.find(o => cand > o[0] + 1 && cand < o[1] - 1);
-            cand = op[1];
+            cand = op[1]; { const g454 = snapT454(r, op[1], 1); if (g454 !== null && !inOp(r, g454)) cand = g454; }   /* CAD-454：開口の先も割り付けの上に */
             if (cand <= a + 0.5 || cand >= b - 0.5) break;
           }
           ts.add(cand); a = cand;
@@ -6572,7 +6580,7 @@ function framePos(){
     });
     // CAD-199: jamb（新設間仕切りのドア・開口・クローゼットの両脇）を太い間柱（45×105）として登録する。柱と同位置なら柱を優先し、グリッド間柱と同位置なら太にまとめて1本に数える
     runs.forEach(r => {
-      (r.jambs || []).forEach(t => {
+      (r.jambs || []).concat((r.jambs454 || []).filter(t => ![...r.postT].some(pt => Math.abs(pt - t) <= 50))).forEach(t => {
         const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
         if (postMap.has(kk)) return;
         Z.jambN++;
@@ -11902,7 +11910,8 @@ function wallSegs406core(fl){
         const sg = {id: rid + ":" + Math.round(t0) + "-" + Math.round(t1), ri, ext: r.kind === "e", dirX, a: u[k].k, b: u[k + 1].k, A, B, L, solid, kind: "none", user: false, end: k === 0 || k + 2 === u.length,
           c: dirX ? (A.y + B.y) / 2 : (A.x + B.x) / 2};
         if (S.tr === "menzai" && sg.ext && solid) sg.kind = "menzai";
-        if (solid && ov[sg.id] && WALLF406[ov[sg.id]] !== undefined){ sg.kind = ov[sg.id]; sg.user = true; }
+        sg.bok = solid && L >= 890;   /* CAD-454：筋交いは柱の間 910 以上の所だけ（455の所には入れない）。面材は 600 以上で可 */
+        if (solid && ov[sg.id] && WALLF406[ov[sg.id]] !== undefined && (sg.bok || ov[sg.id] === "menzai" || ov[sg.id] === "none")){ sg.kind = ov[sg.id]; sg.user = true; }
         out.segs.push(sg);
       }
     });
@@ -11916,7 +11925,7 @@ function wallSegs406core(fl){
       const dirX = d === "x", Q = quarter(dirX), mine = out.segs.filter(sg => sg.dirX === dirX);
       const have = () => mine.reduce((a, sg) => a + cm(sg), 0);
       const sideHave = si => mine.filter(sg => sideOf(sg, Q) === si).reduce((a, sg) => a + cm(sg), 0);
-      const free = () => mine.filter(sg => sg.solid && !sg.user && (sg.kind === "none" || (sg.kind === "menzai" && false)));
+      const free = () => mine.filter(sg => sg.bok && !sg.user && (sg.kind === "none" || (sg.kind === "menzai" && false)));
       const rank = arr => arr.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (c.L - a.L));
       const put = sg => { sg.kind = autoKind; sg.auto = true; };
       // 1) 両端の1/4の帯：充足率1を超えるまで
@@ -11928,7 +11937,7 @@ function wallSegs406core(fl){
         let c2 = rank(free().filter(sg => sideOf(sg, Q) === pref)); if (!c2.length) c2 = rank(free());
         if (!c2.length){
           // 面材の上に筋交いを重ねる（倍率4.5）
-          const m2 = rank(mine.filter(sg => sg.solid && !sg.user && sg.kind === "menzai"));
+          const m2 = rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "menzai"));
           if (!m2.length) break; m2[0].kind = "menzaiKata"; m2[0].auto = true; continue;
         }
         put(c2[0]);
@@ -30169,7 +30178,7 @@ var poly = [[A[0] + nx * hw, A[1] + ny * hw], [B[0] + nx * hw, B[1] + ny * hw], 
 g += "<polygon points=\"" + poly + "\" fill=\"" + (k === "menzai" || k === "menzaiKata"? "#c8c8c8": "#fff") + "\" stroke=\"" + (k === "none"? "#777": c) + "\" stroke-width=\"" + (k === "none"? 0.6: 1) + "\"/>";
 if (sg.solid) g += "<line class=\"tkHit\" data-sid=\"" + sg.id + "\" x1=\"" + r2(A[0]) + "\" y1=\"" + r2(A[1]) + "\" x2=\"" + r2(B[0]) + "\" y2=\"" + r2(B[1]) + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"14\" style=\"cursor:pointer\"/>";
 });
-g += postsDraw(fr, framePos());
+g += postsDraw(fr, withFloor416(fl === 2? 2: 1, function(){ return framePos(); }));   /* CAD-454：2階の図は2階の柱 */
 g += braceSvg413(fr.P, fl || 1, fr.s);   /* CAD-413：筋交いは黒い三角（尖った方が下・広い方が上・置いた側が入る面） */
 return g;
 }
@@ -30311,7 +30320,7 @@ if (fsKind !== "taiku" && fsKind !== "taiku2") return;
 var t = e.target && e.target.closest? e.target.closest("[data-sid]"): null; if (!t) return;
 var fl = fsKind === "taiku2"? 2: 1, key = fl === 2? "braces406f2": "braces406";
 var id = t.getAttribute("data-sid"), WS = wallSegs406(fl), sg = WS.segs.find(function(q){ return q.id === id;}); if (!sg) return;
-var order = ["none", "kata", "tasuki", "menzai"], cur = sg.user? sg.kind: null, nx;
+var order = sg.bok? ["none", "kata", "tasuki", "menzai"]: ["none", "menzai"], cur = sg.user? sg.kind: null, nx; if (!sg.bok && !sg.solid){ try { toast("ここは柱の間が狭いか開口があるので、耐力壁にできません"); } catch(er){} return; } if (!sg.bok){ try { toast("柱の間が910より狭いので、筋交いは入れられません（面材は可）"); } catch(er){} }
 if (cur === null) nx = "none"; else { var ix = order.indexOf(cur); nx = ix < 0 || ix === order.length - 1? null: order[ix + 1];}
 S[key] = Object.assign({}, S[key] || {});
 if (nx === null) delete S[key][id]; else S[key][id] = nx;
@@ -35818,6 +35827,22 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
   }
   function pickS(cat, name, w){ var L = SASH.filter(function(s){ return s.cat === cat && (!name || s.name === name); }); if (!L.length) L = SASH.filter(function(s){ return s.cat === cat; }); if (!L.length) return null; L.sort(function(p, q){ return Math.abs(p.w - w) - Math.abs(q.w - w); }); return L[0]; }
   function applyD(D){
+    /* CAD-454：図面から読んだ寸法を、柱の割り付けにそろえる。外形は227.5、間仕切りは455（外壁の線にはぴったり合わせる）。
+       AIの読みの数十mmのずれで、455より狭い柱の間や半端な位置の柱ができないように */
+    try { (function(){ var O = D.outline || []; if (O.length < 3) return; var mx = Math.min.apply(null, O.map(function(p){ return +p[0]; })), my = Math.min.apply(null, O.map(function(p){ return +p[1]; }));
+      var sn = function(v, o, m){ return o + Math.round((v - o) / m) * m; };
+      D.outline = O.map(function(p){ return [sn(+p[0], mx, 227.5), sn(+p[1], my, 227.5)]; });
+      var ex = D.outline.map(function(p){ return p[0]; }), ey = D.outline.map(function(p){ return p[1]; });
+      var sw = function(v, o, edges){ var g = sn(v, o, 455), best = g; edges.forEach(function(e){ if (Math.abs(e - v) < Math.abs(best - v) && Math.abs(e - v) <= 240) best = e; }); return best; };
+      var fixW = function(W){ return (W || []).map(function(w){ if (!Array.isArray(w) || w.length < 4) return w; return [sw(+w[0], mx, ex), sw(+w[1], my, ey), sw(+w[2], mx, ex), sw(+w[3], my, ey)]; }); };
+      D.walls = fixW(D.walls); if (D.floors2 && D.floors2.walls) D.floors2.walls = fixW(D.floors2.walls);
+      /* 窓・ドア：割り付けの柱の間に納まる位置へ（幅を455で切り上げた柱の間の真ん中に置く。例：1690の窓→1820の柱の間の真ん中） */
+      var fixO = function(OP, W){ var hy = ey.slice(), vx = ex.slice(); (W || []).forEach(function(w){ if (!Array.isArray(w)) return; if (Math.abs(w[1] - w[3]) < 1) hy.push(w[1]); else if (Math.abs(w[0] - w[2]) < 1) vx.push(w[0]); });
+        return (OP || []).map(function(op){ if (!op || !(+op.w > 0)) return op; var x = +op.x, y = +op.y, dH = Math.min.apply(null, hy.map(function(v){ return Math.abs(v - y); })), dV = Math.min.apply(null, vx.map(function(v){ return Math.abs(v - x); }));
+          var sp = Math.ceil((+op.w - 1) / 455) * 455, al = function(c, o){ var st = o + Math.round((c - sp / 2 - o) / 455) * 455; return st + sp / 2; };
+          var q = Object.assign({}, op); if (dH <= dV) q.x = al(x, mx); else q.y = al(y, my); return q; }); };
+      D.openings = fixO(D.openings, D.walls); if (D.floors2 && D.floors2.openings) D.floors2.openings = fixO(D.floors2.openings, D.floors2.walls);
+    })(); } catch(e){}
     try { if (window.__gkBack453) window.__gkBack453(); } catch(e){}
     pushUndo();
     var o = D.outline.map(function(p){ return [Math.round(+p[0]), Math.round(+p[1])]; }), ar = 0;
