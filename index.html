@@ -29060,11 +29060,17 @@ window.__len309txt = function(){ return null; };
    なぞっている間だけ 910 ピッチのマス目（外形の基準に揃えた格子の線）を
    出す。CAD-321 でドットからマス目に変更（本人の実機指摘 2026-11-17：
    ドットは「分かりにくい」→「マス目の方がわかりやすい」）。
-   CAD-315 の見張り（MutationObserver＋タイマー＋ピンチ判定との照合）も維持。 */
+   CAD-315 の見張り（MutationObserver＋タイマー＋ピンチ判定との照合）も維持。
+   CAD-446（2026-11-20 本人の決定）：見た目を候補1「線のそばの小さいタグ」へ
+   作り替え（濃紺 #182A4A のタグ＋白い数字だけ）。ゲーム風HUD（大きな
+   パネル・装飾・下段の別単位）は廃止。同時表示も廃止し、出るのは単位の
+   設定（gosei-unit-v1）で選んだ単位だけ。タグの大きさは画面基準で固定し、
+   ピンチ拡大しても大きくならない。置き場所は今なぞっている辺の中点のそば。
+   なぞりの追跡・長さの計算・マス目・見張りは CAD-318 のまま。 */
 (function(){ "use strict";
   var NS = "http://www.w3.org/2000/svg";
-  var hud = null, digT = null, shkT = null, mmT = null, dotsG = null, dotsKey = "";
-  var builtU = 0, placeKey = "", lastHot = false, lastUnit318 = "";
+  var hud = null, digT = null, tagBg = null, dotsG = null, dotsKey = "";
+  var segGeo318 = null;   /* CAD-446: 今なぞっている辺（mm・タグの置き場所用） */
   var rafPend = false, curVal = null, suppress = false;
   var trk = null;
   var ptrs = new Set();
@@ -29137,6 +29143,7 @@ window.__len309txt = function(){ return null; };
       pieces = pdTrimSegs314(pieces);
       if (!pieces.length) return null;
       var last = qs.length - 1, cur = 0, any = false;
+      segGeo318 = { x1: qs[last].x1, y1: qs[last].y1, x2: qs[last].x2, y2: qs[last].y2 };
       pieces.forEach(function(p){ if (p.__s318 === last){ cur += Math.hypot(p.x2 - p.x1, p.y2 - p.y1); any = true; } });
       if (!any) return null;
       return Math.round(cur);
@@ -29147,59 +29154,68 @@ window.__len309txt = function(){ return null; };
     for (var k in attrs) e.setAttribute(k, attrs[k]);
     return e;
   }
-  /* HUD の組み立て（候補4のモック：濃紺パネル・角カット・水色の細枠と数字） */
+  /* CAD-446：タグの組み立て（候補1：濃紺の小さいタグ＋白い数字だけ。
+     ゲーム風HUDのパネル・装飾は廃止） */
   function build318(){
     var s = $("plan"); if (!s) return false;
     if (hud && hud.parentNode === s && digT) return true;
-    var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
-    var W = vb && vb.width > 0 ? vb.width : 360, u = W / 360;
-    var PW = 292 * u, PH = 108 * u, C = 13 * u;
-    hud = el318("g", {id: "hud318", "pointer-events": "none"});
+    hud = el318("g", {id: "tag446", "pointer-events": "none"});
     hud.style.display = "none";
-    var panel = el318("path", {
-      d: "M " + C + " 0 H " + PW + " V " + (PH - C) + " L " + (PW - C) + " " + PH + " H 0 V " + C + " Z",
-      fill: "rgba(4,28,42,.88)", stroke: "#3EC6EA", "stroke-width": Math.max(0.8, 1.1 * u)
-    });
-    hud.appendChild(panel);
-    var lab = function(x, y, anchor, str){
-      var t = el318("text", {x: x, y: y, "text-anchor": anchor, fill: "#57C8E8"});
-      t.setAttribute("style", "font-size:" + (10 * u) + "px;font-weight:700;letter-spacing:" + (2.5 * u) + "px");
-      t.textContent = str;
-      return t;
-    };
-    hud.appendChild(lab(16 * u, 19 * u, "start", "WALL-LENGTH"));
-    hud.appendChild(lab(PW - 16 * u, 19 * u, "end", "SYS // MEASURE"));
-    var dt = el318("text", {x: PW / 2, y: 64 * u, "text-anchor": "middle"});
-    dt.setAttribute("style", "font-size:" + (44 * u) + "px;font-weight:900;letter-spacing:" + (1 * u) + "px");
-    digT = el318("tspan", {id: "lenM314", fill: "#D8F7FF", stroke: "rgba(62,198,234,.5)", "stroke-width": Math.max(0.7, 1.1 * u), "paint-order": "stroke"});
-    dt.appendChild(digT);
-    mmT = el318("tspan", {fill: "#7FD8F2", dx: 5 * u});
-    mmT.setAttribute("style", "font-size:" + (17 * u) + "px;font-weight:700");
-    mmT.textContent = "mm";
-    dt.appendChild(mmT);
-    hud.appendChild(dt);
-    hud.appendChild(el318("line", {x1: 16 * u, y1: 78 * u, x2: PW - 16 * u, y2: 78 * u, stroke: "#2FA8CC", "stroke-width": Math.max(0.7, 1 * u)}));
-    [16 * u, PW / 2, PW - 16 * u].forEach(function(cx){
-      hud.appendChild(el318("rect", {x: cx - 2.3 * u, y: 78 * u - 2.3 * u, width: 4.6 * u, height: 4.6 * u, fill: "#3EC6EA"}));
-    });
-    shkT = el318("text", {id: "lenS318", x: PW / 2, y: 97 * u, "text-anchor": "middle", fill: "#7FD8F2"});
-    shkT.setAttribute("style", "font-size:" + (15.5 * u) + "px;font-weight:700;letter-spacing:" + (3 * u) + "px");
-    hud.appendChild(shkT);
+    tagBg = el318("rect", {fill: "#182A4A"});
+    hud.appendChild(tagBg);
+    digT = el318("text", {"text-anchor": "middle", fill: "#FFFFFF"});
+    hud.appendChild(digT);
     s.appendChild(hud);
-    builtU = u; placeKey = ""; lastHot = false; lastUnit318 = "__new";
     return true;
   }
-  function place318(){
-    var s = $("plan"); if (!s || !hud) return;
+  /* CAD-446：タグの大きさと置き場所。
+     大きさは画面基準で固定：viewBox の幅と画面の実表示幅の比から
+     「画面1px＝何SVG単位か」を出し、数字は画面で約15px・タグの高さ
+     約27px にそろえる。ピンチ拡大（SVG の CSS 幅が広がる）でも
+     画面上の大きさは変わらない。
+     置き場所は今なぞっている辺（segGeo318・mm）の中点のそば。辺の
+     向きの横へタグ半分＋少しだけ離し、viewBox の外に出そうなら
+     反対側へ回す。最後は viewBox の内側へ収める。 */
+  function layout446(){
+    var s = $("plan"); if (!s || !hud || !digT || !tagBg) return;
     var vb = null; try { vb = s.viewBox && s.viewBox.baseVal; } catch(e){}
-    var W = vb && vb.width > 0 ? vb.width : 360, X = vb ? vb.x : 0, Y = vb ? vb.y : 0;
-    var u = W / 360;
-    if (Math.abs(u - builtU) > 0.01){ hud = null; if (!build318()) return; }
-    var key = X + "|" + Y + "|" + W;
-    if (key !== placeKey){
-      placeKey = key;
-      hud.setAttribute("transform", "translate(" + (X + (W - 292 * u) / 2) + "," + (Y + 76 * u) + ")");
+    if (!vb || !(vb.width > 0)) return;
+    var rc = null; try { rc = s.getBoundingClientRect(); } catch(e){}
+    if (!rc || !(rc.width > 0)) return;
+    var pw = vb.width / rc.width;
+    var fs = 15 * pw;
+    digT.setAttribute("style", "font-size:" + fs + "px;font-weight:800");
+    var tw = 0;
+    try { tw = digT.getComputedTextLength(); } catch(e){}
+    if (!(tw > 0)) tw = fs * 0.62 * String(digT.textContent || "").length;
+    var w = tw + 18 * pw, h = 27 * pw;
+    tagBg.setAttribute("rx", 7 * pw);
+    tagBg.setAttribute("width", w);
+    tagBg.setAttribute("height", h);
+    var cx = null, cy = null;
+    var T = (typeof HB !== "undefined") ? HB.__planT : null;
+    if (segGeo318 && T && T.s > 0){
+      var ax = segGeo318.x1 * T.s + T.ox, ay = segGeo318.y1 * T.s + T.oy;
+      var bx = segGeo318.x2 * T.s + T.ox, by = segGeo318.y2 * T.s + T.oy;
+      var dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy);
+      var mx = (ax + bx) / 2, my = (ay + by) / 2;
+      if (L > 1){
+        var nx = -dy / L, ny = dx / L, off = h / 2 + 7 * pw;
+        cx = mx + nx * off; cy = my + ny * off;
+        if (cx - w / 2 < vb.x + 2 || cx + w / 2 > vb.x + vb.width - 2 || cy - h / 2 < vb.y + 2 || cy + h / 2 > vb.y + vb.height - 2){ cx = mx - nx * off; cy = my - ny * off; }
+      } else { cx = mx; cy = my; }
     }
+    if (cx == null && trk && trk.sv && trk.sv.length){
+      var lp = trk.sv[trk.sv.length - 1];
+      cx = lp[0]; cy = lp[1] - h - 12 * pw;
+    }
+    if (cx == null) return;
+    cx = Math.max(vb.x + w / 2 + 2, Math.min(vb.x + vb.width - w / 2 - 2, cx));
+    cy = Math.max(vb.y + h / 2 + 2, Math.min(vb.y + vb.height - h / 2 - 2, cy));
+    tagBg.setAttribute("x", cx - w / 2);
+    tagBg.setAttribute("y", cy - h / 2);
+    digT.setAttribute("x", cx);
+    digT.setAttribute("y", cy + fs * 0.36);
   }
   /* 910 ピッチのマス目（外形の基準 x0/y0 から 910mm 間隔の格子の線・1本の path）
      CAD-321：CAD-318 のドットは本人の実機で「分かりにくい」となりマス目に変更。
@@ -29244,18 +29260,13 @@ window.__len309txt = function(){ return null; };
     var v = curSegVal318(trk.mm);
     if (v == null){ hide318(); return; }
     if (!build318()) return;
-    place318();
     curVal = v;
-    /* CAD-319: 尺モードでは大きい数字が尺になり、枠の下の小さい方は mm になる */
+    /* CAD-446：出すのは単位の設定で選んだ単位だけ（同時表示はしない） */
     var un318 = (typeof unit319 === "function") ? unit319() : "mm";
     var t = un318 === "shaku" ? shaku318(v) : fmtV318(v);
     if (digT.textContent !== t) digT.textContent = t;
-    if (un318 !== lastUnit318){ lastUnit318 = un318; if (mmT) mmT.textContent = un318 === "shaku" ? "" : "mm"; }
-    var hot = (v > 0 && v % 455 === 0);
-    if (hot !== lastHot){ lastHot = hot; digT.setAttribute("fill", hot ? "#FFB300" : "#D8F7FF"); }
-    var st = un318 === "shaku" ? fmtV318(v) + " mm" : shaku318(v);
-    if (shkT.textContent !== st) shkT.textContent = st;
     if (hud.style.display === "none") hud.style.display = "";
+    layout446();
   }
   function queue318(){ if (!rafPend){ rafPend = true; requestAnimationFrame(upd318); } }
   /* CAD-315 の見張り：なぞり中に #plan が描き直されると HUD・マス目ごと
