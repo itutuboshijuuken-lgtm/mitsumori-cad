@@ -35248,3 +35248,29 @@ nav.steps{padding:1px 6px 3px}
   setInterval(function(){ try { hook(); chips(); var sv = document.getElementById("plan"); if (onM() && sv && !sv.querySelector("#f434") && ((S.furn434 || []).length || mark)) paint(); if (mark && Date.now() - mark.t > 6000){ mark = null; paint(); } } catch(e){} }, 400);
 })();
 </script>
+<script id="nm436js">
+/* ===== CAD-436（Opus）：部屋の名前が重ならないようにする。
+   器具から予想した名前（例：便器がある大きな部屋＝「トイレ」）が、別の部屋に自分で付けた名前（部品の「トイレ」など）と同じ時は、予想の名前を出さない。
+   自分で付けた名前は今まで通り。表示の名前だけ（保存データ・見積には触らない）。 */
+(function(){
+  "use strict";
+  if (typeof roomDispNm366 !== "function" || roomDispNm366.__n436) return;
+  var base = roomDispNm366, cache = {k: "", v: null};
+  function userNames(){
+    var R = roomsCalc(), key = JSON.stringify(S.roomNames || []) + "|" + R.rooms.length;
+    if (cache.k === key) return cache.v;
+    var m = {}; R.rooms.forEach(function(r){ var n = null; try { n = roomUserNm366(r); } catch(e){} if (n) m[r.cid] = n; });
+    cache = {k: key, v: m}; return m;
+  }
+  var w = function(r){
+    var n = base.apply(this, arguments); if (!r || !n) return n;
+    try {
+      var U = userNames(); if (U[r.cid]) return n;          /* 自分で付けた名前はそのまま */
+      for (var cid in U) if (+cid !== r.cid && U[cid] === n) return null;   /* 予想が、別の部屋の自分の名前と同じなら出さない */
+    } catch(e){}
+    return n;
+  };
+  w.__n436 = true;
+  try { roomDispNm366 = w; } catch(e){}
+})();
+</script>
