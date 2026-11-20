@@ -18836,6 +18836,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 (function(){
   "use strict";
   var roomSel176 = null;      // {pt:[x,y]} 部屋はタップした点で都度引き直す
+  HB.__roomPt433 = function(){ return roomSel176 ? roomSel176.pt : null; };   /* CAD-433：開いている部屋の点（表示用に読むだけ） */
   var tapDown176 = null;      // pointerdown の記録（タップ判定用）
   var guardTap176 = null;     // CAD-399：バーを開いたタップの座標（そのタップの click の着地止め）
   var spot176 = {x: 0, y: 0, sig: "", n: 0};
@@ -34912,7 +34913,7 @@ nav.steps{padding:1px 6px 3px}
    表示だけ。保存データ・見積・印刷用の図面には触らない。 */
 (function(){
   "use strict";
-  var NS = "http://www.w3.org/2000/svg", busy = false, lastSig = "";
+  var NS = "http://www.w3.org/2000/svg", busy = false, lastSig = "", narrowKey = "";
   var css = document.createElement("style");
   css.textContent = "body.v432 #plan #dim424,body.v432 #plan .h432{display:none!important}";
   document.head.appendChild(css);
@@ -34996,13 +34997,37 @@ nav.steps{padding:1px 6px 3px}
           });
           var A = h ? P(z.x1, z.y1) : P(z.x1, z.y1), B = h ? P(z.x2, z.y2) : P(z.x2, z.y2);
           g.appendChild(el("line", {x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#E8742C", "stroke-width": (5 * k).toFixed(2), "stroke-linecap": "round"}));
-          var chip = function(cx, cy, v){ var w2 = (String(fmt(v)).length * 9 + 16) * k, h2 = 22 * k; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: "#E8742C"})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (14 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, fmt(v))); };
+          var chip = function(cx, cy, v){ var w2 = (String(fmt(v)).length * 9 + 16) * k, h2 = 22 * k, cf = v < 455 ? "#C62828" : "#E8742C"; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: cf})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (14 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, fmt(v))); };
           [[lo, -1], [hi, 1]].forEach(function(e){
             if (e[0] === null) return;
             var p1 = h ? P(mid, at) : P(at, mid), p2 = h ? P(mid, e[0]) : P(e[0], mid);
             g.appendChild(el("line", {x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1], stroke: "#E8742C", "stroke-width": (1.3 * k).toFixed(2), "stroke-dasharray": (4 * k) + " " + (3 * k)}));
             chip((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, Math.round(Math.abs(e[0] - at)));
           });
+          /* CAD-433：動かして狭くなったら、その場で知らせる（狭い状態に入った時に1回だけ） */
+          var dmin = Math.min(lo === null ? 1e9 : at - lo, hi === null ? 1e9 : hi - at), nk = sel.i + ":" + Math.round(at);
+          if (dmin < 455){ if (narrowKey !== nk){ narrowKey = nk; try { toast("狭すぎます：すき間 芯々" + fmt(Math.round(dmin)) + "（内法 約" + fmt(Math.max(0, Math.round(dmin) - 130)) + "mm）。人は通れません"); } catch(e){} } }
+          else narrowKey = "";
+        }
+      } catch(e){}
+      /* CAD-433：部屋をタップした時、その部屋の内法（芯々−壁130）を青い丸で出す */
+      try {
+        var rp = HB.__roomPt433 && HB.__roomPt433();
+        if (rp && typeof roomsCalc === "function"){
+          var R = roomsCalc(), ci = Math.floor((rp[0] - R.b.x0) / R.st), cj = Math.floor((rp[1] - R.b.y0) / R.st), cid = R.comp[cj * R.NX + ci], rm = R.rooms.find(function(r){ return r.cid === cid; });
+          if (rm){
+            var i0 = 1e9, i1 = -1, j0 = 1e9, j1 = -1; rm.cells.forEach(function(cc){ var ii = cc % R.NX, jj = Math.floor(cc / R.NX); if (ii < i0) i0 = ii; if (ii > i1) i1 = ii; if (jj < j0) j0 = jj; if (jj > j1) j1 = jj; });
+            var X0 = R.b.x0 + i0 * R.st, X1 = R.b.x0 + (i1 + 1) * R.st, Y0 = R.b.y0 + j0 * R.st, Y1 = R.b.y0 + (j1 + 1) * R.st, rect = rm.cells.length >= 0.9 * (i1 - i0 + 1) * (j1 - j0 + 1);
+            var near = function(v, L){ var bst = v, bd = 260; L.forEach(function(w){ var d = Math.abs(w - v); if (d < bd){ bd = d; bst = w; } }); return bst; };   /* 端を一番近い壁の芯にそろえる */
+            X0 = near(X0, xs); X1 = near(X1, xs); Y0 = near(Y0, ys); Y1 = near(Y1, ys);
+            var wIn = Math.round(X1 - X0 - 130), dIn = Math.round(Y1 - Y0 - 130);
+            var bchip = function(cx, cy, t){ var w2 = (t.length * 8.6 + 16) * k, h2 = 22 * k; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: "#1a73e8"})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (13.5 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, t)); };
+            var q0 = P(X0, Y0), q1 = P(X1, Y1), pre = rect ? "内法 " : "最大 ";
+            g.appendChild(el("rect", {x: q0[0].toFixed(1), y: q0[1].toFixed(1), width: (q1[0] - q0[0]).toFixed(1), height: (q1[1] - q0[1]).toFixed(1), fill: "rgba(26,115,232,.06)", stroke: "#1a73e8", "stroke-width": (2 * k).toFixed(2), "stroke-dasharray": (6 * k) + " " + (4 * k)}));
+            bchip((q0[0] + q1[0]) / 2, q1[1] - 16 * k, pre + fmt(wIn));
+            var cy0 = (q0[1] + q1[1]) / 2, cx0 = q0[0] + 16 * k, t2 = pre + fmt(dIn), w3 = (t2.length * 8.6 + 16) * k, gg = el("g", {transform: "rotate(-90 " + cx0.toFixed(1) + " " + cy0.toFixed(1) + ")"});
+            gg.appendChild(el("rect", {x: (cx0 - w3 / 2).toFixed(1), y: (cy0 - 11 * k).toFixed(1), width: w3.toFixed(1), height: (22 * k).toFixed(1), rx: (11 * k).toFixed(1), fill: "#1a73e8"})); gg.appendChild(el("text", {x: cx0.toFixed(1), y: (cy0 + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (13.5 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, t2)); g.appendChild(gg);
+          }
         }
       } catch(e){}
       var poly = sv.querySelector("polygon"); sv.appendChild(g);
@@ -35010,7 +35035,7 @@ nav.steps{padding:1px 6px 3px}
       lastSig = sig();
     } catch(e){} finally { busy = false; }
   }
-  function sig(){ try { var sv = document.getElementById("plan"), ctm = sv.getScreenCTM(); return [on(), ctm ? ctm.a.toFixed(4) : 0, typeof sel !== "undefined" && sel ? sel.t + sel.i : "", (S.parts2D || []).length, !!sv.querySelector("#v432"), S.mode].join("|"); } catch(e){ return ""; } }
+  function sig(){ try { var sv = document.getElementById("plan"), ctm = sv.getScreenCTM(); return [on(), ctm ? ctm.a.toFixed(4) : 0, typeof sel !== "undefined" && sel ? sel.t + sel.i : "", (HB.__roomPt433 && HB.__roomPt433() || []).join(","), (function(){ try { return sel && sel.t === "p" ? JSON.stringify(S.parts2D[sel.i]) : ""; } catch(e){ return ""; } })(), (S.parts2D || []).length, !!sv.querySelector("#v432"), S.mode].join("|"); } catch(e){ return ""; } }
   try {
     if (typeof drawPlan === "function" && !drawPlan.__v432){ var d0 = drawPlan; window.drawPlan = function(){ var r = d0.apply(this, arguments); try { apply(); } catch(e){} return r; }; window.drawPlan.__v432 = true; }
   } catch(e){}
