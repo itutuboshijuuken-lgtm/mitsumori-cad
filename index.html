@@ -11635,7 +11635,7 @@ function intGirderH(){
    面材（構造用合板9mm・N50@150）の壁倍率は2.5。開口の無い所で、幅910以上の所だけ数える。足りない分は筋交いを足す。 ---------- */
 function wallCoef406(){
   const two = roof().two, X = (S.roofW === "light" ? 0.81 : 1.50) + (S.solar ? 0.20 : 0),   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
-  return Math.round(10.204 * (two ? X + 1.5 * Y + F : X + 0.5 * Y));
+  return Math.round(10.204 * (two ? X + 1.5 * Y + F : X + 0.5 * Y) * (S.softGround ? 1.5 : 1));   /* 軟弱地盤の指定区域（S.softGround）は C0＝0.3 なので1.5倍 */
 }
 // 外まわりの面材の効く長さ（cm）：X方向の壁・Y方向の壁それぞれ。開口を除き、幅910以上の所だけ
 function menzaiLen406(){
