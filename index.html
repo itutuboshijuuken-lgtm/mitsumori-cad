@@ -955,6 +955,16 @@ function loadProject(id){
     if (S.mode === "zo" && Array.isArray(S.fl) && S.fl.length >= 2 && S.floors !== 2) S.floors = 2;
   }
   thinParts142();   // 10cmに満たない切れ端の壁は消す（建具の host も付け替える）
+  /* CAD-447：写真取り込み（CAD-439〜446）が全サッシに wall: 0 を入れていた保存データの救済。
+     描いた建具の wall は、付いている壁（host）から決まるのが通常経路の決まり
+     （外周ならその辺番号・間仕切りなら -1）。host と食い違う物だけ host から直す。
+     手で置いた建具は元から一致しているため触らない（ハーネスで手描きの保存データ
+     3軒の食い違い0件を確認済み）。階のスナップショット内のサッシも同じ直しをする。 */
+  try {
+    const fixWall447 = list447 => { (list447 || []).forEach(sa447 => { if (!sa447 || !sa447.drawn || !sa447.host) return; const exp447 = sa447.host.t === "e" && typeof sa447.host.i === "number" ? sa447.host.i : sa447.host.t === "p" ? -1 : null; if (exp447 !== null && sa447.wall !== exp447) sa447.wall = exp447; }); };
+    fixWall447(S.sashes);
+    (S.fl || []).forEach(f447 => { if (f447 && f447.snap) fixWall447(f447.snap.sashes); });
+  } catch(e){}
   PJ.cur = id; LSs("zochiku-projects-v1", PJ);
   /* --- 後段（旧 blk17）：旧「シートフロア」をフローリング（複合）に読み替える。fixFlSheet は blk17 が window に置く全局関数のため直接呼ぶ。
      この直後の読み込み時呼び出し loadProject(PJ.cur) は blk17 評価前で、元の連鎖でも後段は無かったため、定義済みの時だけ呼んで段階を再現する（統合 go の blk17 前段と同じ扱い） --- */
@@ -35614,12 +35624,16 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     /* CAD-443：前の家の床の範囲・器具・照明などを残さない（新しい家として入れる） */
     ["tatami", "zones", "roomFin", "roomRecs", "fx", "lights", "tenken", "tare", "furn434"].forEach(function(k){ if (Array.isArray(S[k])) S[k] = []; });
     var MAP = {window: ["腰窓", null], sweep: ["掃き出し", null], door: ["室内ドア", "片開き"], sliding: ["室内ドア", "片引き戸"], entrance: ["玄関", null], opening: ["開口", null]}, skipped = 0;
+    /* CAD-447：取り込みの建具も、手で置く経路（addStdOpening・placeOpening）と
+       同じ決まりで wall と flip を入れる。wall: 0 固定だと立体図・室内図が全部の
+       建具を北の壁（wall 0）に等間隔で並べて帯になり、見積の建具行の仕様欄も
+       全部「北の壁」になる（本人の実機指摘 2026-11-20）。2階分も同じ決まり。 */
     (D.openings || []).forEach(function(op){
       try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ skipped++; return; }
         var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ skipped++; return; }
         var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
         var along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w;
-        S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"});
+        S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"});
       } catch(e){ skipped++; }
     });
     var addFC = function(L){ (L || []).forEach(function(fc){ try { var r = fc.rect; if (!Array.isArray(r) || r.length < 4) return; var fk = fc.type === "doma" ? "flDoma" : fc.type === "tatami" ? "tatami" : null; if (!fk) return; S.tatami = S.tatami || []; S.tatami.push({x0: tx(Math.min(r[0], r[2])), y0: ty(Math.min(r[1], r[3])), x1: tx(Math.max(r[0], r[2])), y1: ty(Math.max(r[1], r[3])), fk: fk, st: "fl:" + fk}); } catch(e){} }); };
@@ -35645,7 +35659,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
         S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
         S.sashes = []; S.tatami = [];
-        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"}); } catch(e){ sk2++; } });
+        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); } catch(e){ sk2++; } });
         addFC(F2.floor_changes);
         var snap2 = flSnap(); flLoad(keep1); S.fl.push({name: (S.fl.length + 1) + "階", snap: snap2}); if (S.mode === "zo") S.floors = 2; S.fi = 0; save(); try { flTitle(); } catch(e){} two = {sk: sk2};
       }
