@@ -2283,6 +2283,16 @@ let tatMode = false, tatInk = null;
 const tatGrid = r => [Math.max(1, Math.round((r.x1 - r.x0) / 910)), Math.max(1, Math.round((r.y1 - r.y0) / 910))];
 // 床組の大引・2階床梁：建物の輪郭（L字など）の中だけを数える。
 // alongX=true なら横向き（y一定）の線、false なら縦向きの線。線の間隔は910以内。
+/* CAD-401: 新築の床の大引の向き。リフォーム床（CAD-241）と同じ決まり：標準は長手、S.obikiDir="short"で短手、
+   長い方が4mを超えて短い方が4m以内なら短い方に通す（4m材で継ぎなし）。長さは柱面（芯芯−柱）で見る。trueなら大引はX方向。 */
+function obikiAlongX264(b){
+  const PIL = +S.pil || 105, wf = b.w - PIL, hf = b.h - PIL;
+  let alongW = wf >= hf;
+  if (S.obikiDir === "short") alongW = !alongW;
+  const al = alongW ? wf : hf, ac = alongW ? hf : wf;
+  if (al > 4000 && ac <= 4000) alongW = !alongW;
+  return alongW;
+}
 function joistRuns(alongX, P0, b0){
   const P = P0 || pts(), b = b0 || bbox(), sw = p => alongX ? p : [p[1], p[0]];
   const lo = alongX ? b.y0 : b.x0, hi = alongX ? b.y1 : b.x1;
@@ -7328,13 +7338,13 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   const eaveLen = yose ? 2 * (W + D + 4 * S.noki) : kata ? (D + kerA + kerB) * ((nokiA > 0) + (nokiB > 0)) : (D + kerA + kerB) * ((nokiA > 0) + (nokiB > 0));
   const hanakakushi = []; for (let L = eaveLen; L > 0; L -= 3800) hanakakushi.push(Math.min(L, 3800) + 100);
   if (kata && S.parapet && eaveLen < D) hanakakushi.push(D + 100); // パラペットの下側（開けた辺）にも鼻隠し
-  const b = R.b, sh = Math.min(b.w, b.h), lg = Math.max(b.w, b.h), JR2 = joistRuns(b.w >= b.h), obiki = JR2.n, tsukaF = JR2.posts;
+  const b = R.b, sh = Math.min(b.w, b.h), lg = Math.max(b.w, b.h), JR2 = joistRuns(obikiAlongX264(b)), obiki = JR2.n, tsukaF = JR2.posts;
   /* CAD-264: 床の工法（翔伍の決定 2026-11-15）。剛床＝大引＋小つなぎの田の字（どちらも105角・芯々910ピッチ）、床合板24mm、鋼製束は格子の交点。
      根太工法＝大引は一方向だけ、根太は大引と直交に土台の外面まで（線分＋105）、根太受けは新築・増築では拾わない。 */
   const FKO264 = S.floorKoho === "neda" ? "neda" : "goushou", banT264 = FKO264 === "neda" ? 28 : 24;
   let koNeeds264 = [], gridPosts264 = JR2.posts, gridPostsEx264 = 0; const nedaNeeds264 = [];
   if (wood && FKO264 === "goushou"){
-    const alongX264 = b.w >= b.h, A264 = gridLines264(alongX264, 910), B264 = gridLines264(!alongX264, 910);
+    const alongX264 = obikiAlongX264(b), A264 = gridLines264(alongX264, 910), B264 = gridLines264(!alongX264, 910);
     gridPosts264 = 0;
     const EX264 = kisoEx264(A264, B264, alongX264);
     B264.lines.forEach(L264 => L264.segs.forEach(sg => {
@@ -7345,7 +7355,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     }));
   }
   if (wood && FKO264 === "neda"){
-    const B264 = gridLines264(!(b.w >= b.h), S.joistP === 455 ? 455 : 303);
+    const B264 = gridLines264(!obikiAlongX264(b), S.joistP === 455 ? 455 : 303);
     B264.lines.forEach(L264 => L264.segs.forEach(sg => nedaNeeds264.push(Math.round(sg[1] - sg[0] + 105))));
   }
   let wallLen = 0; S.edges.forEach((e, i) => { if (i !== S.house && i !== S.noWall) wallLen += e.v; });
@@ -28983,8 +28993,13 @@ return g;
 }
 
 /* CAD-393：部材の上に断面寸法を直接書く（帯の真ん中。縦の帯は回す。白い縁取りで線の上でも読める様に） */
+var lblSeen401 = {};
 function sizeLbl393(fr, a, c, text){
 var A = fr.P(a), C2 = fr.P(c);
+/* CAD-401: 同じ表記は1枚の図に1回だけ。帯が文字より短ければ書かない（線に重ねない） */
+if (lblSeen401[text]) return "";
+if (Math.hypot(C2[0] - A[0], C2[1] - A[1]) < String(text).length * 6.6 + 8) return "";
+lblSeen401[text] = 1;
 var mx = (A[0] + C2[0]) / 2, my = (A[1] + C2[1]) / 2;
 var vert = Math.abs(C2[0] - A[0]) < Math.abs(C2[1] - A[1]);
 var t = "<text class=\"fsSize\" x=\"" + r2(mx) + "\" y=\"" + r2(my) + "\" text-anchor=\"middle\" dominant-baseline=\"middle\" style=\"font-size:9px;font-weight:700;fill:#111;paint-order:stroke;stroke:#fff;stroke-width:2.6px\"";
@@ -29082,6 +29097,7 @@ return g + "</g>";
 
 /* ===== 基礎伏図 ===== */
 function fsKiso(fr, b){
+lblSeen401 = {};
 if (!S.kisoNew){
 var p = pts(), g = "";
 for (var i = 0; i < p.length; i++) g += line(fr, p[i], p[(i + 1) % p.length], "fsRef", "#9AA3AD", 1);
@@ -29093,11 +29109,12 @@ return outline(fr, true, 150, "fsKiso") + intBands(fr, "fsKisoInt", 150) + outli
 
 /* ===== 床伏図 ===== */
 function fsYuka(fr, b){
+lblSeen401 = {};
 var F = framePos(), g = partRef(fr, F);
 g += outline(fr, true, 105, "fsDodai") + outlineLbl393(fr, true, "105×105"); /* 土台：見積行（lensD）と同じく母屋側の辺を除く */
 var wood = S.floor!== "doma" && S.floor!== "oki";
 if (wood){
-var alongX = b.w >= b.h;
+var alongX = obikiAlongX264(b);
 var A = gridLines264(alongX, 910), B = gridLines264(!alongX, 910);
 var segA = function(along, c, v){ return along? [v, c]: [c, v];};
 A.lines.forEach(function(Ln){
@@ -29148,6 +29165,7 @@ g += postSq(fr, a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f, sizeMm, "fsT
 return g;
 }
 function fsKoya(fr, b){
+lblSeen401 = {};
 var R = roof(), F = framePos(), g = partRef(fr, F);
 var moyaW = +S.moya || 105, tsukaW = +S.tsuka || 105, hariP = +S.hariP || 1820;
 g += outline(fr, false, 105, "fsKeta") + outlineLbl393(fr, false, "105×" + fmt(S.keta));
