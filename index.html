@@ -558,6 +558,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="mtools">
       <div class="seg modeSeg" style="flex:0 0 auto"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
       <div class="mrow" id="stepBar399"></div>
+      <div id="stepGuide400">間仕切りを引く</div>
       <div class="mrow" id="toolTabs"></div>
       <div class="mrow" id="partCh" hidden></div>
       <div class="mrow" id="toolCh2" hidden></div>
@@ -1957,11 +1958,12 @@ function fixInk(){ resetPV();
   const mx = Math.max(...e.map(x => x.px));
   S.edges = e.map(x => ({d: x.d, v: Math.max(455, gLen(x.px / mx * 5460)), set: false}));
   if (!HB.__nbtut){ [["R","L"],["D","U"]].forEach(ax => { const ii = S.edges.map((q, j) => j).filter(j => ax.includes(S.edges[j].d)); ii.slice(0, -1).forEach(j => { S.edges[j].set = true; }); }); } /* CAD-82: 本番はなぞった長さをそのまま寸法にする（各軸の最後の辺だけ閉じ合わせ用に残す） */
-  S.house = -1; solve(); save(); clearInk(); toast("直線に整えました"); HB.__sy = HB.__sy || {}; HB.__sy[2] = 0; go(2);
+  S.house = -1; solve(); save(); clearInk(); try { HB.__presetSig400 = ""; } catch(e){} toast("直線に整えました"); HB.__sy = HB.__sy || {}; HB.__sy[2] = 0; go(2);
 }
 document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => { resetPV(); if (S.edges) pushUndo();   /* CAD-259 */
   if (b.dataset.preset === "rect") S.edges = [{d:"R",v:3640,set:true},{d:"D",v:2730,set:true},{d:"L",v:3640,set:false},{d:"U",v:2730,set:false}];
   else S.edges = [{d:"R",v:3640,set:true},{d:"D",v:1820,set:true},{d:"L",v:1820,set:true},{d:"D",v:1820,set:true},{d:"L",v:1820,set:false},{d:"U",v:3640,set:false}];
+  try { HB.__presetSig400 = S.edges.map(function(e){ return e.d + e.v; }).join(","); } catch(e){}
   S.house = -1; solve(); save(); go(2);
 }));
 
@@ -1992,6 +1994,7 @@ function drawTsubo(){
     const o = ops[+b.dataset.ts], W = o.b * 910, D = o.a * 910;
     if (S.edges) pushUndo();   /* CAD-259 */
     S.edges = [{d:"R", v:W, set:true}, {d:"D", v:D, set:true}, {d:"L", v:W, set:false}, {d:"U", v:D, set:false}];
+    try { HB.__presetSig400 = S.edges.map(function(e){ return e.d + e.v; }).join(","); } catch(e){}
     S.house = -1; solve(); save(); toast(`${ken(o.a)}×${ken(o.b)}で作りました`); go(2);
   });
 }
@@ -5180,7 +5183,35 @@ function drawPlan(){
   let topSvg152 = 0;
   if (HB.__pageM && Ht && document.body.classList.contains("fsDraw")){ try { const rr = $("slotM").getBoundingClientRect(); let tp = 0; [document.querySelector("#stM .mtools"), $("planBar")].forEach(el => { if (el){ const bb = el.getBoundingClientRect(); if (bb.height > 0) tp = Math.max(tp, bb.bottom - rr.top); } }); if (tp > 0 && rr.width > 50) topSvg152 = tp * W / rr.width; } catch(e){} }
   const maxH152 = Math.max(120, maxH - topSvg152);
-  let s = topSvg152 > 0 ? Math.min((W - pad * 2) / b.w, (maxH152 - pad * 2) / b.h, (maxH152 - 16) / (b.h + 1260)) : Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
+  /* CAD-400：全画面（置く作業）では、下の選ぶシート（葉＋道具の列）が図面に被る分も
+     収まる範囲から引く（シートの上端から画面の下端までを botSvg400 とする）。
+     あわせて、置く作業の帯（#putBar261）が図面の上に浮く分も、上の帯の分へ足す
+     （topSvg152 は .mtools と #planBar しか見ていないため）。
+     シートが閉じている時・通常表示ではどちらも 0 で、従来と完全に同じ計算になる。
+     通常表示のシートは #slotM の余白側（末尾ブロック）で合わせる。 */
+  let botSvg400 = 0, topSvg400 = 0;
+  if (HB.__pageM && Ht && document.body.classList.contains("fsDraw")){
+    try {
+      const rr400 = $("slotM").getBoundingClientRect();
+      let bt400 = 0;
+      ["grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id400){
+        const el400 = document.getElementById(id400);
+        if (el400 && !el400.hidden && el400.getClientRects().length){
+          const bb400 = el400.getBoundingClientRect();
+          if (bb400.height > 0) bt400 = Math.max(bt400, window.innerHeight - bb400.top);
+        }
+      });
+      if (bt400 > 0 && rr400.width > 50) botSvg400 = bt400 * W / rr400.width;
+      const pb400 = document.getElementById("putBar261");
+      if (pb400 && !pb400.hidden && pb400.getClientRects().length && rr400.width > 50){
+        const bb401 = pb400.getBoundingClientRect();
+        if (bb401.height > 0 && bb401.width > 50)
+          topSvg400 = Math.max(0, (bb401.bottom - rr400.top) * W / rr400.width - topSvg152 + 8);
+      }
+    } catch(e){}
+  }
+  const regH400 = Math.max(120, maxH152 - botSvg400 - topSvg400);
+  let s = topSvg152 > 0 ? Math.min((W - pad * 2) / b.w, (regH400 - pad * 2) / b.h, (regH400 - 16) / (b.h + 1260)) : Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
   /* CAD-156: 横画面の間取りでは、寸法表示（外形の外へ最大630mm出る）が viewBox の外へ
      はみ出して消えない様、はみ出し込みの収まりでも s を抑える（寸法と文字は欠かさない）。
      横の上限は全画面でも効かせる。縦の上限は通常表示だけ（全画面は上の
@@ -5193,7 +5224,7 @@ function drawPlan(){
     s = Math.min(s, (W - 10) / (b.w + 1260));
     if (HB.__landM128 && !(topSvg152 > 0) && Ht) s = Math.min(s, (Ht - 10) / (b.h + 1260));
   }
-  const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + (maxH152 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
+  const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + topSvg400 + (regH400 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
   const sp = p.map(P);
   HB.__planT = {s, ox, oy}; HB.__lbl = []; const lbl316 = [];   /* CAD-316: 寸法の札の材料（反発レイアウト用） */
@@ -17769,7 +17800,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 
   var st176 = document.createElement("style");
   st176.textContent =
-    "#stM #roomBar176{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:8;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:8px;touch-action:manipulation}"
+    "#stM #roomBar176{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:8;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:8px;touch-action:manipulation;max-height:40vh;overflow-y:auto}"
     + "#roomBar176[hidden]{display:none}"
     + "#roomBar176 .r1{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:6px;font-size:15px;font-weight:800}"
     + "#roomBar176 .r1 button{min-height:40px;min-width:76px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:14px;font-weight:800;color:var(--ai);padding:0 10px}"
@@ -29631,6 +29662,7 @@ body.gold #presetBar363 button{background:#0B0D10;color:#F4EEDD;border-color:rgb
     resetPV();
     if (S.edges) pushUndo();   /* CAD-259 と同じ作法 */
     S.edges = [{d:"R", v:W, set:true}, {d:"D", v:D, set:true}, {d:"L", v:W, set:false}, {d:"U", v:D, set:false}];
+    try { HB.__presetSig400 = S.edges.map(function(e){ return e.d + e.v; }).join(","); } catch(e){}
     S.house = -1; solve(); save();
     go(2);
     placed363 = {name: sz[0]};
@@ -29875,7 +29907,16 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
     var avail = stM && !stM.hidden && hasE && !tut;
     /* CAD-371：入った瞬間だけ自動判定（部屋が無い階だけ自動で開く。
        閉じた事のある現場では開かない）。開いた後は閉じるまで開いたまま。 */
-    if (avail && !wasAvail371) open371 = !hasRoom371() && !houseClosed371();
+    if (avail && !wasAvail371){
+      /* CAD-400：見本から置いた外形（署名が今の外形と一致）の時は自動で開かない。
+         署名はメモリだけ。手で描き直すと消える（fixInk）。チップからは開ける。 */
+      var fp400 = false;
+      try {
+        var sg400 = (typeof S !== "undefined" && S.edges) ? S.edges.map(function(e){ return e.d + (e.v != null ? e.v : e.px); }).join(",") : "";
+        fp400 = !!(typeof HB !== "undefined" && HB.__presetSig400 && sg400 && HB.__presetSig400 === sg400);
+      } catch(e){}
+      open371 = !hasRoom371() && !houseClosed371() && !fp400;
+    }
     if (!avail) open371 = false;
     wasAvail371 = !!avail;
     var showBox371 = !!(avail && open371);
@@ -29892,6 +29933,8 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
       if (tb.parentElement.style.order !== want) tb.parentElement.style.order = want;
     }
   }
+  /* CAD-400：手順を移る時に見本パネルを閉じるための口（「閉じた」記録には触らない） */
+  try { HB.__rpClose400 = function(){ open371 = false; sync365(); }; } catch(e){}
   drawRp365(); sync365();
   setInterval(sync365, 700);
 })();
@@ -32365,5 +32408,153 @@ function daikuBaseRows391(nobeT){
   }
   buildBar399();
   try { applyStep399(); } catch(e){}
+})();
+</script>
+<script>
+/* ================= CAD-400：Claude の実機確認で見つかった困りごと4点の直し =================
+   出典：Claudeから-じゅうちゃんへ-実機確認と手順の組み立て案-1120.md（B1）。
+   1) 手順を移る時に部屋バーと見本パネルを閉じる（床の手順へ移る時だけ部屋バーは
+      閉じない＝「床を決める」の流れを守る。見本パネルは行き先に関わらず閉じる）。
+   2) 各手順の上に「今やる事」を1行（#stepGuide400）。常時ある細い1行で高さ一定。
+   4) 選ぶシートが図面に被さる分、通常表示では #slotM の下に余白を足して図面を
+      縮めて合わせる（CAD-371 の refit371 と同じ考え方）。シートが閉じたら余白を戻す。
+      全画面（置く作業）では drawPlan 側の収まり計算で下のシートの分を引く
+      （build400 の差し替え側）。ここではシートの開閉を検えて drawPlan を掛け直す。
+      あわせて、間取りに入った直後に pinH が古い大きい値のままで図面が slot から
+      はみ出す時は、pinH を作り直す（見本チップだけ出る状態では refit371 が掛からないため）。
+   3) は CAD-365 側の判定と、見本から置く3経路の署名（このファイルの差し替え側）。
+   状態はメモリだけ（保存キーは追加しない）。見積・保存データには触らない。 */
+(function(){
+  "use strict";
+  var st400 = document.createElement("style");
+  st400.textContent = "#stepGuide400{font-size:12.5px;font-weight:800;line-height:1.45;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:3px 9px}"
+    + "body.nbtutRun #stepGuide400{display:none}";
+  document.head.appendChild(st400);
+
+  var GUIDE400 = {part: "間仕切りを引く", floor: "部屋をタップして床を選ぶ", ds: "ドア・窓を置く壁をタップ", put: "置く場所をタップ"};
+  var guideEl400 = document.getElementById("stepGuide400");
+  var lastStep400 = "part";
+  try { if (typeof HB !== "undefined" && HB.__step399) lastStep400 = HB.__step399(); } catch(e){}
+  var applied400 = 0;   /* 今 #slotM に足している下の余白(px) */
+
+  function tutOn400(){
+    try { return document.body.classList.contains("nbtutRun") || !!(typeof HB !== "undefined" && HB.__nbtut); }
+    catch(e){ return false; }
+  }
+  function setGuide400(ns){
+    if (!guideEl400) return;
+    var t = GUIDE400[ns] || GUIDE400.part;
+    if (guideEl400.textContent !== t) guideEl400.textContent = t;
+  }
+  setGuide400(lastStep400);
+
+  /* 手順が変わった時に、部屋バー（床へ移る時は除く）と見本パネルを閉じる */
+  function closeOnStep400(ns){
+    if (tutOn400()) return;
+    if (ns !== "floor"){
+      try {
+        var b = document.getElementById("roomBar176");
+        if (b && !b.hidden && typeof HB !== "undefined" && HB.__closeRoom176) HB.__closeRoom176();
+      } catch(e){}
+    }
+    try { if (typeof HB !== "undefined" && HB.__rpClose400) HB.__rpClose400(); } catch(e){}
+  }
+
+  /* シートの分だけ #slotM の下に余白を足し、図面を縮めて合わせる */
+  function setMargin400(px, refit){
+    var slot = document.getElementById("slotM");
+    if (!slot) return;
+    applied400 = px;
+    slot.style.marginBottom = px ? px + "px" : "";
+    if (refit){
+      try { if (typeof HB !== "undefined") HB.__pinH = 0; } catch(e){}
+      try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    }
+  }
+  function refit400(){
+    var stM = document.getElementById("stM");
+    var slot = document.getElementById("slotM");
+    if (!stM || !slot) return;
+    if (stM.hidden || !(typeof HB !== "undefined" && HB.__pageM)
+        || document.body.classList.contains("fsDraw") || tutOn400()){
+      if (applied400) setMargin400(0, false);
+      return;
+    }
+    var sr = slot.getBoundingClientRect();
+    var naturalBottom = sr.bottom + applied400;   /* 余白が無い時の slotM の下端 */
+    var top = Infinity;
+    ["roomBar176", "grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el || el.hidden) return;
+      if (!el.getClientRects().length) return;   /* display:none（ux-sheet-off 含む）は数えない */
+      var r = el.getBoundingClientRect();
+      if (r.height > 0 && r.top < top) top = r.top;
+    });
+    var want = 0;
+    if (top !== Infinity) want = Math.max(0, Math.round(naturalBottom - top));
+    if (Math.abs(want - applied400) >= 3) setMargin400(want, true);
+  }
+
+  /* 全画面（置く作業）の収まりに関わる形：一番上のシートの上端＋置く帯の下端 */
+  function fsSig400(){
+    var top = null;
+    ["grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){
+      var el = document.getElementById(id);
+      if (!el || el.hidden || !el.getClientRects().length) return;
+      var r = el.getBoundingClientRect();
+      if (r.height > 0 && (top === null || r.top < top)) top = Math.round(r.top);
+    });
+    var pb = document.getElementById("putBar261");
+    var pbB = -1;
+    if (pb && !pb.hidden && pb.getClientRects().length){
+      var pr = pb.getBoundingClientRect();
+      if (pr.height > 0 && pr.width > 50) pbB = Math.round(pr.bottom);
+    }
+    return (top === null ? "-" : top) + "/" + pbB;
+  }
+  var lastFsSig400 = null, lastOv400 = 0;
+
+  setInterval(function(){
+    try {
+      var ns = (typeof HB !== "undefined" && HB.__step399) ? HB.__step399() : null;
+      if (ns){
+        if (ns !== lastStep400){
+          lastStep400 = ns;
+          setGuide400(ns);
+          closeOnStep400(ns);
+        } else setGuide400(ns);
+      }
+    } catch(e){}
+    try { refit400(); } catch(e){}
+    /* 全画面：シートの開閉で図面の収まりを掛け直す／通常表示：入口のはみ出しを直す */
+    try {
+      var stM3 = document.getElementById("stM");
+      if (stM3 && !stM3.hidden && typeof HB !== "undefined" && HB.__pageM && !tutOn400()){
+        if (document.body.classList.contains("fsDraw")){
+          var fs400 = fsSig400();
+          if (lastFsSig400 === null){
+            /* 全画面に入った直後：入る時の描画が帯・シートより前に走っている事があるため、基線と一緒に一度だけ掛け直す */
+            lastFsSig400 = fs400;
+            try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+          }
+          else if (fs400 !== lastFsSig400){
+            lastFsSig400 = fs400;
+            try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+          }
+        } else {
+          lastFsSig400 = null;
+          var slot3 = document.getElementById("slotM"), sv3 = document.getElementById("plan");
+          if (slot3 && sv3 && !applied400){
+            var sr3 = slot3.getBoundingClientRect(), vr3 = sv3.getBoundingClientRect();
+            if (vr3.height > 0 && vr3.bottom > sr3.bottom + 3 && (HB.__pinH || 0) > sr3.height + 3
+                && Date.now() - lastOv400 >= 1000){
+              lastOv400 = Date.now();
+              try { HB.__pinH = 0; if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+            }
+          }
+        }
+      }
+    } catch(e){}
+  }, 250);
 })();
 </script>
