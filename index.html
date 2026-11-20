@@ -13204,7 +13204,31 @@ document.addEventListener("click", function(e){
             const leftA397 = left397.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
             rmWhole397 = leftA397 <= Math.max(1, roomA397 * 0.001);
           }
-          (S.tatami || []).forEach(o => { if (!o.rm || !rmWhole397){ gaps170 = gaps170.flatMap(p => subFloor140(p, o)); cover343.push(o); } });
+          /* CAD-404：全体判定を種類で分ける（診断 diag-floor-old-data-2026-11-20）。
+             畳（fk無し）・土間（flDoma）・座上げ（za）の rm 記録は、その種類だけの
+             合算が部屋全体を覆う時だけ決め直し可とする。他の種類と合わせて全体に
+             なる場合（一部だけの畳・土間＋残りの部屋タップ記録で敷き詰め）でも守る。
+             ゾーンは全体判定（rmWhole397）の従来の扱いにそろえて引く（読み込み時
+             にゾーンで分割された記録でも全体と正しく判定するため）。通常仕上げの
+             rm 記録は従来どおり全体の合算（rmWhole397）で判定する。 */
+          const kindOf404 = o => o.za ? "za" : (!o.fk ? "tatami" : (o.fk === "flDoma" ? "doma" : ""));
+          const kindWhole404 = {};
+          {
+            const roomAk404 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+            ["tatami", "doma", "za"].forEach(kd => {
+              const recsK = rmRecs397.filter(o => kindOf404(o) === kd);
+              if (!recsK.length){ kindWhole404[kd] = false; return; }
+              let leftK = rects.slice();
+              recsK.forEach(o => { leftK = leftK.flatMap(p => subFloor140(p, o)); });
+              (S.zones || []).forEach(z => { if (typeof zoneCutQ198 === "function" && zoneCutQ198(z)) leftK = leftK.flatMap(p => subFloor140(p, z)); });
+              const leftAk = leftK.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
+              kindWhole404[kd] = leftAk <= Math.max(1, roomAk404 * 0.001);
+            });
+          }
+          (S.tatami || []).forEach(o => {
+            const kd404 = o.rm ? kindOf404(o) : "";
+            if (!o.rm || (kd404 ? !kindWhole404[kd404] : !rmWhole397)){ gaps170 = gaps170.flatMap(p => subFloor140(p, o)); cover343.push(o); }
+          });
           (S.zones || []).forEach(z => { if (typeof zoneCutQ198 === "function" && zoneCutQ198(z)) gaps170 = gaps170.flatMap(p => subFloor140(p, z)); });
           const roomA170 = rects.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
           const gapA170 = gaps170.reduce((a, rc) => a + (rc.x1 - rc.x0) * (rc.y1 - rc.y0), 0);
