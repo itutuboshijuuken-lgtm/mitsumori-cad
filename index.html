@@ -35079,11 +35079,13 @@ nav.steps{padding:1px 6px 3px}
       if (!sa.drawn || !sa.host) return; var seg = hostSeg(sa.host); if (!seg) return;
       var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L], n = [-u[1], u[0]];
       var p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), m = [a[0] + u[0] * (p0 + w / 2), a[1] + u[1] * (p0 + w / 2)], off = R.st + 80, isWin = typeOf(sa) === "win";
-      [1, -1].forEach(function(sg){ var r = roomAtMM(R, m[0] + n[0] * off * sg, m[1] + n[1] * off * sg); if (r){ if (isWin) win[r.cid] = 1; else touch[r.cid] = 1; } });
+      [1, -1].forEach(function(sg){ var r = roomAtMM(R, m[0] + n[0] * off * sg, m[1] + n[1] * off * sg); if (r){ if (isWin){ win[r.cid] = (win[r.cid] || 0) + (+sa.w || 0) * (+sa.h || 0) / 1e6; } else touch[r.cid] = 1; } });
     });
     var big = R.rooms.filter(function(r){ return r.area >= 1; });
     if (big.length > 1) big.forEach(function(r){ if (!touch[r.cid]) out.push({lv: 2, t: nameOf(r, R) + "：ドアがありません", p: r.p}); });
-    big.forEach(function(r){ var nm = nameOf(r, R); if (/洋室|寝室|LDK|リビング|ダイニング|子供|和室|居間|書斎/.test(nm) && !win[r.cid]) out.push({lv: 2, t: nm + "：窓がありません（居室は採光の窓が要ります）", p: r.p}); });
+    big.forEach(function(r){ var nm = nameOf(r, R); if (!/洋室|寝室|LDK|リビング|ダイニング|子供|和室|居間|書斎/.test(nm)) return;
+      if (!win[r.cid]) out.push({lv: 2, t: nm + "：窓がありません（居室は採光の窓が要ります）", p: r.p});
+      else if (win[r.cid] < r.area / 7) out.push({lv: 1, t: nm + "：採光の窓が小さめ（床の1/7＝" + (r.area / 7).toFixed(2) + "㎡ に対し 窓 " + win[r.cid].toFixed(2) + "㎡。窓の大きさの合計での目安）", p: r.p}); });   /* CAD-435：建築基準法28条 居室の採光 1/7（有効採光面積の細かい計算はしない目安） */
     var parts = (S.parts2D || []).filter(function(z){ try { return pState(z) !== "remove"; } catch(e){ return true; } }), lines = [], P = pts(), nar = 0;
     P.forEach(function(q, i){ var r = P[(i + 1) % P.length]; lines.push({x1: q[0], y1: q[1], x2: r[0], y2: r[1]}); }); parts.forEach(function(z){ lines.push(z); });
     parts.forEach(function(q){
