@@ -4972,7 +4972,7 @@ function pickList(p){
   if (p.kind === "ext") return L.filter(([x]) => /玄関|勝手口/.test(x.cat));
   return L.filter(([x]) => x.cat === p.wcat);
 }
-function pickBase(p){ const l = pickList(p); return l.length ? l[0][0] : {cat: "室内ドア", name: "片開き", w: 778, h: 2033}; }
+function pickBase(p){ const l = pickList(p); return l.length ? l[0][0] : {cat: "室内ドア", name: "片開き", w: 780, h: 2033}; }
 const pkRow = (arr, cur, attr) => `<div class="seg" style="margin-top:6px">${arr.map(([k, n]) => `<button type="button" data-${attr}="${k}" aria-pressed="${cur === k}">${n}</button>`).join("")}</div>`;
 function pickerHtml(p, withPart){
 const TG = ["door", "hiki", "closet"], inTg = TG.includes(p.kind);
@@ -5627,14 +5627,17 @@ $("geyaAdd").addEventListener("click", () => { S.geya = S.geya || []; const used
 /* ---------- ④ 仕様 ---------- */
 /* CAD-405：この表の w・h は全て枠外寸法（ドアも窓と同じ物差し。本人の決定 2026-11-15／2026-11-20）。
    ドアの数値は本人の決定で現行のまま枠外寸法として扱う。根拠と照合結果は
-   harness/audit-door-wakugai-2026-11-20.md。開口（建具なし）だけは開口そのものの寸法。 */
+   harness/audit-door-wakugai-2026-11-20.md。開口（建具なし）だけは開口そのものの寸法。
+   CAD-406：本人の決定「数字はメーカーを信じて下さい」（2026-11-20）で、カタログの
+   枠外寸法と食い違う2件をカタログどおりに直した：片開き 778→780、玄関シングル
+   922→920。保存済みの家の数字は書き換えない（この表と初期値だけの変更）。 */
 const SASH = [
   {cat:"掃き出し", name:"16520", w:1690, h:2030}, {cat:"掃き出し", name:"16522", w:1690, h:2230}, {cat:"掃き出し", name:"11920", w:1235, h:2030}, {cat:"掃き出し", name:"25620（4枚建）", w:2600, h:2030},
   {cat:"腰窓", name:"16511", w:1690, h:1170}, {cat:"腰窓", name:"16509", w:1690, h:970}, {cat:"腰窓", name:"11911", w:1235, h:1170}, {cat:"腰窓", name:"11909", w:1235, h:970}, {cat:"腰窓", name:"07411", w:780, h:1170},
   {cat:"小窓", name:"07409", w:780, h:970}, {cat:"小窓", name:"07407", w:780, h:770}, {cat:"小窓", name:"07405", w:780, h:570}, {cat:"小窓", name:"03605", w:405, h:570},
   {cat:"FIX", name:"07407", w:780, h:770}, {cat:"FIX", name:"11905", w:1235, h:570}, {cat:"FIX", name:"16505", w:1690, h:570},
-  {cat:"玄関", name:"シングル（片開き）", w:922, h:2330}, {cat:"玄関", name:"親子ドア", w:1235, h:2330}, {cat:"玄関", name:"引き戸 片引き", w:1235, h:2230}, {cat:"玄関", name:"引き戸 2枚建", w:1690, h:2230}, {cat:"勝手口", name:"ドア", w:785, h:2030},
-  {cat:"室内ドア", name:"片開き", w:778, h:2033}, {cat:"室内ドア", name:"片引き戸", w:1645, h:2033}, {cat:"室内ドア", name:"引違い戸", w:1645, h:2033}, {cat:"室内ドア", name:"片引き戸（上吊り）", w:1645, h:2033},
+  {cat:"玄関", name:"シングル（片開き）", w:920, h:2330}, {cat:"玄関", name:"親子ドア", w:1235, h:2330}, {cat:"玄関", name:"引き戸 片引き", w:1235, h:2230}, {cat:"玄関", name:"引き戸 2枚建", w:1690, h:2230}, {cat:"勝手口", name:"ドア", w:785, h:2030},
+  {cat:"室内ドア", name:"片開き", w:780, h:2033}, {cat:"室内ドア", name:"片引き戸", w:1645, h:2033}, {cat:"室内ドア", name:"引違い戸", w:1645, h:2033}, {cat:"室内ドア", name:"片引き戸（上吊り）", w:1645, h:2033},
   {cat:"クローゼット", name:"折れ戸 2枚", w:850, h:2033}, {cat:"クローゼット", name:"折れ戸 4枚", w:1645, h:2033},
   {cat:"シャッター", name:"手動", w:2000, h:2000}, {cat:"シャッター", name:"手動", w:2560, h:2200}, {cat:"シャッター", name:"手動", w:3000, h:2400},
   {cat:"シャッター", name:"電動", w:2000, h:2000}, {cat:"シャッター", name:"電動", w:2560, h:2200}, {cat:"シャッター", name:"電動", w:3000, h:2400},
