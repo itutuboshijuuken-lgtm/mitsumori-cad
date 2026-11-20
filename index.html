@@ -34570,6 +34570,14 @@ nav.steps{padding:1px 6px 3px}
       [poly, g].forEach(function(el){
         if (el && el.getAttribute("clip-path") !== "url(#clipF423)") el.setAttribute("clip-path", "url(#clipF423)");
       });
+      /* CAD-442：床を隠す枠で外形の線まで消えていた。外形の線だけ、隠さない写しを上に重ねる */
+      if (poly){
+        var ol = svg.querySelector("#ol442");
+        if (!ol){ ol = document.createElementNS(NS, "polygon"); ol.setAttribute("id", "ol442"); ol.setAttribute("pointer-events", "none"); poly.parentNode.insertBefore(ol, poly.nextSibling); }
+        ol.setAttribute("points", poly.getAttribute("points") || ""); ol.setAttribute("fill", "none");
+        ol.setAttribute("stroke", poly.getAttribute("stroke") || "#1d2a3a"); ol.setAttribute("stroke-width", poly.getAttribute("stroke-width") || "3");
+        if (poly.getAttribute("stroke-linejoin")) ol.setAttribute("stroke-linejoin", poly.getAttribute("stroke-linejoin"));
+      }
       /* その他の床の絵（部屋ごとの仕上げ rect・床板の継ぎ目線・水まわりのCF等）も
          同じ clip を付ける。範囲指定の絵（印つき・専用グループ内）は決めた範囲
          そのものなので触らない。 */
@@ -34919,7 +34927,7 @@ nav.steps{padding:1px 6px 3px}
   document.head.appendChild(css);
   function on(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM && typeof S !== "undefined" && S.edges); }
   function el(tag, at, txt){ var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (txt != null) e.textContent = txt; return e; }
-  var HIDE_FILL = ["rgb(194, 87, 26)", "rgb(30, 58, 138)", "rgb(138, 150, 163)"], HIDE_STROKE = ["#1e3a8a", "#8a96a3", "#c2571a"];
+  var HIDE_FILL = ["rgb(194, 87, 26)", "rgb(30, 58, 138)", "rgb(138, 150, 163)"], HIDE_STROKE = ["#8a96a3", "#c2571a"];   /* CAD-442：#1E3A8A は外周の線にも使われていたので隠さない */
   function apply(){
     if (busy) return; busy = true;
     try {
