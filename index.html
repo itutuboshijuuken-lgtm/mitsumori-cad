@@ -34582,3 +34582,87 @@ nav.steps{padding:1px 6px 3px}
   fix423();
 })();
 </script>
+
+<script id="fs424js">
+/* ===== CAD-424：間取りの編集画面では通り芯の符号を寸法列に変える =====
+   CAD-345 の符号グループ（g[data-sno="grid345"]）を編集画面でのみ隠し、
+   gridLines345 の実芯位置から、上＝X方向・左＝Y方向の寸法列を描く。
+   完成図プレビュー（pvSvg）と図面集（dz411）は対象外（符号のまま）。 */
+(function(){
+  var NS = "http://www.w3.org/2000/svg";
+  var lastKey = "";
+  function fmtN(v){ return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+  function fix424(){
+    try{
+      if (typeof HB === "undefined" || !HB.__pageM) { lastKey = ""; return; }
+      var svg = document.getElementById("plan");
+      if (!svg || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
+      if (typeof bbox !== "function" || typeof gridLines345 !== "function") return;
+      var grp = svg.querySelector('g[data-sno="grid345"]');
+      if (!grp) return;
+      if (grp.style.display !== "none") grp.style.display = "none";
+      var b = bbox(); if (!b || !(b.w > 0)) return;
+      var poly = null;
+      svg.querySelectorAll("polygon").forEach(function(p){ if (!poly && (p.getAttribute("fill") || "").indexOf("url(#pFl") === 0) poly = p; });
+      if (!poly) return;
+      var pb; try { pb = poly.getBBox(); } catch(e){ return; }
+      if (!(pb.width > 0) || !(pb.height > 0)) return;
+      var sx = pb.width / b.w, sy = pb.height / b.h;
+      var X = function(mm){ return pb.x + (mm - b.x0) * sx; };
+      var Y = function(mm){ return pb.y + (mm - b.y0) * sy; };
+      var gl = gridLines345(b);
+      var key = gl.xs.join(",") + "|" + gl.ys.join(",") + "|" + pb.x + "," + pb.y + "," + pb.width + "," + pb.height + "|" + (svg.getAttribute("viewBox") || "");
+      var old = svg.querySelector("#dim424");
+      if (key === lastKey && old) return;
+      lastKey = key;
+      if (old) old.remove();
+      /* 符号の帯の位置（符号の丸の中心）を読み取る */
+      var rowY = pb.y - 8, colX = pb.x - 8;
+      var cs = grp.querySelectorAll("circle");
+      var rows = [], cols = [];
+      cs.forEach(function(c){
+        var cx = parseFloat(c.getAttribute("cx")), cy = parseFloat(c.getAttribute("cy"));
+        if (cy < pb.y - 1) rows.push(cy);
+        if (cx < pb.x - 1) cols.push(cx);
+      });
+      if (rows.length) rowY = rows.reduce(function(a, v){ return a + v; }, 0) / rows.length;
+      if (cols.length) colX = cols.reduce(function(a, v){ return a + v; }, 0) / cols.length;
+      var g = document.createElementNS(NS, "g");
+      g.setAttribute("id", "dim424"); g.setAttribute("pointer-events", "none");
+      function tick(x1, y1, x2, y2){
+        var l = document.createElementNS(NS, "line");
+        l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+        l.setAttribute("stroke", "#1E3A8A"); l.setAttribute("stroke-width", ".55");
+        g.appendChild(l);
+      }
+      function label(x, y, str, wUnits){
+        var fs = wUnits < 13 ? 5 : 6.8;
+        var t = document.createElementNS(NS, "text");
+        t.setAttribute("x", x); t.setAttribute("y", y);
+        t.setAttribute("text-anchor", "middle"); t.setAttribute("dominant-baseline", "middle");
+        t.setAttribute("class", "halo");
+        t.setAttribute("style", "font-size:" + fs + "px;font-weight:700;fill:#1E3A8A");
+        t.textContent = str;
+        g.appendChild(t);
+      }
+      gl.xs.forEach(function(mm){ var x = X(mm); tick(x, rowY - 3.2, x, rowY + 3.2); });
+      for (var i = 0; i + 1 < gl.xs.length; i++){
+        var xa = X(gl.xs[i]), xb = X(gl.xs[i + 1]);
+        if (xb - xa < 7) continue;
+        label((xa + xb) / 2, rowY, fmtN(gl.xs[i + 1] - gl.xs[i]), xb - xa);
+      }
+      gl.ys.forEach(function(mm){ var y = Y(mm); tick(colX - 3.2, y, colX + 3.2, y); });
+      for (var j = 0; j + 1 < gl.ys.length; j++){
+        var ya = Y(gl.ys[j]), yb = Y(gl.ys[j + 1]);
+        if (yb - ya < 7) continue;
+        label(colX, (ya + yb) / 2, fmtN(gl.ys[j + 1] - gl.ys[j]), yb - ya);
+      }
+      svg.appendChild(g);
+    }catch(e){}
+  }
+  setInterval(fix424, 500); fix424();
+  var prev = window.tidyPlanLabels;
+  if (typeof prev === "function"){ window.tidyPlanLabels = function(){ var r = prev.apply(this, arguments); fix424(); return r; }; }
+})();
+</script>
+
