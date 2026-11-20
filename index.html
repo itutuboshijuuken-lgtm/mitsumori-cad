@@ -24023,11 +24023,8 @@ function build(S,T,opt){
   const band=M({color:0xd9d2c3,roughness:.6});add(box(-.02,FL+H0+B*.35,-.02,W+.02,FL+H0+B*.35+.06,D+.02,six(band)));
   BASE449=H0+B;SRC449=f2;[0,1,2,3].forEach(i=>wall(P[i][0],P[i][1],TH_O,H2,{t:'e',i},P[i][2]));BASE449=0;SRC449=null;
   LIFT=B+H2;}}catch(e){BASE449=0;SRC449=null;LIFT=0}
- /* 外壁の上（梁・小屋裏）：片流れ。北が高い */
- const RISE=.3*D;
- if(mode!=='doll')add(box(0,FL+H+LIFT,0,W,FL+H0+LIFT+RISE,TH_O,six(mat.cloth,{nz:mat.siding})));
- if(mode!=='doll'){ const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(D,0);sh.lineTo(D,RISE);sh.closePath();
-   [[0,'nx'],[W-TH_O,'px']].forEach(([x])=>{const g=new T.ExtrudeGeometry(sh,{depth:TH_O,bevelEnabled:false});g.rotateY(Math.PI/2);g.translate(x,FL+H0+LIFT,D);const m=new T.Mesh(g,mat.siding);m.castShadow=m.receiveShadow=true;add(m)}) }
+ const RISE=.3*D;/* CAD-450：外壁の上と屋根は、下の「屋根（選んだ形）」で作る。作れない時だけ従来の片流れ */
+ let OLDROOF450=true;
  /* 間仕切り */
  (S.parts2D||[]).forEach((p,i)=>{const cl=(x,z)=>({x:x<=.001?TH_O:x>=W-.001?W-TH_O:x,z:z<=.001?TH_O:z>=D-.001?D-TH_O:z});
   let A=cl(mm(p.x1),mm(p.y1)),B=cl(mm(p.x2),mm(p.y2));const horiz=Math.abs(mm(p.y1)-mm(p.y2))<1e-6;if(horiz){A.z=B.z=mm(p.y1)}else{A.x=B.x=mm(p.x1)}
@@ -24036,11 +24033,49 @@ function build(S,T,opt){
   if(horiz){A.x=ext303(A.x,W);B.x=ext303(B.x,W)}else{A.z=ext303(A.z,D);B.z=ext303(B.z,D)}
   const P1={x:mm(p.x1),z:mm(p.y1)};const dirS=horiz?Math.sign(B.x-A.x):Math.sign(B.z-A.z);const off=horiz?(A.x-P1.x)*dirS:(A.z-P1.z)*dirS;
   wall(A,B,TH_P,H,{t:'p',i},null,off)});
+ /* CAD-450：屋根（選んだ形どおり）。本体の roofPlanes413（見積・伏図と同じ面）から、面ごとに屋根板・軒天・鼻隠しを作り、
+    外壁の上（桁まで）と妻の三角・棟違いの段差・入母屋の妻を外壁で埋める */
+ try{(function(){
+  if(typeof roofPlanes413!=="function"||typeof roof!=="function"||S!==__gS307())throw 0;
+  const R=roof(),RP=roofPlanes413(),b=R.b,t=R.t;if(!RP.planes.length)throw 0;
+  const FK=mm(Math.max(0,+S.fuko||300)),BY=FL+H0+LIFT+(mode==='out'?FK:0);
+  if(mode!=='doll'&&mode==='out'&&FK>0)add(box(0,FL+H0+LIFT,0,W,BY,D,six(mat.siding)));
+  const hOf=(P,x,y)=>{if(P.run==="y"){const w=Math.abs(P.eave-b.y0)<=Math.abs(P.eave-b.y1)?b.y0:b.y1;return (w===b.y0?y-b.y0:b.y1-y)*t}const w=Math.abs(P.eave-b.x0)<=Math.abs(P.eave-b.x1)?b.x0:b.x1;return (w===b.x0?x-b.x0:b.x1-x)*t};
+  const inP=(poly,x,y)=>{let sg=0;for(let i=0;i<poly.length;i++){const a=poly[i],c=poly[(i+1)%poly.length],cr=(c[0]-a[0])*(y-a[1])-(c[1]-a[1])*(x-a[0]);if(Math.abs(cr)<1e-6)continue;const s1=cr>0?1:-1;if(!sg)sg=s1;else if(s1!==sg)return false}return true};
+  const hAt=(x,y)=>{let best=null;RP.planes.forEach(P=>{if(inP(P.poly,x,y)){const v=hOf(P,x,y);if(best===null||v<best)best=v}});return best};
+  const V=(x,y,hh)=>[mm(x-b.x0),BY+mm(hh),mm(y-b.y0)];
+  const TK=.12;const RT=X.tile.clone();RT.wrapS=RT.wrapT=T.RepeatWrapping;RT.repeat.set(1,1);RT.needsUpdate=true;const RM=mat.roof.clone();RM.map=RT;RM.side=T.DoubleSide;
+  RP.planes.forEach(P=>{const pts=P.poly.map(q=>V(q[0],q[1],hOf(P,q[0],q[1])));const n=pts.length;
+   const top=[],bot=[],uvT=[];for(let i=1;i<n-1;i++){[0,i,i+1].forEach(k=>{const q=pts[k];top.push(q[0],q[1]+TK,q[2]);bot.push(q[0],q[1],q[2]);uvT.push((P.run==="y"?q[0]:q[2])/1.4,(P.run==="y"?q[2]:q[0])/1.1)})}
+   const gT=new T.BufferGeometry();gT.setAttribute('position',new T.Float32BufferAttribute(top,3));gT.setAttribute('uv',new T.Float32BufferAttribute(uvT,2));gT.computeVertexNormals();
+   const nT=gT.attributes.normal.array;if(nT[1]<0){for(let k=0;k<top.length;k+=9){const tmp=[top[k+3],top[k+4],top[k+5]];top[k+3]=top[k+6];top[k+4]=top[k+7];top[k+5]=top[k+8];top[k+6]=tmp[0];top[k+7]=tmp[1];top[k+8]=tmp[2]}gT.setAttribute('position',new T.Float32BufferAttribute(top,3));gT.computeVertexNormals()}
+   const mT=new T.Mesh(gT,RM);mT.castShadow=mT.receiveShadow=true;ceilG.add(mT);
+   const gB=new T.BufferGeometry();gB.setAttribute('position',new T.Float32BufferAttribute(bot,3));gB.computeVertexNormals();const mB=new T.Mesh(gB,M({color:0xf1eee7,roughness:.7,side:T.DoubleSide}));mB.receiveShadow=true;ceilG.add(mB);
+   const sd=[];for(let i=0;i<n;i++){const a=pts[i],c=pts[(i+1)%n];sd.push(a[0],a[1],a[2],c[0],c[1],c[2],c[0],c[1]+TK,c[2],a[0],a[1],a[2],c[0],c[1]+TK,c[2],a[0],a[1]+TK,a[2])}
+   const gS=new T.BufferGeometry();gS.setAttribute('position',new T.Float32BufferAttribute(sd,3));gS.computeVertexNormals();const mS=new T.Mesh(gS,M({color:0xf1eee7,roughness:.5,side:T.DoubleSide}));ceilG.add(mS)});
+  if(mode==='doll')return;
+  /* 外壁の上の三角など：壁の線に沿って、屋根の下までを外壁で埋める */
+  const fillLine=(x0,y0,x1,y1,offx,offy)=>{const L=Math.hypot(x1-x0,y1-y0),N=Math.max(2,Math.ceil(L/150));const pr=[];let mx=0;for(let i=0;i<=N;i++){const u=i/N,x=x0+(x1-x0)*u,y=y0+(y1-y0)*u;let hh=hAt(x+offx,y+offy);if(hh===null)hh=0;hh=Math.max(0,hh);mx=Math.max(mx,hh);pr.push([u*L,hh])}
+   if(mx<40)return;const ps=[[0,0]];pr.forEach(q=>{if(q[1]>1)ps.push(q);else if(q[0]>0&&q[0]<L)ps.push([q[0],0])});ps.push([L,0]);const pz=ps.filter((q,i)=>!i||Math.hypot(q[0]-ps[i-1][0],q[1]-ps[i-1][1])>1).filter((q,i,arr)=>{if(i===0||i===arr.length-1)return true;return !(q[1]===0&&arr[i-1][1]===0&&arr[i+1][1]===0)});const sh=new T.Shape(pz.map(q=>new T.Vector2(mm(q[0]),mm(q[1]))));
+   const g=new T.ExtrudeGeometry(sh,{depth:TH_O,bevelEnabled:false});const ang=Math.atan2(y1-y0,x1-x0);g.translate(0,0,-TH_O/2);g.rotateY(-ang);g.translate(mm(x0-b.x0)+Math.sign(offx)*TH_O/2,BY,mm(y0-b.y0)+Math.sign(offy)*TH_O/2);const m=new T.Mesh(g,mat.siding);m.castShadow=m.receiveShadow=true;add(m)};
+  const e=8;fillLine(b.x0,b.y0,b.x1,b.y0,0,e);fillLine(b.x1,b.y0,b.x1,b.y1,-e,0);fillLine(b.x1,b.y1,b.x0,b.y1,0,-e);fillLine(b.x0,b.y1,b.x0,b.y0,e,0);
+  /* 入母屋の妻（壁の線から ia 内側の三角） */
+  if(R.iri){if(R.spanY){[b.x0+R.ia,b.x1-R.ia].forEach((x,k)=>fillLine(x,b.y0,x,b.y1,k?-e:e,0))}else{[b.y0+R.ia,b.y1-R.ia].forEach((y,k)=>fillLine(b.x0,y,b.x1,y,0,k?-e:e))}}
+  /* 棟違い（招き屋根）の段差の壁 */
+  if(R.mune){const rc=(R.spanY?b.y0:b.x0)+R.mp,hA=R.mp*t,hB=(R.W-R.mp)*t,lo=Math.min(hA,hB),hi=Math.max(hA,hB);
+   if(R.spanY)add(box(0,BY+mm(lo),mm(rc-b.y0)-TH_O/2,W,BY+mm(hi),mm(rc-b.y0)+TH_O/2,six(mat.siding)));else add(box(mm(rc-b.x0)-TH_O/2,BY+mm(lo),0,mm(rc-b.x0)+TH_O/2,BY+mm(hi),D,six(mat.siding)))}
+  OLDROOF450=false;
+ })()}catch(e){if(e)console.error('roof450',e&&e.message)}
+ if(OLDROOF450){
+ if(mode!=='doll')add(box(0,FL+H+LIFT,0,W,FL+H0+LIFT+RISE,TH_O,six(mat.cloth,{nz:mat.siding})));
+ if(mode!=='doll'){ const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(D,0);sh.lineTo(D,RISE);sh.closePath();
+   [[0,'nx'],[W-TH_O,'px']].forEach(([x])=>{const g=new T.ExtrudeGeometry(sh,{depth:TH_O,bevelEnabled:false});g.rotateY(Math.PI/2);g.translate(x,FL+H0+LIFT,D);const m=new T.Mesh(g,mat.siding);m.castShadow=m.receiveShadow=true;add(m)}) }
  /* 屋根（片流れ・北が高い） */
  const OV=.55,run=D+2*OV,sl=Math.atan2(RISE,D);const len=Math.hypot(run,RISE*(run/D)-0)/1;const Lr=run/Math.cos(sl);
  const rg=new T.Group();rg.position.set(W/2,FL+H0+LIFT+RISE/2,D/2);
  X.tile.repeat.set((W+2*OV)/1.4,Lr/1.1);
  const rb=new T.Mesh(new T.BoxGeometry(W+2*OV,.14,Lr),[mat.fascia,mat.fascia,mat.roof,mat.fascia,mat.fascia,mat.fascia]);rb.rotation.x=sl;rb.castShadow=rb.receiveShadow=true;rg.add(rb);ceilG.add(rg);
+ }
  /* 破風・鼻隠し */
  /* 天井 */
  const ceil=flat(0,0,W,D,FL+H-.002,mat.ceil,1);ceil.rotation.x=Math.PI;ceil.position.y=0;{const g=new T.PlaneGeometry(W,D);g.rotateX(Math.PI/2);g.translate(W/2,FL+H0-.01,D/2);const c=new T.Mesh(g,mat.ceil);c.receiveShadow=true;ceilG.add(c)}
