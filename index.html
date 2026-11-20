@@ -16015,6 +16015,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     save(); drawPlan();
     try { drawSelBar(); } catch(e){}
     toast("間仕切り " + fmt(Math.round(L)) + "mm を入れました");
+    try { if (HB.__gap430) HB.__gap430(segs); } catch(e){}   /* CAD-431：狭すぎる所をその場で知らせる */
   }
 
   /* CAD-216: 描く・選ぶ中のタップ選択の行き先。本体のタップ選択（#plan の
@@ -34835,5 +34836,69 @@ nav.steps{padding:1px 6px 3px}
   /* ①描く：描き終わったら案内は消えたまま */
   setInterval(tick, 300); tick();
   HB.__coach430 = {show: function(k){ show(k || keyNow(), true); }, reset: function(){ done = {}; try { localStorage.removeItem(KEY); } catch(e){} last = null; }};
+})();
+</script>
+<script id="grid431js">
+/* ===== CAD-431（Opus）：①910の家は 910 → 455 → 227.5 の順に近い所へ止める ②人が通れない狭さを描いたら、その場で知らせる。
+   翔伍（2026-11-20）：「変な数字（1,593・2,048）で止まると後から直すのが面倒。910・455・227.5の一番近い所に止まってほしい。300などの特殊な寸法は後から設定する方向」
+   「人が通る所は内法何cm以上とかあるでしょ。それより狭く書こうとしたら警告か確認を、その場で」。
+   入力の止まり方だけ変える。描いてある間仕切り・保存データ・見積の計算には触らない。特殊な寸法は今まで通り、選んで数字（長さ寸法・10mm送り）で直せる。 */
+(function(){
+  "use strict";
+  /* 1) 止まる所：910の倍数の近く（±160）なら910、455の倍数の近く（±100）なら455、それ以外は227.5 */
+  if (typeof gSnap === "function" && !gSnap.__g431){
+    var M = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5;
+    var g431 = function(v, o){
+      o = o || 0;
+      var u4 = M * 4, u2 = M * 2;
+      var a = o + Math.round((v - o) / u4) * u4; if (Math.abs(v - a) <= M * 0.7) return a;
+      var b = o + Math.round((v - o) / u2) * u2; if (Math.abs(v - b) <= M * 0.45) return b;
+      return o + Math.round((v - o) / M) * M;
+    };
+    g431.__g431 = true;
+    try { gSnap = g431; } catch(e){}
+  }
+  /* 2) 狭さの確認。新しく入れた間仕切りと、平行で向かい合う壁（外壁・間仕切り）の芯々の距離を見る。
+     芯々455未満＝人も物も入らない幅（ほぼ描き間違い）→ その場で「取り消す／このまま」を聞く。
+     芯々910未満＝廊下としては狭い（内法780mmが目安。収納ならOK）→ 短い知らせだけ。壁の厚さは約130（柱105＋ボード12.5×2）で内法を出す。 */
+  var WALL = 130;
+  function lines(){
+    var L = [];
+    try { var P = pts(); P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; L.push({x1: a[0], y1: a[1], x2: c[0], y2: c[1]}); }); } catch(e){}
+    (S.parts2D || []).forEach(function(z){ try { if (pState(z) === "remove") return; } catch(e){} L.push(z); });
+    return L;
+  }
+  function gapOf(q, L){
+    var h = Math.abs(q.y1 - q.y2) < 1, v = Math.abs(q.x1 - q.x2) < 1; if (!h && !v) return null;
+    var lo = h ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), hi = h ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2), at = h ? q.y1 : q.x1, best = null;
+    L.forEach(function(z){
+      if (z === q) return;
+      var zh = Math.abs(z.y1 - z.y2) < 1, zv = Math.abs(z.x1 - z.x2) < 1; if (h ? !zh : !zv) return;
+      var zlo = h ? Math.min(z.x1, z.x2) : Math.min(z.y1, z.y2), zhi = h ? Math.max(z.x1, z.x2) : Math.max(z.y1, z.y2);
+      var ov = Math.min(hi, zhi) - Math.max(lo, zlo); if (ov < 450) return;   /* 向かい合う長さが450以上の時だけ（通路になる長さ） */
+      var d = Math.abs((h ? z.y1 : z.x1) - at); if (d < 1) return;
+      if (!best || d < best.d) best = {d: d, ov: ov};
+    });
+    return best;
+  }
+  HB.__gap430 = function(segs){
+    if (!segs || !segs.length) return;
+    var L = lines(), worst = null;
+    segs.forEach(function(q){ var g = gapOf(q, L); if (g && (!worst || g.d < worst.d)) worst = g; });
+    if (!worst) return;
+    var d = Math.round(worst.d), inner = Math.max(0, d - WALL);
+    if (d < 455){
+      var mb = document.getElementById("mbox"), md = document.getElementById("modal"); if (!mb || !md) return;
+      mb.innerHTML = '<h3 style="margin:0 0 6px;color:#C62828">すき間が狭すぎます</h3>'
+        + '<p style="margin:0 0 8px;font-size:15px;line-height:1.6">向かい合う壁との間が <b>芯々 ' + fmt(d) + 'mm（内法 約' + fmt(inner) + 'mm）</b>しかありません。人は通れず、物も入らない幅です。</p>'
+        + '<p class="hint" style="margin:0 0 10px">廊下は内法780mm（芯々910）以上が目安です。描き間違いなら「取り消す」。</p>'
+        + '<div class="row" style="display:flex;gap:8px"><button class="btn pri" id="g431No" type="button" style="flex:1">取り消す</button><button class="btn sub" id="g431Ok" type="button" style="flex:1">このまま</button></div>';
+      md.hidden = false; document.querySelectorAll(".toast").forEach(function(t){ t.remove(); });
+      document.getElementById("g431No").onclick = function(){ md.hidden = true; try { document.getElementById("undoBtn").click(); } catch(e){} };
+      document.getElementById("g431Ok").onclick = function(){ md.hidden = true; };
+    } else if (d < 910){
+      try { toast("すき間 芯々" + fmt(d) + "（内法 約" + fmt(inner) + "mm）。廊下なら内法780mm以上が目安。収納ならこのままでOK"); } catch(e){}
+    }
+  };
 })();
 </script>
