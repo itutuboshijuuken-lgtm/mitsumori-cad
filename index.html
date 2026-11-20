@@ -11870,6 +11870,63 @@ function nValue406(){
   } catch(e){ out.err = String(e); }
   return out;
 }
+/* CAD-413（Opus）：筋交いの記号（現場の図面の書き方）。黒い三角を壁の脇に置く。
+   尖った方＝筋交いの下（柱脚側）、広い方（笠）＝筋交いの上（柱頭側）。三角を置いた側＝筋交いが入る面（外周は室内側、間仕切りは決まった面）。
+   たすきは両側に向きを逆にして2つ。面材は外側に太線。P は図の座標へ変える関数、pxmm は図の1mmの大きさ。 */
+function braceSvg413(P, fl, pxmm, offPx){
+  let g = "";
+  try {
+    const WS = wallSegs406(fl || 1), b = bbox(), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+    const off = offPx || Math.max(2.2, 90 * pxmm), wid = Math.max(2.6, 150 * pxmm);   /* 壁の帯の外に置く（平面図は帯が太いので offPx で外へ） */
+    const tri = (foot, head, nx, ny) => { const F = P([foot.x, foot.y]), H = P([head.x, head.y]);
+      const a = [F[0] + nx * off, F[1] + ny * off], b1 = [H[0] + nx * off, H[1] + ny * off], b2 = [H[0] + nx * (off + wid), H[1] + ny * (off + wid)];
+      return `<polygon class="brTri413" points="${[a, b1, b2].map(q => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" ")}" fill="#111"/>`; };
+    WS.segs.forEach(sg => {
+      if (sg.kind === "none") return;
+      const A = P([sg.A.x, sg.A.y]), B = P([sg.B.x, sg.B.y]), L = Math.hypot(B[0] - A[0], B[1] - A[1]) || 1;
+      let nx = -(B[1] - A[1]) / L, ny = (B[0] - A[0]) / L;   // 壁の片側（図の座標）
+      const mid = {x: (sg.A.x + sg.B.x) / 2, y: (sg.A.y + sg.B.y) / 2};
+      const Mp = P([mid.x, mid.y]), Cp = P([cx, cy]);
+      if (sg.ext && ((Cp[0] - Mp[0]) * nx + (Cp[1] - Mp[1]) * ny) < 0){ nx = -nx; ny = -ny; }   // 外周は室内側
+      const headA = sg.head ? sg.head === sg.a : true, head = headA ? sg.A : sg.B, foot = headA ? sg.B : sg.A;
+      if (sg.kind === "menzai" || sg.kind === "menzaiKata"){ const o = -off * 0.8; g += `<line x1="${(A[0] + nx * o).toFixed(1)}" y1="${(A[1] + ny * o).toFixed(1)}" x2="${(B[0] + nx * o).toFixed(1)}" y2="${(B[1] + ny * o).toFixed(1)}" stroke="#111" stroke-width="${Math.max(1.4, 45 * pxmm).toFixed(1)}"/>`; }
+      if (sg.kind === "kata" || sg.kind === "menzaiKata") g += tri(foot, head, nx, ny);
+      if (sg.kind === "tasuki"){ g += tri(foot, head, nx, ny) + tri(head, foot, -nx, -ny); }
+    });
+  } catch(e){}
+  return `<g class="brace413">${g}</g>`;
+}
+/* CAD-413：屋根の面（軒の出・ケラバを含む平面の形）。垂木伏図・野地板割付図が使う。
+   面ごとに {poly:[[x,y]..], run:"x"|"y"（流れの向き＝垂木の向き）, eave:流れの下端の座標} */
+function roofPlanes413(){
+  const R = roof(), b = bbox(), out = {planes: [], ridges: [], hips: [], t: R.t, n: Math.sqrt(1 + R.t * R.t)};
+  if (S.roof === "yose"){
+    const n0 = +S.noki || 0, X0 = b.x0 - n0, X1 = b.x1 + n0, Y0 = b.y0 - n0, Y1 = b.y1 + n0, w = X1 - X0, h = Y1 - Y0;
+    if (h <= w){ const hw = h / 2, ra = [X0 + hw, (Y0 + Y1) / 2], rb = [X1 - hw, (Y0 + Y1) / 2];
+      out.planes.push({poly: [[X0, Y0], [X1, Y0], rb, ra], run: "y", eave: Y0}, {poly: [ra, rb, [X1, Y1], [X0, Y1]], run: "y", eave: Y1}, {poly: [[X0, Y0], ra, [X0, Y1]], run: "x", eave: X0}, {poly: [[X1, Y0], [X1, Y1], rb], run: "x", eave: X1});
+      out.ridges.push([ra, rb]); out.hips.push([[X0, Y0], ra], [[X0, Y1], ra], [[X1, Y0], rb], [[X1, Y1], rb]); }
+    else { const hw = w / 2, ra = [(X0 + X1) / 2, Y0 + hw], rb = [(X0 + X1) / 2, Y1 - hw];
+      out.planes.push({poly: [[X0, Y0], ra, rb, [X0, Y1]], run: "x", eave: X0}, {poly: [ra, [X1, Y0], [X1, Y1], rb], run: "x", eave: X1}, {poly: [[X0, Y0], [X1, Y0], ra], run: "y", eave: Y0}, {poly: [[X0, Y1], rb, [X1, Y1]], run: "y", eave: Y1});
+      out.ridges.push([ra, rb]); out.hips.push([[X0, Y0], ra], [[X1, Y0], ra], [[X0, Y1], rb], [[X1, Y1], rb]); }
+    return out;
+  }
+  const sy = !!R.spanY, nA = R.nokiA || 0, nB = R.nokiB || 0, kA = R.kerA || 0, kB = R.kerB || 0;
+  const s0 = (sy ? b.y0 : b.x0) - nA, s1 = (sy ? b.y1 : b.x1) + nB, d0 = (sy ? b.x0 : b.y0) - kA, d1 = (sy ? b.x1 : b.y1) + kB;
+  const pt = (s, d) => sy ? [d, s] : [s, d], run = sy ? "y" : "x";
+  if (S.roof === "kata"){ out.planes.push({poly: [pt(s0, d0), pt(s0, d1), pt(s1, d1), pt(s1, d0)], run, eave: s0}); return out; }
+  const rc = (sy ? b.y0 : b.x0) + (R.mune ? R.mp : R.W / 2);
+  out.planes.push({poly: [pt(s0, d0), pt(s0, d1), pt(rc, d1), pt(rc, d0)], run, eave: s0}, {poly: [pt(rc, d0), pt(rc, d1), pt(s1, d1), pt(s1, d0)], run, eave: s1});
+  out.ridges.push([pt(rc, d0), pt(rc, d1)]);
+  return out;
+}
+/* 凸な多角形と、軸に平行な線（axis:"x"＝x一定の縦線）の交わる区間 */
+function clipLine413(poly, axis, c){
+  let lo = Infinity, hi = -Infinity;
+  for (let i = 0; i < poly.length; i++){ const a = poly[i], d = poly[(i + 1) % poly.length], a1 = axis === "x" ? a[0] : a[1], d1 = axis === "x" ? d[0] : d[1], a2 = axis === "x" ? a[1] : a[0], d2 = axis === "x" ? d[1] : d[0];
+    if (Math.abs(d1 - a1) < 1e-6){ if (Math.abs(a1 - c) < 0.5){ lo = Math.min(lo, a2, d2); hi = Math.max(hi, a2, d2); } continue; }
+    const t = (c - a1) / (d1 - a1); if (t < -1e-9 || t > 1 + 1e-9) continue; const v = a2 + (d2 - a2) * t; lo = Math.min(lo, v); hi = Math.max(hi, v); }
+  return hi > lo ? [lo, hi] : null;
+}
 /* CAD-409（Opus）：図面の作法（翔伍がいつも見ている現場の図面に合わせる）。伏図・耐力壁図・平面図・矩計図に共通。
    ・図面の枠と表題欄（図面名・縮尺・工事名・日付）　・通り芯は一点鎖線で図面を貫く　・線は細く、強弱は元の比のまま
    ・文字は細め・白い縁取りで線の上でも読める　・柱は ☒（管柱の記号） */
@@ -12002,11 +12059,14 @@ function dzOpen411(){
   const stN = ["構造部材の位置・本数・金物は、見積即答CADの計算（壁量計算・四分割法・N値計算・スパンの目安）による。", "構造計算・設計者の確認により変わることがある。単位はmm。寸法は通り芯（柱の芯）。"];
   const L = [
     ["A-01", "平面図", () => HBx.__pvRender410(false), ["寸法は柱の芯。単位はmm。", "建具・設備の位置は計画の目安。"]],
-    ["A-02", "軸組図（柱・間柱）", () => HBx.__pvRender410(true), ["柱・間柱の位置と本数は見積と同じ。☒は柱。", "単位はmm。"]],
+    ["A-02", "軸組図（柱・間柱・筋交い）", () => HBx.__pvRender410(true), ["柱・間柱の位置と本数は見積と同じ。☒は柱。", "▶筋交い：尖った方が下（柱脚）、広い方が上（柱頭）、置いた側が入る面。太線は面材。"]],
     ["S-01", "基礎伏図", () => HBx.__fsRender410("kiso"), stN.concat([S.kisoType === "nuno" ? "基礎は布基礎（床下は防湿コンクリート）。" : "基礎はベタ基礎。立ち上がり幅150。"])],
     ["S-02", two ? "1階床伏図" : "床伏図", () => HBx.__fsRender410("yuka"), stN],
     ["S-03", "小屋伏図", () => HBx.__fsRender410("koya"), stN.concat(["□は柱か壁を入れる所（提案）。"])],
-    ["S-04", two ? "1階耐力壁図" : "耐力壁図", () => HBx.__fsRender410("taiku"), stN.concat(["赤い点線は四分割法の1/4の線。必要壁量は2025年改正の基準（余裕1.2倍）。"])],
+    ["S-08", "母屋伏図", () => HBx.__fsRender410("moya"), stN],
+    ["S-09", "垂木伏図", () => HBx.__fsRender410("taru"), ["垂木 45×60、間隔は仕様の設定による。軒の出・ケラバを含む屋根の形。", "点線は外壁の線。単位はmm。"]],
+    ["S-10", "野地板割付図", () => HBx.__fsRender410("noji"), ["構造用合板12mm（910×1820）を軒先から張る。段ごとに910ずらす。", "線は合板の継ぎ目。枚数の見積は見積の行（ロス5%込み）による。"]],
+    ["S-04", two ? "1階耐力壁図" : "耐力壁図", () => HBx.__fsRender410("taiku"), stN.concat(["赤い点線は四分割法の1/4の線。必要壁量は2025年改正の基準（余裕1.2倍）。", "▶筋交い：尖った方が下、広い方が上、置いた側が入る面。灰色・太線は面材。"])],
     two && ["S-05", "2階耐力壁図", () => HBx.__fsRender410("taiku2"), stN],
     ["S-06", two ? "1階金物図" : "金物図", () => HBx.__fsRender410("kana"), stN.concat(["柱頭・柱脚の金物は告示1460号（N値計算）。記号の無い柱は (い) かすがい。"])],
     two && ["S-07", "2階金物図", () => HBx.__fsRender410("kana2"), stN],
@@ -14765,13 +14825,13 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     const P = q => [mL + (q[0] - b.x0) * s, mT + (q[1] - b.y0) * s];
     const bandO = Math.max(8, 165 * s), bandP = Math.max(6.5, 120 * s);
     let g = gridChain409(P, b, mT - 79 + 10, mL - 79 + 10) + pvDims(P, s, b, mL, mT);   /* CAD-409 */
-    sheetInfo409 = {title: (S.floors > 1 ? (S.fi + 1) + "階" : "") + (pvStructOn ? "軸組（柱・間柱）図" : "平面図"), scale: "1/" + niceScale409(s) + "（A4）", s: s};
+    sheetInfo409 = {title: (S.floors > 1 ? (S.fi + 1) + "階" : "") + (pvStructOn ? "軸組図（柱・間柱・筋交い）" : "平面図"), scale: "1/" + niceScale409(s) + "（A4）", s: s};
     g += gridSym345(P, b, mT - 79, mL - 79, 9);   /* CAD-345：通り芯の符号（上＝いろは、左＝数字）。寸法の全長線（50単位外）よりさらに外 */
     g += pvWalls(P, bandO, bandP);
     g += pvSashes(P, s, bandO, bandP);
     g += pvRooms(P);
     const F = pvFrame();
-    if (pvStructOn) g += '<g opacity="0.85">' + pvMarks(P, F, bandO, s) + "</g>";   /* CAD-271 B9／CAD-409：軸組図として読めるよう濃く（柱は☒） */
+    if (pvStructOn) g += '<g opacity="0.85">' + pvMarks(P, F, bandO, s) + "</g>" + braceSvg413(P, 1, s, bandO / 2 + 1);   /* CAD-413：軸組図に筋交いの三角 */   /* CAD-271 B9／CAD-409：軸組図として読めるよう濃く（柱は☒） */
     g += pvNorth(W);
     svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
     svg.innerHTML = g;
@@ -29576,15 +29636,10 @@ var A = fr.P([sg.A.x, sg.A.y]), B = fr.P([sg.B.x, sg.B.y]), dx = B[0] - A[0], dy
 var k = sg.kind, c = sg.user? "#0a58ca": "#111"; hw = 3.2;
 var poly = [[A[0] + nx * hw, A[1] + ny * hw], [B[0] + nx * hw, B[1] + ny * hw], [B[0] - nx * hw, B[1] - ny * hw], [A[0] - nx * hw, A[1] - ny * hw]].map(function(q){ return r2(q[0]) + "," + r2(q[1]);}).join(" ");
 g += "<polygon points=\"" + poly + "\" fill=\"" + (k === "menzai" || k === "menzaiKata"? "#c8c8c8": "#fff") + "\" stroke=\"" + (k === "none"? "#777": c) + "\" stroke-width=\"" + (k === "none"? 0.6: 1) + "\"/>";
-if (k === "kata" || k === "menzaiKata" || k === "tasuki"){
-var headA = sg.head === sg.a;
-var s0 = headA? B: A, s1 = headA? A: B;
-g += "<line x1=\"" + r2(s0[0] - nx * hw) + "\" y1=\"" + r2(s0[1] - ny * hw) + "\" x2=\"" + r2(s1[0] + nx * hw) + "\" y2=\"" + r2(s1[1] + ny * hw) + "\" stroke=\"" + c + "\" stroke-width=\"1.3\"/>";
-if (k === "tasuki") g += "<line x1=\"" + r2(s0[0] + nx * hw) + "\" y1=\"" + r2(s0[1] + ny * hw) + "\" x2=\"" + r2(s1[0] - nx * hw) + "\" y2=\"" + r2(s1[1] - ny * hw) + "\" stroke=\"" + c + "\" stroke-width=\"1.3\"/>";
-}
 if (sg.solid) g += "<line class=\"tkHit\" data-sid=\"" + sg.id + "\" x1=\"" + r2(A[0]) + "\" y1=\"" + r2(A[1]) + "\" x2=\"" + r2(B[0]) + "\" y2=\"" + r2(B[1]) + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"14\" style=\"cursor:pointer\"/>";
 });
 g += postsDraw(fr, framePos());
+g += braceSvg413(fr.P, fl || 1, fr.s);   /* CAD-413：筋交いは黒い三角（尖った方が下・広い方が上・置いた側が入る面） */
 return g;
 }
 function fsTaikuTbl409(y0, fl){
@@ -29642,8 +29697,7 @@ var g = "", NV = nValue406();
 var p = pts(); for (var i = 0; i < p.length; i++) g += line(fr, p[i], p[(i + 1) % p.length], "fsKnOut", "#111", 1.4);
 (S.parts2D || []).forEach(function(q){ if (pState(q) === "remove") return; g += line(fr, [q.x1, q.y1], [q.x2, q.y2], "fsKnPart", "#555", 0.8);});
 var WS = wallSegs406(fl || 1);
-WS.segs.forEach(function(sg){ if (sg.kind === "none") return; var A = fr.P([sg.A.x, sg.A.y]), B = fr.P([sg.B.x, sg.B.y]);
-if (sg.kind === "kata" || sg.kind === "menzaiKata" || sg.kind === "tasuki") g += "<line x1=\"" + r2(A[0]) + "\" y1=\"" + r2(A[1]) + "\" x2=\"" + r2(B[0]) + "\" y2=\"" + r2(B[1]) + "\" stroke=\"#888\" stroke-width=\"2.6\" stroke-dasharray=\"2 1.5\"/>";});
+g += braceSvg413(fr.P, fl || 1, fr.s);
 NV.cols.forEach(function(c){ var t = fl === 2? c.t2: c.t1; if (t === null || t === undefined) return; var q = fr.P([c.x, c.y]), h = 2.6;
 g += "<rect class=\"fsHashira\" x=\"" + r2(q[0] - h) + "\" y=\"" + r2(q[1] - h) + "\" width=\"" + (h * 2) + "\" height=\"" + (h * 2) + "\" fill=\"#111\"/>";
 if (t >= 5) g += "<circle cx=\"" + r2(q[0]) + "\" cy=\"" + r2(q[1]) + "\" r=\"5.2\" fill=\"none\" stroke=\"#111\" stroke-width=\"1\"/>";
@@ -29665,6 +29719,48 @@ if (i) g += "<line x1=\"" + x0 + "\" y1=\"" + r2(yy) + "\" x2=\"" + (x0 + wT) + 
 rw.forEach(function(v, k){ if (k && i === 0) g += "<line x1=\"" + r2(xx) + "\" y1=\"" + r2(y0) + "\" x2=\"" + r2(xx) + "\" y2=\"" + r2(y0 + rh * rows.length) + "\" stroke=\"#111\" stroke-width=\"0.4\"/>";
 g += "<text x=\"" + r2(xx + cw[k] / 2) + "\" y=\"" + r2(yy + rh / 2) + "\" text-anchor=\"middle\" dominant-baseline=\"middle\" style=\"font-size:" + (i? 8: 7.5) + "px;fill:" + (/構造計算/.test(v)? "#c00": "#111") + "\">" + v + "</text>"; xx += cw[k];});});
 return g + "</g>";
+}
+/* CAD-413：母屋伏図＝小屋伏図から小屋梁を抜いた物（母屋・棟木・小屋束・隅木・桁） */
+function fsMoya413(fr, b){ return fsKoya(fr, b).replace(/<g class="fsHari">[\s\S]*?<\/g>/g, ""); }
+/* CAD-413：屋根の形（軒の出・ケラバ込み）の外形・棟・隅木を描く */
+function roofOutline413(fr, RP){
+var g = "", p0 = pts();
+for (var i = 0; i < p0.length; i++) g += line(fr, p0[i], p0[(i + 1) % p0.length], "fsRfWall", "#777", 0.8, "5 3");
+RP.planes.forEach(function(pl){ g += "<polygon points=\"" + pl.poly.map(function(q){ var c = fr.P(q); return r2(c[0]) + "," + r2(c[1]);}).join(" ") + "\" fill=\"none\" stroke=\"#111\" stroke-width=\"1.3\"/>";});
+RP.ridges.forEach(function(r){ g += line(fr, r[0], r[1], "fsRfRidge", "#111", 2.2);});
+RP.hips.forEach(function(r){ g += line(fr, r[0], r[1], "fsRfHip", "#111", 1.8);});
+return g;
+}
+/* CAD-413：垂木伏図。面ごとに流れの向きの線を、端（破風垂木）から垂木の間隔で */
+function fsTaru413(fr, b){
+var RP = roofPlanes413(), g = roofOutline413(fr, RP), sp = +S.taruP || 455, cnt = 0;
+RP.planes.forEach(function(pl){
+var along = pl.run === "y"? "x": "y", vs = pl.poly.map(function(q){ return along === "x"? q[0]: q[1];}), lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+for (var c = lo; c <= hi + 1; c += sp){ var cc = Math.min(c, hi), iv = clipLine413(pl.poly, along, cc); if (!iv || iv[1] - iv[0] < 60) continue; cnt++;
+var a = along === "x"? [cc, iv[0]]: [iv[0], cc], d = along === "x"? [cc, iv[1]]: [iv[1], cc]; g += line(fr, a, d, "fsTaru", "#111", 0.9);
+if (hi - cc < sp && cc < hi - 1){ var iv2 = clipLine413(pl.poly, along, hi); if (iv2 && iv2[1] - iv2[0] > 60){ cnt++; g += line(fr, along === "x"? [hi, iv2[0]]: [iv2[0], hi], along === "x"? [hi, iv2[1]]: [iv2[1], hi], "fsTaru", "#111", 0.9);}} }
+});
+fsTaruCnt413 = cnt;
+return g;
+}
+var fsTaruCnt413 = 0, fsNojiCnt413 = 0;
+/* CAD-413：野地板割付図。合板3×6（910×1820）を軒先から流れ方向910ずつ、棟方向1820ずつ。段ごとに910ずらす（いも目地にしない） */
+function fsNoji413(fr, b){
+var RP = roofPlanes413(), g = roofOutline413(fr, RP), n = RP.n, rowP = 910 / n, sheets = 0;
+RP.planes.forEach(function(pl){
+var run = pl.run, along = run === "y"? "x": "y", rs = pl.poly.map(function(q){ return run === "y"? q[1]: q[0];}), rlo = Math.min.apply(null, rs), rhi = Math.max.apply(null, rs);
+var fromLo = Math.abs(pl.eave - rlo) < Math.abs(pl.eave - rhi), k = 0;
+for (var r = 0; r * rowP < rhi - rlo - 1; r++){
+var e0 = fromLo? rlo + r * rowP: rhi - r * rowP, e1 = fromLo? Math.min(rhi, e0 + rowP): Math.max(rlo, e0 - rowP), em = (e0 + e1) / 2;
+if (r > 0){ var iv = clipLine413(pl.poly, run === "y"? "y": "x", e0); if (iv) g += line(fr, run === "y"? [iv[0], e0]: [e0, iv[0]], run === "y"? [iv[1], e0]: [e0, iv[1]], "fsNojiJ", "#111", 0.7);}
+var ivm = clipLine413(pl.poly, run === "y"? "y": "x", em); if (!ivm) continue;
+var st = ivm[0] + ((r % 2)? 910: 0);
+for (var a = st; a < ivm[1] - 1; a += 1820){ if (a > ivm[0] + 1){ var y0 = Math.min(e0, e1), y1 = Math.max(e0, e1); g += line(fr, run === "y"? [a, y0]: [y0, a], run === "y"? [a, y1]: [y1, a], "fsNojiJ", "#111", 0.7);} }
+sheets += Math.ceil((ivm[1] - ivm[0]) / 1820 * 2 - 1e-9) / 2;
+}
+});
+fsNojiCnt413 = Math.ceil(sheets);
+return g;
 }
 function taikuTapInit409(svg){
 if (!svg || svg.__tk409) return; svg.__tk409 = true;
@@ -30016,20 +30112,21 @@ try {
 try { flEnsure();} catch(e){}
 if (S.fl && S.fl.length > 1){
 keep = flSnap();
-var target = fsKind === "koya"? S.fl.length - 1: 0;
+var target = (fsKind === "koya" || fsKind === "moya" || fsKind === "taru" || fsKind === "noji")? S.fl.length - 1: 0;
 if (target!== S.fi){ var snap = S.fl[target] && S.fl[target].snap; if (snap) flLoad(snap);}
 }
 var b = bbox();
 var fsHasInt393 = false; try { fsHasInt393 = (fsKind === "kiso"? fsKisoLines406(): fsIntLines()).length > 0; } catch(e){}
 var fsIntPosts393 = 0; try { fsIntPosts393 = intPostList().n; } catch(e){}
 var lgRows393 = fsLegendRows393(fsHasInt393, fsIntPosts393);
-var tblH393 = (fsKind === "kana" || fsKind === "kana2")? 12 * 13.5 + 10: (fsKind === "taiku" || fsKind === "taiku2")? 11 * 13.5 + 10: lgRows393.length? (lgRows393.length + 1) * 13.5 + 10: 0;
+if (fsKind === "moya") lgRows393 = lgRows393.filter(function(r){ return r.nm !== "小屋梁";});   /* CAD-413：母屋伏図は小屋梁を描かない */
+var tblH393 = (fsKind === "taru" || fsKind === "noji")? 3 * 13.5 + 10: (fsKind === "kana" || fsKind === "kana2")? 12 * 13.5 + 10: (fsKind === "taiku" || fsKind === "taiku2")? 11 * 13.5 + 10: lgRows393.length? (lgRows393.length + 1) * 13.5 + 10: 0;
 var fr = {W: 360, mL: 94, mT: 94, s: 0, H: 0, P: null};
 fr.s = Math.min((fr.W - fr.mL - 42) / b.w, (470 - fr.mT - 38 - tblH393) / b.h);
 fr.H = Math.round(fr.mT + b.h * fr.s + 38 + tblH393);
 fr.P = function(q){ return [fr.mL + (q[0] - b.x0) * fr.s, fr.mT + (q[1] - b.y0) * fr.s];};
 var R = roof();
-var title = fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): fsKind === "taiku"? (R.two? "1階耐力壁図": "耐力壁図"): fsKind === "taiku2"? "2階耐力壁図": fsKind === "kana"? (R.two? "1階金物図": "金物図"): fsKind === "kana2"? "2階金物図": "小屋伏図";
+var title = fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): fsKind === "taiku"? (R.two? "1階耐力壁図": "耐力壁図"): fsKind === "taiku2"? "2階耐力壁図": fsKind === "kana"? (R.two? "1階金物図": "金物図"): fsKind === "kana2"? "2階金物図": fsKind === "moya"? "母屋伏図": fsKind === "taru"? "垂木伏図": fsKind === "noji"? "野地板割付図": "小屋伏図";
 var g = fsHead(fr, b, title), legend = "";
 var hasInt349 = false; try { hasInt349 = fsIntLines().length > 0; } catch(e){} /* CAD-349：内部の線を描くかどうか（描画と同じ fsIntLines が正本） */
 var geyaNote = (S.geya && S.geya.length)? "下屋の分は描いていません。": "";
@@ -30037,7 +30134,16 @@ if (fsKind === "taiku2" && !R.two) fsKind = "taiku";
 if (fsKind === "kana2" && !R.two) fsKind = "kana";
 try { var k2b = document.querySelector("[data-fs=\"kana2\"]"); if (k2b) k2b.style.display = R.two? "": "none";} catch(e){}
 try { var t2b = document.querySelector("[data-fs=\"taiku2\"]"); if (t2b) t2b.style.display = R.two? "": "none";} catch(e){}
-if (fsKind === "kana" || fsKind === "kana2"){
+if (fsKind === "moya"){
+g += fsMoya413(fr, b);
+legend = "母屋伏図：母屋・棟木・小屋束・隅木・桁は見積と同じ位置と本数です（小屋梁は小屋伏図）。";
+} else if (fsKind === "taru"){
+g += fsTaru413(fr, b);
+legend = "垂木伏図：軒の出・ケラバまで含めた屋根の形に、垂木（45×60 @" + fmt(+S.taruP || 455) + "）を描いています。点線は外壁の線。";
+} else if (fsKind === "noji"){
+g += fsNoji413(fr, b);
+legend = "野地板割付図：構造用合板12mm（910×1820）を軒先から張り、段ごとに910ずらします。線は合板の継ぎ目。";
+} else if (fsKind === "kana" || fsKind === "kana2"){
 g += fsKana411(fr, b, fsKind === "kana2"? 2: 1);
 legend = "金物図：柱頭・柱脚の金物はN値計算（告示1460号）による。記号の無い柱は (い) かすがい。◎はホールダウン（1階は基礎へアンカーM16）。筋交いの位置は耐力壁図による。";
 } else if (fsKind === "taiku" || fsKind === "taiku2"){
@@ -30063,7 +30169,7 @@ legend = "小屋伏図：桁・小屋梁・母屋・棟木・小屋束" + (hasIn
 + (S.roof === "yose"? "寄棟の母屋は内側の矩形に、隅木は四隅から棟の端へ描いています。": "") + geyaNote;
 }
 if (fsKind === "yuka" || fsKind === "koya") g += chooserSvg410(fr); else chooser410 = null;
-g += (fsKind === "kana" || fsKind === "kana2")? fsKanaTbl411(fr.mT + b.h * fr.s + 12, fsKind === "kana2"? 2: 1): (fsKind === "taiku" || fsKind === "taiku2")? fsTaikuTbl409(fr.mT + b.h * fr.s + 12, fsKind === "taiku2"? 2: 1): fsLegendSvg393(lgRows393, fr.mT + b.h * fr.s + 12);
+g += fsKind === "taru"? fsLegendSvg393([{sw: "line", nm: "垂木 @" + fmt(+S.taruP || 455), sz: "45×60・" + fsTaruCnt413 + "本"}, {sw: "band", nm: "棟・隅木", sz: "太線"}], fr.mT + b.h * fr.s + 12): fsKind === "noji"? fsLegendSvg393([{sw: "line", nm: "合板の継ぎ目", sz: "3×6・約" + fsNojiCnt413 + "枚"}, {sw: "band", nm: "棟・隅木", sz: "太線"}], fr.mT + b.h * fr.s + 12): (fsKind === "kana" || fsKind === "kana2")? fsKanaTbl411(fr.mT + b.h * fr.s + 12, fsKind === "kana2"? 2: 1): (fsKind === "taiku" || fsKind === "taiku2")? fsTaikuTbl409(fr.mT + b.h * fr.s + 12, fsKind === "taiku2"? 2: 1): fsLegendSvg393(lgRows393, fr.mT + b.h * fr.s + 12);
 svg.setAttribute("viewBox", "0 0 " + fr.W + " " + fr.H);
 svg.innerHTML = g;
 sheetFinish409(svg);
@@ -30102,7 +30208,7 @@ var bar = document.getElementById("pvBar");
 if (!bar || document.getElementById("fsSeg")) return;
 var seg = document.createElement("div");
 seg.className = "seg"; seg.id = "fsSeg"; seg.style.margin = "0 0 6px";
-seg.innerHTML = "<button data-fs=\"kiso\" type=\"button\" aria-pressed=\"true\">基礎伏図</button><button data-fs=\"yuka\" type=\"button\" aria-pressed=\"false\">床伏図</button><button data-fs=\"koya\" type=\"button\" aria-pressed=\"false\">小屋伏図</button><button data-fs=\"taiku\" type=\"button\" aria-pressed=\"false\">耐力壁</button><button data-fs=\"taiku2\" type=\"button\" aria-pressed=\"false\" style=\"display:none\">耐力壁2F</button><button data-fs=\"kana\" type=\"button\" aria-pressed=\"false\">金物</button><button data-fs=\"kana2\" type=\"button\" aria-pressed=\"false\" style=\"display:none\">金物2F</button>";
+seg.innerHTML = "<button data-fs=\"kiso\" type=\"button\" aria-pressed=\"true\">基礎伏図</button><button data-fs=\"yuka\" type=\"button\" aria-pressed=\"false\">床伏図</button><button data-fs=\"koya\" type=\"button\" aria-pressed=\"false\">小屋伏図</button><button data-fs=\"taiku\" type=\"button\" aria-pressed=\"false\">耐力壁</button><button data-fs=\"taiku2\" type=\"button\" aria-pressed=\"false\" style=\"display:none\">耐力壁2F</button><button data-fs=\"moya\" type=\"button\" aria-pressed=\"false\">母屋</button><button data-fs=\"taru\" type=\"button\" aria-pressed=\"false\">垂木</button><button data-fs=\"noji\" type=\"button\" aria-pressed=\"false\">野地板</button><button data-fs=\"kana\" type=\"button\" aria-pressed=\"false\">金物</button><button data-fs=\"kana2\" type=\"button\" aria-pressed=\"false\" style=\"display:none\">金物2F</button>";
 bar.insertBefore(seg, bar.firstChild);
 seg.querySelectorAll("[data-fs]").forEach(function(btn){
 btn.addEventListener("click", function(){
