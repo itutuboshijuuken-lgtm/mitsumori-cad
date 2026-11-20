@@ -35580,7 +35580,7 @@ nav.steps{padding:1px 6px 3px}
   }
   function impOpen(){
     var d = ov("🤖 図面の写真から作る"), bd = d.querySelector(".bd"), ft = d.querySelector(".ft");
-    bd.innerHTML = '<p class="note" style="margin:0 0 6px"><b>① </b>下の「頼み方をコピー」を押して、使っているAI（ChatGPT・Claude・Gemini など）に、図面の写真と一緒に貼って送ります。<br><b>② </b>AIの答えを全部コピーして、下の枠に貼ります。<br><b>③ </b>「中身を確かめる」→ よければ「この家を入れる」。</p>'
+    bd.innerHTML = '<p class="note" style="margin:0 0 6px"><b>⓪ </b>名前・住所・会社名など見せたくない所は、先に「✏ 見せたくない所を塗る」で黒く塗れます。<br><b>① </b>下の「頼み方をコピー」を押して、使っているAI（ChatGPT・Claude・Gemini など）に、図面の写真と一緒に貼って送ります。<br><b>② </b>AIの答えを全部コピーして、下の枠に貼ります。<br><b>③ </b>「中身を確かめる」→ よければ「この家を入れる」。</p>'
       + '<textarea id="ta439" placeholder="ここにAIの答えを貼る"></textarea><div id="ck439" style="margin-top:8px"></div>';
     var bC = document.createElement("button"); bC.textContent = "頼み方をコピー";
     bC.onclick = function(){ var done = function(){ toast("頼み方をコピーしました。AIに図面の写真と一緒に送ってください"); }; try { navigator.clipboard.writeText(PROMPT).then(done, function(){ prompt("コピーしてください", PROMPT); }); } catch(e){ prompt("コピーしてください", PROMPT); } };
@@ -35594,6 +35594,8 @@ nav.steps{padding:1px 6px 3px}
       if (!r.bad.length) h += '<p class="ok">✓ 入れられます。入れた後、「？」の所は図面で確かめてください（「戻す」で元に戻せます）。</p>';
       ck.innerHTML = h; bI.disabled = !!r.bad.length; };
     bI.onclick = function(){ if (!D) return; d.remove(); applyD(D); };
+    var bM = document.createElement("button"); bM.textContent = "✏ 見せたくない所を塗る"; bM.onclick = function(){ if (HB.__mask440) HB.__mask440(); };
+    ft.insertBefore(bM, ft.firstChild);
     ft.appendChild(bC); ft.appendChild(bK); ft.appendChild(bI);
   }
   HB.__cal439 = calOpen; HB.__imp439 = impOpen; HB.__parse439 = parse; HB.__check439 = checkD; HB.__apply439 = applyD; HB.__PROMPT439 = PROMPT;
@@ -35606,5 +35608,38 @@ nav.steps{padding:1px 6px 3px}
       if (st1 && !st1.hidden && dr && !document.getElementById("imp439btn")){ var c = document.createElement("button"); c.id = "imp439btn"; c.type = "button"; c.textContent = "🤖 図面の写真から作る（AIに読ませる）"; c.onclick = impOpen; var card = dr.closest(".card"); (card || dr).before(c); }
     } catch(e){}
   }, 500);
+})();
+</script>
+<script id="mask440js">
+/* ===== CAD-440（Opus）：AIに送る前に、図面の写真の見せたくない所（名前・住所・会社名など）を黒く塗る。
+   写真はこの画面の中だけで扱い、どこにも保存・送信しない（localStorage にも入れない）。塗った写真は「保存」か「共有」で本人が持ち出す。 */
+(function(){
+  "use strict";
+  function open(){
+    var d = document.createElement("div"); d.className = "ov439";
+    d.innerHTML = '<div class="hd"><b>✏ 見せたくない所を塗る</b><button type="button" class="x">閉じる</button></div>'
+      + '<div style="padding:8px 12px;background:#E8F5E9;color:#1B5E20;font-size:13px;font-weight:800;line-height:1.5">🔒 この画面では、写真はどこにも保存・送信されません。塗った写真は下の「保存」か「共有」で、ご自分で持ち出してください。</div>'
+      + '<div class="bd" style="display:flex;align-items:center;justify-content:center;background:#eceff1;touch-action:none"><p class="note" id="mk440h">下の「写真をえらぶ」から図面の写真を選んでください。<br>選んだら、隠したい所を指で斜めになぞると黒い四角で塗れます。</p><canvas id="mk440c" style="max-width:100%;max-height:100%;display:none;touch-action:none"></canvas></div>'
+      + '<div class="ft"></div>';
+    document.body.appendChild(d);
+    var cv = d.querySelector("#mk440c"), bd = d.querySelector(".bd"), ft = d.querySelector(".ft"), img = null, boxes = [], drag = null, name = "図面";
+    d.querySelector(".x").onclick = function(){ img = null; boxes = []; d.remove(); };
+    function draw(tmp){ if (!img) return; var x = cv.getContext("2d"); x.drawImage(img, 0, 0, cv.width, cv.height); x.fillStyle = "#000"; boxes.concat(tmp ? [tmp] : []).forEach(function(b){ x.fillRect(Math.min(b[0], b[2]), Math.min(b[1], b[3]), Math.abs(b[2] - b[0]), Math.abs(b[3] - b[1])); }); }
+    function fit(){ if (!img) return; var k = Math.min(1, 2400 / Math.max(img.width, img.height)); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.style.display = ""; d.querySelector("#mk440h").style.display = "none"; draw(); }
+    function pt(e){ var r = cv.getBoundingClientRect(); return [(e.clientX - r.left) * cv.width / r.width, (e.clientY - r.top) * cv.height / r.height]; }
+    cv.addEventListener("pointerdown", function(e){ if (!img) return; e.preventDefault(); try { cv.setPointerCapture(e.pointerId); } catch(er){} var p = pt(e); drag = [p[0], p[1], p[0], p[1]]; });
+    cv.addEventListener("pointermove", function(e){ if (!drag) return; var p = pt(e); drag[2] = p[0]; drag[3] = p[1]; draw(drag); });
+    var up = function(){ if (!drag) return; if (Math.abs(drag[2] - drag[0]) > 4 && Math.abs(drag[3] - drag[1]) > 4) boxes.push(drag); drag = null; draw(); };
+    cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+    var mk = function(t, fn, pri){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; if (pri) b.className = "pri"; b.onclick = fn; ft.appendChild(b); return b; };
+    mk("写真をえらぶ", function(){ var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function(){ var f = inp.files && inp.files[0]; if (!f) return; name = (f.name || "図面").replace(/\.[^.]+$/, ""); var u = URL.createObjectURL(f), im = new Image(); im.onload = function(){ img = im; boxes = []; fit(); URL.revokeObjectURL(u); }; im.src = u; }; inp.click(); });
+    mk("1つ戻す", function(){ boxes.pop(); draw(); });
+    var out = function(cb){ if (!img){ toast("先に写真をえらんでください"); return; } draw(); cv.toBlob(cb, "image/jpeg", 0.9); };
+    var fname = function(){ return (name + "_塗りつぶし済み.jpg").replace(/[\\/:*?"<>|]/g, ""); };
+    var dl = function(bl){ var a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000); };
+    mk("保存", function(){ out(dl); });
+    mk("共有（AIへ送る）", function(){ out(function(bl){ try { var f = new File([bl], fname(), {type: "image/jpeg"}); if (navigator.canShare && navigator.canShare({files: [f]})){ navigator.share({files: [f]}).catch(function(){}); return; } } catch(e){} dl(bl); toast("保存しました。AIに送ってください"); }); }, true);
+  }
+  HB.__mask440 = open;
 })();
 </script>
