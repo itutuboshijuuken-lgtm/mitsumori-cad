@@ -1100,7 +1100,8 @@ const WORK = [
   ["kaidanL", "階段（かね折れ）", "円/か所", 0, 200000],
   ["kaidanM", "階段（回り階段）", "円/か所", 0, 220000],
   ["ninkuT", "大工の人工（建方・造作・仕上げ全部／坪・刻みは別）", "人工/坪", 0, 5]   /* CAD-248：刻みは含まない事を明記 */,
-  ["daikuTsubo", "大工手間 基本坪単価", "円/坪", 0, 45000],   /* CAD-398：販売までの間、翔伍の単価（棟上げ込み 坪¥45,000・本人の決定 2026-11-19）を初期値として入れる。workP の既定値として未設定の時だけ効き、自分で入れた値が常に優先。⚠️販売時には初期値を外す事（0に戻す＝未入力） */
+  ["daikuTsubo", "大工手間 基本坪単価", "円/坪", 0, 45000],
+  ["mensaiTe", "面材の手間（仮）", "円/坪", 0, 3500],   /* CAD-427：耐力面材を使う家の手間（翔伍の決定 2026-11-20：延床×3,500円/坪） */   /* CAD-398：販売までの間、翔伍の単価（棟上げ込み 坪¥45,000・本人の決定 2026-11-19）を初期値として入れる。workP の既定値として未設定の時だけ効き、自分で入れた値が常に優先。⚠️販売時には初期値を外す事（0に戻す＝未入力） */
   ["kdDanS", "階段 取付手間（直階段）", "円/段", 0, 1700],   /* CAD-391：CAD-389 の 1.0人工/か所 を段数で割った換算（study-daiku-tema） */
   ["kdDanM", "階段 取付手間（廻り・かね折れ等）", "円/段", 0, 2500],   /* CAD-391：1.5人工/か所 の換算 */
   ["ninkuR", "大工の人工（リフォーム・坪あたり）", "人工/坪", 0, 2.5],
@@ -5828,6 +5829,17 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
     $("trBox").appendChild(box);
     box.querySelectorAll("[data-k409]").forEach(b => b.onclick = () => { const k = b.dataset.k409, v = b.dataset.v; if (v === "__u") delete S[k]; else S[k] = v === "true" ? true : (isNaN(+v) ? v : +v); save(); drawSpec(); });
   } catch(e){}
+  /* CAD-427：建て方の目安の設定（翔伍の追加指示 2026-11-20） */
+  try {
+    const mc427 = meyasu427Cfg();
+    const mbox427 = document.createElement("div");
+    mbox427.innerHTML = `<div class="sub2" style="margin-top:10px">建て方の目安（見積に出る表示だけの設定）</div>`
+      + `<button class="set" id="meyasuPerBtn" type="button"><span>建て方の目安：何坪に1人<small>延床○坪ごとに大工1人で数えます</small></span><b>${meyasu427Txt(mc427.per)}坪</b></button>`
+      + `<button class="set" id="meyasuUpBtn" type="button"><span>建て方の目安：面材の時は○割増し<small>耐力面材を使う家は、目安の人数を増やします</small></span><b>${meyasu427Txt(mc427.up)}割増し</b></button>`;
+    $("trBox").appendChild(mbox427);
+    $("meyasuPerBtn").onclick = () => openPad({title: "建て方の目安：何坪に1人", unit: "坪", value: mc427.per, done: v => { if (v && v > 0){ const c = meyasu427Cfg(); c.per = v; try { localStorage.setItem("gosei-meyasu-v1", JSON.stringify(c)); } catch(e){} drawSpec(); } }});
+    $("meyasuUpBtn").onclick = () => openPad({title: "建て方の目安：面材の時は○割増し", unit: "割", value: mc427.up, done: v => { if (v != null && v >= 0){ const c = meyasu427Cfg(); c.up = v; try { localStorage.setItem("gosei-meyasu-v1", JSON.stringify(c)); } catch(e){} drawSpec(); } }});
+  } catch(e){}
   const chipsOf = (el, list, key) => { el.innerHTML = list.map(v => `<button data-v="${v}" aria-pressed="${S[key] === v}" type="button">${v.replace("石膏ボード ", "").replace("強化", "強化 ")}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = b.dataset.v; save(); drawSpec(); }); };
   chipsOf($("gbW"), GBW, "gbW"); chipsOf($("gbC"), GBC, "gbC");
   const chipsN = (el, list, key, def) => { if (!el) return; el.innerHTML = list.map(v => `<button data-v="${v}" aria-pressed="${(S[key] == null ? def : S[key]) === v}" type="button">${v}mm</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = +b.dataset.v; save(); drawSpec(); }); };
@@ -7617,7 +7629,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   else if (S.mode !== "zo") { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT;   /* CAD-391：新築・増築の刻みは「大工手間（基本）」に含める（行を出さない） */ rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
   if (S.precut){ const wu = workP("precutUnpan"); rows.push({name: "プレカット運搬費", spec: `工場からの配達 ${fmt(wu.p)}円`, qty: "1式", cost: wu.p, avg: wu.avg, fix: {kind: "work", key: "precutUnpan"}}); }   // CAD-122: 運搬費は交通費・移動とは別の行（プレカット方法だけ）
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
-  if (window.__J406 > 0){ const nj = window.__J406; work("tsugite", "継手加工（腰掛け鎌継ぎ・柱の上から150持ち出し）", nj, "か所"); work("tanzaku", "短冊金物（継手の上）", nj, "枚"); }   /* CAD-406 Q1 */
+  if (window.__J406 > 0){ const nj = window.__J406; work("tanzaku", "短冊金物（継手の上）", nj, "枚"); }   /* CAD-427：継手加工の行は出さない（翔伍の決定 2026-11-20：手刻みでも刻みは大工手間（基本）に含まれる形のため、加工費を別に取ると二重取りになる。短冊金物は今までどおり残す） */
   if (S.kisoNew){
     const w1 = workP("kisoBase"), w2 = workP("kisoRise"), k = S.kiso / 400;
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
@@ -7677,6 +7689,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   /* CAD-391：従来の大工手間（人工の積み上げ）の計算は廃止。下の行で「大工手間（基本）」に置き換えた */   /* CAD-248：刻み・間仕切りの扱いを明示 */
   rows.push(...daikuBaseRows391(nobeT));   /* CAD-391：大工手間（基本）＝基本坪単価×延床（ハウスメーカー方式・翔伍の決定 2026-11-19） */
+  if (S.mode === "zo" && S.tr === "menzai") work("mensaiTe", "面材の手間", nobeT, "坪");   /* CAD-427：耐力面材を使う家だけ（翔伍の決定 2026-11-20：延床×3,500円/坪。面材＋筋交いの家も S.tr === "menzai" なので出す） */
   exRows();
   bisouRow(nobe);
   rows.push({name: "処分費", spec: "まとめて", qty: "", cost: S.shobun || 0, fix: {kind: "shobun"}});
@@ -7693,6 +7706,11 @@ function mabaSecP(){ return (S.mabaSec || "45x105").split("x").map(Number); }
 function mabaThinP(){ return [30, mabaSecP()[1]]; }
 function gbParse(s){ if (/ケイカル板/.test(s)){ const m = s.match(/([\d.]+)/); return ["ケイカル板", m ? +m[1] : 6]; } if (/シージングボード/.test(s)){ const m = s.match(/([\d.]+)/); return ["シージングボード", m ? +m[1] : 9.5]; } if (/ラワン合板/.test(s)){ const m = s.match(/([\d.]+)/); return ["ラワン合板", m ? +m[1] : 5.5]; } if (/Mクロス/.test(s)){ const m = s.match(/([\d.]+)/); return ["Mクロス", m ? +m[1] : 9.5]; } const m = s.match(/(強化)?石膏ボード\s*([\d.]+)/); return [m && m[1] ? "強化石膏ボード" : "石膏ボード", m ? +m[2] : 12.5]; }
 let lastText = "", custText = "";
+/* CAD-427：建て方の目安の設定。初期値＝3坪に1人・面材は2割増し（翔伍の決定 2026-11-20）。
+   人による・家の凝り方によるので仕様の画面で変えられる形に（翔伍の追加指示 2026-11-20）。
+   保存は新しいキー gosei-meyasu-v1。既存の保存キーは触らない */
+function meyasu427Cfg(){ try { const v = JSON.parse(localStorage.getItem("gosei-meyasu-v1") || "null"); if (v && +v.per > 0) return {per: +v.per, up: Math.max(0, +v.up || 0)}; } catch(e){} return {per: 3, up: 2}; }
+function meyasu427Txt(x){ return String(Math.round(x * 100) / 100); }
 function drawEst(){
   $("genba").value = S.genba || ""; $("startD").value = S.startD || ""; $("addr").value = S.addr || "";
   drawKotsu();
@@ -7737,6 +7755,11 @@ function drawEst(){
     const d = S.precut ? kizami - precut : precut - kizami, man = Math.round(Math.abs(d) / 10000), sgn = d < 0 ? "\u2212" : "+";
     return S.precut ? `いまプレカット。手刻みにすると ${sgn}約${man}万円` : `いま手刻み。プレカットにすると ${sgn}約${man}万円`;
   })();
+  const meyasuCfg427 = meyasu427Cfg();   /* CAD-427：建て方の目安の設定（仕様の画面で変更可） */
+  const meyasu427 = (() => {   /* CAD-427：建て方の目安（表示だけ・金額には入れない。翔伍の決定 2026-11-20：延床○坪に1人、面材の家は○割増し、端数は切り上げ） */
+    if (S.mode !== "zo" || C.pt || !(C.nobeT > 0)) return 0;
+    return Math.ceil(C.nobeT / meyasuCfg427.per * (S.tr === "menzai" ? 1 + meyasuCfg427.up / 10 : 1) - 1e-9);
+  })();
   const ord249 = rowOrder();
   let anch249 = -1; ord249.forEach(([r], j) => { if (r.name === "刻み人工" || r.name === "プレカット運搬費") anch249 = j; });
   if (anch249 < 0) ord249.forEach(([r], j) => { if (r.name === "プレカット加工費") anch249 = j; });
@@ -7746,6 +7769,7 @@ function drawEst(){
     sub += r.cost || 0;
     html += `<tr class="tap" data-row="${i}"><td>${esc(r.name)}${r.qty ? `　<b>${esc(r.qty)}</b>` : ""}<small>${esc(r.spec)}${r.note ? "・" + r.note : ""}${r.conv ? "・長さで換算" : ""}</small></td><td class="cost ${r.miss ? "miss" : ""}">${r.note ? "—" : r.miss ? "単価なし" : fmt(Math.round(r.cost))}${r.avg && !r.note ? `<span class="kari">仮</span>` : ""}</td></tr>`;
     if (d249 && j249 === anch249) html += `<tr class="diff249"><td colspan="2" style="font-size:13px;background:rgba(128,128,128,.13);color:inherit">${d249}</td></tr>`;   /* CAD-249：差額表示（表示だけ） */
+    if (meyasu427 && r.name === "大工手間（基本）") html += `<tr class="meyasu427"><td colspan="2" style="font-size:13px;background:rgba(128,128,128,.13);color:inherit">建て方の目安 <b>${meyasu427}人</b>（延床 ${fmt(C.nobeT, 1)}坪・${meyasu427Txt(meyasuCfg427.per)}坪に1人${S.tr === "menzai" ? `・面材ありで${meyasu427Txt(meyasuCfg427.up)}割増し` : ""}）</td></tr>`;   /* CAD-427：建て方の目安（表示だけ） */
   });
   html += subRow() + `<tr class="sum"><td>原価合計</td><td class="cost">${fmt(Math.round(C.genka))}</td></tr><tr class="sum"><td>見積（税抜）利益率 ${fmt(S.margin, 1)}%・${fmt(S.marginEq ?? 15, 1)}%</td><td class="cost">${fmt(Math.round(C.mitsu))}</td></tr>`;
   $("mat").innerHTML = html;
