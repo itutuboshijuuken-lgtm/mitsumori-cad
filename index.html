@@ -5210,7 +5210,7 @@ function drawPlan(){
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawPlanCompass();
   let Ht = 0;
-  if (HB.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ const asp128 = r.width > r.height; if (HB.__aspM !== undefined && HB.__aspM !== asp128) HB.__pinH = 0; HB.__aspM = asp128; HB.__landM128 = asp128; if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (HB.__pinH || 0)) HB.__pinH = r.height; Ht = 360 * (HB.__pinH || r.height) / r.width; if (asp128){ try{ const bb128 = bbox(); const sW128 = (360 - 32) / Math.max(1, bb128.w); const Hf128 = bb128.h * sW128 + 32; if (isFinite(Hf128) && Ht < Hf128) Ht = Hf128; }catch(e128){} } } }
+  if (HB.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ const asp128 = r.width > r.height; if (HB.__aspM !== undefined && HB.__aspM !== asp128) HB.__pinH = 0; HB.__aspM = asp128; HB.__landM128 = asp128; if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (HB.__pinH || 0)) HB.__pinH = r.height; Ht = 360 * ((HB.__noStable438 && !$("selBar").hidden) ? r.height : (HB.__pinH || r.height)) / r.width; if (asp128){ try{ const bb128 = bbox(); const sW128 = (360 - 32) / Math.max(1, bb128.w); const Hf128 = bb128.h * sW128 + 32; if (isFinite(Hf128) && Ht < Hf128) Ht = Hf128; }catch(e128){} } } }
   const p = pts(), b = bbox(), pad = HB.__pageM ? (HB.__landM128 ? 16 : (document.body.classList.contains("v432") ? 44 : 10)) : 66   /* CAD-438: 大きい寸法2段（view432）の分だけ余白を取る */   /* CAD-426: 縦画面の余白 22→10 */   /* CAD-425: 縦画面の余白を詰めた（36→22） */, W = 360, maxH = Ht || (HB.__pageM ? 470 : 340);
   // CAD-152: 全画面（fsDraw）では道具帯と #planBar が図面の上に浮く。帯の下端より上に
   // 寸法表示が来ない様、帯の高さ（topSvg152）分だけ図面の収まる範囲を下へずらす。
@@ -5335,7 +5335,7 @@ function drawPlan(){
     });
   }
   PV.W = W; PV.H = H; if (PV.cx == null){ PV.cx = W / 2; PV.cy = H / 2; }
-  if (HB.__pageM){ const sv = $("plan"); sv.setAttribute("viewBox", `0 0 ${W} ${H}`); if (!sv.style.width) applyPV(); else if (HB.__pinH) sv.style.height = (HB.__pinH * PV.z) + "px"; } else applyPV(); $("plan").innerHTML = h + tradeLayer(P, s) + `<g id="planInk" fill="none" stroke="#E8742C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>`;
+  if (HB.__pageM){ const sv = $("plan"); sv.setAttribute("viewBox", `0 0 ${W} ${H}`); if (!sv.style.width) applyPV(); else if (HB.__noStable438 && !$("selBar").hidden){ sv.style.height = ($("slotM").getBoundingClientRect().height * PV.z) + "px"; } else if (HB.__pinH) sv.style.height = (HB.__pinH * PV.z) + "px"; } else applyPV(); $("plan").innerHTML = h + tradeLayer(P, s) + `<g id="planInk" fill="none" stroke="#E8742C" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></g>`;
   tidyPlanLabels();
   $("plan").querySelectorAll("[data-edge]").forEach(g => g.addEventListener("click", () => { if (!tool && Date.now() - (HB.__justPlaced || 0) > 600) editEdge(+g.dataset.edge); }));
   const fresh = () => Date.now() - (HB.__justPlaced || 0) < 600;
@@ -26904,7 +26904,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       } catch(e){}
       var r = _dp282.apply(this, arguments);
       try {
-        if (onPlan282() && !selState282() && typeof HB !== "undefined" && HB.__pinH > 0){
+        if (onPlan282() && !selState282() && typeof HB !== "undefined" && HB.__pinH > 0 && !(document.getElementById("slotM") || {style: {}}).style.marginBottom){   /* CAD-441：選ぶシートが開いて図面が縮んでいる時の高さは覚えない（選んだ時に小さいまま描いていた原因） */
           stable282.pinH = HB.__pinH; stable282.sig = sig282();
         }
       } catch(e){}
@@ -33809,7 +33809,7 @@ function daikuBaseRows391(nobeT){
     var sr = slot.getBoundingClientRect();
     var naturalBottom = sr.bottom + applied400;   /* 余白が無い時の slotM の下端 */
     var top = Infinity;
-    ["roomBar176", "grpSub", "toolCh", "toolCh2", "toolCh3", "selBar"].forEach(function(id){
+    ["roomBar176", "grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){
       var el = document.getElementById(id);
       if (!el || el.hidden) return;
       if (!el.getClientRects().length) return;   /* display:none（ux-sheet-off 含む）は数えない */
@@ -35166,7 +35166,7 @@ nav.steps{padding:1px 6px 3px}
       var lab = {parts: "🚽 部品", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", del: "消す", done: "OK"}; try { if (HB.__lab437) Object.assign(lab, HB.__lab437); } catch(e){}
       want.forEach(function(w){ var b = document.createElement("button"); b.type = "button"; b.textContent = lab[w]; b.dataset.w = w; if (arm && ((w === "parts" && arm.kind === "part") || (w === "furn" && arm.kind === "furn"))) b.className = "on"; if (w === "del") b.className = "red"; b.onclick = function(e){ e.stopPropagation(); act(w); }; box.appendChild(b); });
     }
-    var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
+    var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176", "selBar"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
   }
   function act(w){
     try { if (HB.__act437 && HB.__act437(w)) { chips(); return; } } catch(e){}
@@ -35419,26 +35419,9 @@ nav.steps{padding:1px 6px 3px}
 })();
 </script>
 <script id="fit438js">
-/* ===== CAD-438（Opus）：ドア・窓・間仕切りを選んだ時に図面が小さくなる直し。
-   選んだ時の下の操作パネル（#selBar）を CAD-400 の「シート」に入れて図面の枠をパネルの上までにし（refit400）、
-   図面（#plan）の高さが古いまま（254px など）残っていたら、枠の高さに合わせ直す。表示だけ。 */
-(function(){
-  "use strict";
-  HB.__noStable438 = true;   /* CAD-282 の「選んだ時は前の高さを守る」は、選ぶ前に選ぶシートが開いていると小さい高さを守ってしまうので使わない（パネルの上までに合わせ直す） */
-  setInterval(function(){
-    try {
-      var m = document.getElementById("stM"), sl = document.getElementById("slotM"), sv = document.getElementById("plan");
-      if (!m || m.hidden || !sl || !sv || !(typeof HB !== "undefined" && HB.__pageM)) return;
-      if (document.body.classList.contains("nbtutRun")) return;
-      var z = (typeof PV !== "undefined" && PV.z) ? PV.z : 1, want = Math.round(sl.clientHeight);
-      if (want < 120) return;
-      var vb = (sv.getAttribute("viewBox") || "").split(/\s+/).map(Number), ratio = vb.length === 4 && vb[2] ? vb[3] / vb[2] : 0;
-      var expect = Math.round(sv.getBoundingClientRect().width * ratio);   /* 図面の中身が求める高さ */
-      var cur = Math.round(sv.getBoundingClientRect().height);
-      if (z <= 1.01 && Math.abs(cur - want) > 6 && Math.abs(expect - want) < 40){ HB.__pinH = want; sv.style.height = want + "px"; try { drawPlan(); } catch(e){} }
-    } catch(e){}
-  }, 250);
-})();
+/* ===== CAD-438/441（Opus）：選んだ時に図面が小さくならない。CAD-441：選ぶたびに図面の大きさが変わって「拡大・縮小を繰り返す」ように見えたので、
+   選んでも図面の大きさは変えない形（CAD-282）に戻し、その「前の高さ」を、選ぶシートで縮んでいる時には覚えないようにした（小さいまま描いていた本当の原因）。 */
+HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変えない（CAD-282 の形に戻す）。操作パネルは図面の下側に重なる */
 </script>
 <script id="ux439js">
 /* ===== CAD-439（Opus）：A 実際の原価と比べて自分の基準を作る ／ B 図面の写真をAIに読ませて家を作る。翔伍「お願いします」（2026-11-20）。
