@@ -2260,7 +2260,7 @@ function dimOverlay(P, sc){
     const ts = [0, L];
     parts.forEach(q => [[q.x1, q.y1], [q.x2, q.y2]].forEach(pt => { const r = segDist(pt, a, c); if (r.d < 3){ const t = r.t * L; if (t > 5 && t < L - 5) ts.push(t); } }));
     ts.sort((x, y) => x - y);
-    let off = 300; swings252.forEach(sw => { if (sw.e === i) off = Math.max(off, sw.r + 120); });   /* CAD-258：外へ開くドアの弧が届く辺は、寸法線ごと弧の外へ逃がす（寸法の値は変えない） */
+    let off = 185; swings252.forEach   /* CAD-425: 寸法線の位置 300→185mm（ドアの弧の逃がしは従来どおり sw.r + 120） */(sw => { if (sw.e === i) off = Math.max(off, sw.r + 120); });   /* CAD-258：外へ開くドアの弧が届く辺は、寸法線ごと弧の外へ逃がす（寸法の値は変えない） */
     const col = e.set ? "#1E3A8A" : "#8A96A3", vert = Math.abs(u[0]) < 0.5;
     const A0 = P([a[0] + n[0] * off, a[1] + n[1] * off]), C0 = P([c[0] + n[0] * off, c[1] + n[1] * off]);
     out.push(`<line x1="${A0[0]}" y1="${A0[1]}" x2="${C0[0]}" y2="${C0[1]}" stroke="${col}" stroke-width=".8"/>`);
@@ -2268,12 +2268,12 @@ function dimOverlay(P, sc){
     for (let k = 0; k < ts.length - 1; k++){
       const d = ts[k + 1] - ts[k]; const tiny348 = d * sc < 18;   /* CAD-348：小さすぎる区間も数字を消さない（消すと区間の合計が全長と合わなくなる）。全体表示では隠し、拡大で出す（zx252） */
       const ex = (d * sc < dimTxtW319(fmtDR319(d)) * 6.6 + 6 && k % 2) ? 14 / sc : 0;
-      const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 130 + ex), a[1] + u[1] * mid + n[1] * (off + 130 + ex)]);
-      const tw252 = dimTxtW319(fmtDR319(d)) * 6.6 / sc, crossed252 = swings252.some(sw => sw.e === i && Math.hypot(Math.max(0, Math.abs(mid - sw.t) - tw252 / 2), off + 130 + ex) < sw.r);   /* CAD-252：ドアの開く線と重なる寸法文字は全体表示で隠し、拡大で出す */
+      const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 125 + ex), a[1] + u[1] * mid + n[1] * (off + 125 + ex)   /* CAD-425: 区間数字 430→310mm */]);
+      const tw252 = dimTxtW319(fmtDR319(d)) * 6.6 / sc, crossed252 = swings252.some(sw => sw.e === i && Math.hypot(Math.max(0, Math.abs(mid - sw.t) - tw252 / 2), off + 125 + ex) < sw.r   /* CAD-425 */);   /* CAD-252：ドアの開く線と重なる寸法文字は全体表示で隠し、拡大で出す */
       out.push(tx(q0[0], q0[1], fmtDR319(d), ts.length > 2 ? "#C2571A" : col, vert, (crossed252 || tiny348) ? "zx252" : ""));
       chainVals.add(Math.round(d));
     }
-    if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 330), m[1] + n[1] * (off + 330)]); out.push(tx(q0[0], q0[1], `全長 ${fmtDR319(L)}${e.set ? "" : "（自動）"}`, col, vert)); }
+    if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 315), m[1] + n[1] * (off + 315)]);   /* CAD-425: 全長 630→500mm */ out.push(tx(q0[0], q0[1], `全長 ${fmtDR319(L)}${e.set ? "" : "（自動）"}`, col, vert)); }
   });
   // 選んだ間仕切り：両側の壁までの距離
   // CAD-210: 当たった壁が外周に接していて、その距離が外周の寸法チェーンに既に出ている方向は
@@ -5210,7 +5210,7 @@ function drawPlan(){
   drawPlanCompass();
   let Ht = 0;
   if (HB.__pageM){ const r = $("slotM").getBoundingClientRect(); if (r.width > 50 && r.height > 50){ const asp128 = r.width > r.height; if (HB.__aspM !== undefined && HB.__aspM !== asp128) HB.__pinH = 0; HB.__aspM = asp128; HB.__landM128 = asp128; if ($("selBar").hidden && !document.body.classList.contains("mSel") && (typeof step === "undefined" || step === "M") && r.height > (HB.__pinH || 0)) HB.__pinH = r.height; Ht = 360 * (HB.__pinH || r.height) / r.width; if (asp128){ try{ const bb128 = bbox(); const sW128 = (360 - 32) / Math.max(1, bb128.w); const Hf128 = bb128.h * sW128 + 32; if (isFinite(Hf128) && Ht < Hf128) Ht = Hf128; }catch(e128){} } } }
-  const p = pts(), b = bbox(), pad = HB.__pageM ? (HB.__landM128 ? 16 : 36) : 66, W = 360, maxH = Ht || (HB.__pageM ? 470 : 340);
+  const p = pts(), b = bbox(), pad = HB.__pageM ? (HB.__landM128 ? 16 : 22) : 66   /* CAD-425: 縦画面の余白を詰めた（36→22） */, W = 360, maxH = Ht || (HB.__pageM ? 470 : 340);
   // CAD-152: 全画面（fsDraw）では道具帯と #planBar が図面の上に浮く。帯の下端より上に
   // 寸法表示が来ない様、帯の高さ（topSvg152）分だけ図面の収まる範囲を下へずらす。
   // 寸法表示は外形の外へ最大630mm出るので、その分も高さの見積りに入れる（寸法と文字は重ねない）。
@@ -5245,7 +5245,7 @@ function drawPlan(){
     } catch(e){}
   }
   const regH400 = Math.max(120, maxH152 - botSvg400 - topSvg400);
-  let s = topSvg152 > 0 ? Math.min((W - pad * 2) / b.w, (regH400 - pad * 2) / b.h, (regH400 - 16) / (b.h + 1260)) : Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
+  let s = topSvg152 > 0 ? Math.min((W - pad * 2) / b.w, (regH400 - pad * 2) / b.h, (regH400 - 16) / (b.h + 1000)   /* CAD-425: 630mm→500mm */) : Math.min((W - pad * 2) / b.w, (maxH - pad * 2) / b.h);
   /* CAD-156: 横画面の間取りでは、寸法表示（外形の外へ最大630mm出る）が viewBox の外へ
      はみ出して消えない様、はみ出し込みの収まりでも s を抑える（寸法と文字は欠かさない）。
      横の上限は全画面でも効かせる。縦の上限は通常表示だけ（全画面は上の
@@ -5255,8 +5255,8 @@ function drawPlan(){
      東・西の寸法が viewBox の外へはみ出して消えていた（本人の実機報告
      2026-11-13 22:19「図面の右側が切れている」）。縦の上限は従来通り横画面だけ。 */
   if (HB.__pageM){
-    s = Math.min(s, (W - 10) / (b.w + 1260));
-    if (HB.__landM128 && !(topSvg152 > 0) && Ht) s = Math.min(s, (Ht - 10) / (b.h + 1260));
+    s = Math.min(s, (W - 10) / (b.w + 1000));   /* CAD-425: 全長ラベル片側500mm見込み */
+    if (HB.__landM128 && !(topSvg152 > 0) && Ht) s = Math.min(s, (Ht - 10) / (b.h + 1000));   /* CAD-425 */
   }
   const H = Ht || b.h * s + pad * 2, ox = (W - b.w * s) / 2 - b.x0 * s, oy = Ht ? topSvg152 + topSvg400 + (regH400 - b.h * s) / 2 - b.y0 * s : pad - b.y0 * s;
   const P = q => [q[0] * s + ox, q[1] * s + oy];
@@ -34616,17 +34616,9 @@ nav.steps{padding:1px 6px 3px}
       if (key === lastKey && old) return;
       lastKey = key;
       if (old) old.remove();
-      /* 符号の帯の位置（符号の丸の中心）を読み取る */
-      var rowY = pb.y - 8, colX = pb.x - 8;
-      var cs = grp.querySelectorAll("circle");
-      var rows = [], cols = [];
-      cs.forEach(function(c){
-        var cx = parseFloat(c.getAttribute("cx")), cy = parseFloat(c.getAttribute("cy"));
-        if (cy < pb.y - 1) rows.push(cy);
-        if (cx < pb.x - 1) cols.push(cx);
-      });
-      if (rows.length) rowY = rows.reduce(function(a, v){ return a + v; }, 0) / rows.length;
-      if (cols.length) colX = cols.reduce(function(a, v){ return a + v; }, 0) / cols.length;
+      /* CAD-425：寸法列の帯は壁の近くへ寄せる（上＝壁から95mm・左＝壁から90mm）。
+         符号の旧位置（壁から165mm）のままだと、外周チェーンの寸法線（185mm）と重なるため。 */
+      var rowY = pb.y - 95 * sx, colX = pb.x - 90 * sy;
       var g = document.createElementNS(NS, "g");
       g.setAttribute("id", "dim424"); g.setAttribute("pointer-events", "none");
       function tick(x1, y1, x2, y2){
