@@ -11825,9 +11825,51 @@ function withFloor416(fl, fn){
 }
 /* その階の外形と間仕切り（図面用） */
 function fl416(fl){ return withFloor416(fl === 2 ? 2 : 1, () => ({p: pts().map(q => q.slice()), parts: (S.parts2D || []).filter(q => { try { return pState(q) !== "remove"; } catch(e){ return true; } }).map(q => ({x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}))})); }
+/* CAD-453（Opus）：片筋交いの向き（柱頭＝筋交いの上が付く柱）。
+   ① 外周の角の柱は、筋交いの上を角に（現場の普通の入れ方。角はホールダウン等の強い金物が付く所）。
+   ② 同じ通りで続く筋交いは、向きを交互に（ハの字・Vの字）。左右どちらから押されても同じ効き方になるように。
+   ③ 離れて1本ずつある筋交いは、その方向（X・Y）で右上がり・左上がりの数がそろうように。
+   ④ 2階の筋交いは、真下の1階の筋交いと「くの字」（1階の上の端と2階の下の端が同じ柱）。その柱の金物（N値）が小さくなる。
+   N値は柱頭側＋0.5・柱脚側−0.5（45×90片筋交いの補正）で、この向きのまま計算される。本数・壁量は変わらない。 */
+function braceHeads453(out, below){
+  try {
+    const isK = sg => sg.kind === "kata" || sg.kind === "menzaiKata";
+    const ks = out.segs.filter(isK); if (!ks.length) return;
+    const corner = out.corner || new Set(), fix = new Map();
+    const same = (P, Q) => Math.abs(P.x - Q.x) < 2 && Math.abs(P.y - Q.y) < 2;
+    if (below && below.segs) ks.forEach(sg => { const d = below.segs.find(q => isK(q) && q.head && ((same(q.A, sg.A) && same(q.B, sg.B)) || (same(q.A, sg.B) && same(q.B, sg.A))));
+      if (d){ const hP = d.head === d.a ? d.A : d.B; fix.set(sg, !same(hP, sg.B)); } });   /* くの字：1階の柱頭の柱＝2階の柱脚 → 2階の柱頭は反対の端（true＝柱頭がb側） */
+    /* 同じ通りで続く筋交いの鎖 */
+    const chains = []; let cur = null;
+    out.segs.forEach((sg, i) => { const prev = out.segs[i - 1];
+      if (isK(sg) && cur && prev && prev.ri === sg.ri && isK(prev) && prev.b === sg.a) cur.push(sg);
+      else if (isK(sg)){ cur = [sg]; chains.push(cur); } else cur = null; });
+    const lean = sg => { const up = sg.dirX ? sg.B.x > sg.A.x : sg.B.y > sg.A.y; return up === !!sg.hb; };   // 方向ごとの「傾き」：数をそろえる用
+    const fill = (ch, i0, v) => { for (let i = i0; i < ch.length; i++) ch[i].hb = (i - i0) % 2 ? !v : v; for (let i = i0 - 1; i >= 0; i--) ch[i].hb = (i0 - i) % 2 ? !v : v; };
+    const free = [];
+    chains.forEach(ch => {
+      const fi = ch.findIndex(sg => fix.has(sg));
+      if (fi >= 0){ fill(ch, fi, fix.get(ch[fi])); ch.forEach(sg => { if (fix.has(sg)) sg.hb = fix.get(sg); }); return; }
+      const c0 = corner.has(ch[0].a), c1 = corner.has(ch[ch.length - 1].b);
+      if (c0 && c1 && ch.length > 1){   /* 両端が角：両方とも角を上に。数が合わない時は真ん中の1組だけ同じ向き */
+        const h = Math.ceil(ch.length / 2); for (let i = 0; i < ch.length; i++) ch[i].hb = i < h ? (i % 2 === 1) : ((ch.length - 1 - i) % 2 === 0); return; }
+      if (c0){ fill(ch, 0, false); return; }
+      if (c1){ fill(ch, ch.length - 1, true); return; }
+      if (ch.length === 1 && corner.has(ch[0].b)){ ch[0].hb = true; return; }
+      free.push(ch);
+    });
+    /* 角に付かない鎖：方向ごとに傾きの数をそろえる（長い鎖から） */
+    free.sort((a, c) => c.length - a.length).forEach(ch => {
+      const d = ch[0].dirX, done = ks.filter(sg => sg.dirX === d && sg.hb !== undefined && !ch.includes(sg)), nUp = done.filter(lean).length, nDn = done.length - nUp;
+      fill(ch, 0, true); const upT = ch.filter(lean).length; fill(ch, 0, false); const upF = ch.filter(lean).length;
+      const bT = Math.abs(nUp + upT - (nDn + ch.length - upT)), bF = Math.abs(nUp + upF - (nDn + ch.length - upF));
+      fill(ch, 0, bT < bF); });
+    ks.forEach(sg => { sg.head = sg.hb ? sg.b : sg.a; delete sg.hb; });
+  } catch(e){ out.segs.forEach(sg => { if ((sg.kind === "kata" || sg.kind === "menzaiKata") && !sg.head) sg.head = sg.a; }); }
+}
 function wallSegs406(fl){
   fl = fl === 2 ? 2 : 1;
-  if (fl === 2 && !roof().two) return wallSegs406core(fl);
+  if (fl === 2){ const o2 = !roof().two ? wallSegs406core(fl) : withFloor416(fl, () => wallSegs406core(fl)); try { if (o2.segs.length){ const o1 = withFloor416(1, () => wallSegs406core(1)); braceHeads453(o2, o1); } } catch(e){} return o2; }
   return withFloor416(fl, () => wallSegs406core(fl));
 }
 function wallSegs406core(fl){
@@ -11899,8 +11941,8 @@ function wallSegs406core(fl){
     out.segs.forEach(sg => {
       const nb = sg.kind === "kata" || sg.kind === "menzaiKata" ? 1 : sg.kind === "tasuki" ? 2 : 0;
       out.n += nb; if (sg.dirX) out.nx += nb; else out.ny += nb;
-      if (sg.kind === "kata" || sg.kind === "menzaiKata"){ const ca = corner.has(sg.a), cb = corner.has(sg.b); sg.head = (ca || !cb) ? sg.a : sg.b; }
     });
+    braceHeads453(out, null);
     out.mx = out.segs.filter(sg => sg.dirX && (sg.kind === "menzai" || sg.kind === "menzaiKata")).reduce((a, sg) => a + sg.L / 10, 0);
     out.my = out.segs.filter(sg => !sg.dirX && (sg.kind === "menzai" || sg.kind === "menzaiKata")).reduce((a, sg) => a + sg.L / 10, 0);
   } catch(e){ out.err = String(e); }
@@ -20769,6 +20811,7 @@ function isRf(){ try { return !!(typeof S !== "undefined" && S && S.mode === "rf
 function gkObj(){ try { return (typeof S !== "undefined" && S) ? (S.gk || null) : null; } catch(e){ return null; } }
 function $(id){ return document.getElementById(id); }
 window.__gk208 = G; /* テスト用に状態を公開 */
+window.__gkBack453 = function(){ try { if (G.mode === "M") swapBack(); } catch(e){} };   /* CAD-453：図面の取り込みの前に、既存の表示から計画の表示へ戻す（戻さないと取り込んだ間仕切りが消える） */
 
 /* ---- 影（計画側の正本）：swap の出し入れと、保存の書き直しに使う ---- */
 function snapPlan(){
@@ -35775,6 +35818,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
   }
   function pickS(cat, name, w){ var L = SASH.filter(function(s){ return s.cat === cat && (!name || s.name === name); }); if (!L.length) L = SASH.filter(function(s){ return s.cat === cat; }); if (!L.length) return null; L.sort(function(p, q){ return Math.abs(p.w - w) - Math.abs(q.w - w); }); return L[0]; }
   function applyD(D){
+    try { if (window.__gkBack453) window.__gkBack453(); } catch(e){}
     pushUndo();
     var o = D.outline.map(function(p){ return [Math.round(+p[0]), Math.round(+p[1])]; }), ar = 0;
     o.forEach(function(p, k){ var q = o[(k + 1) % o.length]; ar += p[0] * q[1] - q[0] * p[1]; }); if (ar < 0) o.reverse();
