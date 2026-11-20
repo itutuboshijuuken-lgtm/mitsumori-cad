@@ -16031,7 +16031,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       try { drawSelBar(); } catch(er){}
       return;
     }
-    if (tp.zi >= 0){
+    if (tp.zi >= 0 && !(HB.__lockRoom443 && HB.__lockRoom443())){
       pdOff(true);
       if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(er){} }
       enclMode = true;
@@ -19224,6 +19224,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   if (plan176) plan176.addEventListener("pointerup", function(e){
     var d = tapDown176; tapDown176 = null;
     if (!d || gatesOff176()) return;
+    if (HB.__lockRoom443 && HB.__lockRoom443()) return;   /* CAD-443：部屋（床）は ②床 と ⑤見直し だけ */
     if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 700){ spot176.n = 0; return; }
     var mm = d.mm;
     /* 照明は pickCands の対象外で別に選ぶ物なので、その近くは任せる */
@@ -22420,10 +22421,14 @@ setInterval(gkSync208, 600);
           });
           var mats = matsForBox(bx0, by0, bx1 - bx0, by1 - by0, cfg.toPx);
           if (!mats) return;
-          jobs.push({ clip: matched.map(function(el){
+          var clipL = matched.map(function(el){
                         return { x: parseFloat(el.getAttribute("x")), y: parseFloat(el.getAttribute("y")),
                                  w: parseFloat(el.getAttribute("width")), h: parseFloat(el.getAttribute("height")) };
-                      }), mats: mats, els: matched });
+                      });
+          /* CAD-443：四角い部屋は外形の四角で切る（壁の端のマスが抜けて、畳の上に白い線が出ていた） */
+          var ra = 0; runs.forEach(function(rn){ ra += rn[2] * rn[3]; });
+          if (ra >= 0.9 * (bx1 - bx0) * (by1 - by0)){ var PA = cfg.toPx(bx0, by0), PB = cfg.toPx(bx1, by1); clipL = [{x: Math.min(PA[0], PB[0]), y: Math.min(PA[1], PB[1]), w: Math.abs(PB[0] - PA[0]) + 0.3, h: Math.abs(PB[1] - PA[1]) + 0.3}]; }
+          jobs.push({ clip: clipL, mats: mats, els: matched });
         });
       }
     }
@@ -33624,8 +33629,8 @@ function daikuBaseRows391(nobeT){
    従来どおり動く事だけ守る（ラジアルで道具を持ち替えたら手順も付いていく）。 */
 (function(){
   "use strict";
-  var STEPS399 = ["part", "floor", "ds", "put"];
-  var LABEL399 = {part: "① 間仕切り", floor: "② 床", ds: "③ ドア・サッシ", put: "④ 置く物"};
+  var STEPS399 = ["part", "floor", "ds", "put", "all"];
+  var LABEL399 = {part: "①間仕切り", floor: "②床", ds: "③ドア窓", put: "④置く物", all: "⑤見直し"};   /* CAD-443：⑤見直し＝全部さわれる最後の確認。幅に入るよう短い名前 */
   var step399 = "part";
   var barEl399 = null;
 
@@ -33697,14 +33702,14 @@ function daikuBaseRows391(nobeT){
     /* タブ・ラジアル等の他の入口で道具が持ち替わっていたら、手順も合わせる */
     try {
       var owner = stepOfTool399((typeof toolOpen !== "undefined") ? toolOpen : null);
-      if (owner && owner !== step399) step399 = owner;
+      if (owner && owner !== step399 && step399 !== "all") step399 = owner;   /* ⑤見直しでは道具を持っても手順を動かさない */
     } catch(e){}
     paintBar399();
     var s = step399;
     var tabs = document.getElementById("toolTabs");
     if (tabs) tabs.querySelectorAll("[data-tt]").forEach(function(b){
       var k = b.dataset.tt;
-      vis399(b, (s === "part" && k === "part") || ((s === "ds" || s === "put") && k === "put"));
+      vis399(b, s === "all" || (s === "part" && k === "part") || ((s === "ds" || s === "put") && k === "put"));
     });
     var sub = document.getElementById("grpSub");
     if (sub){
@@ -33713,15 +33718,15 @@ function daikuBaseRows391(nobeT){
         sub.hidden = false;
         sub.querySelectorAll("[data-tt]").forEach(function(b){
           var k = b.dataset.tt;
-          vis399(b, s === "ds" ? (k === "door" || k === "win" || k === "gen")
+          vis399(b, s === "all" ? true : s === "ds" ? (k === "door" || k === "win" || k === "gen")
                                : (k === "mizu" || k === "light" || k === "etc"));
         });
       }
     }
-    var pc = document.getElementById("partCh"); if (pc && s !== "part") pc.hidden = true;
-    var tc = document.getElementById("toolCh"); if (tc && s !== "ds") tc.hidden = true;
-    var tc2 = document.getElementById("toolCh2"); if (tc2 && s !== "put") tc2.hidden = true;
-    var tc3 = document.getElementById("toolCh3"); if (tc3 && s !== "put") tc3.hidden = true;
+    var pc = document.getElementById("partCh"); if (pc && s !== "part" && s !== "all") pc.hidden = true;
+    var tc = document.getElementById("toolCh"); if (tc && s !== "ds" && s !== "all") tc.hidden = true;
+    var tc2 = document.getElementById("toolCh2"); if (tc2 && s !== "put" && s !== "all") tc2.hidden = true;
+    var tc3 = document.getElementById("toolCh3"); if (tc3 && s !== "put" && s !== "all") tc3.hidden = true;
     var nz = document.getElementById("nazoruBtn");   /* 囲み（床の範囲作り）は床の手順だけ。今の版にボタンが無い場合は何もしない */
     if (nz) vis399(nz, s === "floor" || (typeof enclMode !== "undefined" && enclMode));
   }
@@ -33757,7 +33762,7 @@ function daikuBaseRows391(nobeT){
     + "body.nbtutRun #stepGuide400{display:none}";
   document.head.appendChild(st400);
 
-  var GUIDE400 = {part: "間仕切りを引く", floor: "部屋をタップして床を選ぶ", ds: "ドア・窓を置く壁をタップ", put: "置く場所をタップ"};
+  var GUIDE400 = {part: "間仕切りを引く", floor: "部屋をタップして床を選ぶ", ds: "ドア・窓を置く壁をタップ", put: "置く場所をタップ", all: "直したい物をタップ"};
   var guideEl400 = document.getElementById("stepGuide400");
   var lastStep400 = "part";
   try { if (typeof HB !== "undefined" && HB.__step399) lastStep400 = HB.__step399(); } catch(e){}
@@ -34525,6 +34530,13 @@ nav.steps{padding:1px 6px 3px}
         var ok = false;
         try { var f = roomFinOf(rm); if (f && f.f && f.f !== "none") ok = true; } catch(e){}
         /* CAD-430：部屋の種類（トイレ・浴室など）だけでは「床を決めた」にしない（翔伍：床を決めるまで何も表示しない） */
+        /* CAD-443：部屋をタップして床を決めた時は、範囲の記録（S.tatami）に入る。その部屋も「決めた」に入れる（入れないと、決めても床が出なかった） */
+        if (!ok && Array.isArray(S.tatami)) S.tatami.some(function(t){
+          if (!t || t.x1 == null) return false;
+          var cx = (t.x0 + t.x1) / 2, cy = (t.y0 + t.y1) / 2, ii = Math.floor((cx - R.b.x0) / R.st), jj = Math.floor((cy - R.b.y0) / R.st);
+          if (ii < 0 || jj < 0 || ii >= R.NX || jj >= R.NY) return false;
+          if (R.comp[jj * R.NX + ii] === rm.cid){ ok = true; return true; } return false;
+        });
         if (ok) decided[rm.cid] = true;
       });
       /* 決めた部屋のセルを行ラン（mm）にまとめる */
@@ -34558,10 +34570,11 @@ nav.steps{padding:1px 6px 3px}
           cp.setAttribute("id", "clipF423");
           runs.forEach(function(rn){
             var r = document.createElementNS(NS, "rect");
-            r.setAttribute("x", (pb.x + (rn[0] - bb.x0) * sx).toFixed(2));
-            r.setAttribute("y", (pb.y + (rn[1] - bb.y0) * sy).toFixed(2));
-            r.setAttribute("width", (rn[2] * sx).toFixed(2));
-            r.setAttribute("height", (rn[3] * sy).toFixed(2));
+            var pd = R.st;   /* CAD-443：壁の下のマス（部屋の外扱い）で床が白く抜けて線に見えていたので、1マス分ふくらませる（壁の線が上に描かれるので見た目は変わらない） */
+            r.setAttribute("x", (pb.x + (rn[0] - pd - bb.x0) * sx).toFixed(2));
+            r.setAttribute("y", (pb.y + (rn[1] - pd - bb.y0) * sy).toFixed(2));
+            r.setAttribute("width", ((rn[2] + 2 * pd) * sx).toFixed(2));
+            r.setAttribute("height", ((rn[3] + 2 * pd) * sy).toFixed(2));
             cp.appendChild(r);
           });
           defs.appendChild(cp);
@@ -34725,7 +34738,8 @@ nav.steps{padding:1px 6px 3px}
     floor: ["部屋をタップして、床をえらびます", "土間など一部だけ変える時は、上の「囲んで一部だけ」を押してから、指で囲みます。"],
     encl:  ["変えたい範囲を、指でぐるっと囲みます", "囲んだら床をえらびます。やめる時は、もう一度「囲んで一部だけ」。"],
     ds:    ["下でドア・窓をえらんで、壁をタップ", "置いたドア・窓をタップすると、寸法や向きを直せます。"],
-    put:   ["下で置く物をえらんで、置く場所をタップ", "置いた物は、指で動かせます。"]
+    put:   ["下で置く物をえらんで、置く場所をタップ", "置いた物は、指で動かせます。"],
+    all:   ["直したい物をタップすると、何でも直せます", "床・間仕切り・ドア・窓・置いた物を、ここで全部見直せます。終わったら右上の「次へ」。"]
   };
   var css = document.createElement("style");
   css.textContent =
@@ -35166,7 +35180,7 @@ nav.steps{padding:1px 6px 3px}
     var m = stM(); if (!m) return; var box = document.getElementById("chips434");
     if (!box){ box = document.createElement("div"); box.id = "chips434"; m.appendChild(box); }
     if (!onM()){ box.style.display = "none"; return; } box.style.display = "";
-    var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
+    var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : s === "all" ? ["parts", "furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
     try { if (HB.__extra437) want = HB.__extra437(s, fsel, want); } catch(e){}   /* CAD-437：下絵・ひな形・声のボタン */
     var sig = want.join(",") + "|" + (arm ? arm.kind : "") + "|" + (HB.__sig437 ? HB.__sig437() : "");
     if (box.dataset.sig !== sig){
@@ -35208,7 +35222,7 @@ nav.steps{padding:1px 6px 3px}
         else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; save(); drawPlan(); toast("指で動かせます。↻で回す"); }
         chips(); return;
       }
-      var i = fAt(m);
+      var i = (step() === "put" || step() === "all") ? fAt(m) : -1;   /* CAD-443：家具は ④置く物 と ⑤見直し だけ */
       if (i >= 0){
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
         fsel = i; var f = S.furn434[i]; drag = {id: e.pointerId, dx: f.x - m[0], dy: f.y - m[1], moved: false};
@@ -35551,6 +35565,8 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     S.parts2D = (D.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
     S.roomNames = (D.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
     S.sashes = (S.sashes || []).filter(function(sa){ return !sa.drawn; });
+    /* CAD-443：前の家の床の範囲・器具・照明などを残さない（新しい家として入れる） */
+    ["tatami", "zones", "roomFin", "roomRecs", "fx", "lights", "tenken", "tare", "furn434"].forEach(function(k){ if (Array.isArray(S[k])) S[k] = []; });
     var MAP = {window: ["腰窓", null], sweep: ["掃き出し", null], door: ["室内ドア", "片開き"], sliding: ["室内ドア", "片引き戸"], entrance: ["玄関", null]}, skipped = 0;
     (D.openings || []).forEach(function(op){
       try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ skipped++; return; }
@@ -35632,5 +35648,58 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     mk("共有（AIへ送る）", function(){ out(function(bl){ try { var f = new File([bl], fname(), {type: "image/jpeg"}); if (navigator.canShare && navigator.canShare({files: [f]})){ navigator.share({files: [f]}).catch(function(){}); return; } } catch(e){} dl(bl); toast("保存しました。AIに送ってください"); }); }, true);
   }
   HB.__mask440 = open;
+})();
+</script>
+<script id="lock443js">
+/* ===== CAD-443（Opus）：手順ごとに、その手順の物だけさわれる（翔伍「分けた意味がない」）。⑤見直しでは全部さわれる。各手順に「次へ」。
+   ①間仕切り＝間仕切り・垂れ壁だけ／②床＝部屋（床）だけ／③ドア窓＝ドア・窓だけ／④置く物＝置く物・家具だけ／⑤見直し＝全部。
+   選ぶ候補（pickCands）を手順でしぼり、部屋の床バー・床の範囲は②⑤だけ開く。表示と入口だけ（データ・見積には触らない）。 */
+(function(){
+  "use strict";
+  var NEXT = {part: ["floor", "②床へ"], floor: ["ds", "③ドア窓へ"], ds: ["put", "④置く物へ"], put: ["all", "⑤見直しへ"], all: ["@7", "③室内図へ"]};
+  function onM(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM); }
+  function st(){ try { return HB.__step399 ? HB.__step399() : "all"; } catch(e){ return "all"; } }
+  function tut(){ try { return document.body.classList.contains("nbtutRun") || !!HB.__nbtut; } catch(e){ return false; } }
+  HB.__lockRoom443 = function(){ if (!onM() || tut()) return false; var s = st(); return s === "part" || s === "ds" || s === "put"; };
+  var ALLOW = {part: {p: 1, r: 1}, floor: {}, ds: {o: 1}, put: {k: 1}};
+  if (typeof pickCands === "function" && !pickCands.__l443){
+    var pc0 = pickCands;
+    pickCands = function(){ var c = pc0.apply(this, arguments); try { if (onM() && !tut()){ var a = ALLOW[st()]; if (a && Array.isArray(c)) c = c.filter(function(x){ return x && a[x.t]; }); } } catch(e){} return c; };
+    pickCands.__l443 = true;
+  }
+  var css = document.createElement("style");
+  css.textContent = "#stM .mtools{position:relative}#stepGuide400{min-height:30px;display:flex;align-items:center;padding-right:120px!important;box-sizing:border-box}"
+    + "#next443{position:absolute;right:6px;height:28px;z-index:9;border:0;border-radius:14px;background:#1a73e8;color:#fff;font-size:13.5px;font-weight:900;padding:0 12px;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,.2)}";
+  document.head.appendChild(css);
+  function btn(){
+    var g = document.getElementById("stepGuide400"); if (!g || !onM()) { var b0 = document.getElementById("next443"); if (b0) b0.style.display = "none"; return; }
+    var b = document.getElementById("next443");
+    if (!b){ b = document.createElement("button"); b.id = "next443"; b.type = "button"; g.parentNode.appendChild(b);
+      b.onclick = function(){ var n = NEXT[st()]; if (!n) return; if (n[0].charAt(0) === "@"){ var t = document.querySelector('.steps [data-step="' + n[0].slice(1) + '"]'); if (t) t.click(); } else if (HB.__setStep399) HB.__setStep399(n[0]); }; }
+    var n = NEXT[st()]; b.style.display = n ? "" : "none"; if (n && b.textContent !== "次へ " + n[1] + " ▶") b.textContent = "次へ " + n[1] + " ▶";
+    b.style.top = (g.offsetTop + (g.offsetHeight - 28) / 2) + "px";
+  }
+  setInterval(btn, 300); btn();
+})();
+</script>
+<script id="flapply443js">
+/* ===== CAD-443（Opus）：部屋を選んでから床の種類を押したら、その場でその部屋の床にする（翔伍「押しても床が変わらない」）。
+   前は種類を押すと「構え」になるだけで、もう一度部屋をタップしないと変わらなかった。部屋を選んでいる時だけ、すぐ同じ処理（ltPlanClick）を呼ぶ。 */
+(function(){
+  "use strict";
+  var last = 0;
+  var h = function(e){
+    var b = e.target && e.target.closest ? e.target.closest("#roomBar176 button") : null; if (!b) return;
+    if (Date.now() - last < 400) return; last = Date.now();
+    setTimeout(function(){
+      try {
+        var arm = HB.__floorArm, pt = HB.__roomPt433 && HB.__roomPt433();
+        if (!arm || !pt) return;
+        if (typeof sel !== "undefined" && sel) return;
+        if (typeof ltPlanClick === "function"){ ltPlanClick([pt[0], pt[1]]); try { drawPlan(); } catch(er){} }
+      } catch(er){}
+    }, 80);
+  };
+  document.addEventListener("pointerup", h, true); document.addEventListener("click", h, true);
 })();
 </script>
