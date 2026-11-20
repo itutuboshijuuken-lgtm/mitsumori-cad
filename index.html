@@ -5546,14 +5546,20 @@ function drawSec(){
     return;
   }
   $("rfRes").innerHTML = "";
-  if (unknown() || dimErr.length){ $("sec").innerHTML = `<text x="180" y="150" text-anchor="middle" style="font-size:15px;font-weight:700;fill:#9A4A12">先に②で寸法を入れてください</text>`; $("secRes").innerHTML = ""; return; }
+  if (unknown() || dimErr.length){ $("sec").setAttribute("viewBox", "0 0 360 300"); $("sec").innerHTML = `<text x="180" y="150" text-anchor="middle" style="font-size:15px;font-weight:700;fill:#9A4A12">先に②で寸法を入れてください</text>`; $("secRes").innerHTML = ""; return; }
   const R = roof(), {W, t, Lc, Lc2, Hd, two, Hk, ms, topRise, nokiA, nokiB} = R;
   const kata = S.roof === "kata";
+  /* CAD-452（2026-11-21・本人の実機指摘「スクロールで見るとこちいさすぎる」）：屋根画面の断面図が
+     カード（fs420stage）の中で小さく出る直し。原因は、絵の幅の予算（スパン250＋左ラベル帯95＋右15
+     ＝viewBox幅360固定）に対してカードが縦長で、meet フィットの倍率が幅で決まり、絵がカードの
+     高さの3〜5割しか使えていなかった事。当て方だけを変えた：左ラベル帯 95→74、桁天・胴差天ラベルの
+     柱からの間隔 34→8、viewBox幅は固定360でなく絵の右端＋10に合わせる。形・寸法の値・部材・計算・
+     設定の並びは一切変えていない。 */
   const zGL = -105 - S.kiso, zTop = Hk + topRise + 60 * R.n + 40;
   const xL = -nokiA - 150, xR = W + (kata ? nokiB : nokiB) + 150;
-  const s = Math.min(250 / (xR - xL), 420 / (zTop - zGL)), mL = 95, mT = 40;
+  const s = Math.min(248 / (xR - xL), 420 / (zTop - zGL)), mL = 74, mT = 40;
   const X = x => mL + (x - xL) * s, Y = z => mT + (zTop - z) * s;
-  const Hpx = mT + (zTop - zGL) * s + 30, Wpx = 360;
+  const Hpx = mT + (zTop - zGL) * s + 30, Wpx = Math.ceil(X(xR)) + 10;
   const rect = (x0, z0, x1, z1, fill, st = "#A87C4C") => `<rect x="${X(Math.min(x0, x1))}" y="${Y(Math.max(z0, z1))}" width="${Math.abs(x1 - x0) * s}" height="${Math.abs(z1 - z0) * s}" fill="${fill}" stroke="${st}" stroke-width="1"/>`;
   let h = "";
   h += `<defs><pattern id="secWoodH351" width="90" height="26" patternUnits="userSpaceOnUse"><rect width="90" height="26" fill="#D9A862"/><path d="M0 5H90M0 12H90M0 19H90M0 24H90" stroke="#BE8A48" stroke-width="1" opacity=".5"/><path d="M0 8.5H90M0 15.5H90M0 22H90" stroke="#EBCB96" stroke-width="1" opacity=".55"/><ellipse cx="28" cy="12" rx="4.6" ry="2.1" fill="none" stroke="#96692F" stroke-width="1" opacity=".65"/><ellipse cx="28" cy="12" rx="2" ry=".9" fill="none" stroke="#96692F" stroke-width=".8" opacity=".65"/><ellipse cx="66" cy="6" rx="3.4" ry="1.5" fill="none" stroke="#96692F" stroke-width="1" opacity=".5"/></pattern><pattern id="secWoodV351" width="26" height="90" patternUnits="userSpaceOnUse"><rect width="26" height="90" fill="#E0B57A"/><path d="M5 0V90M12 0V90M19 0V90M24 0V90" stroke="#C79A58" stroke-width="1" opacity=".5"/><path d="M8.5 0V90M15.5 0V90M22 0V90" stroke="#F0D3A0" stroke-width="1" opacity=".55"/><ellipse cx="12" cy="30" rx="2.1" ry="4.6" fill="none" stroke="#96692F" stroke-width="1" opacity=".6"/><ellipse cx="7" cy="66" rx="1.5" ry="3.4" fill="none" stroke="#96692F" stroke-width="1" opacity=".5"/></pattern><pattern id="secWoodL351" width="26" height="90" patternUnits="userSpaceOnUse"><rect width="26" height="90" fill="#EAC88F"/><path d="M5 0V90M12 0V90M19 0V90M24 0V90" stroke="#D3AB6C" stroke-width="1" opacity=".5"/><path d="M8.5 0V90M15.5 0V90M22 0V90" stroke="#F6E2B8" stroke-width="1" opacity=".55"/><ellipse cx="12" cy="34" rx="2.1" ry="4.6" fill="none" stroke="#A5763C" stroke-width="1" opacity=".55"/></pattern><pattern id="secWoodHD351" width="90" height="26" patternUnits="userSpaceOnUse"><rect width="90" height="26" fill="#C99047"/><path d="M0 5H90M0 12H90M0 19H90M0 24H90" stroke="#A9763A" stroke-width="1" opacity=".55"/><path d="M0 8.5H90M0 15.5H90M0 22H90" stroke="#E3B878" stroke-width="1" opacity=".5"/><ellipse cx="34" cy="13" rx="4.6" ry="2.1" fill="none" stroke="#7E5525" stroke-width="1" opacity=".65"/><ellipse cx="70" cy="7" rx="3.4" ry="1.5" fill="none" stroke="#7E5525" stroke-width="1" opacity=".5"/></pattern></defs>`;  /* CAD-351：断面図の木目パターン（候補1の見た目が基準） */
@@ -5574,7 +5580,7 @@ function drawSec(){
     h += `<text x="${cx2 + 6}" y="${(Y(f2) + Y(f2 + S.ch2)) / 2 + 5}" class="halo" style="font-size:13px;font-weight:900;fill:#2563B0">2階 天井高 ${fmt(S.ch2)}</text>`;
     const lx2 = X(0) - 10;
     h += `<text x="${lx2}" y="${Y(Hd + Lc2 / 2)}" transform="rotate(-90 ${lx2} ${Y(Hd + Lc2 / 2)})" text-anchor="middle" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">2階柱 ${fmt(Lc2)}</text>`;
-    h += `<text x="${X(0) - 34}" y="${Y(Hd) + 4}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#18202A">胴差天 ${fmt(Hd)}</text>`;
+    h += `<text x="${X(0) - 8}" y="${Y(Hd) + 4}" text-anchor="end" class="halo" style="font-size:12px;font-weight:900;fill:#18202A">胴差天 ${fmt(Hd)}</text>`;
   }
   h += rect(0, Hk - S.hari, W, Hk, "url(#secWoodH351)");
   // 床・天井
@@ -5627,9 +5633,9 @@ function drawSec(){
   // 柱・桁の高さラベル
   const lx = X(0) - 10;
   h += `<text x="${lx}" y="${Y(Lc / 2)}" transform="rotate(-90 ${lx} ${Y(Lc / 2)})" text-anchor="middle" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">${two ? "1階柱" : "柱"} ${fmt(Lc)}</text>`;
-  h += `<text x="${X(0) - 34}" y="${Y(Hk) + 4}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">桁天 ${fmt(Hk)}</text>`;
+  h += `<text x="${X(0) - 8}" y="${Y(Hk) + 4}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#18202A">桁天 ${fmt(Hk)}</text>`;
   const topX = kata ? W : R.mune ? R.mp : W / 2, topZ = Hk + topRise;
-  h += `<text x="${Math.min(X(topX) + 30, 355)}" y="${Y(topZ + th) - 8}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#2F353C">${kata ? "上の母屋天" : "棟木天"} ${fmt(topZ)}</text>`;
+  h += `<text x="${Math.min(X(topX) + 30, Wpx - 5)}" y="${Y(topZ + th) - 8}" text-anchor="end" class="halo" style="font-size:13px;font-weight:900;fill:#2F353C">${kata ? "上の母屋天" : "棟木天"} ${fmt(topZ)}</text>`;
   h += `<text x="6" y="18" style="font-size:12px;font-weight:700;fill:#5B6673">断面（高さは土台の上から・mm）</text>`;
   $("sec").setAttribute("viewBox", `0 0 ${Wpx} ${Hpx}`); $("sec").innerHTML = h;
   const tsk = (kata || R.mune ? ms : ms.filter(m => m.x <= W / 2 + 1)).map(m => m.L > 0 ? fmt(m.L) : "なし").join(" ／ ");
