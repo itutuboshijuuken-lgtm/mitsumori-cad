@@ -34324,3 +34324,30 @@ nav.steps{padding:1px 6px 3px}
   upd();
 })();
 </script>
+
+<style id="fs420css">
+/* ===== CAD-420：④屋根を図面いっぱいに ===== */
+#st3:not([hidden]){position:fixed;left:0;right:0;top:var(--hdrH,100px);bottom:0;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--bg);z-index:5;overflow:hidden}
+#st3 .fs420stage{flex:1 1 0;min-height:0;display:flex;align-items:center;justify-content:center}
+#st3 .fs420stage #sec{width:100%;height:100%;display:block}
+#st3 .fs420scroll{flex:0 0 25%;min-height:0;overflow-y:auto}
+</style>
+<script id="fs420js">
+/* CAD-420：屋根の入れ替え（見た目と並びだけ。要素とIDはそのまま移動） */
+(function(){
+  var st3 = document.getElementById("st3");
+  var sec = document.getElementById("sec");
+  if (!st3 || !sec) return;
+  var card = sec.closest(".card");
+  if (!card) return;
+  card.classList.add("fs420stage");
+  st3.insertBefore(card, st3.firstChild);
+  var scroll = document.createElement("div");
+  scroll.className = "fs420scroll";
+  st3.insertBefore(scroll, card.nextSibling);
+  /* 設定群を元の順番のままスクロール領域へ（flowNext と断面カード以外） */
+  [...st3.children].forEach(function(ch){
+    if (ch !== card && ch !== scroll && !ch.classList.contains("flowNext")) scroll.appendChild(ch);
+  });
+})();
+</script>
