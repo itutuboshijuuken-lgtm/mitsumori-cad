@@ -24019,7 +24019,7 @@ body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
   setInterval(function(){ try{
     ensure();
     var lbl=label(), off=document.body.classList.contains("ux-sheet-off"), tabs=vis(document.getElementById("toolTabs")), fs=document.body.classList.contains("fsDraw");
-    var show=!!lbl&&((off&&tabs)||fs);
+    var show=!!lbl&&((off&&tabs)||fs)&&!document.body.classList.contains("stB395open"); /* CAD-401：階段の組み立て画面の間は帯を出さない */
     bar.classList.toggle("on261",show); document.body.classList.toggle("b261",show);
     if(!show) return;
     bar.querySelector(".pb261l").textContent="置く：「"+lbl+"」";
@@ -26488,7 +26488,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         return [r.x0, r.y0, r.x1, r.y1, r.fk || "", r.fin || "", (r.za && r.det) ? (r.det.fin || "") : ""].join(",");
       }).join(";");
       return t + "|" + (S.flType || "") + "|" + JSON.stringify(S.roomFin || null) +
-             "|" + JSON.stringify(S.edges || []) + "|" + JSON.stringify(S.parts2D || []);
+             "|" + JSON.stringify(S.edges || []) + "|" + JSON.stringify(S.parts2D || []) +
+             "|st" + (S.tenken || []).filter(function(o){ return o && o.k === "stair"; }).map(function(o){ return [o.x, o.y, o.w, o.d, o.dir].join(","); }).join(";"); /* CAD-401：階段の置き場も判定の材料 */
     } catch(e){ return null; }
   }
   function judge295(){
@@ -26517,11 +26518,13 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       u.x0 = Math.min(u.x0, Math.min(r.x0, r.x1)); u.x1 = Math.max(u.x1, Math.max(r.x0, r.x1));
       u.y0 = Math.min(u.y0, Math.min(r.y0, r.y1)); u.y1 = Math.max(u.y1, Math.max(r.y0, r.y1));
     });
+    var boxes401 = [];
     var infos = R.rooms.map(function(room, ri){
       var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
       room.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
         if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
       var w = (mxx - mnx + 1) * st, d = (mxy - mny + 1) * st;
+      boxes401[ri] = { x0: bx0 + mnx * st, y0: by0 + mny * st, x1: bx0 + (mxx + 1) * st, y1: by0 + (mxy + 1) * st }; /* CAD-401 */
       /* CAD-387：向きは部屋の外形だけで決める（本人の決まり「フローリングは
          部屋の長手方向に張る」）。以前は、部屋の仕上げが木と決められない時
          （例：玄関＝土間が標準の部屋）に、その部屋にある木レコード全部の
@@ -26530,6 +26533,40 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
          属する部屋の向きにそろえる。部屋の外の要素は従来通り要素自身の外形。 */
       return { vert: isVert(w, d) };
     });
+    /* CAD-401 件3：階段に接した細長い帯の区画は、本体部屋の向きに寄せる（表示だけ）。
+       条件：短辺1000以下／名前の付いた独立の部屋（廊下など）は対象外／階段の置き場に
+       触れている／長辺を共有する隣の区画（本体）が帯より大きい。隣との間には間仕切りの
+       厚み分のセル（約100mm）が入るため、接し方は160mmまで許す。保存データは変えない。 */
+    try {
+      var stairs401 = (S.tenken || []).filter(function (o) { return o && o.k === "stair" && o.x != null; }).map(function (o) {
+        var ex = (o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2];
+        return { x0: o.x - ex[0], y0: o.y - ex[1], x1: o.x + ex[0], y1: o.y + ex[1] };
+      });
+      if (stairs401.length && R.rooms.length > 1) {
+        var orig401 = infos.map(function (inf) { return inf && inf.vert; });
+        R.rooms.forEach(function (room, ri) {
+          var inf = infos[ri], bx = boxes401[ri];
+          if (!inf || !bx) return;
+          var bw = bx.x1 - bx.x0, bd = bx.y1 - bx.y0, mn = Math.min(bw, bd), mx = Math.max(bw, bd);
+          if (mn > 1000 || mx <= mn) return;
+          if (typeof roomNm === "function" && roomNm(room)) return;
+          var touch = stairs401.some(function (s) { return bx.x0 <= s.x1 + 1 && s.x0 - 1 <= bx.x1 && bx.y0 <= s.y1 + 1 && s.y0 - 1 <= bx.y1; });
+          if (!touch) return;
+          var horiz = bw >= bd, best = -1, bestShare = 0;
+          R.rooms.forEach(function (o, oi) {
+            if (oi === ri) return;
+            var ob = boxes401[oi]; if (!ob) return;
+            var share = 0;
+            if (horiz) { if (Math.abs(ob.y1 - bx.y0) <= 160 || Math.abs(ob.y0 - bx.y1) <= 160) share = Math.max(0, Math.min(bx.x1, ob.x1) - Math.max(bx.x0, ob.x0)); }
+            else { if (Math.abs(ob.x1 - bx.x0) <= 160 || Math.abs(ob.x0 - bx.x1) <= 160) share = Math.max(0, Math.min(bx.y1, ob.y1) - Math.max(bx.y0, ob.y0)); }
+            if (share > bestShare) { bestShare = share; best = oi; }
+          });
+          if (best < 0 || bestShare < mx * 0.5) return;
+          if (!(R.rooms[best].cells.length > room.cells.length)) return;
+          inf.vert = orig401[best];
+        });
+      }
+    } catch (e) {}
     var J = { roomIdxAt: roomIdxAt, infos: infos };
     if (sig !== null){ cache295.sig = sig; cache295.J = J; }
     return J;
@@ -32611,5 +32648,239 @@ function daikuBaseRows391(nobeT){
       }
     } catch(e){}
   }, 250);
+})();
+</script>
+
+<script>
+/* ===== CAD-401 段階B2：手順②「全部の部屋の床」入口＋手順④の部屋チップ =====
+   ・手順②に入ったら「全部の部屋の床を決める」入口を出す。シートの中で本物の
+     #floorPanel を開き、種類を選ぶと全室へ今までの適用経路（ltPlanClick）で
+     付ける。付け方は部屋ごとに付けた場合と完全に同じ（記録・見積が一致する）。
+   ・手順④では部屋チップ列を出し、部屋を選ぶと水まわりの種類をその部屋向きに
+     絞る。終わった部屋（物を置いた部屋）に✓。「まとめて」で全部出す。
+   ・保存キーは追加しない。状態はメモリだけ。 */
+(function () {
+  "use strict";
+  var stM = document.getElementById("stM");
+  var guide = document.getElementById("stepGuide400");
+  if (!stM || !guide || typeof HB === "undefined") return;
+
+  function stepNow() { try { return HB.__step399 ? HB.__step399() : ""; } catch (e) { return ""; } }
+  function onPlan() {
+    try {
+      if (document.body.classList.contains("nbtutRun")) return false;
+      if (typeof HB !== "undefined" && typeof HB.__pageM !== "undefined") return !!HB.__pageM;
+      return false;
+    } catch (e) { return false; }
+  }
+  function toast401(msg) { try { if (typeof toast === "function") toast(msg); } catch (e) {} }
+
+  /* ================= 手順②：全部の部屋の床 ================= */
+  var row = document.createElement("div");
+  row.id = "allFlRow401";
+  row.hidden = true;
+  row.style.cssText = "padding:2px 10px 6px;background:#fffbe9;";
+  var btn = document.createElement("button");
+  btn.type = "button"; btn.id = "allFlBtn401"; btn.className = "btn sub";
+  btn.style.cssText = "width:100%;padding:9px 6px;font-size:14px;font-weight:700;";
+  btn.textContent = "全部の部屋の床を決める";
+  row.appendChild(btn);
+  guide.parentNode.insertBefore(row, guide.nextSibling);
+
+  var sheet = document.createElement("div");
+  sheet.id = "allFlSheet401"; sheet.hidden = true;
+  sheet.style.cssText = "position:absolute;left:0;right:0;bottom:0;z-index:9;background:#fff;border-top:2px solid #d8c690;border-radius:14px 14px 0 0;box-shadow:0 -6px 18px rgba(0,0,0,.18);padding:8px 10px calc(10px + env(safe-area-inset-bottom));max-height:40vh;overflow-y:auto;-webkit-overflow-scrolling:touch;";
+  var shT = document.createElement("div");
+  shT.style.cssText = "font-size:13px;font-weight:700;color:#6b5a2a;margin:0 2px 6px;";
+  shT.textContent = "全部の部屋の床（違う部屋は後で部屋ごとに直せます）";
+  var shHost = document.createElement("div"); shHost.id = "allFlHost401";
+  var shX = document.createElement("button");
+  shX.type = "button"; shX.className = "btn sub"; shX.style.cssText = "width:100%;margin-top:8px;padding:8px;";
+  shX.textContent = "閉じる";
+  sheet.appendChild(shT); sheet.appendChild(shHost); sheet.appendChild(shX);
+  stM.appendChild(sheet);
+
+  var panelHome = null; /* 床パネルの戻し先 {parent, next} */
+  function parkBack401() {
+    var fp = document.getElementById("floorPanel"), fb = document.getElementById("flBranch");
+    if (!panelHome) return;
+    [fp, fb].forEach(function (el) {
+      if (!el) return;
+      if (panelHome.next && panelHome.next.parentNode === panelHome.parent) panelHome.parent.insertBefore(el, panelHome.next);
+      else panelHome.parent.appendChild(el);
+    });
+    if (fp) { fp.hidden = true; fp.style.display = "none"; }
+    panelHome = null;
+  }
+  function openSheet401() {
+    var fp = document.getElementById("floorPanel"), fb = document.getElementById("flBranch");
+    if (!fp) return;
+    try { if (typeof HB.__closeRoom176 === "function") HB.__closeRoom176(); } catch (e) {}
+    if (!panelHome) panelHome = { parent: fp.parentNode, next: fp.nextSibling };
+    shHost.appendChild(fp); if (fb) shHost.appendChild(fb);
+    fp.hidden = false; fp.style.display = "flex";
+    sheet.hidden = false;
+    row.hidden = true;
+  }
+  function closeSheet401() {
+    if (sheet.hidden) return;
+    sheet.hidden = true;
+    parkBack401();
+    sync401();
+  }
+  shX.addEventListener("click", function () { closeSheet401(); });
+  btn.addEventListener("click", function () { openSheet401(); });
+
+  function disarm401() {
+    try { HB.__floorArm = null; } catch (e) {}
+    try { HB.__zaActive138 = false; } catch (e) {}
+    try { HB.__flBlinkChip140 = null; } catch (e) {}
+    try { if (typeof HB.__floorPendOff384 === "function") HB.__floorPendOff384(); } catch (e) {}
+  }
+  function applyAll401(label) {
+    var modalWas = false;
+    try { var m0 = document.getElementById("modal"); modalWas = !!(m0 && !m0.hidden); } catch (e) {}
+    try {
+      var R = roomsCalc();
+      (R.rooms || []).forEach(function (r) { try { ltPlanClick([r.p[0], r.p[1]]); } catch (e) {} });
+    } catch (e) {}
+    disarm401();
+    closeSheet401();
+    try { drawPlan(); } catch (e) {}
+    /* 座上げ（flAge）は部屋ごとに畳シートが出る仕様のため、全部付けでは閉じておく */
+    if (!modalWas) setTimeout(function () { try { var m = document.getElementById("modal"); if (m && !m.hidden) m.hidden = true; } catch (e) {} }, 260);
+    toast401("全部の部屋の床を「" + label + "」にしました");
+  }
+  /* シート内での選択を拾う。床チップの click は CAD-138 の捕捉リスナーが
+     stopImmediatePropagation で止めるため、click では届かない。CAD-384 と同じく
+     pointerup の捕捉で先に拾い、138 が構えを作った後に全室へ付ける。
+     座上げの仕上げボタンは CAD-176 と同じく click の捕捉で拾う（こちらは止められない）。 */
+  document.addEventListener("pointerup", function (ev) {
+    if (sheet.hidden) return;
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var chip = t.closest("#allFlSheet401 [data-flk]");
+    if (!chip) return;
+    var fk = chip.getAttribute("data-flk");
+    if (fk === "za") return; /* 枝分かれ（仕上げ選び）待ち */
+    if (fk === "") { setTimeout(function () { disarm401(); closeSheet401(); }, 100); return; }
+    var label = (chip.textContent || "").trim();
+    setTimeout(function () { if (HB.__floorArm) applyAll401(label); }, 150);
+  }, true);
+  document.addEventListener("click", function (ev) {
+    if (sheet.hidden) return;
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    var zb = t.closest("#flBranch [data-zf]");
+    if (!zb || !zb.closest || !document.getElementById("flBranch").closest("#allFlSheet401")) return;
+    var lb = (zb.textContent || "").trim();
+    setTimeout(function () { if (HB.__floorArm) applyAll401(lb); }, 120);
+  }, true);
+
+  /* ================= 手順④：部屋チップ ================= */
+  var prow = document.createElement("div");
+  prow.id = "putRooms401"; prow.hidden = true; prow.style.display = "none";
+  prow.style.cssText = "gap:6px;overflow-x:auto;padding:4px 10px 6px;background:#fffbe9;-webkit-overflow-scrolling:touch;";
+  guide.parentNode.insertBefore(prow, row.nextSibling);
+  var putRoom401 = null; /* cid | null=まとめて */
+  var MIZU_HOME = { wc: ["toilet"], tearai: ["toilet", "wash"], bath: ["bath"], senmen: ["wash"], senpan: ["wash"], kitchen: ["kitchen"] };
+  function roomKind401(name) {
+    var n = name || "";
+    if (/トイレ|便所|WC/.test(n)) return "toilet";
+    if (/浴|バス/.test(n)) return "bath";
+    if (/洗面|脱衣|サニタリー|ランドリー/.test(n)) return "wash";
+    if (/キッチン|台所/.test(n)) return "kitchen";
+    if (/玄関/.test(n)) return "genkan";
+    return "other";
+  }
+  function roomDone401(room) {
+    try {
+      var hit = function (o) { if (!o || o.x == null) return false; var r = roomAt(o.x, o.y); return !!r && r.cid === room.cid; };
+      return (S.tenken || []).some(hit) || (S.lights || []).some(hit);
+    } catch (e) { return false; }
+  }
+  function renderPutRooms401() {
+    var R; try { R = roomsCalc(); } catch (e) { return; }
+    if (putRoom401 != null && !(R.rooms || []).some(function (r) { return r.cid === putRoom401; })) putRoom401 = null;
+    prow.innerHTML = "";
+    var mk = function (val, label, on) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chipbtn" + (on ? " on" : "");
+      b.setAttribute("data-room401", val);
+      b.style.cssText = "flex:0 0 auto;padding:6px 10px;font-size:13px;";
+      b.textContent = label;
+      prow.appendChild(b);
+    };
+    mk("", "まとめて", putRoom401 == null);
+    (R.rooms || []).forEach(function (r) {
+      var nm = "";
+      try { nm = (typeof roomNm === "function" && roomNm(r)) || (typeof roomDispNm366 === "function" && roomDispNm366(r)) || r.label || ""; } catch (e) { nm = r.label || ""; }
+      mk(String(r.cid), nm + (roomDone401(r) ? " ✓" : ""), putRoom401 === r.cid);
+    });
+  }
+  prow.addEventListener("click", function (ev) {
+    var b = ev.target && ev.target.closest ? ev.target.closest("[data-room401]") : null;
+    if (!b) return;
+    var v = b.getAttribute("data-room401");
+    putRoom401 = (v === "" || v == null) ? null : +v;
+    renderPutRooms401();
+    applyPutFilter401();
+  });
+  var mizuLeafHidden401 = false;
+  function applyPutFilter401() {
+    var sel = null;
+    if (putRoom401 != null && stepNow() === "put") {
+      try { var R = roomsCalc(); sel = (R.rooms || []).find(function (r) { return r.cid === putRoom401; }) || null; } catch (e) { sel = null; }
+    }
+    var kind = null, nm = "";
+    if (sel) { try { nm = (typeof roomNm === "function" && roomNm(sel)) || ""; } catch (e) {} kind = roomKind401(nm); }
+    /* 水まわいの葉を出すかどうかは、今出ているチップではなく対応表で決める
+       （チップは開いている葉の分しか描かれていないため） */
+    var anyMizu = !kind || Object.keys(MIZU_HOME).some(function (tk) { return MIZU_HOME[tk].indexOf(kind) >= 0; });
+    document.querySelectorAll("#toolCh2 [data-tk], #toolCh3 [data-tk]").forEach(function (b) {
+      var tk = b.getAttribute("data-tk"), show = true;
+      if (kind) {
+        if (MIZU_HOME[tk]) show = MIZU_HOME[tk].indexOf(kind) >= 0;
+        else if (tk === "geta") show = (kind === "genkan");
+      }
+      b.style.display = show ? "" : "none";
+    });
+    var leaf = document.querySelector('#grpSub [data-tt="mizu"]');
+    if (leaf) {
+      if (kind && !anyMizu) { leaf.style.display = "none"; mizuLeafHidden401 = true; }
+      else if (mizuLeafHidden401) { leaf.style.display = ""; mizuLeafHidden401 = false; }
+    }
+  }
+  if (typeof drawToolsUI === "function") {
+    var __drawToolsUI401 = drawToolsUI;
+    drawToolsUI = function () { var r = __drawToolsUI401.apply(this, arguments); try { applyPutFilter401(); } catch (e) {} return r; };
+  }
+
+  /* ---------- 表示の同期（250ms） ---------- */
+  var lastSig401 = "";
+  function sync401() {
+    var st = stepNow(), on = onPlan();
+    var showRow = on && st === "floor" && sheet.hidden;
+    row.hidden = !showRow;
+    if (on && st === "floor" && !sheet.hidden) {
+      var fp = document.getElementById("floorPanel");
+      if (fp && (fp.hidden || fp.style.display === "none")) { fp.hidden = false; fp.style.display = "flex"; } /* floorPanelSync に隠されてもシート内では見せる */
+    }
+    if (!on || st !== "floor") { if (!sheet.hidden) closeSheet401(); }
+    var showProw = on && st === "put";
+    prow.hidden = !showProw;
+    prow.style.display = showProw ? "flex" : "none";
+    var sig = "";
+    try {
+      var R = roomsCalc();
+      sig = R.k + "|" + (S.tenken || []).length + "|" + (S.lights || []).length + "|" + JSON.stringify(S.roomNames || []) + "|" + putRoom401 + "|" + st;
+    } catch (e) {}
+    if (sig && sig !== lastSig401) {
+      lastSig401 = sig;
+      if (showProw) { renderPutRooms401(); applyPutFilter401(); }
+    }
+  }
+  setInterval(sync401, 250);
+  sync401();
 })();
 </script>
