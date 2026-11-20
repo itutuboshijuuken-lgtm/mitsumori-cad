@@ -6484,6 +6484,10 @@ function framePos(){
     if (!S.edges || !S.edges.length) return Z;
     const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
     const colP = +S.colP || 1820, pv = pts(), runs = [];
+    /* CAD-455（Opus）：外周の柱は910ごと（尺モジュール。メーター＝1000）。内側の間仕切りは今まで通り1820ごと。
+       理由：法律は柱の間隔を決めていないが、外周は ①筋交い・面材の耐力壁が全部910の柱の間で組める ②サッシ・外壁の下地・胴縁の受けがそろう
+       ③2階の柱や床梁を受けやすい、ので現場では910が普通（S.colPe で1820に戻せる＝本数を減らして安くする時）。 */
+    const colPe = +S.colPe || (S.modul === "1000" ? 1000 : 910);
     const addRun = (a, c, kind, isNew) => {
       const L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (!(L > 1)) return null;
       const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], opsD: [], junc: new Set(), postT: new Set(), jambs: []};
@@ -6539,9 +6543,10 @@ function framePos(){
       const arr = [...new Set([...ts, ...r.jambs])].sort((a, b) => a - b);   // CAD-199: 埋め処理は jamb の位置も区切りにする（長い間仕切りで開口の遠端に柱が戻らないように）
       for (let i = 0; i + 1 < arr.length; i++){
         let a = arr[i]; const b = arr[i + 1]; let guard = 0;
-        while (b - a > colP + 0.5 && guard++ < 60){
-          let cand = Math.floor((a + colP) / M4 + 1e-9) * M4;
-          if (cand <= a + 0.5) cand = a + colP;
+        const cp = r.kind === "e" ? colPe : colP;
+        while (b - a > cp + 0.5 && guard++ < 60){
+          let cand = Math.floor((a + cp) / M4 + 1e-9) * M4;
+          if (cand <= a + 0.5) cand = a + cp;
           if (cand >= b - 0.5) break;
           if (inOp(r, cand)){
             const op = r.ops.find(o => cand > o[0] + 1 && cand < o[1] - 1);
@@ -11528,12 +11533,15 @@ function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
       let b = document.getElementById("colBox");
       if (!b){ b = document.createElement("div"); b.id = "colBox"; anchor.after(b); }
       const rw = S.roofW === "light" ? "light" : S.roofW === "slate" ? "slate" : "kawara", md = S.modul === "1000" ? "1000" : "910";
-      const sig = rw + "|" + md;
+      const ce = +S.colPe === 1820 || +S.colPe === 2000 ? "wide" : "std", sig = rw + "|" + md + "|" + ce;
       if (b.dataset.sig === sig) return; b.dataset.sig = sig;
       b.innerHTML = `<h2>屋根の重さ</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button><button type="button" data-rw="slate" aria-pressed="${rw === "slate"}">スレート（中）</button></div>
       <p class="hint">屋根の仕上げの金額、小屋梁が飛ばせる長さの目安、壁量の計算に使います。</p>
       <h2>モジュール（柱・間柱の基準）</h2><div class="seg"><button type="button" data-md="910" aria-pressed="${md === "910"}">910ピッチ</button><button type="button" data-md="1000" aria-pressed="${md === "1000"}">1000モジュール</button></div>
-      <p class="hint">柱と柱の間は、最大で ${md === "1000" ? "2,000" : "1,820"}mm まで。図面の寸法は変わりません。</p>`;
+      <p class="hint">内側の柱と柱の間は、最大で ${md === "1000" ? "2,000" : "1,820"}mm まで。図面の寸法は変わりません。</p>
+      <h2>外周の柱の間隔</h2><div class="seg"><button type="button" data-ce="std" aria-pressed="${ce === "std"}">${md === "1000" ? "1,000" : "910"}ごと（ふつう）</button><button type="button" data-ce="wide" aria-pressed="${ce === "wide"}">${md === "1000" ? "2,000" : "1,820"}ごと（本数を減らす）</button></div>
+      <p class="hint">外周は${md === "1000" ? "1,000" : "910"}ごとが現場のふつう。筋交いが全部の柱の間に入れられ、サッシ・外壁の下地も受けやすい。窓・ドアの所は、その両脇に立てます。</p>`;
+      b.querySelectorAll("[data-ce]").forEach(x => x.onclick = () => { if (x.dataset.ce === "wide") S.colPe = md === "1000" ? 2000 : 1820; else delete S.colPe; S.sujiN = null; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
       b.querySelectorAll("[data-rw]").forEach(x => x.onclick = () => { S.roofW = x.dataset.rw; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
       b.querySelectorAll("[data-md]").forEach(x => x.onclick = () => { S.modul = x.dataset.md; S.colP = colPEff183(); save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
     } catch(e){}
