@@ -34121,3 +34121,135 @@ nav.steps{padding:1px 6px 3px}
 #toolTabs{max-height:50px;overflow-y:hidden}
 #rpOpen365{height:36px;margin-bottom:60px}
 </style>
+
+<style id="fs418css">
+/* ===== CAD-418：①描く・②寸法を図面いっぱいに ===== */
+/* モード切替の帯を少し低く（全画面共通） */
+.seg.modeSeg button{min-height:38px;padding-top:2px;padding-bottom:2px}
+/* --- ①描く（#st1） --- */
+#st1:not([hidden]){position:fixed;left:0;right:0;top:var(--hdrH,100px);bottom:0;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--bg);z-index:5;overflow:hidden}
+#st1 .card{flex:1 1 0;min-height:0;order:1}
+#st1>h2.shp{order:0;margin:0 2px}
+#st1>.row{order:2}
+#st1 .seg.modeSeg button{min-height:34px}
+#st1 #draw{width:100%;height:100%;display:block}
+#st1 .row .fs418tg{flex:0 1 auto;font-size:13px;padding:0 8px;white-space:nowrap}
+/* --- ②寸法（#st2） --- */
+#st2:not([hidden]){position:fixed;left:0;right:0;top:var(--hdrH,100px);bottom:0;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--bg);z-index:5;overflow:hidden}
+#st2 #slot2{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+#st2 #planWrap{flex:1 1 0;min-height:0;display:flex;flex-direction:column}
+#st2 #planWrap .card{flex:1 1 0;min-height:0}
+#st2 #plan{width:100%;height:100%;display:block}
+#zRow{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+#zRow::-webkit-scrollbar{display:none}
+#zRow>*{flex:0 0 auto}
+#zRow button{height:38px;min-height:38px}
+#st2 #dimStatus{margin:0;font-size:13px}
+#st2 #dimStatus .status{padding:5px 10px;font-size:13.5px;line-height:1.25}
+#st2 #areaBox{padding:0 6px;font-size:13.5px}
+#st2 #areaBox>div{padding:2px 4px}
+#st2 #areaBox span{font-size:11px}
+#st2 #areaBox b{font-size:19px}
+#st2:not([hidden]){gap:2px}
+#st2 .fs418bar{flex:0 0 auto;display:flex;gap:6px}
+#st2 .fs418bar button{flex:1;min-height:42px}
+/* --- 引き出しパネル（選ぶ時だけ開く・高さ45%まで） --- */
+.fs418drawer{position:absolute;left:0;right:0;bottom:0;max-height:45%;overflow-y:auto;background:#fff;border-top:2px solid var(--ai);border-radius:12px 12px 0 0;z-index:9;padding:8px;box-shadow:0 -4px 16px rgba(0,0,0,.18)}
+.fs418drawer[hidden]{display:none}
+.fs418drawer .fs418dh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.fs418drawer .fs418dh b{font-size:14px}
+.fs418drawer .fs418dh button{min-height:34px;padding:0 12px}
+</style>
+<script id="fs418js">
+/* CAD-418：st1/st2 の入れ替え（見た目と並びだけ。要素とIDはそのまま移動） */
+(function(){
+  function drawer(sec, title){
+    var d = document.createElement("div");
+    d.className = "fs418drawer"; d.hidden = true;
+    var h = document.createElement("div"); h.className = "fs418dh";
+    var b = document.createElement("b"); b.textContent = title;
+    var c = document.createElement("button"); c.type = "button"; c.textContent = "閉じる";
+    c.addEventListener("click", function(){ d.hidden = true; });
+    h.appendChild(b); h.appendChild(c); d.appendChild(h);
+    sec.appendChild(d);
+    return d;
+  }
+  function toggleBtn(label, fn){
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "btn sub fs418tg"; b.textContent = label;
+    b.addEventListener("click", fn);
+    return b;
+  }
+  /* ---- ①描く ---- */
+  var st1 = document.getElementById("st1");
+  if (st1){
+    var d1 = drawer(st1, "決め方を選ぶ");
+    var panels = {};
+    function panel(name){
+      var p = document.createElement("div"); p.hidden = true; d1.appendChild(p); panels[name] = p; return p;
+    }
+    var pT = panel("tsubo"), pP = panel("preset"), pC = panel("compass");
+    var shp = document.getElementById("tsuboIn");
+    if (shp){ var shpBox = shp.closest(".shp"); if (shpBox) pT.appendChild(shpBox); }
+    var pb = document.getElementById("presetBox363");
+    if (pb) pP.appendChild(pb);
+    /* 定型（四角・L字）の見出しと行も見本パネルへ */
+    var presetRow = null;
+    st1.querySelectorAll(".row").forEach(function(r){ if (r.querySelector("[data-preset]")) presetRow = r; });
+    if (presetRow){
+      var h2 = presetRow.previousElementSibling;
+      if (h2 && h2.tagName === "H2") pP.appendChild(h2);
+      pP.appendChild(presetRow);
+    }
+    var cb = document.getElementById("compassBox");
+    if (cb) pC.appendChild(cb);
+    var row = null;
+    st1.querySelectorAll(".row").forEach(function(r){ if (r.querySelector("#fixInk")) row = r; });
+    function show(name){
+      var willOpen = d1.hidden || panels[name].hidden;
+      Object.keys(panels).forEach(function(k){ panels[k].hidden = k !== name; });
+      d1.hidden = !willOpen;
+    }
+    if (row){
+      row.appendChild(toggleBtn("坪数から", function(){ show("tsubo"); }));
+      row.appendChild(toggleBtn("見本・定型", function(){ show("preset"); }));
+      row.appendChild(toggleBtn("方位", function(){ show("compass"); }));
+    }
+    /* #draw の viewBox の高さを入れ物に合わせる */
+    var svg = document.getElementById("draw");
+    var card = svg ? svg.closest(".card") : null;
+    function fitDraw(){
+      if (!svg || !card) return;
+      var r = card.getBoundingClientRect();
+      if (r.width < 50 || r.height < 50) return;
+      var H = Math.round(360 * r.height / r.width);
+      if (H < 300) H = 300; if (H > 900) H = 900;
+      var cur = (svg.getAttribute("viewBox") || "").split(/\s+/);
+      if (Math.abs((+cur[3] || 418) - H) < 4) return;
+      svg.setAttribute("viewBox", "0 0 360 " + H);
+      ["drawGround", "gridRect"].forEach(function(id){
+        var el = document.getElementById(id);
+        if (el){ el.setAttribute("height", H); el.setAttribute("width", 360); }
+      });
+      var hint = document.getElementById("drawHint");
+      if (hint) hint.setAttribute("y", Math.round(H * 0.43));
+    }
+    if (window.ResizeObserver && card){ new ResizeObserver(function(){ fitDraw(); }).observe(card); }
+    window.addEventListener("resize", fitDraw);
+    setTimeout(fitDraw, 300);
+  }
+  /* ---- ②寸法 ---- */
+  var st2 = document.getElementById("st2");
+  if (st2){
+    var d2 = drawer(st2, "辺の寸法（タップで入力）");
+    var el = document.getElementById("edgeList");
+    if (el) d2.appendChild(el);
+    var bar = document.createElement("div"); bar.className = "fs418bar";
+    var b2 = document.createElement("button"); b2.type = "button"; b2.className = "btn"; b2.textContent = "辺の寸法を入れる";
+    b2.addEventListener("click", function(){ d2.hidden = !d2.hidden; });
+    bar.appendChild(b2);
+    var fc = st2.querySelector(".flowNext");
+    if (fc) st2.insertBefore(bar, fc); else st2.appendChild(bar);
+  }
+})();
+</script>
