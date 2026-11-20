@@ -6304,7 +6304,7 @@ function calc(){
       if (S.mode === "zo" && C && Array.isArray(C.rows) && !C.rows.some(r => r.intNote)){
         const R = roof(), zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
         const rows = [];
-        if (zi.rows > 0){ const need = beamNeeded(R.W), ipn = intPostList().n; rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${ipn}本・立ち上がり${zi.rows}列を入れています`, qty: "", cost: 0, note: need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です", intNote: true, zoNote: true}); }  /* CAD-344：柱の本数は intPostList（間仕切りとの交点だけ） */
+        if (zi.rows > 0){ const need = beamNeeded(R.W), ipn = intPostList().n, G402 = intGirderH(); rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${ipn}本・立ち上がり${zi.rows}列を入れています${G402.msg}`, qty: "", cost: 0, note: (need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です") + (G402.warn ? `　⚠ ${G402.warn}` : ""), intNote: true, zoNote: true}); }  /* CAD-344：柱の本数は intPostList（間仕切りとの交点だけ） */
         if (rows.length){ let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; }); if (last >= 0) C.rows.splice(last + 1, 0, ...rows); else C.rows.unshift({grp: "ご注意"}, ...rows); }
       }
     } catch(e){}
@@ -7404,7 +7404,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("hashira", "柱", 105, 105, Array(colsEach).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
-    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const ipn = intPostList().n; if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120), `105角・間仕切りとの交点（${zi.rows}列）`, true); lum("keta", "内部の桁（柱の上）", 105, S.hari, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(S.hari)}・${zi.rows}列`, true); if (ipn > 0) work("kanamono", "内部の柱の金物", ipn, "本"); } }  /* CAD-344：内部の柱・金物は間仕切りとの交点にある分だけ（intPostList）。桁は支持ラインの列数で従来通り */
+    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const ipn = intPostList().n; if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120), `105角・間仕切りとの交点（${zi.rows}列）`, true); { const G402 = intGirderH(); lum("keta", "内部の桁（柱の上）", 105, G402.h, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(G402.h)}・${zi.rows}列${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true); } if (ipn > 0) work("kanamono", "内部の柱の金物", ipn, "本"); } }  /* CAD-344：内部の柱・金物は間仕切りとの交点にある分だけ（intPostList）。桁は支持ラインの列数で従来通り */
   }
   /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
      余り材は専用プールで拾う（lum の共有プール POOL を使うと、ほかの行の本数が動いてしまうため）。 */
@@ -11470,6 +11470,43 @@ function intPostList(){
     out.sort((a, c) => a.x - c.x || a.y - c.y);
     return {list: out, n: out.length};
   } catch(e){ return {list: [], n: 0}; }
+}
+/* CAD-402：内部の桁（柱の上）の梁せい。小屋梁の目安（beamLimit）は小屋梁1本分の荷重だが、内部の桁は両側の小屋梁を受けるので
+   荷重の幅（受け持ち幅＝梁間÷(列数+1)）で計算し直す。柱と柱の間（柱が無ければ壁から壁まで）が飛ばせない時は、柱を足さず
+   （部屋の真ん中に独立柱が出るため）梁せいを大きくする。390でも足りない・4m材を超える時は、足りないことを見積に出す（目安）。 */
+function girderLimit402(h, trib){
+  const b = 105, E = 11000, fb = 9.8, q = S.roofW === "light" ? 0.9 : 1.5, w = q * Math.max(910, trib) / 1000;
+  const Z = b * h * h / 6, I = b * h * h * h / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * 200));
+  return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
+}
+function intGirderH(){
+  const out = {h: +S.hari || 180, gap: 0, need: null, over: false, long4: false, msg: "", warn: ""};
+  try {
+    if (S.mode !== "zo") return out;
+    const R = roof(); if (R.two) return out;
+    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
+    if (!(zi.rows > 0) || !(zi.per > 0)) return out;
+    const b = bbox(), M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
+    const a0 = spanY ? b.x0 : b.y0, a1 = spanY ? b.x1 : b.y1;
+    const pl = intPostList().list || [];
+    let gap = 0;
+    for (let i2 = 1; i2 <= zi.rows; i2++){
+      let lc = org + span * i2 / (zi.rows + 1);
+      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+      const xs = pl.filter(p => Math.abs((spanY ? p.y : p.x) - lc) < 2).map(p => spanY ? p.x : p.y).concat([a0, a1]).sort((p, q2) => p - q2);
+      for (let k = 0; k + 1 < xs.length; k++) gap = Math.max(gap, xs[k + 1] - xs[k]);
+    }
+    const trib = R.W / (zi.rows + 1);
+    let need = null; for (let h = 150; h <= 390; h += 30) if (girderLimit402(h, trib) >= gap){ need = h; break; }
+    out.gap = Math.round(gap); out.need = need;
+    out.long4 = gap > 4000;
+    out.over = need === null || out.long4;
+    if (!out.over && need > out.h) out.h = need;
+    if (!out.over && need > (+S.hari || 180)) out.msg = `。内部の桁は柱と柱の間が最大${fmt(out.gap)}mmなので105×${need}にしています`;
+    if (out.over) out.warn = need === null ? `内部の桁の柱と柱の間が最大${fmt(out.gap)}mmで、梁せい390でも飛ばせない目安です。この線の上に壁か柱を足してください` : `内部の桁の柱と柱の間が最大${fmt(out.gap)}mmで、4m材を超えます。この線の上に壁か柱を足してください`;
+  } catch(e){}
+  return out;
 }
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：内部の柱・基礎の行）。この IIFE はラッパーだけだったため除去のみ。相方の roofKey/roofLbl/beamLimit/beamNeeded/zoInt はこのブロックに残る。 */
 </script>
@@ -29064,7 +29101,7 @@ rows.push({sw: "bandCL", nm: "母屋", sz: mq + "×" + mq});
 rows.push({sw: "bandCL", nm: "棟木", sz: mq + "×" + mq});
 rows.push({sw: "sq", nm: "小屋束", sz: fmt(+S.tsuka || 105) + "×" + fmt(+S.tsuka || 105)});
 if (S.roof === "yose") rows.push({sw: "line", nm: "隅木", sz: "105×150"});
-if (hasInt) rows.push({sw: "band", nm: "内部の桁", sz: "105×" + fmt(S.hari)});
+if (hasInt) rows.push({sw: "band", nm: "内部の桁", sz: "105×" + fmt(intGirderH().h)});
 rows.push({sw: "sq", nm: "柱", sz: SQ});
 if (intPosts > 0) rows.push({sw: "sq", nm: "内部の柱", sz: SQ});
 return rows;
@@ -29236,7 +29273,7 @@ if (!(m.L > 0)) return;
 rowsPos.forEach(function(p){ var pt = rp(R, b, p, m.x); g += postSq(fr, pt[0], pt[1], tsukaW, "fsTsuka");});
 });
 }
-g += intBands(fr, "fsIntKeta", 105) + intBandLbl393(fr, "105×" + fmt(S.hari));
+g += intBands(fr, "fsIntKeta", 105) + intBandLbl393(fr, "105×" + fmt(intGirderH().h));
 g += intPostsDraw(fr);
 g += postsDraw(fr, F);
 return g;
