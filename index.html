@@ -11954,8 +11954,10 @@ function sheetFinish409(svg){
     try { const bb0 = svg.getBBox(); if (bb0 && bb0.height > 0 && bb0.y + bb0.height + 14 < H0) H0 = Math.ceil(bb0.y + bb0.height + 14); } catch(e){}   /* CAD-409.1：下の余白を詰める */
     /* CAD-411：図面集（A3）用。縮尺を決め（1/20〜1/300の標準）、紙の上の文字が2.5〜3.5mm、線が0.13〜0.5mmになる様に直す */
     let kSheet = 0;
-    if (sheetMode410 && info.s > 0){
-      const A = sheetArea410 || {w: 380, h: 225}, k0 = Math.min(A.w / W, A.h / H0), d0 = 1 / (k0 * info.s), L = [20, 30, 50, 100, 150, 200, 300, 500];
+    if (sheetMode410 && info.fit){ const A = sheetArea410 || {w: 380, h: 225}; kSheet = Math.min(A.w / W, A.h / H0, 1.0); info.k = kSheet; info.scale = "—";
+      const ft = px => Math.max(1.8, Math.min(4.2, px * 0.3)) / kSheet; svg.querySelectorAll("text").forEach(t => { const st = t.getAttribute("style") || ""; t.setAttribute("style", st.replace(/font-size:\s*([\d.]+)px/, (m, v) => "font-size:" + ft(+v).toFixed(2) + "px")); }); }
+    else if (sheetMode410 && info.s > 0){
+      const A = sheetArea410 || {w: 380, h: 225}, k0 = Math.min(A.w / W, A.h / H0), d0 = 1 / (k0 * info.s), L = [10, 20, 30, 50, 100, 150, 200, 300, 500];
       let D = L[L.length - 1]; for (let i = 0; i < L.length; i++) if (L[i] >= d0 * 0.999){ D = L[i]; break; }
       kSheet = 1 / (D * info.s); info.D = D; info.k = kSheet; info.scale = "1/" + D;
       const ft = px => Math.max(1.8, Math.min(4.2, px * 0.3)) / kSheet;   /* 紙の上の文字の高さ（mm）→ 図の単位 */
@@ -12013,6 +12015,182 @@ function sheetFinish409(svg){
 }
 /* CAD-411（Opus）：図面集。A3横・右下に表題欄、承認欄（設計・確認・作成）、注記。図は正しい縮尺（1/20〜1/300の標準）で紙に載せる。
    印刷・PDF（ブラウザの印刷→PDFに保存）、図面ごとに画像保存・コピー。図の中身は画面の図面と同じ関数で描く（見積と同じ数）。 */
+/* CAD-415（Opus）：図面集の追加7枚。立面図・天井伏図・仕上表・建具表・電気配線図・求積図・基礎断面詳細図。
+   どれも見積と同じデータ（外形・窓・照明・コンセント・部屋・仕上げ・基礎の設定）から描く。#pvSvg に描いて sheetFinish409 を通す（図面集で正しい縮尺・表題欄になる）。 */
+function esc415(v){ return String(v == null ? "" : v).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c])); }
+function tx415(x, y, t, fs, anc, extra){ return `<text x="${(+x).toFixed(1)}" y="${(+y).toFixed(1)}" text-anchor="${anc || "middle"}" style="font-size:${fs || 9}px;fill:#111${extra || ""}">${esc415(t)}</text>`; }
+function ln415(x1, y1, x2, y2, w, dash, col){ return `<line x1="${(+x1).toFixed(1)}" y1="${(+y1).toFixed(1)}" x2="${(+x2).toFixed(1)}" y2="${(+y2).toFixed(1)}" stroke="${col || "#111"}" stroke-width="${w || 0.8}"${dash ? ` stroke-dasharray="${dash}"` : ""}/>`; }
+function table415(rows, cw, x0, y0, rh){
+  rh = rh || 15; const wT = cw.reduce((a, b) => a + b, 0); let g = `<rect x="${x0}" y="${y0}" width="${wT}" height="${rh * rows.length}" fill="#fff" stroke="#111" stroke-width="1"/>`;
+  rows.forEach((rw, i) => { const yy = y0 + rh * i; if (i) g += ln415(x0, yy, x0 + wT, yy, i === 1 ? 0.9 : 0.4); let xx = x0;
+    rw.forEach((v, k) => { if (k && i === 0) g += ln415(xx, y0, xx, y0 + rh * rows.length, 0.4); g += tx415(xx + cw[k] / 2, yy + rh / 2 + 3, v, i ? 8 : 8.5, "middle", i ? "" : ";font-weight:700"); xx += cw[k]; }); });
+  return g;
+}
+/* 平面の枠（平面図と同じ余白・縮尺の決め方） */
+function planFrame415(){ const b = bbox(), W = 360, mL = 94, mT = 94, s = Math.min((W - mL - 42) / b.w, (470 - mT - 38) / b.h); return {b, W, mL, mT, s, H: Math.round(mT + b.h * s + 38), P: q => [mL + (q[0] - b.x0) * s, mT + (q[1] - b.y0) * s]}; }
+function planBase415(F, wallW){
+  const p = pts(); let g = gridChain409(F.P, F.b, F.mT - 79 + 10, F.mL - 79 + 10);
+  try { g += gridSym345(F.P, F.b, F.mT - 79, F.mL - 79, 9); } catch(e){}
+  for (let i = 0; i < p.length; i++){ const a = F.P(p[i]), c = F.P(p[(i + 1) % p.length]); g += ln415(a[0], a[1], c[0], c[1], wallW || 2.4); }
+  (S.parts2D || []).forEach(q => { try { if (pState(q) === "remove") return; } catch(e){} const a = F.P([q.x1, q.y1]), c = F.P([q.x2, q.y2]); g += ln415(a[0], a[1], c[0], c[1], 1.2); });
+  return g;
+}
+function fxPos415(f){ try { const g = fxProj(), w = fxWall(g, f.w); return [w.a[0] + w.ux * (f.u || 0), w.a[1] + w.uy * (f.u || 0)]; } catch(e){ return null; } }
+function drw415(kind){
+  const svg = document.getElementById("pvSvg"); if (!svg || !S.edges || !S.edges.length) return;
+  let g = "", W = 360, H = 300, info = null;
+  try {
+  if (kind === "elev"){
+    const R = roof(), b = bbox(), t = R.t, kiso = +S.kiso || 400, zW = kiso + 105 + R.Hk, zFL = kiso + 105 + (+S.dfl || 40), zFL2 = R.two ? kiso + 105 + (R.Hd || 0) + 40 : 0;
+    const ov = {U: 0, D: 0, L: 0, R: 0}, n0 = +S.noki || 0;
+    if (S.roof === "yose"){ ov.U = ov.D = ov.L = ov.R = n0; }
+    else if (S.roof === "kata"){ const hi = R.high, lo = {U: "D", D: "U", L: "R", R: "L"}[hi]; ov[lo] = R.nokiA || 0; ov[hi] = R.nokiB || 0; const sd = R.spanY ? ["L", "R"] : ["U", "D"]; ov[sd[0]] = R.kerA || 0; ov[sd[1]] = R.kerB || 0; }
+    else if (R.spanY){ ov.U = R.nokiA || 0; ov.D = R.nokiB || 0; ov.L = R.kerA || 0; ov.R = R.kerB || 0; } else { ov.L = R.nokiA || 0; ov.R = R.nokiB || 0; ov.U = R.kerA || 0; ov.D = R.kerB || 0; }
+    const X0 = b.x0 - ov.L, X1 = b.x1 + ov.R, Y0 = b.y0 - ov.U, Y1 = b.y1 + ov.D;
+    const zTop = (x, y) => {
+      if (S.roof === "yose") return zW + Math.min(x - b.x0, b.x1 - x, y - b.y0, b.y1 - y) * t;
+      if (S.roof === "kata"){ const h = R.high; return zW + (h === "U" ? b.y1 - y : h === "D" ? y - b.y0 : h === "L" ? b.x1 - x : x - b.x0) * t; }
+      const sp = R.spanY ? y - b.y0 : x - b.x0; return zW + (R.mune ? (sp <= R.mp ? sp : R.W - sp) : Math.min(sp, R.W - sp)) * t;
+    };
+    const eaveFace = f => S.roof === "yose" || (S.roof === "kata" ? ({N: "U", S: "D", E: "R", W: "L"}[f] === {U: "D", D: "U", L: "R", R: "L"}[R.high]) : (R.spanY ? (f === "N" || f === "S") : (f === "E" || f === "W")));
+    const faces = [["S", "南立面図"], ["E", "東立面図"], ["N", "北立面図"], ["W", "西立面図"]];
+    let zMax = 0; for (let x = X0; x <= X1; x += 200) for (let y = Y0; y <= Y1; y += 200) zMax = Math.max(zMax, zTop(x, y));
+    const wMax = Math.max(X1 - X0, Y1 - Y0), gap = 1800, sc = Math.min((720 - 60) / (2 * wMax + gap), (620) / (2 * (zMax + 600) + gap));
+    W = 720; H = Math.round(2 * (zMax + 600) * sc + gap * sc + 60);
+    faces.forEach(([f, nm], fi) => {
+      const ox = 40 + (fi % 2) * (wMax + gap) * sc, oy = 20 + (Math.floor(fi / 2) + 1) * (zMax + 600) * sc + Math.floor(fi / 2) * gap * sc;   // oy＝GL
+      const hz = f === "S" ? (x, y) => x - X0 : f === "N" ? (x, y) => X1 - x : f === "E" ? (x, y) => Y1 - y : (x, y) => y - Y0;
+      const HL = (f === "S" || f === "N") ? X1 - X0 : Y1 - Y0, PX = h => ox + h * sc, PZ = z => oy - z * sc;
+      const wa = f === "S" || f === "N" ? [hz(b.x0, 0), hz(b.x1, 0)].sort((a, c) => a - c) : [hz(0, b.y0), hz(0, b.y1)].sort((a, c) => a - c);
+      const top = []; for (let h = 0; h <= HL + 1; h += 50){ let zm = -1e9; for (let d = (f === "S" || f === "N" ? Y0 : X0); d <= (f === "S" || f === "N" ? Y1 : X1) + 1; d += 100){
+        const x = f === "S" ? X0 + h : f === "N" ? X1 - h : d, y = f === "E" ? Y1 - h : f === "W" ? Y0 + h : d; zm = Math.max(zm, zTop(x, y)); } top.push([h, zm]); }
+      const ovF = {N: ov.U, S: ov.D, E: ov.R, W: ov.L}[f], zEave = zW - ovF * t - 30;   /* 軒先の高さ（壁の線から軒の出の分さがる） */
+      // 基礎・壁
+      g += `<rect x="${PX(wa[0])}" y="${PZ(kiso)}" width="${(wa[1] - wa[0]) * sc}" height="${kiso * sc}" fill="#e6e6e6" stroke="#111" stroke-width="0.8"/>`;
+      if (eaveFace(f)) g += `<rect x="${PX(wa[0])}" y="${PZ(zW)}" width="${(wa[1] - wa[0]) * sc}" height="${(zW - kiso) * sc}" fill="#fff" stroke="#111" stroke-width="1.2"/>`;
+      else { const wp = top.filter(q => q[0] >= wa[0] && q[0] <= wa[1]).map(q => [q[0], Math.max(zW, q[1] - 150)]); g += `<polygon points="${[[wa[0], kiso], ...wp, [wa[1], kiso]].map(q => PX(q[0]).toFixed(1) + "," + PZ(q[1]).toFixed(1)).join(" ")}" fill="#fff" stroke="#111" stroke-width="1.2"/>`; }
+      // 屋根
+      if (eaveFace(f)) g += `<polygon points="${[[0, zEave], ...top, [HL, zEave]].map(q => PX(q[0]).toFixed(1) + "," + PZ(q[1]).toFixed(1)).join(" ")}" fill="#bfc4ca" stroke="#111" stroke-width="1.2"/>`;
+      else g += `<polyline points="${top.map(q => PX(q[0]).toFixed(1) + "," + PZ(q[1]).toFixed(1)).join(" ")}" fill="none" stroke="#111" stroke-width="${Math.max(1.6, 150 * sc).toFixed(1)}"/>`;
+      // 棟違いの段差の壁と高窓（低い側から見える面）
+      if (R.mune && eaveFace(f) && ((R.spanY && f === "N") || (!R.spanY && f === "W"))){ const zA = zW + R.mp * t, zB = zW + (R.W - R.mp) * t, MW = muneWin412();
+        g += `<rect x="${PX(wa[0])}" y="${PZ(zB)}" width="${(wa[1] - wa[0]) * sc}" height="${(zB - zA) * sc}" fill="#fff" stroke="#111" stroke-width="1"/>`;
+        if (MW.n){ const L = wa[1] - wa[0], gp = (L - MW.n * MW.w) / (MW.n + 1); for (let k = 0; k < MW.n; k++){ const h0 = wa[0] + gp + k * (MW.w + gp); g += `<rect x="${PX(h0)}" y="${PZ(zA + 120 + MW.h)}" width="${MW.w * sc}" height="${MW.h * sc}" fill="#dbe8f4" stroke="#111" stroke-width="0.8"/>`; } } }
+      // 窓・ドア（外まわり）
+      const pv = pts(); (S.sashes || []).forEach(sa => { if (!sa.drawn || !sa.host || sa.host.t !== "e") return; const e = S.edges[sa.host.i]; if (!e) return;
+        const fe = {R: "N", L: "S", D: "E", U: "W"}[e.d]; if (fe !== f) return;
+        const a = pv[sa.host.i], c = pv[(sa.host.i + 1) % pv.length], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, ux = (c[0] - a[0]) / L, uy = (c[1] - a[1]) / L;
+        for (let k = 0; k < (sa.n || 1); k++){ const u0 = (+sa.pos || 0) + k * sa.w, p0 = [a[0] + ux * u0, a[1] + uy * u0], p1 = [a[0] + ux * (u0 + sa.w), a[1] + uy * (u0 + sa.w)];
+          const h0 = hz(p0[0], p0[1]), h1 = hz(p1[0], p1[1]), base = (R.two && sa.fl === 2) ? zFL2 : zFL, door = /玄関|勝手口|掃き出し|テラス|ドア/.test((sa.cat || "") + (sa.name || ""));
+          const zb = door ? base : base + 2000 - sa.h; g += `<rect x="${PX(Math.min(h0, h1)).toFixed(1)}" y="${PZ(zb + sa.h).toFixed(1)}" width="${(Math.abs(h1 - h0) * sc).toFixed(1)}" height="${(sa.h * sc).toFixed(1)}" fill="#eef4fa" stroke="#111" stroke-width="0.8"/>`;
+          if (!door) g += ln415(PX((h0 + h1) / 2), PZ(zb + sa.h), PX((h0 + h1) / 2), PZ(zb), 0.5); } });
+      // GL・高さの印
+      g += ln415(ox - 20, oy, ox + HL * sc + 20, oy, 1.4);
+      [["GL", 0], ["1FL", zFL], ["軒高", zW], ["最高", Math.max(...top.map(q => q[1]))]].concat(R.two ? [["2FL", zFL2]] : []).forEach(([nm2, z], k) => { g += ln415(ox - 30, PZ(z), ox - 4, PZ(z), 0.5, "3 2") + tx415(ox - 32, PZ(z) + 3, nm2 + (z ? " +" + fmt(Math.round(z)) : " ±0"), 6.5, "end"); });
+      g += tx415(ox + HL * sc / 2, oy + 16, nm, 10, "middle", ";font-weight:700");
+    });
+    info = {title: "立面図", scale: "", s: sc};
+  }
+  else if (kind === "tenjo" || kind === "denki"){
+    const F = planFrame415(); W = F.W; H = F.H + 60; g += planBase415(F);
+    let rooms = []; try { rooms = roomsCalc().rooms || []; } catch(e){}
+    const gb = esc415(S.gbC || "石膏ボード 9.5"), cl = S.cloth === false ? "" : "＋クロス";
+    rooms.forEach(r => { const c = F.P(r.p); g += tx415(c[0], c[1] - 6, roomLbl(r), 9, "middle", ";font-weight:700");
+      if (kind === "tenjo") g += tx415(c[0], c[1] + 5, "CH=" + fmt(+S.ch || 2400), 7) + tx415(c[0], c[1] + 14, (S.gbC || "石膏ボード9.5") + cl, 6); });
+    const lights = S.lights || [];
+    lights.forEach(L0 => { const c = F.P([L0.x, L0.y]); g += `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="4.2" fill="#fff" stroke="#111" stroke-width="0.9"/>` + ln415(c[0] - 3, c[1] - 3, c[0] + 3, c[1] + 3, 0.7) + ln415(c[0] + 3, c[1] - 3, c[0] - 3, c[1] + 3, 0.7); });
+    const leg = [["○×", "照明（シーリング）", lights.length]];
+    if (kind === "denki"){
+      const fx = S.fx || [], sw = [], cnt = {outlet: 0, switch: 0, alarm: 0, other: 0};
+      fx.forEach(f => { const q = fxPos415(f); if (!q) return; const c = F.P(q);
+        if (f.k === "outlet"){ cnt.outlet++; g += `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3" fill="#fff" stroke="#111" stroke-width="0.8"/><path d="M${(c[0] - 3).toFixed(1)} ${c[1].toFixed(1)} A3 3 0 0 1 ${(c[0] + 3).toFixed(1)} ${c[1].toFixed(1)} Z" fill="#111"/>`; }
+        else if (f.k === "switch"){ cnt.switch++; sw.push(c); g += `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="2.4" fill="#111"/>`; }
+        else if (f.k === "alarm"){ cnt.alarm++; g += `<circle cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="3.4" fill="#fff" stroke="#c00" stroke-width="0.8"/>` + tx415(c[0], c[1] + 2.4, "S", 5.5); }
+        else { cnt.other++; g += `<rect x="${(c[0] - 2.5).toFixed(1)}" y="${(c[1] - 2.5).toFixed(1)}" width="5" height="5" fill="#fff" stroke="#111" stroke-width="0.7"/>`; } });
+      // 配線：スイッチから一番近い照明へ（破線の弧）
+      const lp = lights.map(L0 => F.P([L0.x, L0.y]));
+      sw.forEach(c => { if (!lp.length) return; let best = lp[0]; lp.forEach(q => { if (Math.hypot(q[0] - c[0], q[1] - c[1]) < Math.hypot(best[0] - c[0], best[1] - c[1])) best = q; });
+        const mx = (c[0] + best[0]) / 2 - (best[1] - c[1]) * 0.25, my = (c[1] + best[1]) / 2 + (best[0] - c[0]) * 0.25; g += `<path d="M${c[0].toFixed(1)} ${c[1].toFixed(1)} Q${mx.toFixed(1)} ${my.toFixed(1)} ${best[0].toFixed(1)} ${best[1].toFixed(1)}" fill="none" stroke="#111" stroke-width="0.7" stroke-dasharray="3 2"/>`; });
+      leg.push(["◐", "コンセント", cnt.outlet], ["●", "スイッチ", cnt.switch], ["Ⓢ", "火災警報器", cnt.alarm], ["□", "その他の器具", cnt.other], ["- -", "配線（スイッチ→照明）", sw.length]);
+    }
+    g += table415([["記号", "名前", "数"]].concat(leg.map(r => [r[0], r[1], String(r[2])])), [40, 140, 40], 4, F.H + 4, 13);
+    info = {title: kind === "tenjo" ? "天井伏図" : "電気配線図", scale: "", s: F.s};
+    if (kind === "tenjo") g += tx415(4, F.H + 4 + 13 * leg.length + 26, `天井：${S.gbC || "石膏ボード9.5"}${cl}・天井高 ${fmt(+S.ch || 2400)}（部屋ごとの高さが違う所は室内図による）`, 7, "start");
+  }
+  else if (kind === "shiage"){
+    let rooms = []; try { rooms = roomsCalc().rooms || []; } catch(e){}
+    const recs = (S.tatami || []).concat(S.zones || []), nmOf = k => { try { const w = WORK.find(r => r[0] === k); return w ? w[1].replace(/（仮）/g, "").replace(/^床\s*/, "") : ""; } catch(e){ return ""; } };
+    const rows = [["室名", "床", "幅木", "壁", "廻り縁", "天井", "天井高"]];
+    rooms.forEach(r => { const rec = recs.find(q => r.p[0] >= Math.min(q.x0, q.x1) && r.p[0] <= Math.max(q.x0, q.x1) && r.p[1] >= Math.min(q.y0, q.y1) && r.p[1] <= Math.max(q.y0, q.y1));
+      const fl = rec ? (nmOf(rec.fk) || (rec.st || "").replace(/^fl:/, "")) : (S.floor === "doma" ? "土間コンクリート" : "フローリング");
+      rows.push([roomLbl(r), fl, /畳|土間/.test(fl) ? "畳寄せ" : "幅木", (S.gbW || "石膏ボード12.5") + (S.cloth === false ? "" : "＋クロス"), "廻り縁", (S.gbC || "石膏ボード9.5") + (S.cloth === false ? "" : "＋クロス"), fmt(+S.ch || 2400)]); });
+    if (rows.length === 1) rows.push(["（部屋がありません）", "", "", "", "", "", ""]);
+    const cw = [70, 110, 50, 120, 50, 120, 46]; W = cw.reduce((a, b) => a + b, 0) + 8; H = rows.length * 16 + 40;
+    g += table415(rows, cw, 4, 6, 16) + tx415(4, rows.length * 16 + 22, "仕上げは仕様の設定による。部屋ごとの床は間取りで指定した物。", 7, "start");
+    info = {title: "仕上表", fit: true};
+  }
+  else if (kind === "tategu"){
+    const grp = {}; (S.sashes || []).forEach(sa => { if (!sa.drawn) return; const ext = sa.host && sa.host.t === "e", door = /玄関|勝手口|ドア|引戸|引き戸|開き/.test((sa.cat || "") + (sa.name || "")), pre = ext ? (door ? "AD" : "AW") : "WD";
+      const key = [pre, sa.cat, sa.name, sa.w, sa.h].join("|"); grp[key] = grp[key] || {pre, cat: sa.cat || "", name: sa.name || "", w: sa.w, h: sa.h, n: 0, ext}; grp[key].n += sa.n || 1; });
+    const list = Object.values(grp).sort((a, c) => a.pre.localeCompare(c.pre) || c.w - a.w), no = {};
+    const rows = [["符号", "種類", "品名・形", "幅×高さ（枠外）", "数量", "場所"]];
+    list.forEach(q => { no[q.pre] = (no[q.pre] || 0) + 1; rows.push([q.pre + "-" + no[q.pre], q.cat, q.name, fmt(q.w) + "×" + fmt(q.h), q.n + "か所", q.ext ? "外まわり" : "間仕切り"]); });
+    if (rows.length === 1) rows.push(["", "（建具がありません）", "", "", "", ""]);
+    const cw = [46, 80, 110, 110, 50, 70]; W = cw.reduce((a, b) => a + b, 0) + 8; H = rows.length * 16 + 40;
+    g += table415(rows, cw, 4, 6, 16) + tx415(4, rows.length * 16 + 22, "AW＝外部の窓、AD＝外部のドア、WD＝内部の建具。寸法は枠外（メーカーの品番の寸法）。", 7, "start");
+    info = {title: "建具表", fit: true};
+  }
+  else if (kind === "kyuseki"){
+    const F = planFrame415(); W = F.W; const p = pts(), xs = Array.from(new Set(p.map(q => Math.round(q[0])))).sort((a, c) => a - c);
+    const cut = x => { const ys = []; for (let i = 0; i < p.length; i++){ const a = p[i], c = p[(i + 1) % p.length]; if ((a[0] <= x && c[0] > x) || (c[0] <= x && a[0] > x)) ys.push(a[1] + (x - a[0]) * (c[1] - a[1]) / (c[0] - a[0])); } ys.sort((a, c) => a - c); const iv = []; for (let j = 0; j + 1 < ys.length; j += 2) iv.push([ys[j], ys[j + 1]]); return iv; };
+    const rects = []; for (let i = 0; i + 1 < xs.length; i++){ const iv = cut((xs[i] + xs[i + 1]) / 2); iv.forEach(v => { const prev = rects.find(r => r.x1 === xs[i] && Math.abs(r.y0 - v[0]) < 1 && Math.abs(r.y1 - v[1]) < 1); if (prev) prev.x1 = xs[i + 1]; else rects.push({x0: xs[i], x1: xs[i + 1], y0: v[0], y1: v[1]}); }); }
+    g += planBase415(F, 1.6);
+    const circ = "①②③④⑤⑥⑦⑧⑨⑩"; let tot = 0; const rows = [["記号", "計算式（m）", "面積（㎡）"]];
+    rects.forEach((r, k) => { const a = F.P([r.x0, r.y0]), c = F.P([r.x1, r.y1]); g += `<rect x="${a[0].toFixed(1)}" y="${a[1].toFixed(1)}" width="${(c[0] - a[0]).toFixed(1)}" height="${(c[1] - a[1]).toFixed(1)}" fill="none" stroke="#c00" stroke-width="0.6" stroke-dasharray="4 2"/>` + tx415((a[0] + c[0]) / 2, (a[1] + c[1]) / 2 + 4, circ[k] || String(k + 1), 12, "middle", ";fill:#c00");
+      const w = (r.x1 - r.x0) / 1000, h = (r.y1 - r.y0) / 1000, ar = Math.floor(w * h * 10000) / 10000; tot += ar; rows.push([circ[k] || String(k + 1), w.toFixed(3) + " × " + h.toFixed(3), ar.toFixed(4)]); });
+    const R = roof(), f1 = Math.floor(tot * 100) / 100;
+    rows.push(["", "1階 床面積", f1.toFixed(2)]); if (R.two) rows.push(["", "2階 床面積（総2階）", f1.toFixed(2)]);
+    rows.push(["", "延べ床面積", (R.two ? f1 * 2 : f1).toFixed(2)], ["", "建築面積（軒の出1m以下は含まない）", f1.toFixed(2)]);
+    g += table415(rows, [40, 210, 100], 4, F.H + 4, 13); H = F.H + 4 + rows.length * 13 + 20;
+    info = {title: "求積図", scale: "", s: F.s};
+  }
+  else if (kind === "kisoD"){
+    const sc = 0.32, nuno = S.kisoType === "nuno", kiso = +S.kiso || 400; W = 400; H = 380; const ox = 130, oy = 190, X = x => ox + x * sc, Z = z => oy - z * sc;
+    const box = (x0, z0, x1, z1, fill, sw) => `<rect x="${X(x0).toFixed(1)}" y="${Z(z1).toFixed(1)}" width="${((x1 - x0) * sc).toFixed(1)}" height="${((z1 - z0) * sc).toFixed(1)}" fill="${fill || "#fff"}" stroke="#111" stroke-width="${sw || 1}"/>`;
+    const lead = (x, z, tx2, t0) => { const a = [X(x), Z(z)], b2 = [X(tx2), Z(z)]; return `<circle cx="${a[0].toFixed(1)}" cy="${a[1].toFixed(1)}" r="1.4" fill="#111"/>` + ln415(a[0], a[1], b2[0], b2[1], 0.5) + tx415(b2[0] + (tx2 > x ? 3 : -3), b2[1] + 3, t0, 7, tx2 > x ? "start" : "end"); };
+    const dim = (z0, z1, x, t0) => ln415(X(x), Z(z0), X(x), Z(z1), 0.5) + ln415(X(x) - 3, Z(z0) + 3, X(x) + 3, Z(z0) - 3, 0.6) + ln415(X(x) - 3, Z(z1) + 3, X(x) + 3, Z(z1) - 3, 0.6) + `<text x="${(X(x) - 4).toFixed(1)}" y="${((Z(z0) + Z(z1)) / 2).toFixed(1)}" transform="rotate(-90 ${(X(x) - 4).toFixed(1)} ${((Z(z0) + Z(z1)) / 2).toFixed(1)})" text-anchor="middle" style="font-size:7px;fill:#111">${t0}</text>`;
+    g += `<defs><pattern id="hc415" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="5" stroke="#999" stroke-width="0.6"/></pattern><pattern id="gr415" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="0.9" fill="#999"/><circle cx="5" cy="5" r="0.7" fill="#999"/></pattern></defs>`;
+    if (!nuno){
+      const sB = -120, sT = 30, bB = -270;
+      g += box(-150, bB - 150, 300, bB - 50, "url(#gr415)", 0.4) + box(-100, bB - 50, 250, bB, "#ddd", 0.4) + box(250, sB - 150, 1000, sB - 50, "url(#gr415)", 0.4) + box(150, sB - 50, 1000, sB, "#ddd", 0.4);   /* 砕石 t100・捨てコン t50（梁の下と底盤の下） */
+      g += box(0, bB, 150, sT, "url(#hc415)") + box(150, sB, 1000, sT, "url(#hc415)") + box(0, sT, 150, kiso, "url(#hc415)");
+      g += ln415(X(150), Z(sB - 2), X(1000), Z(sB - 2), 1, "", "#06c");
+      [[60, kiso - 50], [60, bB + 60]].forEach(q => g += `<circle cx="${X(q[0])}" cy="${Z(q[1])}" r="2.2" fill="#111"/>`);
+      g += ln415(X(75), Z(kiso - 40), X(75), Z(bB + 50), 0.8, "4 2");
+      for (let x = 250; x < 1000; x += 200) g += `<circle cx="${X(x)}" cy="${Z(sB + 60)}" r="1.6" fill="#111"/>`;
+      g += ln415(X(75), Z(kiso + 100), X(75), Z(kiso - 250), 1.4) + box(-10, kiso + 20, 160, kiso + 125, "#f4ead9", 0.8) + box(0, kiso, 150, kiso + 20, "#bbb", 0.5);
+      g += lead(75, kiso + 70, 380, "土台 105×105（基礎パッキン t20）") + lead(75, kiso - 200, 380, "アンカーボルト M12 L=400（埋込み250）@2,700以内") + lead(60, kiso - 50, -260, "主筋 D13（上端）") + lead(75, 150, -260, "縦筋 D10 @200") + lead(60, bB + 60, -260, "主筋 D13（下端）")
+        + lead(450, sB + 60, 700, "底盤 t150 D13 @200（シングル）") + lead(600, sB - 2, 700, "防湿シート t0.15") + lead(600, bB - 100, 700, "捨てコンクリート t50・砕石 t100");
+      g += dim(0, kiso, -60, "GL+" + kiso) + dim(sB, 0, -60, "根入れ" + (-sB)) + dim(sB, sT, 1030, "150") + ln415(X(-200), Z(0), X(1050), Z(0), 1.2) + tx415(X(-205), Z(0) + 3, "GL", 7, "end") + tx415(X(75), Z(kiso + 150), "150", 7);
+      info = {title: "基礎断面詳細図（ベタ基礎）", scale: "", s: sc};
+    } else {
+      const fB = -390, fT = -240;
+      g += box(-250, fB - 150, 400, fB - 50, "url(#gr415)", 0.4) + box(-200, fB - 50, 350, fB, "#ddd", 0.4) + box(-150, fB, 300, fT, "url(#hc415)") + box(0, fT, 150, kiso, "url(#hc415)") + box(150, 0, 1000, 60, "#e8e8e8", 0.6);
+      g += ln415(X(150), Z(-2), X(1000), Z(-2), 1, "", "#06c");
+      [[60, kiso - 50], [60, fT + 40]].forEach(q => g += `<circle cx="${X(q[0])}" cy="${Z(q[1])}" r="2.2" fill="#111"/>`);
+      g += ln415(X(75), Z(kiso - 40), X(75), Z(fB + 50), 0.8, "4 2") + ln415(X(-120), Z(fB + 60), X(270), Z(fB + 60), 0.8, "4 2");
+      g += ln415(X(75), Z(kiso + 100), X(75), Z(kiso - 250), 1.4) + box(-10, kiso + 20, 160, kiso + 125, "#f4ead9", 0.8) + box(0, kiso, 150, kiso + 20, "#bbb", 0.5);
+      g += lead(75, kiso + 70, 380, "土台 105×105（基礎パッキン t20）") + lead(75, kiso - 200, 380, "アンカーボルト M12 L=400（埋込み250）") + lead(60, kiso - 50, -260, "主筋 D13（上端）") + lead(75, 100, -260, "縦筋 D10 @300") + lead(60, fT + 40, -260, "主筋 D13（下端）")
+        + lead(200, fB + 60, 520, "フーチング 450×150 ベース筋 D10 @300") + lead(600, 30, 700, "防湿コンクリート t60・防湿シート") + lead(300, fB - 100, 520, "捨てコンクリート t50・砕石 t100");
+      g += dim(0, kiso, -200, "GL+" + kiso) + dim(fB, 0, -200, "根入れ" + (-fB)) + ln415(X(-300), Z(0), X(1050), Z(0), 1.2) + tx415(X(-305), Z(0) + 3, "GL", 7, "end");
+      info = {title: "基礎断面詳細図（布基礎）", scale: "", s: sc};
+    }
+    g += tx415(4, H - 6, "標準の目安。配筋・寸法・根入れは構造計算・設計者の確認・地盤調査の結果で決める。", 7, "start");
+  }
+  } catch(e){ g = tx415(180, 120, "この図面は描けませんでした：" + e, 8); info = {title: "図面", fit: true}; }
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`); svg.innerHTML = g; sheetInfo409 = info; sheetFinish409(svg);
+}
+HB.__drw415 = drw415;
 function dzCapture411(fn){
   const real = document.getElementById("pvSvg"); if (!real) return null;
   const lg = document.getElementById("pvLegend"), lgT = lg ? lg.textContent : null;
@@ -12047,7 +12225,7 @@ function dzSheet411(no, name, cap, note){
   const val = (x, y, t, fs, b) => `<text x="${x}" y="${y}" text-anchor="middle" style="font-size:${fs}px;fill:#111${b ? ";font-weight:700" : ""}">${esc(t)}</text>`;
   g += lab(tx + 11, ty + 6, "工事名") + val(tx + 90, ty + 6.4, S.genba || "", 3.4);
   g += lab(tx + 11, 262, "図面名") + val(tx + 61, 262.4, name, 4.6, true) + lab(tx + 110, 262, "図面番号") + val(tx + 139, 262.4, no, 4.2, true);
-  g += lab(tx + 11, 271.7, "縮尺") + val(tx + 61, 272, cap ? cap.info.scale + "（A3）" : "—", 3.4) + lab(tx + 110, 271.7, "日付") + val(tx + 139, 272, ds, 3.2);
+  g += lab(tx + 11, 271.7, "縮尺") + val(tx + 61, 272, cap ? (cap.info.scale === "—" ? "なし（表）" : cap.info.scale + "（A3）") : "—", 3.4) + lab(tx + 110, 271.7, "日付") + val(tx + 139, 272, ds, 3.2);
   g += lab(tx + 11, 281.5, "作成") + val(tx + 61, 281.8, "見積即答CAD", 3.2) + lab(tx + 110, 281.5, "用紙") + val(tx + 139, 281.8, "A3 横", 3.2);
   return g + "</svg>";
 }
@@ -12070,6 +12248,13 @@ function dzOpen411(){
     two && ["S-05", "2階耐力壁図", () => HBx.__fsRender410("taiku2"), stN],
     ["S-06", two ? "1階金物図" : "金物図", () => HBx.__fsRender410("kana"), stN.concat(["柱頭・柱脚の金物は告示1460号（N値計算）。記号の無い柱は (い) かすがい。"])],
     two && ["S-07", "2階金物図", () => HBx.__fsRender410("kana2"), stN],
+    ["A-04", "立面図", () => drw415("elev"), ["外形と屋根の形・窓とドアの位置は見積と同じ。窓の上端は床から2,000の目安。", "L字など凹凸のある家は外形の四角で描いている。単位はmm。"]],
+    ["A-05", "天井伏図", () => drw415("tenjo"), ["照明の位置は間取りで置いた所。CH＝天井高。"]],
+    ["A-06", "仕上表", () => drw415("shiage"), ["仕上げは仕様の設定と、間取りで部屋ごとに指定した床による。"]],
+    ["A-07", "建具表", () => drw415("tategu"), ["窓・ドアは間取りで置いた物。寸法は枠外。数量は見積と同じ。"]],
+    ["E-01", "電気配線図", () => drw415("denki"), ["照明・コンセント・スイッチは室内図・間取りで置いた所。配線はスイッチから一番近い照明への目安。", "回路・分電盤は電気工事の業者の設計による。"]],
+    ["A-08", "求積図", () => drw415("kyuseki"), ["外形を長方形に分けて計算。面積は小数点以下4位を切り捨て、合計は2位を切り捨て。"]],
+    ["S-11", "基礎断面詳細図", () => drw415("kisoD"), ["標準の目安。配筋・寸法・根入れは構造計算・設計者の確認・地盤調査で決める。"]],
     ["A-03", "矩計図", () => HBx.__knRender410(), ["部材の寸法・間隔・高さは仕様の設定による。", "窓・建具と基礎の配筋は描いていない。単位はmm。"]]
   ].filter(Boolean);
   let box = document.getElementById("dz411");
