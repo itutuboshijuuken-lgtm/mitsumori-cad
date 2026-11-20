@@ -34473,3 +34473,112 @@ nav.steps{padding:1px 6px 3px}
   }
 })();
 </script>
+
+<script id="fs423js">
+/* ===== CAD-423：床を決めていない部屋は床の絵を出さない（表示だけ） ===== */
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var lastSig = "";
+  function fix423(){
+    try {
+      if (typeof HB === "undefined" || !HB.__pageM) return;
+      if (typeof S === "undefined" || !S || S.mode !== "zo") return;
+      if (typeof roomsCalc !== "function" || typeof roomFinOf !== "function") return;
+      var svg = document.getElementById("plan");
+      if (!svg) return;
+      var poly = svg.querySelector('polygon[fill="url(#pFl)"]');
+      var g = document.getElementById("flAll282");
+      if (!poly && !g) return;
+      var R = null;
+      try { R = roomsCalc(); } catch(e){ return; }
+      if (!R || !R.rooms || !R.comp) return;
+      /* 床を決めた部屋（cid）の集合 */
+      var decided = {};
+      R.rooms.forEach(function(rm){
+        var ok = false;
+        try { var f = roomFinOf(rm); if (f && f.f && f.f !== "none") ok = true; } catch(e){}
+        if (!ok && typeof roomZoneKind === "function"){
+          try { if (roomZoneKind(rm)) ok = true; } catch(e){}
+        }
+        if (ok) decided[rm.cid] = true;
+      });
+      /* 決めた部屋のセルを行ラン（mm）にまとめる */
+      var runs = [];
+      for (var j = 0; j < R.NY; j++){
+        var i = 0;
+        while (i < R.NX){
+          var cid = R.comp[j * R.NX + i];
+          if (cid >= 0 && decided[cid]){
+            var i0 = i;
+            while (i < R.NX && R.comp[j * R.NX + i] === cid) i++;
+            runs.push([R.b.x0 + i0 * R.st, R.b.y0 + j * R.st, (i - i0) * R.st, R.st]);
+          } else i++;
+        }
+      }
+      /* mm→svg座標の対応（外形ポリゴンの bbox と mm の bbox から） */
+      var bb = (typeof bbox === "function") ? bbox() : R.b;
+      var pb = null;
+      try { pb = poly ? poly.getBBox() : (g ? g.getBBox() : null); } catch(e){ pb = null; }
+      if (!pb || !bb || !bb.w || !bb.h) return;
+      var sx = pb.width / bb.w, sy = pb.height / bb.h;
+      var sig = runs.length + "|" + pb.x.toFixed(1) + "," + pb.y.toFixed(1) + "," + pb.width.toFixed(1) + "|" + Object.keys(decided).join(",");
+      var defs = svg.querySelector("defs");
+      if (sig !== lastSig){
+        lastSig = sig;
+        var old = svg.querySelector("#clipF423");
+        if (old) old.remove();
+        if (defs){
+          var cp = document.createElementNS(NS, "clipPath");
+          cp.setAttribute("id", "clipF423");
+          runs.forEach(function(rn){
+            var r = document.createElementNS(NS, "rect");
+            r.setAttribute("x", (pb.x + (rn[0] - bb.x0) * sx).toFixed(2));
+            r.setAttribute("y", (pb.y + (rn[1] - bb.y0) * sy).toFixed(2));
+            r.setAttribute("width", (rn[2] * sx).toFixed(2));
+            r.setAttribute("height", (rn[3] * sy).toFixed(2));
+            cp.appendChild(r);
+          });
+          defs.appendChild(cp);
+        }
+      }
+      [poly, g].forEach(function(el){
+        if (el && el.getAttribute("clip-path") !== "url(#clipF423)") el.setAttribute("clip-path", "url(#clipF423)");
+      });
+      /* その他の床の絵（部屋ごとの仕上げ rect・床板の継ぎ目線・水まわりのCF等）も
+         同じ clip を付ける。範囲指定の絵（印つき・専用グループ内）は決めた範囲
+         そのものなので触らない。 */
+      var patIds = {};
+      var fd = svg.querySelector("#flDefs");
+      if (fd) fd.querySelectorAll("pattern").forEach(function(p){ if (p.id) patIds[p.id] = true; });
+      var isFloorFill = function(el){
+        var f = el.getAttribute && el.getAttribute("fill");
+        if (!f) return false;
+        if (f.toUpperCase() === "#F2B84B") return true;
+        var m = /^url\(#(.+)\)$/.exec(f);
+        return !!(m && patIds[m[1]]);
+      };
+      var inExcept = function(el){
+        if (el.closest && el.closest("#g277Ft,#g278Cf,#g279Muku,#tat286plan,#g282Fl")) return true;
+        for (var n = el; n && n !== svg; n = n.parentElement){
+          if (n.getAttribute && (n.getAttribute("data-ft277") || n.getAttribute("data-tat286") || n.getAttribute("data-cf278"))) return true;
+        }
+        return false;
+      };
+      svg.querySelectorAll("rect,polygon,path,g").forEach(function(el){
+        if (el === poly || el === g) return;
+        if (el.closest && el.closest("defs,pattern")) return;
+        var cand = isFloorFill(el);
+        if (!cand && el.tagName === "g"){
+          cand = [...el.children].some(function(c){ return isFloorFill(c); });
+        }
+        if (!cand) return;
+        if (inExcept(el)) return;
+        if (el.getAttribute("clip-path") !== "url(#clipF423)") el.setAttribute("clip-path", "url(#clipF423)");
+      });
+    } catch(e){}
+  }
+  setInterval(fix423, 500);
+  fix423();
+})();
+</script>
