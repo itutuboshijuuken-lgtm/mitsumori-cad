@@ -24999,7 +24999,7 @@ body.ux-sheet-off #toolCh2:not([hidden]):not([style*="display: none"]):not([styl
 /* ===== CAD-261：「いま何を置いているか」の帯は、図面の下ではなく、上の空いている所（操作の行のすぐ下）に1本だけ出す。図面に重ねない ===== */
 #tcStrip254,#putBand253{display:none!important}
 body.tc254 .toast{bottom:calc(var(--ux-bot,76px) + 12px)!important}
-body.b261 .toast{bottom:auto!important;top:var(--t261,150px)!important}
+body.b261 .toast{bottom:auto!important;top:var(--t261,150px)!important}body:has(.ov439) .toast{z-index:2147483646!important;top:auto!important;bottom:calc(90px + env(safe-area-inset-bottom,0px))!important}
 #putBar261{position:fixed;left:8px;right:8px;top:8px;z-index:46;display:none;align-items:center;gap:8px;min-height:48px;padding:4px 6px 4px 14px;box-sizing:border-box;background:#1b2430;color:#fff;border-radius:14px;font-size:15px;font-weight:800;box-shadow:0 2px 10px rgba(0,0,0,.25)}
 #putBar261.on261{display:flex}
 #putBar261 .pb261l{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -35625,16 +35625,20 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     try {
       if (D.floors === 2 && D.floors2 && typeof flAdd === "function"){
         if (Array.isArray(S.fl) && S.fl.length > 1){ while (S.fl.length > 1){ S.fl.pop(); } S.fi = 0; }
-        flAdd();
+        /* CAD-445.1: build the 2nd floor without flSwitch (switching while the 既存 view is open moved the 1st-floor walls/windows out of sight) */
+        flEnsure(); var keep1 = flSnap();
+        FLOOR_KEYS.forEach(function(k){ if (["edges", "house", "ch", "rot"].indexOf(k) < 0) delete S[k]; });
+        S.zones = (keep1.zones || []).filter(function(z){ return z.k === "stair"; }).map(flClone);
+        Object.assign(S, {rfFloor: "none", rfWall: "none", rfCeil: "none", rfWallMat: "cloth", rfCeilMat: "cloth"}); if (keep1.flType) S.flType = keep1.flType;
         var F2 = D.floors2, sk2 = 0;
         S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
         S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
         S.sashes = []; S.tatami = [];
         (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"}); } catch(e){ sk2++; } });
         addFC(F2.floor_changes);
-        save(); two = {sk: sk2}; flSwitch(0);
+        var snap2 = flSnap(); flLoad(keep1); S.fl.push({name: (S.fl.length + 1) + "階", snap: snap2}); if (S.mode === "zo") S.floors = 2; S.fi = 0; save(); try { flTitle(); } catch(e){} two = {sk: sk2};
       }
-    } catch(e){ two = null; }
+    } catch(e){ two = null; try { if (keep1 && S.fl.length < 2) flLoad(keep1); } catch(e2){} }
     try { HB.__pinH = 0; } catch(e){} try { go("M"); } catch(e){ try { drawPlan(); } catch(e2){} }
     toast("図面から家を作りました" + (two ? "（2階も）" : "") + (skipped ? "（入れられなかった窓・ドア " + skipped + "）" : ""));
     setTimeout(function(){ try { if (HB.__autoCheck444) HB.__autoCheck444(true); } catch(e){} }, 900);
@@ -35649,23 +35653,23 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
       + '<p style="' + st + '">③ 中身を確かめて、よければ入れる</p><div id="s3_445" style="display:flex;gap:8px;flex-wrap:wrap"></div><div id="ck439" style="margin-top:8px"></div>';
     var bC = document.createElement("button"); bC.textContent = "📋 頼み方をコピー";
     bC.onclick = function(){ var done = function(){ toast("頼み方をコピーしました。AIに図面の写真と一緒に送ってください"); }; try { navigator.clipboard.writeText(PROMPT).then(done, function(){ prompt("コピーしてください", PROMPT); }); } catch(e){ prompt("コピーしてください", PROMPT); } };
-    var bK = document.createElement("button"); bK.textContent = "中身を確かめる"; var bI = document.createElement("button"); bI.className = "pri"; bI.textContent = "この家を入れる"; bI.disabled = true;
+    var bK = document.createElement("button"); bK.textContent = "中身を確かめる"; var bI = document.createElement("button"); bI.className = "pri"; bI.textContent = "この家を入れる";
     var D = null;
-    bK.onclick = function(){ var ck = bd.querySelector("#ck439"); try { D = parse(bd.querySelector("#ta439").value); } catch(e){ D = null; ck.innerHTML = '<p class="bad">読めませんでした：' + e.message + '。AIの答えを全部貼ってください。</p>'; bI.disabled = true; return; }
+    function need(t){ var ck = bd.querySelector("#ck439"); ck.innerHTML = '<p class="bad" style="font-size:15px">' + t + '</p>'; try { ck.scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} toast(t); }
+    bK.onclick = function(){ var ck = bd.querySelector("#ck439"); if (!bd.querySelector("#ta439").value.trim()){ need("先に②の枠に、AIの答えを貼ってください"); return false; } try { D = parse(bd.querySelector("#ta439").value); } catch(e){ D = null; ck.innerHTML = '<p class="bad">読めませんでした：' + e.message + '。AIの答えを全部貼ってください。</p>'; return false; }
       var r = checkD(D), h = "";
       h += '<p class="note">外形の角 ' + (D.outline || []).length + '・間仕切り ' + (D.walls || []).length + '・部屋 ' + (D.rooms || []).length + '・窓とドア ' + (D.openings || []).length + (D.__area ? '・1階 ' + D.__area.toFixed(1) + '㎡' : '') + '</p>';
       r.bad.forEach(function(t){ h += '<p class="bad">✕ ' + t + '</p>'; }); r.warn.forEach(function(t){ h += '<p style="color:#E8742C;font-weight:800">！ ' + t + '</p>'; });
       (D.unsure || []).forEach(function(t){ h += '<p style="color:#E8742C">？ AIの自信がない所：' + String(t).replace(/[<>&]/g, "") + '</p>'; });
       if (!r.bad.length) h += '<p class="ok">✓ 入れられます。入れた後、「？」の所は図面で確かめてください（「戻す」で元に戻せます）。</p>';
-      ck.innerHTML = h; bI.disabled = !!r.bad.length; try { ck.scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} };
-    bI.onclick = function(){ if (!D) return; d.remove(); applyD(D); };
+      ck.innerHTML = h; D.__bad445 = !!r.bad.length; try { ck.scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} };
+    bI.onclick = function(){ /* CAD-445.1: no hidden disabled state - pressing it checks first, then imports */ if (!bd.querySelector("#ta439").value.trim()){ need("先に②の枠に、AIの答えを貼ってください"); return; } if (bK.onclick() === false) return; if (!D || D.__bad445){ toast("✕ の所を直してから入れてください"); return; } d.remove(); applyD(D); };
     var bM = document.createElement("button"); bM.textContent = "✏ 見せたくない所を塗る"; bM.onclick = function(){ if (HB.__mask440) HB.__mask440(); };
     [bM, bC, bK, bI].forEach(function(b){ b.style.cssText += ";min-height:46px;font-size:15px"; });
     bd.querySelector("#s0_445").appendChild(bM); bd.querySelector("#s1_445").appendChild(bC);
     var s3 = bd.querySelector("#s3_445"); s3.appendChild(bK); s3.appendChild(bI);
     if (ft && !ft.children.length) ft.style.display = "none";
     /* enable 中身を確かめる only after something is pasted, so the order is obvious */
-    var ta = bd.querySelector("#ta439"); bK.disabled = true; ta.addEventListener("input", function(){ bK.disabled = !ta.value.trim(); });
   }
   HB.__cal439 = calOpen; HB.__imp439 = impOpen; HB.__parse439 = parse; HB.__check439 = checkD; HB.__apply439 = applyD; HB.__PROMPT439 = PROMPT;
   /* ボタンを置く：見積の上（⑤）と、①描く */
