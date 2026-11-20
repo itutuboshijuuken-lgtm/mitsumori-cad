@@ -35044,3 +35044,205 @@ nav.steps{padding:1px 6px 3px}
   apply();
 })();
 </script>
+<script id="ux434js">
+/* ===== CAD-434（Opus）：③チェック一覧 ④間取りの部品 ⑤家具 ⑥お客さん用。翔伍OK（2026-11-20、トイレは910×1820が最初の大きさ）。
+   ボタンは図面の左下に小さく並べる（#chips434）。選ぶ時だけ下のシート（#modal）が図面に被り、選んだら閉じる。
+   ④は部屋の壁を間仕切りとして入れる（もう壁がある所は入れない＝二重に数えない）＋部屋名。⑤家具は S.furn434（見積に入らない、階ごと）。
+   ③⑥は読むだけ。 */
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  try { if (typeof FLOOR_KEYS !== "undefined" && FLOOR_KEYS.indexOf("furn434") < 0) FLOOR_KEYS.push("furn434"); } catch(e){}
+  var PARTS = [["トイレ", 910, 1820], ["洗面所", 1820, 1820], ["浴室", 1820, 1820], ["押入", 910, 1820], ["階段", 910, 2730], ["玄関", 1820, 1820]];
+  var FURN = [["ベッド S", 970, 1950], ["ベッド SD", 1200, 1950], ["ベッド D", 1400, 1950], ["ソファ 2人", 1500, 850], ["ソファ 3人", 2000, 850], ["テーブル", 1350, 800], ["冷蔵庫", 700, 700], ["洗濯機", 640, 640], ["机", 1000, 600], ["タンス", 900, 450]];
+  var arm = null, fsel = -1, drag = null;
+  var css = document.createElement("style");
+  css.textContent = "#chips434{position:absolute;left:6px;z-index:8;display:flex;gap:6px;top:var(--cb434,600px)}"
+    + "#chips434 button{min-height:38px;border:1.5px solid #1a73e8;border-radius:19px;background:rgba(255,255,255,.96);color:#1a73e8;font-size:13px;font-weight:900;padding:0 11px;white-space:nowrap}"
+    + "#chips434 button.on{background:#1a73e8;color:#fff}#chips434 button.red{border-color:#C62828;color:#C62828}"
+    + ".sh434 h3{margin:0 0 6px}.sh434 .gr{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sh434 .gr button{min-height:48px;border:1.5px solid #1a73e8;border-radius:10px;background:#fff;color:#1a73e8;font-size:14px;font-weight:900}"
+    + ".sh434 .ck{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;border:1px solid #d5dbe3;border-radius:10px;background:#fff;padding:10px;margin-bottom:6px;font-size:14px;font-weight:700;color:#263238}"
+    + "#cv434{position:fixed;inset:0;z-index:2147483640;background:#fff;display:flex;flex-direction:column}#cv434 .bar{display:flex;gap:8px;padding:10px}#cv434 .bar button{flex:1;min-height:48px;border-radius:12px;font-size:15px;font-weight:900;border:2px solid #1a73e8;background:#fff;color:#1a73e8}#cv434 .bar .line{background:#06c755;border-color:#06c755;color:#fff}";
+  document.head.appendChild(css);
+  function stM(){ return document.getElementById("stM"); }
+  function onM(){ var m = stM(); return !!(m && !m.hidden && m.getClientRects().length && S && S.edges); }
+  function step(){ try { return HB.__step399 ? HB.__step399() : "part"; } catch(e){ return "part"; } }
+  function sheet(html){ var mb = document.getElementById("mbox"), md = document.getElementById("modal"); mb.innerHTML = '<div class="sh434">' + html + '</div>'; md.hidden = false; return mb; }
+  function closeSheet(){ var md = document.getElementById("modal"); if (md) md.hidden = true; }
+  function R0(){ return roomsCalc(); }
+  function roomAtMM(R, x, y){ var i = Math.floor((x - R.b.x0) / R.st), j = Math.floor((y - R.b.y0) / R.st); if (i < 0 || j < 0 || i >= R.NX || j >= R.NY) return null; var cid = R.comp[j * R.NX + i]; return R.rooms.find(function(r){ return r.cid === cid; }) || null; }
+  function nameOf(r, R){ try { return roomShort(r, R, function(p){ return p; }) || "部屋"; } catch(e){ return "部屋"; } }
+  /* ---------- ③ チェック ---------- */
+  function check(){
+    var R = R0(), out = [], touch = {}, win = {};
+    (S.sashes || []).forEach(function(sa){
+      if (!sa.drawn || !sa.host) return; var seg = hostSeg(sa.host); if (!seg) return;
+      var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L], n = [-u[1], u[0]];
+      var p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), m = [a[0] + u[0] * (p0 + w / 2), a[1] + u[1] * (p0 + w / 2)], off = R.st + 80, isWin = typeOf(sa) === "win";
+      [1, -1].forEach(function(sg){ var r = roomAtMM(R, m[0] + n[0] * off * sg, m[1] + n[1] * off * sg); if (r){ if (isWin) win[r.cid] = 1; else touch[r.cid] = 1; } });
+    });
+    var big = R.rooms.filter(function(r){ return r.area >= 1; });
+    if (big.length > 1) big.forEach(function(r){ if (!touch[r.cid]) out.push({lv: 2, t: nameOf(r, R) + "：ドアがありません", p: r.p}); });
+    big.forEach(function(r){ var nm = nameOf(r, R); if (/洋室|寝室|LDK|リビング|ダイニング|子供|和室|居間|書斎/.test(nm) && !win[r.cid]) out.push({lv: 2, t: nm + "：窓がありません（居室は採光の窓が要ります）", p: r.p}); });
+    var parts = (S.parts2D || []).filter(function(z){ try { return pState(z) !== "remove"; } catch(e){ return true; } }), lines = [], P = pts(), nar = 0;
+    P.forEach(function(q, i){ var r = P[(i + 1) % P.length]; lines.push({x1: q[0], y1: q[1], x2: r[0], y2: r[1]}); }); parts.forEach(function(z){ lines.push(z); });
+    parts.forEach(function(q){
+      var h = Math.abs(q.y1 - q.y2) < 1, lo = h ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), hi = h ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2), at = h ? q.y1 : q.x1;
+      lines.forEach(function(z){ if (z === q) return; var zh = Math.abs(z.y1 - z.y2) < 1; if (zh !== h) return; var zl = h ? Math.min(z.x1, z.x2) : Math.min(z.y1, z.y2), zr = h ? Math.max(z.x1, z.x2) : Math.max(z.y1, z.y2), ov = Math.min(hi, zr) - Math.max(lo, zl); if (ov < 450) return;
+        var d = Math.abs((h ? z.y1 : z.x1) - at); if (d > 1 && d < 455){ nar++; var mid = (Math.max(lo, zl) + Math.min(hi, zr)) / 2; if (nar <= 6 && !out.some(function(o){ return o.k === Math.round(d) + "|" + Math.round(mid); })) out.push({lv: 2, k: Math.round(d) + "|" + Math.round(mid), t: "すき間 芯々" + fmt(Math.round(d)) + "（内法 約" + fmt(Math.max(0, Math.round(d) - 130)) + "mm）：人が通れません", p: h ? [mid, (at + (h ? z.y1 : z.x1)) / 2] : [(at + z.x1) / 2, mid]}); } });
+    });
+    var und = big.filter(function(r){ try { var f = roomFinOf(r); return !(f && f.f && f.f !== "none") && roomZoneKind(r) !== "ub"; } catch(e){ return false; } });
+    if (und.length) out.push({lv: 1, t: "床を決めていない部屋 " + und.length + "（" + und.slice(0, 3).map(function(r){ return nameOf(r, R); }).join("・") + (und.length > 3 ? "…" : "") + "）", p: und[0].p});
+    return out;
+  }
+  function showCheck(){
+    var L = check(), h = "<h3>見積の前のチェック</h3>";
+    if (!L.length) h += '<div class="ck"><b style="color:#2e7d32">✓</b>気になる所はありません</div>';
+    L.forEach(function(o, i){ h += '<button type="button" class="ck" data-i="' + i + '"><b style="color:' + (o.lv > 1 ? "#C62828" : "#E8742C") + '">' + (o.lv > 1 ? "✕" : "！") + "</b><span>" + o.t + "</span></button>"; });
+    h += '<p class="hint" style="margin:6px 0 8px">押すと、その場所に赤い丸が付きます。</p><button class="btn sub" type="button" id="ck434c" style="width:100%">閉じる</button>';
+    var mb = sheet(h); mb.querySelector("#ck434c").onclick = closeSheet;
+    mb.querySelectorAll("[data-i]").forEach(function(b){ b.onclick = function(){ var o = L[+b.dataset.i]; closeSheet(); mark = {p: o.p, t: Date.now()}; try { drawPlan(); } catch(e){} }; });
+  }
+  var mark = null;
+  /* ---------- ④ 部品 ---------- */
+  function placePart(it, t){
+    var b = bbox(), w = it[1], h = it[2];
+    var P = pts(), L = [];
+    P.forEach(function(q, i){ var r = P[(i + 1) % P.length]; L.push([q[0], q[1], r[0], r[1]]); });
+    (S.parts2D || []).forEach(function(z){ try { if (pState(z) === "remove") return; } catch(e){} L.push([z.x1, z.y1, z.x2, z.y2]); });
+    /* タップした所を囲む壁（左右・上下で一番近い壁）を探し、近い方の角に寄せて置く */
+    var lw = b.x0, rw = b.x1, tw = b.y0, bw = b.y1;
+    L.forEach(function(l){ var v = Math.abs(l[0] - l[2]) < 1, hz = Math.abs(l[1] - l[3]) < 1;
+      if (v && t[1] >= Math.min(l[1], l[3]) && t[1] <= Math.max(l[1], l[3])){ if (l[0] <= t[0] && l[0] > lw) lw = l[0]; if (l[0] >= t[0] && l[0] < rw) rw = l[0]; }
+      if (hz && t[0] >= Math.min(l[0], l[2]) && t[0] <= Math.max(l[0], l[2])){ if (l[1] <= t[1] && l[1] > tw) tw = l[1]; if (l[1] >= t[1] && l[1] < bw) bw = l[1]; } });
+    if ((rw - lw) < w && (bw - tw) >= w && (rw - lw) >= h){ var sw = w; w = h; h = sw; }   /* 入らない向きなら90度回す */
+    var x0 = (t[0] - lw <= rw - t[0]) ? lw : rw - w, y0 = (t[1] - tw <= bw - t[1]) ? tw : bw - h;
+    x0 = Math.max(lw, Math.min(x0, rw - Math.min(w, rw - lw))); y0 = Math.max(tw, Math.min(y0, bw - Math.min(h, bw - tw)));
+    w = Math.min(w, rw - lw); h = Math.min(h, bw - tw);
+    var x1 = x0 + w, y1 = y0 + h;
+    var sides = [[x0, y0, x1, y0], [x1, y0, x1, y1], [x0, y1, x1, y1], [x0, y0, x0, y1]], add = [];
+    sides.forEach(function(sd){
+      var hz = sd[1] === sd[3], at = hz ? sd[1] : sd[0], lo = hz ? sd[0] : sd[1], hi = hz ? sd[2] : sd[3], cov = [];
+      L.forEach(function(l){ var lh = Math.abs(l[1] - l[3]) < 1, lv = Math.abs(l[0] - l[2]) < 1; if (hz ? !lh : !lv) return; if (Math.abs((hz ? l[1] : l[0]) - at) > 1) return; var a = hz ? Math.min(l[0], l[2]) : Math.min(l[1], l[3]), c = hz ? Math.max(l[0], l[2]) : Math.max(l[1], l[3]); if (c > lo && a < hi) cov.push([Math.max(lo, a), Math.min(hi, c)]); });
+      cov.sort(function(p, q){ return p[0] - q[0]; }); var cur = lo;
+      cov.forEach(function(cv){ if (cv[0] > cur + 50) add.push(hz ? {x1: cur, y1: at, x2: cv[0], y2: at} : {x1: at, y1: cur, x2: at, y2: cv[0]}); cur = Math.max(cur, cv[1]); });
+      if (hi > cur + 50) add.push(hz ? {x1: cur, y1: at, x2: hi, y2: at} : {x1: at, y1: cur, x2: at, y2: hi});
+    });
+    pushUndo(); S.parts2D = S.parts2D || [];
+    add.forEach(function(q){ q.isNew = S.mode === "zo"; S.parts2D.push(q); });
+    S.roomNames = S.roomNames || []; S.roomNames.push({p: [(x0 + x1) / 2, (y0 + y1) / 2], name: it[0]});
+    save(); drawPlan(); toast(it[0] + "（" + fmt(w) + "×" + fmt(h) + "）を入れました。壁は選んで動かせます");
+  }
+  /* ---------- ⑤ 家具 ---------- */
+  function fAt(m){ var F = S.furn434 || []; for (var i = F.length - 1; i >= 0; i--){ var f = F[i], w = f.r ? f.h : f.w, h = f.r ? f.w : f.h; if (m[0] >= f.x - w / 2 && m[0] <= f.x + w / 2 && m[1] >= f.y - h / 2 && m[1] <= f.y + h / 2) return i; } return -1; }
+  /* ---------- 図面に描く（家具・チェックの丸）。view432 の後に毎回 ---------- */
+  function paint(){
+    try {
+      var sv = document.getElementById("plan"); if (!sv) return; var old = sv.querySelector("#f434"); if (old) old.remove();
+      if (!onM()) return;
+      var ctm = sv.getScreenCTM(); if (!ctm || !ctm.a) return; var k = 1 / ctm.a, a = toMM([0, 0]), c = toMM([100, 100]), sx = 100 / (c[0] - a[0]), sy = 100 / (c[1] - a[1]);
+      var P = function(x, y){ return [(x - a[0]) * sx, (y - a[1]) * sy]; }, g = document.createElementNS(NS, "g"); g.id = "f434"; g.setAttribute("pointer-events", "none");
+      (S.furn434 || []).forEach(function(f, i){
+        var w = f.r ? f.h : f.w, h = f.r ? f.w : f.h, q0 = P(f.x - w / 2, f.y - h / 2), q1 = P(f.x + w / 2, f.y + h / 2), on = i === fsel;
+        g.insertAdjacentHTML("beforeend", '<rect x="' + q0[0].toFixed(1) + '" y="' + q0[1].toFixed(1) + '" width="' + (q1[0] - q0[0]).toFixed(1) + '" height="' + (q1[1] - q0[1]).toFixed(1) + '" rx="' + (3 * k).toFixed(1) + '" fill="' + (/ベッド/.test(f.n) ? "rgba(91,127,168,.22)" : "rgba(165,131,92,.22)") + '" stroke="' + (on ? "#E8742C" : (/ベッド/.test(f.n) ? "#5b7fa8" : "#a5835c")) + '" stroke-width="' + ((on ? 3 : 1.5) * k).toFixed(2) + '"/>'
+          + '<text x="' + ((q0[0] + q1[0]) / 2).toFixed(1) + '" y="' + ((q0[1] + q1[1]) / 2 + 4 * k).toFixed(1) + '" text-anchor="middle" style="font-size:' + (11 * k).toFixed(2) + 'px;font-weight:800;fill:#37474F">' + f.n + '</text>');
+      });
+      if (mark && Date.now() - mark.t < 6000){ var m = P(mark.p[0], mark.p[1]); g.insertAdjacentHTML("beforeend", '<circle cx="' + m[0].toFixed(1) + '" cy="' + m[1].toFixed(1) + '" r="' + (26 * k).toFixed(1) + '" fill="none" stroke="#C62828" stroke-width="' + (4 * k).toFixed(1) + '"><animate attributeName="opacity" values="1;.3;1" dur="1s" repeatCount="indefinite"/></circle>'); }
+      sv.appendChild(g);
+    } catch(e){}
+  }
+  /* ---------- ボタン ---------- */
+  function chips(){
+    var m = stM(); if (!m) return; var box = document.getElementById("chips434");
+    if (!box){ box = document.createElement("div"); box.id = "chips434"; m.appendChild(box); }
+    if (!onM()){ box.style.display = "none"; return; } box.style.display = "";
+    var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
+    var sig = want.join(",") + "|" + (arm ? arm.kind : "");
+    if (box.dataset.sig !== sig){
+      box.dataset.sig = sig; box.innerHTML = "";
+      var lab = {parts: "🚽 部品", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", del: "消す", done: "OK"};
+      want.forEach(function(w){ var b = document.createElement("button"); b.type = "button"; b.textContent = lab[w]; b.dataset.w = w; if (arm && ((w === "parts" && arm.kind === "part") || (w === "furn" && arm.kind === "furn"))) b.className = "on"; if (w === "del") b.className = "red"; b.onclick = function(e){ e.stopPropagation(); act(w); }; box.appendChild(b); });
+    }
+    var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
+  }
+  function act(w){
+    if (w === "check") return showCheck();
+    if (w === "cust") return cust();
+    if (w === "parts" || w === "furn"){
+      if (arm){ arm = null; chips(); return; }
+      var L = w === "parts" ? PARTS : FURN, h = "<h3>" + (w === "parts" ? "部品をえらんで、置く所をタップ" : "家具をえらんで、置く所をタップ（見積には入りません）") + '</h3><div class="gr">';
+      L.forEach(function(it, i){ h += '<button type="button" data-i="' + i + '">' + it[0] + '<br><small style="font-weight:700">' + fmt(it[1]) + "×" + fmt(it[2]) + "</small></button>"; });
+      h += '</div><button class="btn sub" type="button" id="pk434c" style="width:100%;margin-top:8px">やめる</button>';
+      var mb = sheet(h); mb.querySelector("#pk434c").onclick = closeSheet;
+      mb.querySelectorAll("[data-i]").forEach(function(b){ b.onclick = function(){ arm = {kind: w === "parts" ? "part" : "furn", it: L[+b.dataset.i]}; closeSheet(); try { if (HB.__partDrawOff) HB.__partDrawOff(true); } catch(e){} toast(arm.it[0] + "：置く所をタップ"); chips(); }; });
+      return;
+    }
+    var F = S.furn434 || [];
+    if (w === "rot" && F[fsel]){ pushUndo(); F[fsel].r = F[fsel].r ? 0 : 1; save(); drawPlan(); }
+    if (w === "del" && F[fsel]){ pushUndo(); F.splice(fsel, 1); fsel = -1; save(); drawPlan(); }
+    if (w === "done"){ fsel = -1; drawPlan(); }
+    chips();
+  }
+  /* 置く・家具を選ぶ・動かす（図面のタップより先に受ける） */
+  function hook(){
+    var sl = document.getElementById("slotM"); if (!sl || sl.__h434) return; sl.__h434 = true;
+    sl.addEventListener("pointerdown", function(e){
+      if (!onM() || (e.target.closest && e.target.closest("button,#chips434"))) return;
+      var m; try { m = toMM(planPt(e)); } catch(er){ return; }
+      if (arm){
+        e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+        var it = arm.it, kind = arm.kind; arm = null;
+        if (kind === "part") placePart(it, m);
+        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; save(); drawPlan(); toast("指で動かせます。↻で回す"); }
+        chips(); return;
+      }
+      var i = fAt(m);
+      if (i >= 0){
+        e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+        fsel = i; var f = S.furn434[i]; drag = {id: e.pointerId, dx: f.x - m[0], dy: f.y - m[1], moved: false};
+        try { sl.setPointerCapture(e.pointerId); } catch(er){} chips(); drawPlan(); return;
+      }
+      if (fsel >= 0){ fsel = -1; chips(); drawPlan(); }
+    }, true);
+    sl.addEventListener("pointermove", function(e){
+      if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); e.stopImmediatePropagation();
+      var m; try { m = toMM(planPt(e)); } catch(er){ return; } var f = S.furn434[fsel]; if (!f) return;
+      if (!drag.moved){ pushUndo(); drag.moved = true; }
+      f.x = Math.round((m[0] + drag.dx) / 50) * 50; f.y = Math.round((m[1] + drag.dy) / 50) * 50; paint();
+    }, true);
+    var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); var mv = drag.moved; drag = null; if (mv){ save(); drawPlan(); } };
+    sl.addEventListener("pointerup", up, true); sl.addEventListener("pointercancel", up, true);
+  }
+  /* ---------- ⑥ お客さん用 ---------- */
+  function custSvg(){
+    var b = bbox(), Wd = 680, sc = Math.min((Wd - 80) / b.w, 640 / b.h), ox = 40, oy = 90, P = function(x, y){ return [ox + (x - b.x0) * sc, oy + (y - b.y0) * sc]; }, p = pts(), g = "";
+    var H = Math.round(oy + b.h * sc + 80);
+    g += '<rect width="' + Wd + '" height="' + H + '" fill="#fff"/>';
+    g += '<text x="' + Wd / 2 + '" y="44" text-anchor="middle" style="font-size:26px;font-weight:900;fill:#1d2a3a">' + ((S.genba || "").replace(/[<>&]/g, "") || "間取り案") + '</text>';
+    g += '<polygon points="' + p.map(function(q){ return P(q[0], q[1]).join(","); }).join(" ") + '" fill="#fff" stroke="#1d2a3a" stroke-width="6"/>';
+    (S.parts2D || []).forEach(function(z){ try { if (pState(z) === "remove") return; } catch(e){} var a = P(z.x1, z.y1), c = P(z.x2, z.y2); g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + c[0] + '" y2="' + c[1] + '" stroke="#1d2a3a" stroke-width="3.5"/>'; });
+    (S.sashes || []).forEach(function(sa){ if (!sa.drawn || !sa.host) return; var seg = hostSeg(sa.host); if (!seg) return; var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L], p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), A = P(a[0] + u[0] * p0, a[1] + u[1] * p0), B = P(a[0] + u[0] * (p0 + w), a[1] + u[1] * (p0 + w)), win = typeOf(sa) === "win";
+      g += '<line x1="' + A[0] + '" y1="' + A[1] + '" x2="' + B[0] + '" y2="' + B[1] + '" stroke="' + (win ? "#7fb2e5" : "#fff") + '" stroke-width="' + (win ? 5 : 7) + '"/>'; });
+    (S.furn434 || []).forEach(function(f){ var w = f.r ? f.h : f.w, h = f.r ? f.w : f.h, a = P(f.x - w / 2, f.y - h / 2); g += '<rect x="' + a[0] + '" y="' + a[1] + '" width="' + w * sc + '" height="' + h * sc + '" rx="4" fill="#f1ebe3" stroke="#b9a184" stroke-width="1.5"/>'; });
+    var R = R0(); R.rooms.forEach(function(r){ if (r.area < 1) return; var i0 = 1e9, i1 = -1; r.cells.forEach(function(cc){ var ii = cc % R.NX; if (ii < i0) i0 = ii; if (ii > i1) i1 = ii; }); var wpx = (i1 - i0 + 1) * R.st * sc - 8;
+      var c = P(r.p[0], r.p[1]), nm = nameOf(r, R), fs = Math.max(10, Math.min(20, wpx / ([...nm].length * 1.05))), fs2 = Math.min(16, fs * 0.8);
+      g += '<text x="' + c[0] + '" y="' + c[1] + '" text-anchor="middle" style="font-size:' + fs.toFixed(1) + 'px;font-weight:900;fill:#1d2a3a">' + nm + '</text>'; if (r.area >= 3) g += '<text x="' + c[0] + '" y="' + (c[1] + fs2 + 6) + '" text-anchor="middle" style="font-size:' + fs2.toFixed(1) + 'px;fill:#555">' + (r.area / 1.62).toFixed(1) + '畳</text>'; });
+    var A = areaMM() / 1e6; g += '<text x="' + Wd / 2 + '" y="' + (H - 30) + '" text-anchor="middle" style="font-size:17px;fill:#37474F">延床 ' + A.toFixed(1) + '㎡（' + (A / 3.30579).toFixed(1) + '坪）</text>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + Wd + ' ' + H + '" width="' + Wd + '" height="' + H + '" font-family="sans-serif">' + g + '</svg>';
+  }
+  function toPng(svg, cb){ var img = new Image(); img.onload = function(){ var c = document.createElement("canvas"); c.width = img.width * 2; c.height = img.height * 2; var x = c.getContext("2d"); x.scale(2, 2); x.drawImage(img, 0, 0); c.toBlob(cb, "image/png"); }; img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg); }
+  function cust(){
+    var svg = custSvg(), d = document.createElement("div"); d.id = "cv434";
+    d.innerHTML = '<div style="flex:1;overflow:auto;padding:8px">' + svg.replace('width="680"', 'width="100%"').replace(/height="\d+" font/, 'font') + '</div><div class="bar"><button type="button" id="cv434s">画像で保存</button><button type="button" class="line" id="cv434l">LINEで送る</button><button type="button" id="cv434c">閉じる</button></div>';
+    document.body.appendChild(d);
+    var nm = ((S.genba || "間取り") + "_間取り案.png").replace(/[\\/:*?"<>|]/g, "");
+    var dl = function(bl){ var a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = nm; document.body.appendChild(a); a.click(); a.remove(); };
+    d.querySelector("#cv434c").onclick = function(){ d.remove(); };
+    d.querySelector("#cv434s").onclick = function(){ toPng(svg, dl); };
+    d.querySelector("#cv434l").onclick = function(){ toPng(svg, function(bl){ try { var f = new File([bl], nm, {type: "image/png"}); if (navigator.canShare && navigator.canShare({files: [f]})){ navigator.share({files: [f], title: nm}).catch(function(){}); return; } } catch(e){} dl(bl); toast("画像を保存しました。LINEで送ってください"); }); };
+  }
+  HB.__check434 = check; HB.__custSvg434 = custSvg;
+  try { if (typeof drawPlan === "function" && !drawPlan.__f434){ var d0 = drawPlan; window.drawPlan = function(){ var r = d0.apply(this, arguments); try { paint(); chips(); } catch(e){} return r; }; window.drawPlan.__f434 = true; } } catch(e){}
+  setInterval(function(){ try { hook(); chips(); var sv = document.getElementById("plan"); if (onM() && sv && !sv.querySelector("#f434") && ((S.furn434 || []).length || mark)) paint(); if (mark && Date.now() - mark.t > 6000){ mark = null; paint(); } } catch(e){} }, 400);
+})();
+</script>
