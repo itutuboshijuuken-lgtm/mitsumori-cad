@@ -32843,23 +32843,52 @@ lab391
   }
 
   /* 天井の野縁：見積の tenjo() と同じ式を部屋の寸法で回す */
-  function noji390(w, h){
+  function noji390(w, h, kataO){
     if (!(w > 0 && h > 0)) return null;
     var sec = S.tenjoSec === 30 ? 30 : 36;
     var PIL = +S.pil || 105, wall = S.ceilOrder === "wall", bd = wall ? (gbParse(S.gbW)[1] || 12.5) : 0;
     var cut = PIL + 2 * bd, wf = w - cut, hf = h - cut, T = 45, TL = +S.tsuriLen || 250;
     if (wf <= 0 || hf <= 0) return null;
-    var kata = S.ceilKata === "chote" ? "chote" : "tante";
+    var kata = kataO || (S.ceilKata === "chote" ? "chote" : "tante");
     var sh = Math.min(wf, hf), lo = Math.max(wf, hf);
     var nLen = kata === "tante" ? sh : lo, nSpan = kata === "tante" ? lo : sh;
     var nN = Math.max(0, Math.ceil(nSpan / 303) - 1), nU = Math.max(0, Math.ceil(nLen / 910) - 1);
     var lN = nLen - 2 * T, lU = nSpan - 2 * T, nT = nU * Math.max(0, Math.ceil(nSpan / 910) - 1);
-    return {sec: sec, fuchi: [nSpan, nSpan, lN, lN],
+    return {sec: sec, kata: kata, wf: wf, hf: hf, wall: wall, cut: cut, fuchi: [nSpan, nSpan, lN, lN],
       noji: nN > 0 ? {len: lN, n: nN} : null,
       uke: nU > 0 ? {len: lU, n: nU} : null,
       tsuri: nT > 0 ? {len: TL, n: nT} : null};
   }
 
+  /* CAD-414（Opus）：部屋ごとの野縁の向き。S.ceilDir413[部屋] が無ければ「4m材のロスが少ない向き」を自動で選ぶ（同じなら全体の設定） */
+  function stock414(pieces){
+    var bins = []; pieces.slice().sort(function(a, b){ return b - a;}).forEach(function(L){ if (L > 4000) return; var i = bins.findIndex(function(r){ return r >= L + 5;}); if (i >= 0) bins[i] -= L + 5; else bins.push(4000 - L - 5);});   /* 鋸の刃の分 5mm */
+    return {n: bins.length, rest: Math.round(bins.reduce(function(a, b){ return a + Math.max(0, b);}, 0))};
+  }
+  function pieces414(nj){ var p = nj.fuchi.slice(); if (nj.noji) for (var i = 0; i < nj.noji.n; i++) p.push(nj.noji.len); if (nj.uke) for (var j = 0; j < nj.uke.n; j++) p.push(nj.uke.len); return p; }
+  function nojiRoom414(rm){
+    var key = rm.lbl + ":" + rm.w + "x" + rm.h, set = (S.ceilDir413 || {})[key];
+    if (set === "tante" || set === "chote"){ var r0 = noji390(rm.w, rm.h, set); if (r0){ r0.key = key; r0.auto = false; r0.stock = stock414(pieces414(r0)); } return r0; }
+    var a = noji390(rm.w, rm.h, "tante"), c = noji390(rm.w, rm.h, "chote"); if (!a || !c) return a || c;
+    a.stock = stock414(pieces414(a)); c.stock = stock414(pieces414(c));
+    var pick = a.stock.n !== c.stock.n ? (a.stock.n < c.stock.n ? a : c) : a.stock.rest !== c.stock.rest ? (a.stock.rest < c.stock.rest ? a : c) : (S.ceilKata === "chote" ? c : a);
+    pick.key = key; pick.auto = true; return pick;
+  }
+  /* 部屋の天井下地の図：柱面の内側。縁（太）・野縁（細・@303）・野縁受け（点線・@910）、寸法 */
+  function nojiSvg414(nj){
+    var W = 300, Hm = 190, m = 26, sc = Math.min((W - 2 * m) / nj.wf, (Hm - 2 * m) / nj.hf), w = nj.wf * sc, h = nj.hf * sc, x0 = (W - w) / 2, y0 = m, T = 45 * sc;
+    var horizLong = nj.wf >= nj.hf, nojiAlongX = (nj.kata === "tante") ? !horizLong : horizLong;   /* 野縁が x 方向に伸びるか */
+    var g = "<svg viewBox='0 0 " + W + " " + (h + 2 * m) + "' style='width:100%;max-width:420px;display:block;margin:4px 0;background:#fff;border:1px solid #ddd'>";
+    g += "<rect x='" + x0 + "' y='" + y0 + "' width='" + w + "' height='" + h + "' fill='#fafafa' stroke='#999' stroke-width='0.8'/>";
+    g += "<rect x='" + (x0 + T / 2) + "' y='" + (y0 + T / 2) + "' width='" + (w - T) + "' height='" + (h - T) + "' fill='none' stroke='#111' stroke-width='" + Math.max(1.6, T) + "' opacity='0.85'/>";
+    var span = nojiAlongX ? nj.hf : nj.wf, len = nojiAlongX ? nj.wf : nj.hf, k;
+    if (nj.uke) for (k = 1; k <= nj.uke.n; k++){ var pu = len * k / (nj.uke.n + 1) * sc; g += nojiAlongX ? "<line x1='" + (x0 + pu) + "' y1='" + (y0 + T) + "' x2='" + (x0 + pu) + "' y2='" + (y0 + h - T) + "' stroke='#0a58ca' stroke-width='2' stroke-dasharray='5 3'/>" : "<line x1='" + (x0 + T) + "' y1='" + (y0 + pu) + "' x2='" + (x0 + w - T) + "' y2='" + (y0 + pu) + "' stroke='#0a58ca' stroke-width='2' stroke-dasharray='5 3'/>"; }
+    if (nj.noji) for (k = 1; k <= nj.noji.n; k++){ var pn = Math.min(span - 45, k * 303) * sc; g += nojiAlongX ? "<line x1='" + (x0 + T) + "' y1='" + (y0 + pn) + "' x2='" + (x0 + w - T) + "' y2='" + (y0 + pn) + "' stroke='#111' stroke-width='0.9'/>" : "<line x1='" + (x0 + pn) + "' y1='" + (y0 + T) + "' x2='" + (x0 + pn) + "' y2='" + (y0 + h - T) + "' stroke='#111' stroke-width='0.9'/>"; }
+    g += "<text x='" + (x0 + w / 2) + "' y='" + (y0 - 8) + "' text-anchor='middle' style='font-size:10px;fill:#111'>" + n390(nj.wf) + "</text>";
+    g += "<text x='" + (x0 - 8) + "' y='" + (y0 + h / 2) + "' text-anchor='middle' transform='rotate(-90 " + (x0 - 8) + " " + (y0 + h / 2) + ")' style='font-size:10px;fill:#111'>" + n390(nj.hf) + "</text>";
+    g += "<text x='" + (x0 + w / 2) + "' y='" + (y0 + h + 16) + "' text-anchor='middle' style='font-size:9px;fill:#444'>" + (nj.wall ? "壁先行（柱面−ボード厚×2）" : "天井先行（柱面）") + "　細線＝野縁@303　青点線＝野縁受け@910</text>";
+    return g + "</svg>";
+  }
   /* 長さ方向の割り付け（パターンA：両端の余りは同じ。stag=true の列はジョイントを910ずらす） */
   function segsA390(lo, stag){
     var nF = Math.floor(lo / 1820), rem = lo - nF * 1820, e = rem / 2, s = [], i;
@@ -33006,14 +33035,17 @@ lab391
     var anyNoji = false;
     roomSecs.forEach(function(rs){
       if (rf && rs.rm.cc !== "frame") return;
-      var nj = noji390(rs.rm.w, rs.rm.h);
+      var nj = nojiRoom414(rs.rm);
       if (!nj) return;
       anyNoji = true;
-      h += "<div class='pF'>" + esc390(rs.rm.lbl) + (rs.fl ? "（" + esc390(rs.fl) + "）" : "") + " <span class='pS'>" + n390(rs.rm.w) + "×" + n390(rs.rm.h) + "</span></div>";
+      h += "<div class='pF'>" + esc390(rs.rm.lbl) + (rs.fl ? "（" + esc390(rs.fl) + "）" : "") + " <span class='pS'>芯々 " + n390(rs.rm.w) + "×" + n390(rs.rm.h) + "・下地の内々 " + n390(nj.wf) + "×" + n390(nj.hf) + "</span></div>";
+      h += "<div class='pM'><button type='button' data-cd413='" + esc390(nj.key) + "' data-cur='" + nj.kata + "' style='font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid #0a58ca;background:#e8f0fe;color:#0a58ca'>野縁の向き：" + (nj.kata === "tante" ? "短手" : "長手") + (nj.auto ? "（自動・ロスが少ない方）" : "（手で選んだ）") + "　▶ 切り替え</button></div>";
+      h += nojiSvg414(nj);
       h += "<div class='pM'><b>縁</b> <span class='pS'>" + nj.sec + "×45</span><br>" + lenTxt390(nj.fuchi) + "</div>";
       if (nj.noji) h += "<div class='pM'><b>野縁</b> <span class='pS'>" + nj.sec + "×45・@303</span><br>" + n390(nj.noji.len) + " × " + nj.noji.n + "本</div>";
       if (nj.uke) h += "<div class='pM'><b>野縁受け</b> <span class='pS'>" + nj.sec + "×45・@910</span><br>" + n390(nj.uke.len) + " × " + nj.uke.n + "本</div>";
       if (nj.tsuri) h += "<div class='pM'><b>吊木</b> <span class='pS'>" + nj.sec + "×45・@910×910</span><br>" + n390(nj.tsuri.len) + " × " + nj.tsuri.n + "本</div>";
+      if (nj.stock) h += "<div class='pM'><b>木取り</b> <span class='pS'>縁・野縁・野縁受け</span><br>4m材 " + nj.stock.n + "本（端材の合計 " + n390(nj.stock.rest) + "）</div>";
     });
     if (!anyNoji) h += "<div class='pM'>（部屋が取れていないか、天井下地の工事がありません）</div>";
     h += "<div class='pN'>野縁は見積と同じ式で部屋ごとに計算しています。新築の見積は家全体で計算しているため、本数は見積と合わない事があります。</div>";
@@ -33035,6 +33067,11 @@ lab391
     if (merged390) h += "<div class='pN'>部屋ごとの寸法（野縁・ボード）は、今開いている階の部屋で計算しています。もう1つの階は、階を切り替えてから開き直してください。</div>";
 
     box.innerHTML = h;
+    if (!box.__cd414){ box.__cd414 = true; box.addEventListener("click", function(e){ var b = e.target && e.target.closest ? e.target.closest("[data-cd413]") : null; if (!b) return;
+      var key = b.getAttribute("data-cd413"), cur = b.getAttribute("data-cur"), m = Object.assign({}, S.ceilDir413 || {}), was = m[key];
+      /* 押すと反対の向き（手で選んだ）、もう一度押すと自動（ロスが少ない方）に戻る */
+      if (!was) m[key] = cur === "tante" ? "chote" : "tante"; else delete m[key];
+      S.ceilDir413 = m; try { save(); } catch(er){} render390(); }); }
     var lg = document.getElementById("pvLegend");
     if (lg) lg.textContent = "プレカット図面：カット寸法と本数です。見積は変わりません。";
   }
