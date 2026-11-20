@@ -638,7 +638,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg" id="trSeg"><button data-tr="menzai" type="button">面材（構造用合板）</button><button data-tr="suji" type="button">筋交い</button></div>
     <div id="trBox"></div>
     <h2>外壁</h2>
-    <div class="seg" id="ghSeg"><button data-gh="siding" type="button">サイディング</button><button data-gh="yakisugi" type="button">焼杉</button><button data-gh="nuri" type="button">塗り壁</button></div>
+    <div class="seg" id="ghSeg"><button data-gh="siding" type="button">サイディング</button><button data-gh="yakisugi" type="button">焼杉</button><button data-gh="nuri" type="button">塗り壁</button><button data-gh="metal" type="button">金属サイディング</button></div>
     <p class="hint" id="ghHint"></p>
     <div id="gaiBox"></div>
     </div>
@@ -1069,6 +1069,11 @@ const WORK = [
   ["tanzaku", "短冊金物（ボルト・ビス共）（仮）", "円/枚", 0, 500],
   ["kisoNuno", "布基礎（フーチング・立ち上がり）（仮）", "円/m", 0, 25000],
   /* CAD-408：柱頭・柱脚の金物（N値計算・告示1460号の表の(い)〜(ぬ)）。単価はすべて仮 */
+  /* CAD-410（Opus）：新しい仮単価。スレートはネットの相場（4,500〜8,000円/㎡）の中ほど。他は出典なし・今の単価表の並びからの目安 */
+  ["roofSlate", "屋根（スレート・ルーフィング・役物共）（仮）", "円/㎡", 0, 6000], ["metalSiding", "外壁 金属サイディング（仮）", "円/㎡", 0, 9000],
+  ["hiuchiKana", "火打金物（火打梁のボルト共）（仮）", "円/本", 0, 400], ["munaKanki", "棟換気（換気棟・材工）（仮）", "円/m", 0, 9000],
+  ["nokiKanki", "軒裏換気（軒天の換気部材・材工）（仮）", "円/m", 0, 1500], ["kasetsuToilet", "仮設トイレ（レンタル・月）（仮）", "円/月", 0, 15000],
+  ["kasetsuToiletSet", "仮設トイレ 設置・撤去（運搬）（仮）", "円/回", 0, 20000],
   ["kanaI", "柱頭柱脚 (い) かすがい（仮）", "円/個", 0, 150], ["kanaRo", "柱頭柱脚 (ろ) かど金物 CP・L（仮）", "円/個", 0, 300],
   ["kanaHa", "柱頭柱脚 (は) 山形プレート VP（仮）", "円/個", 0, 400], ["kanaNi", "柱頭柱脚 (に) 羽子板ボルト（仮）", "円/個", 0, 800],
   ["kanaHo", "柱頭柱脚 (ほ) 羽子板ボルト＋スクリュー釘（仮）", "円/個", 0, 1000], ["kanaHe", "柱頭柱脚 (へ) ホールダウン10kN（仮）", "円/個", 0, 1800],
@@ -1612,7 +1617,8 @@ function danStd266(key){ const s = DANSTD266[region266()]; return key === "danF"
 function danActive266(){ return !!S.dan266 || (!!S.danNew266 && S.mode === "zo"); }
 function danT266(key){
   if (S.dan266){ const v = key === "danF" ? S.danFT : key === "danW" ? S.danWT : S.danCT; if (v > 0) return v; }
-  if (S.danNew266 && S.mode === "zo") return danStd266(key);
+  if (S.danNew266 && S.mode === "zo"){ const g = +S.dannetsuGrade || 4, f = g >= 6 ? {danF: 1.6, danW: 1.8, danC: 1.45} : g === 5 ? {danF: 1.25, danW: 1.25, danC: 1.2} : {danF: 1, danW: 1, danC: 1};   /* CAD-410：断熱等級5・6は標準の厚さを増す目安（壁は等級5で高性能GW105、等級6で付加断熱を足した厚さの目安。窓の性能でも変わる・要確認） */
+    return Math.round(danStd266(key) * f[key] / 5) * 5; }
   return DANLEG266[key];
 }
 function danMat266(){ return S.dan266 && S.danFMat === "fuku" ? "fuku" : "xps"; }
@@ -5781,7 +5787,7 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   segBind("[data-cl]", "cloth", v => v === "1", drawSpec);
   segBind("[data-pc]", "precut", v => v === "1", drawSpec);
   segBind("[data-gh]", "gaiheki", v => v, drawSpec);
-  $("ghHint").textContent = S.gaiheki === "siding" ? "防水シート・胴縁＋サイディング＋コーナー役物＋コーキングを㎡で、水切りをmで出します。" : S.gaiheki === "yakisugi" ? "防水シート・胴縁＋焼杉＋役物を㎡で、水切りをmで出します。" : "塗り壁を㎡で、水切りをmで出します。";
+  $("ghHint").textContent = S.gaiheki === "metal" ? "防水シート・胴縁＋金属サイディング＋コーナー役物を㎡で、水切りをmで出します。" : S.gaiheki === "siding" ? "防水シート・胴縁＋サイディング＋コーナー役物＋コーキングを㎡で、水切りをmで出します。" : S.gaiheki === "yakisugi" ? "防水シート・胴縁＋焼杉＋役物を㎡で、水切りをmで出します。" : "塗り壁を㎡で、水切りをmで出します。";
   renderGai();
   $("pcHint").textContent = S.precut ? "材木は単価表の材木の値段で全部出します（工場で長さ通りに切って配達する前提で、継ぎの見込みと4mの制限はかけません）。違いは「プレカット加工費」と「プレカット運搬費」の行だけです（加工費は坪単価×延床坪数。最低額を設定した場合は、その額が下限になります）。大工手間は「基本（坪単価×延床）＋箇所ごと」で、刻みも基本に含まれます。" : "単価表の材木の値段で全部出します。大工手間は「基本（坪単価×延床）＋箇所ごと」で出します（刻みも基本に含まれます）。";   /* CAD-391：文言を新しい方式に */
   if (S.tr === "suji"){
@@ -5798,6 +5804,7 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
     box.innerHTML = row("梁の材", "hariMat", [["__u", "米松"], ["glu", "集成材"]])
       + row("基礎の種類", "kisoType", [["__u", "ベタ基礎"], ["nuno", "布基礎"]])
       + row("太陽光パネル", "solar", [["__u", "なし"], ["true", "あり"]])
+      + row("断熱等級（新築・増築）", "dannetsuGrade", [["__u", "等級4"], ["5", "等級5"], ["6", "等級6"]])
       + `<details style="margin-top:8px"><summary class="hint">細かい設定（地盤・風）</summary>`
       + row("地盤", "softGround", [["__u", "ふつう"], ["true", "軟弱（役所の指定）"]])
       + row("風の強さ", "windC", [["__u", "ふつう"], ["60", "強い"], ["75", "とても強い"]]) + `</details>`
@@ -6331,7 +6338,8 @@ function calc(){
     try {
       const ns = [];
       if (zoAttached()) ns.push({name: "既存の解体工事", spec: "増築の取り合いで、既存を壊す工事は", note: "この見積に含まれていません"});
-      if (zoBeta()) ns.push(S.kisoType === "nuno" ? {name: "基礎の形", spec: "基礎は、布基礎（床下は防湿コンクリート）として見積もっています", note: "ベタ基礎は「基礎の種類」で切り替えられます"} : {name: "基礎の形", spec: "基礎は、ベタ基礎として見積もっています", note: "布基礎は「基礎の種類」で切り替えられます"});
+      if (zoBeta()) if (S.danNew266 && S.mode === "zo") ns.push({name: "断熱", spec: `断熱等級${+S.dannetsuGrade || 4}の目安の厚さで見積もっています（地域${region266()}）`, note: "窓の性能で等級は変わります。設計の確認が必要です"});
+      ns.push(S.kisoType === "nuno" ? {name: "基礎の形", spec: "基礎は、布基礎（床下は防湿コンクリート）として見積もっています", note: "ベタ基礎は「基礎の種類」で切り替えられます"} : {name: "基礎の形", spec: "基礎は、ベタ基礎として見積もっています", note: "布基礎は「基礎の種類」で切り替えられます"});
       if (ns.length && C && Array.isArray(C.rows) && !C.rows.some(r => r.zoNote)) C.rows.unshift({grp: zoAttached() ? "ご注意（増築）" : "ご注意"}, ...ns.map(n => Object.assign({qty: "", cost: 0, zoNote: true}, n)));
     } catch(e){}
 
@@ -6341,7 +6349,7 @@ function calc(){
       if (S.mode === "zo" && C && Array.isArray(C.rows) && !C.rows.some(r => r.intNote)){
         const R = roof(), zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
         const rows = [];
-        if (zi.rows > 0){ const need = beamNeeded(R.W), ipn = intPostList().n, G402 = intGirderH(); rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${S.roofW === "light" ? "軽い屋根" : "瓦屋根"}では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${ipn}本・立ち上がり${zi.rows}列を入れています${G402.msg}`, qty: "", cost: 0, note: (need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です") + (G402.warn ? `　⚠ ${G402.warn}` : ""), intNote: true, zoNote: true}); }  /* CAD-344：柱の本数は intPostList（間仕切りとの交点だけ） */
+        if (zi.rows > 0){ const need = beamNeeded(R.W), ipn = intPostList().n, G402 = intGirderH(); rows.push({name: "内部の柱・基礎", spec: `梁間${fmt(R.W)}は、梁せい${fmt(S.hari)}・${roofNm410()}屋根では飛ばせない目安（上限${fmt(zi.lim)}）→ 内部の柱${ipn}本・立ち上がり${zi.rows}列を入れています${G402.msg}`, qty: "", cost: 0, note: (need ? `梁せい${need}にすると不要です` : "梁を大きくすると不要です") + (G402.warn ? `　⚠ ${G402.warn}` : ""), intNote: true, zoNote: true}); }  /* CAD-344：柱の本数は intPostList（間仕切りとの交点だけ） */
         if (rows.length){ let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; }); if (last >= 0) C.rows.splice(last + 1, 0, ...rows); else C.rows.unshift({grp: "ご注意"}, ...rows); }
       }
     } catch(e){}
@@ -6350,7 +6358,7 @@ function calc(){
     try {
       if (S.mode === "zo" && (S.tr === "suji" || S.tr === "menzai") && C && Array.isArray(C.rows) && !C.rows.some(r => r.sjNote)){
         const w = sujiWall(), n = S.tr === "menzai" ? w.n : (S.sujiN ?? w.n);
-        const base = `${w.two ? "2階建の1階" : "平屋"}・${S.roofW === "light" ? "ガルバ屋根" : "瓦屋根"}・${S.gaiheki === "nuri" ? "塗り壁" : "サイディング等"} ${w.coef}cm/㎡ × 床面積${fmt(w.area, 1)}㎡ ＝ 必要壁量${fmt(w.req)}cm（縦・横それぞれ・2025年の新基準）`;
+        const base = `${w.two ? "2階建の1階" : "平屋"}・${roofNm410()}屋根・${S.gaiheki === "nuri" ? "塗り壁" : S.gaiheki === "metal" ? "金属サイディング" : "サイディング等"} ${w.coef}cm/㎡ × 床面積${fmt(w.area, 1)}㎡ ＝ 必要壁量${fmt(w.req)}cm（縦・横それぞれ・2025年の新基準）`;
         const windT = w.wind ? `。風の力（見付面積×${+S.windC || 50}）の方が大きいので 横${fmt(w.rx)}・縦${fmt(w.ry)}cmで計算` : "";
         const colT = w.col120 ? "　⚠ 2階建の1階・瓦＋塗り壁は、1階の柱（杉）は120角が目安です（ヒノキ等の強い材なら105角でも可の場合あり）" : "";
         const tail = windT + (w.menzai ? ` → 面材（倍率2.5）で 横${fmt(w.hx)}・縦${fmt(w.hy)}cm${n > 0 ? `、足りない分は筋交い${n}本（横${w.nx}・縦${w.ny}）` : "で足ります"}（余裕1.2倍）` : ` → 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`);
@@ -7599,6 +7607,8 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
     if (S.kisoType === "nuno"){ const wN = workP("kisoNuno"), wB = workP("kisoBoshitsu"); rows.push({name: `基礎（布基礎・立ち上がり${fmt(S.kiso)}）`, spec: `外周 ${fmt(perK / 1000, 1)}m×${fmt(wN.p)} ＋ 床下の防湿コンクリート ${fmt(area, 1)}㎡×${fmt(wB.p)}`, qty: "", cost: wN.p * perK / 1000 + wB.p * area, avg: wN.avg || wB.avg, fix: {kind: "work", key: "kisoNuno"}}); } else
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
+    { const mo410 = Math.max(1, Math.ceil(area * (two ? 2 : 1) / 3.3058 / 12));   /* CAD-410：仮設トイレの月数＝延床12坪で1か月の目安（新築・増築だけ） */
+      work("kasetsuToilet", `仮設トイレ（${mo410}か月）`, mo410, "月"); work("kasetsuToiletSet", "仮設トイレ 設置・撤去", 1, "回"); }
     { const w3 = workP("kisoPump"); rows.push({name: "基礎 生コン・ポンプ最低料金", spec: `少量の割増 ${fmt(w3.p)}円`, qty: "1式", cost: w3.p, avg: w3.avg, fix: {kind: "work", key: "kisoPump"}}); }   /* CAD-248：生コン・ポンプの最低料金（新設） */
     { const IL406 = intLines406(); if (IL406.kiso.length){ const L2 = IL406.kisoM, nS = IL406.kiso.filter(l => l.sup).length, nK = IL406.kiso.length - nS, wN = workP("kisoNuno"), nuno = S.kisoType === "nuno";   /* CAD-406：基礎伏図と同じ線（intLines406）。桁の下＋区画（20㎡・5460）を割る線。輪郭で切った長さ */
       rows.push({name: "内部の基礎（立ち上がり）", spec: `${nS ? `内部の桁の下${nS}本` : ""}${nS && nK ? "＋" : ""}${nK ? `区画を割る${nK}本（1区画20㎡・長い辺5.46m以内）` : ""} 計${fmt(L2, 1)}m${nuno ? "・布基礎" : ""}`, qty: `${fmt(L2, 1)}m`, cost: (nuno ? wN.p : w2.p) * L2, avg: nuno ? wN.avg : w2.avg, fix: {kind: "work", key: nuno ? "kisoNuno" : "kisoRise"}}); } }
@@ -7615,9 +7625,16 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     const wL = S.sashes.filter(q => sState(q) === "new" && !/室内ドア|クローゼット|玄関|勝手口|シャッター|開口/.test(q.cat) && on(q.wall, q.fl || 1)).reduce((x, q) => x + q.w * q.n, 0), tot = (dL + mL + wL) / 1000;
     if (tot > 0) work("mizukiri", "外壁 水切り" + gaiSfx, tot, "m", `土台 ${fmt(dL / 1000, 1)}m${mL > 0 ? ` ＋ 中間 ${fmt(mL / 1000, 1)}m` : ""} ＋ 窓上 ${fmt(wL / 1000, 1)}m ＝ ${fmt(tot, 1)}m × ${fmt(workP("mizukiri").p)}円`); }
   if (S.gaiheki === "siding"){ work("siding", "外壁 サイディング" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 コーナー役物", wallNet, "㎡"); work("caulk", "外壁 コーキング（目地）", wallNet, "㎡"); }
+  else if (S.gaiheki === "metal"){ work("metalSiding", "外壁 金属サイディング" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 コーナー役物", wallNet, "㎡"); }   /* CAD-410：金属は目地のコーキングが少ないので役物まで */
   else if (S.gaiheki === "yakisugi"){ work("yakisugi", "外壁 焼杉" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 役物", wallNet, "㎡"); }
   else work("nuri", "外壁 塗り壁" + gaiSfx, wallNet, "㎡");
   work(roofKey(), roofLbl("屋根"), roofA, "㎡");
+  /* CAD-410：小屋裏の換気（切妻・片流れ＝棟換気、寄棟＝軒裏換気）と火打梁（外周の角1か所に1本） */
+  try { const pp410 = pts(), nC = pp410.length;
+    if (S.roof === "yose"){ const per410 = pp410.reduce((a, q, i) => a + Math.hypot(pp410[(i + 1) % nC][0] - q[0], pp410[(i + 1) % nC][1] - q[1]), 0) / 1000; work("nokiKanki", "小屋裏換気（軒裏換気）", per410, "m"); }
+    else work("munaKanki", S.roof === "kata" ? "小屋裏換気（片流れの水上 換気部材）" : "小屋裏換気（棟換気）", D / 1000, "m");
+    lum("hari", "火打梁", 90, 90, Array(nC).fill(750), `90×90・外周の角${nC}か所（小屋${two ? "・2階床は剛床" : ""}）`, true); work("hiuchiKana", "火打金物", nC, "本");
+  } catch(e){}
   if (R.mune) work("roofYaku", "棟違い 雨押え・段差の役物", (D + kerA + kerB) / 1000, "m");
   { const kerL = hafu.reduce((x, y) => x + y, 0), na = (eaveLen * S.noki + kerL * S.keraba) / 1e6;
     if (na > 0) work("nokiten", "軒天", na, "㎡", `軒 ${fmt(eaveLen / 1000, 1)}m×${fmt(S.noki / 1000, 2)}m${kerL ? ` ＋ ケラバ ${fmt(kerL / 1000, 1)}m×${fmt(S.keraba / 1000, 2)}m` : ""} ＝ ${fmt(na, 1)}㎡ × ${fmt(workP("nokiten").p)}円`); }
@@ -11429,10 +11446,10 @@ function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
       const anchor = document.getElementById("kisoBeta") || document.getElementById("kisoCh"); if (!anchor) return;
       let b = document.getElementById("colBox");
       if (!b){ b = document.createElement("div"); b.id = "colBox"; anchor.after(b); }
-      const rw = S.roofW === "light" ? "light" : "kawara", md = S.modul === "1000" ? "1000" : "910";
+      const rw = S.roofW === "light" ? "light" : S.roofW === "slate" ? "slate" : "kawara", md = S.modul === "1000" ? "1000" : "910";
       const sig = rw + "|" + md;
       if (b.dataset.sig === sig) return; b.dataset.sig = sig;
-      b.innerHTML = `<h2>屋根の重さ</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button></div>
+      b.innerHTML = `<h2>屋根の重さ</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button><button type="button" data-rw="slate" aria-pressed="${rw === "slate"}">スレート（中）</button></div>
       <p class="hint">屋根の仕上げの金額、小屋梁が飛ばせる長さの目安、壁量の計算に使います。</p>
       <h2>モジュール（柱・間柱の基準）</h2><div class="seg"><button type="button" data-md="910" aria-pressed="${md === "910"}">910ピッチ</button><button type="button" data-md="1000" aria-pressed="${md === "1000"}">1000モジュール</button></div>
       <p class="hint">柱と柱の間は、最大で ${md === "1000" ? "2,000" : "1,820"}mm まで。図面の寸法は変わりません。</p>`;
@@ -11445,8 +11462,11 @@ function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
 </script>
 <script>
 /* ---------- 屋根の仕様（瓦／軽い）と、梁間を飛ばせない時の「内部の柱・桁・基礎」 ---------- */
-function roofKey(){ return (S.mode === "zo" && S.roofW !== "light") ? "roofKawara" : "roofFin"; }
-function roofLbl(n){ return S.mode === "zo" ? n + (S.roofW === "light" ? "（ガルバ）" : "（瓦）") : n; }
+function roofKey(){ return S.mode !== "zo" || S.roofW === "light" ? "roofFin" : S.roofW === "slate" ? "roofSlate" : "roofKawara"; }
+function roofLbl(n){ return S.mode === "zo" ? n + "（" + roofNm410() + "）" : n; }
+/* CAD-410：屋根の重さは3種類（瓦・スレート・ガルバ）。呼び方・荷重はここだけで決める */
+function roofNm410(){ return S.roofW === "light" ? "ガルバ" : S.roofW === "slate" ? "スレート" : "瓦"; }
+function roofQ410(){ return S.roofW === "light" ? 0.9 : S.roofW === "slate" ? 1.1 : 1.5; }
 /* CAD-406（Opus）：梁の材料と、たわみの決まり。
    たわみは平12建告1459号（変形増大係数2を掛けて L/250 以下）に合わせる（以前は L/200 で甘かった）。
    材料は米松（無等級：E=10000・長期fb=1.1/3×28.2=10.3）が標準。S.hariMat==="glu" で集成材（E105-F300：E=10500・fb=11.0）。 */
@@ -11454,7 +11474,7 @@ function beamMat406(){ return S.hariMat === "glu" ? {E: 10500, fb: 11.0, nm: "�
 const DEFL406 = 250;
 // 小屋梁（梁幅105）の、飛ばせる梁間の目安：曲げとたわみ(L/250・変形増大係数2)。上限×0.8（仕口の欠き込み分の余裕）、455mm単位
 function beamLimit(h){
-  const MT = beamMat406(), hh = h || +S.hari || 180, b = 105, E = MT.E, fb = MT.fb, q = S.roofW === "light" ? 0.9 : 1.5, w = q * (+S.hariP || 1820) / 1000;
+  const MT = beamMat406(), hh = h || +S.hari || 180, b = 105, E = MT.E, fb = MT.fb, q = roofQ410(), w = q * (+S.hariP || 1820) / 1000;
   const Z = b * hh * hh / 6, I = b * hh * hh * hh / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * DEFL406));
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
@@ -11606,7 +11626,7 @@ function intPostList(){
    荷重の幅（受け持ち幅＝梁間÷(列数+1)）で計算し直す。柱と柱の間（柱が無ければ壁から壁まで）が飛ばせない時は、柱を足さず
    （部屋の真ん中に独立柱が出るため）梁せいを大きくする。390でも足りない・4m材を超える時は、足りないことを見積に出す（目安）。 */
 function girderLimit402(h, trib, qq){
-  const MT = beamMat406(), b = 105, E = MT.E, fb = MT.fb, q = qq || (S.roofW === "light" ? 0.9 : 1.5), w = q * Math.max(910, trib) / 1000;
+  const MT = beamMat406(), b = 105, E = MT.E, fb = MT.fb, q = qq || roofQ410(), w = q * Math.max(910, trib) / 1000;
   const Z = b * h * h / 6, I = b * h * h * h / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * DEFL406));
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
@@ -11657,7 +11677,7 @@ function intGirderH(){
    筋交い 45×105 の壁倍率は2（たすき掛けは4）、1本が受け持つ長さは910mm。余裕1.2倍。
    面材（構造用合板9mm・N50@150）の壁倍率は2.5。開口の無い所で、幅910以上の所だけ数える。足りない分は筋交いを足す。 ---------- */
 function wallCoef406(fl){
-  const R406 = roof(), two = R406.two, X = (S.roofW === "light" ? 0.81 : 1.50) + (S.solar ? 0.20 : 0),   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
+  const R406 = roof(), two = R406.two, X = (S.roofW === "light" ? 0.81 : S.roofW === "slate" ? 1.20 : 1.50) + (S.solar ? 0.20 : 0),   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
   /* CAD-409.1：2階建の2階は Ai を掛ける（Ai＝1＋(1/√α−α)×2T/(1＋3T)、α＝2階の重さ÷全体、T＝0.03h）。早見表の2階（瓦26・金属18）と一致 */
   if (two && fl === 2){ const a = (X + 0.5 * Y) / (X + 1.5 * Y + F), h = Math.max(5, ((R406.Hk || 6000) + (R406.W || 0) / 2 * (+S.k || 4) / 10) / 1000), T = 0.03 * h, A2 = 1 + (1 / Math.sqrt(a) - a) * 2 * T / (1 + 3 * T);
     return Math.round(10.204 * A2 * (X + 0.5 * Y) * (S.softGround ? 1.5 : 1)); }
@@ -11789,7 +11809,7 @@ function wallSegs406(fl){
 function sujiWall(){
   const rq = wallReq406(), two = roof().two, WS = wallSegs406();
   const base = {area: rq.area, two, coef: rq.coef, req: rq.req, rx: rq.rx, ry: rq.ry, windX: rq.wd.x, windY: rq.wd.y, wind: rq.rx > rq.req + 0.5 || rq.ry > rq.req + 0.5,
-    col120: two && S.roofW !== "light" && S.gaiheki === "nuri", q: WS.q, unplaced: WS.unplaced};
+    col120: two && S.roofW !== "light" && S.roofW !== "slate" && S.gaiheki === "nuri", q: WS.q, unplaced: WS.unplaced};
   if (WS.segs.length){
     const per1 = 182;
     return Object.assign(base, {n: WS.n, nx: WS.nx, ny: WS.ny, menzai: S.tr === "menzai", mx: WS.mx, my: WS.my, hx: WS.mx * 2.5, hy: WS.my * 2.5, haveX: WS.have.x, haveY: WS.have.y, have: Math.min(WS.have.x, WS.have.y)});
@@ -11852,7 +11872,7 @@ function sheetFinish409(svg){
     if (!svg || !info) return;
     const vb = (svg.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number); if (vb.length < 4 || !(vb[2] > 0)) return;
     const W = vb[2]; let H0 = vb[3];
-    try { const bb0 = svg.getBBox(); if (bb0 && bb0.height > 0 && bb0.y + bb0.height + 8 < H0) H0 = Math.ceil(bb0.y + bb0.height + 8); } catch(e){}   /* CAD-409.1：下の余白を詰める */
+    try { const bb0 = svg.getBBox(); if (bb0 && bb0.height > 0 && bb0.y + bb0.height + 14 < H0) H0 = Math.ceil(bb0.y + bb0.height + 14); } catch(e){}   /* CAD-409.1：下の余白を詰める */
     svg.querySelectorAll("[stroke-width]").forEach(el => { if (el.tagName === "text" || el.closest(".grid409")) return; const w = +el.getAttribute("stroke-width"); if (w > 0) el.setAttribute("stroke-width", Math.max(0.25, +(w * 0.6).toFixed(2))); });
     svg.querySelectorAll("text").forEach(t => {
       let st = t.getAttribute("style") || "";
@@ -11877,7 +11897,7 @@ function sheetFinish409(svg){
     });
     /* 寸法の数字はいつも一番手前（斜めの文字の白抜きに隠れない様に） */
     Array.from(svg.children).filter(el => el.tagName === "text" && /^[\d,.]+$/.test((el.textContent || "").trim())).forEach(t => { const r = t.previousElementSibling; if (r && r.tagName === "rect" && r.getAttribute("fill") === "#fff" && !r.getAttribute("class")) svg.appendChild(r); svg.appendChild(t); });
-    svg.querySelectorAll("rect.fsHashira, rect.fsIntPost, rect.pvPost").forEach(r => {
+    svg.querySelectorAll("rect.fsHashira, rect.fsIntPost, rect.pvPost, rect.fsTsuka").forEach(r => {
       const x = +r.getAttribute("x"), y = +r.getAttribute("y"), w = +r.getAttribute("width"), h = +r.getAttribute("height");
       r.setAttribute("fill", "#fff"); r.setAttribute("stroke", "#111"); r.setAttribute("stroke-width", "0.6");
       r.insertAdjacentHTML("afterend", `<path d="M${x} ${y}L${x + w} ${y + h}M${x + w} ${y}L${x} ${y + h}" stroke="#111" stroke-width="0.45" fill="none" pointer-events="none"/>`);
@@ -14343,10 +14363,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         ivs.push([Math.min(a1, c1), Math.max(a1, c1)]);
         set.add(Math.round(a1 * 10) / 10); set.add(Math.round(c1 * 10) / 10);
         const L = Math.abs(c1 - a1); if (L < 1) return;
-        const seg = Math.ceil(L / S.colP - 1e-9), segL = L / seg, dir = Math.sign(c1 - a1) || 1;
-        for (let s2 = 1; s2 < seg; s2++) set.add(Math.round((a1 + dir * segL * s2) * 10) / 10);
+        /* CAD-410：寸法の区切りは、その辺に実際に立つ柱の位置（柱割り）。等分（例 1,668）ではなく見積・伏図と同じ柱 */
+        let pf410 = null; try { pf410 = (framePos().posts || []).filter(q => q.k === "f"); } catch(e){}
+        if (pf410 && pf410.length){ const lo = Math.min(a1, c1), hi = Math.max(a1, c1); pf410.forEach(q => { const along = horiz ? q.x : q.y, off = horiz ? q.y : q.x; if (Math.abs(off - fixed) < 1 && along > lo + 1 && along < hi - 1) set.add(Math.round(along * 10) / 10); }); }
+        else { const seg = Math.ceil(L / S.colP - 1e-9), segL = L / seg, dir = Math.sign(c1 - a1) || 1; for (let s2 = 1; s2 < seg; s2++) set.add(Math.round((a1 + dir * segL * s2) * 10) / 10); }
       });
-      const xs = [...set].sort((x, y) => x - y), spans = [];
+      let xs = [...set].sort((x, y) => x - y); const spans = [];
+      /* CAD-410：450mmより近い区切りはまとめる（数字が重ならない様に）。辺の端は必ず残す */
+      { const ends = new Set(); ivs.forEach(([u, v]) => { ends.add(Math.round(u * 10) / 10); ends.add(Math.round(v * 10) / 10); }); const kept = [];
+        xs.forEach(v => { const last = kept[kept.length - 1]; if (last === undefined || v - last >= 450){ kept.push(v); return; } if (ends.has(v)){ if (!ends.has(last)) kept[kept.length - 1] = v; else kept.push(v); } }); xs = kept; }
       for (let i = 0; i + 1 < xs.length; i++){ const mid = (xs[i] + xs[i + 1]) / 2; if (ivs.some(([u, v]) => mid >= u - 0.5 && mid <= v + 0.5)) spans.push([xs[i], xs[i + 1]]); }
       return {xs, spans};
     };
@@ -29459,16 +29484,50 @@ var ng = /不足|NG|置けない/.test(String(v));
 g += "<text x=\"" + r2(xx + (k? cw[k] / 2: 4)) + "\" y=\"" + r2(yy + rh / 2) + "\" dominant-baseline=\"middle\"" + (k? " text-anchor=\"middle\"": "") + " style=\"font-size:" + (i? 8: 7.5) + "px;fill:" + (ng? "#c00": "#111") + "\">" + v + "</text>"; xx += cw[k];});});
 return g + "</g>";
 }
+/* CAD-410：決めた柱の小さなボタン（伏図の上に出す。選んだら閉じる） */
+var chooser410 = null;
+function chooserSvg410(fr){
+if (!chooser410) return "";
+var q = fr.P([chooser410.x, chooser410.y]), bw = 34, bh = 15, items = [["mvm", "←455"], ["mvp", "455→"], ["wall", "壁にする"], ["del", "外す"]];
+var tw = items.length * (bw + 3) + 3, x0 = Math.max(4, Math.min(fr.W - tw - 4, q[0] - tw / 2)), y0 = q[1] - bh - 14 < 4? q[1] + 12: q[1] - bh - 14;
+var g = "<g class=\"ch410\"><rect x=\"" + r2(x0) + "\" y=\"" + r2(y0 - 3) + "\" width=\"" + tw + "\" height=\"" + (bh + 6) + "\" rx=\"4\" fill=\"#fff\" stroke=\"#0a58ca\" stroke-width=\"1\"/>";
+items.forEach(function(it, i){ var x = x0 + 3 + i * (bw + 3);
+g += "<g data-act410=\"" + it[0] + "\" style=\"cursor:pointer\"><rect x=\"" + r2(x) + "\" y=\"" + r2(y0) + "\" width=\"" + bw + "\" height=\"" + bh + "\" rx=\"3\" fill=\"#e8f0fe\" stroke=\"#0a58ca\" stroke-width=\"0.6\"/><text x=\"" + r2(x + bw / 2) + "\" y=\"" + r2(y0 + bh / 2 + 0.5) + "\" text-anchor=\"middle\" dominant-baseline=\"middle\" style=\"font-size:7px;fill:#0a58ca\">" + it[1] + "</text></g>";});
+return g + "</g>";
+}
+function choose410(act){
+var c = chooser410; if (!c) return;
+var ups = (S.userPosts406 || []).slice(), ix = ups.findIndex(function(u){ return Math.abs(u.x - c.x) < 1 && Math.abs(u.y - c.y) < 1;});
+var Ln = null; try { Ln = intLines406().sup.find(function(l){ return Math.abs((l.axis === "y"? c.y: c.x) - l.c) < 2;});} catch(e){}
+if (act === "mvm" || act === "mvp"){ if (ix >= 0 && Ln){ var d = act === "mvp"? 455: -455, nb = Ln.axis === "y"? {x: c.x + d, y: c.y}: {x: c.x, y: c.y + d}, b = bbox();
+if (nb.x > b.x0 + 200 && nb.x < b.x1 - 200 && nb.y > b.y0 + 200 && nb.y < b.y1 - 200){ ups[ix] = nb; chooser410 = {x: nb.x, y: nb.y};}}}
+else if (act === "del"){ if (ix >= 0) ups.splice(ix, 1); chooser410 = null;}
+else if (act === "wall" && Ln){
+/* 桁の線と直角に、隣の壁（間仕切りか外周）まで間仕切りを1本足す。その交点に柱が立つ */
+var vert = Ln.axis === "y", pc = vert? c.x: c.y, pa = vert? c.y: c.x, lo = -Infinity, hi = Infinity;
+(lineSegs(vert? "x": "y", pc) || []).forEach(function(sg){ if (sg[0] <= pa && pa <= sg[1]){ lo = sg[0]; hi = sg[1];}});
+(S.parts2D || []).forEach(function(q){ if (pState(q) === "remove") return; var horiz = Math.abs(q.y1 - q.y2) < 1, vv = Math.abs(q.x1 - q.x2) < 1;
+if (vert && horiz && Math.min(q.x1, q.x2) <= pc && pc <= Math.max(q.x1, q.x2)){ if (q.y1 < pa - 1 && q.y1 > lo) lo = q.y1; if (q.y1 > pa + 1 && q.y1 < hi) hi = q.y1;}
+if (!vert && vv && Math.min(q.y1, q.y2) <= pc && pc <= Math.max(q.y1, q.y2)){ if (q.x1 < pa - 1 && q.x1 > lo) lo = q.x1; if (q.x1 > pa + 1 && q.x1 < hi) hi = q.x1;}});
+if (isFinite(lo) && isFinite(hi)){ S.parts2D = (S.parts2D || []).concat([vert? {x1: pc, y1: lo, x2: pc, y2: hi, isNew: true, rid: "uw410" + Date.now()}: {x1: lo, y1: pc, x2: hi, y2: pc, isNew: true, rid: "uw410" + Date.now()}]);
+if (ix >= 0) ups.splice(ix, 1);}
+chooser410 = null;}
+S.userPosts406 = ups; try { save();} catch(er){} fsRender();
+}
 function taikuTapInit409(svg){
 if (!svg || svg.__tk409) return; svg.__tk409 = true;
 svg.addEventListener("click", function(e){
 if (!fsOn) return;
 /* CAD-409.1：「柱か壁（提案）」の□をタップ→その位置に柱を立てる。決めた柱をタップ→外す（□に戻る） */
+var act = e.target && e.target.closest? e.target.closest("[data-act410]"): null;
+if (act && chooser410){ choose410(act.getAttribute("data-act410")); return;}
 var pp = e.target && e.target.closest? e.target.closest("[data-prop],[data-upost]"): null;
 if (pp){ var xy = (pp.getAttribute("data-prop") || pp.getAttribute("data-upost")).split(",").map(Number);
 S.userPosts406 = (S.userPosts406 || []).slice();
-if (pp.hasAttribute("data-prop")) S.userPosts406.push({x: xy[0], y: xy[1]}); else S.userPosts406 = S.userPosts406.filter(function(u){ return Math.abs(u.x - xy[0]) > 1 || Math.abs(u.y - xy[1]) > 1;});
+if (pp.hasAttribute("data-prop")){ S.userPosts406.push({x: xy[0], y: xy[1]}); chooser410 = null;}
+else chooser410 = {x: xy[0], y: xy[1]};   /* CAD-410：決めた柱をタップ→ ←455・455→・壁にする・外す */
 try { save();} catch(er){} fsRender(); return;}
+if (chooser410){ chooser410 = null; fsRender();}
 if (fsKind !== "taiku" && fsKind !== "taiku2") return;
 var t = e.target && e.target.closest? e.target.closest("[data-sid]"): null; if (!t) return;
 var fl = fsKind === "taiku2"? 2: 1, key = fl === 2? "braces406f2": "braces406";
@@ -29845,6 +29904,7 @@ legend = "小屋伏図：桁・小屋梁・母屋・棟木・小屋束" + (hasIn
 + (R.two? "2階の小屋組です。": "")
 + (S.roof === "yose"? "寄棟の母屋は内側の矩形に、隅木は四隅から棟の端へ描いています。": "") + geyaNote;
 }
+if (fsKind === "yuka" || fsKind === "koya") g += chooserSvg410(fr); else chooser410 = null;
 g += (fsKind === "taiku" || fsKind === "taiku2")? fsTaikuTbl409(fr.mT + b.h * fr.s + 12, fsKind === "taiku2"? 2: 1): fsLegendSvg393(lgRows393, fr.mT + b.h * fr.s + 12);
 svg.setAttribute("viewBox", "0 0 " + fr.W + " " + fr.H);
 svg.innerHTML = g;
