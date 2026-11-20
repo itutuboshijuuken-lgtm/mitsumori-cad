@@ -34253,3 +34253,74 @@ nav.steps{padding:1px 6px 3px}
   }
 })();
 </script>
+
+<style id="fs419css">
+/* ===== CAD-419：③室内図を図面いっぱいに ===== */
+/* 図面タブ列：横スクロールのチップ列（室内図・完成図で共用） */
+#pvSeg{display:flex!important;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;gap:6px;padding:2px;scrollbar-width:none;align-items:stretch}
+#pvSeg::-webkit-scrollbar{display:none}
+#pvSeg>*{flex:0 0 auto;height:42px;min-height:42px;min-width:0;padding:2px 10px}
+#pvSeg .tx325{font-size:12.5px;line-height:1.1}
+#pvSeg .ic325{max-height:20px}
+/* --- 室内図モード（.fsRoom） --- */
+#st6.fsRoom{position:fixed;left:0;right:0;top:var(--hdrH,100px);bottom:0;display:flex;flex-direction:column;gap:1px;padding:4px 6px;background:var(--bg);z-index:5;overflow:hidden}
+#st6.fsRoom .seg.modeSeg button{min-height:34px}
+#st6.fsRoom .fs419stage{flex:1 1 0;min-height:0;overflow-y:auto}
+#st6.fsRoom #roomBar{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;align-items:center;padding:2px 0}
+#st6.fsRoom #roomBar::-webkit-scrollbar{display:none}
+#st6.fsRoom #roomBar>*{flex:0 0 auto}
+#st6.fsRoom #roomBar button{min-height:36px}
+#st6.fsRoom .fs419bar{flex:0 0 auto;display:flex;gap:6px}
+#st6.fsRoom .fs419bar button{flex:1;min-height:40px}
+#st6:not(.fsRoom) .fs419bar{display:none}
+.fs419drawer{position:absolute;left:0;right:0;bottom:0;max-height:45%;overflow-y:auto;background:#fff;border-top:2px solid var(--ai);border-radius:12px 12px 0 0;z-index:9;padding:8px;box-shadow:0 -4px 16px rgba(0,0,0,.18)}
+.fs419drawer[hidden]{display:none}
+.fs419drawer .fs418dh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.fs419drawer .fs418dh b{font-size:14px}
+.fs419drawer .fs418dh button{min-height:34px;padding:0 12px}
+</style>
+<script id="fs419js">
+/* CAD-419：室内図の入れ替え（見た目と並びだけ。要素とIDはそのまま移動） */
+(function(){
+  var st6 = document.getElementById("st6");
+  if (!st6) return;
+  /* 図面ステージ：平面＋展開図を1つのスクロール領域へ */
+  var stage = document.createElement("div");
+  stage.className = "fs419stage";
+  var mp = document.getElementById("miniPlan219");
+  var eb = document.getElementById("elevBox");
+  if (mp && eb){
+    mp.parentNode.insertBefore(stage, mp);
+    stage.appendChild(mp); stage.appendChild(eb);
+  }
+  /* 器具の引き出しパネル */
+  var d = document.createElement("div");
+  d.className = "fs419drawer"; d.hidden = true;
+  var h = document.createElement("div"); h.className = "fs418dh";
+  var b = document.createElement("b"); b.textContent = "置く物・器具";
+  var c = document.createElement("button"); c.type = "button"; c.textContent = "閉じる";
+  c.addEventListener("click", function(){ d.hidden = true; });
+  h.appendChild(b); h.appendChild(c); d.appendChild(h);
+  ["fxBranch219", "fxMenu", "fxHint", "fxList"].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) d.appendChild(el);
+  });
+  st6.appendChild(d);
+  /* 開閉バー */
+  var bar = document.createElement("div"); bar.className = "fs419bar";
+  var tb = document.createElement("button"); tb.type = "button"; tb.className = "btn"; tb.textContent = "置く物・器具を選ぶ";
+  tb.addEventListener("click", function(){ d.hidden = !d.hidden; });
+  bar.appendChild(tb);
+  var fc = st6.querySelector(".flowNext");
+  if (fc) st6.insertBefore(bar, fc); else st6.appendChild(bar);
+  /* 器具を選んだら閉じる（分岐の切替と一覧の編集では閉じない） */
+  d.addEventListener("click", function(e){
+    if (e.target.closest && e.target.closest("[data-fk]")) setTimeout(function(){ d.hidden = true; }, 60);
+  });
+  /* 室内図モードの判定：st6表示中 かつ pvOn でない */
+  function upd(){ st6.classList.toggle("fsRoom", !st6.hidden && !st6.classList.contains("pvOn")); }
+  new MutationObserver(upd).observe(st6, { attributes: true, attributeFilter: ["class", "hidden"] });
+  document.addEventListener("click", function(){ setTimeout(upd, 30); }, true);
+  upd();
+})();
+</script>
