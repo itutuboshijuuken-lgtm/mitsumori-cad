@@ -1065,6 +1065,10 @@ const WORK = [
   ["roofFin", "屋根（ガルバ・ルーフィング）", "円/㎡", 0, 6500],
   ["roofKawara", "屋根（瓦・ルーフィング・桟木・役物共）", "円/㎡", 0, 12000],
   ["sujiKana", "筋交い金物（筋交いプレート・ビス共）", "円/本", 0, 600],
+  ["tsugite", "継手加工（腰掛け鎌継ぎ・手刻み）（仮）", "円/か所", 0, 1500],   /* CAD-406：単価は未決（翔伍が決める） */
+  ["tanzaku", "短冊金物（ボルト・ビス共）（仮）", "円/枚", 0, 500],
+  ["kisoNuno", "布基礎（フーチング・立ち上がり）（仮）", "円/m", 0, 25000],
+  ["kisoBoshitsu", "防湿コンクリート（布基礎の床下）（仮）", "円/㎡", 0, 4500],
   ["cloth", "クロス", "円/㎡", 0, 1680],
   ["ashiba", "足場（くさび式）", "円/㎡", 0, 1000],
   ["ashibaW", "足場（枠組）", "円/㎡", 0, 900],
@@ -6306,7 +6310,7 @@ function calc(){
     try {
       const ns = [];
       if (zoAttached()) ns.push({name: "既存の解体工事", spec: "増築の取り合いで、既存を壊す工事は", note: "この見積に含まれていません"});
-      if (zoBeta()) ns.push({name: "基礎の形", spec: "基礎は、ベタ基礎として見積もっています", note: "布基礎・独立基礎は含みません"});
+      if (zoBeta()) ns.push(S.kisoType === "nuno" ? {name: "基礎の形", spec: "基礎は、布基礎（床下は防湿コンクリート）として見積もっています", note: "ベタ基礎は「基礎の種類」で切り替えられます"} : {name: "基礎の形", spec: "基礎は、ベタ基礎として見積もっています", note: "布基礎は「基礎の種類」で切り替えられます"});
       if (ns.length && C && Array.isArray(C.rows) && !C.rows.some(r => r.zoNote)) C.rows.unshift({grp: zoAttached() ? "ご注意（増築）" : "ご注意"}, ...ns.map(n => Object.assign({qty: "", cost: 0, zoNote: true}, n)));
     } catch(e){}
 
@@ -6326,8 +6330,10 @@ function calc(){
       if (S.mode === "zo" && (S.tr === "suji" || S.tr === "menzai") && C && Array.isArray(C.rows) && !C.rows.some(r => r.sjNote)){
         const w = sujiWall(), n = S.tr === "menzai" ? w.n : (S.sujiN ?? w.n);
         const base = `${w.two ? "2階建の1階" : "平屋"}・${S.roofW === "light" ? "ガルバ屋根" : "瓦屋根"}・${S.gaiheki === "nuri" ? "塗り壁" : "サイディング等"} ${w.coef}cm/㎡ × 床面積${fmt(w.area, 1)}㎡ ＝ 必要壁量${fmt(w.req)}cm（縦・横それぞれ・2025年の新基準）`;
-        const tail = w.menzai ? ` → 面材（倍率2.5）で 横${fmt(w.hx)}・縦${fmt(w.hy)}cm${n > 0 ? `、足りない分は筋交い${n}本（横${w.nx}・縦${w.ny}）` : "で足ります"}（余裕1.2倍）` : ` → 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`;
-        const row = {name: w.menzai ? "耐力面材＋筋交い（壁量）" : "筋交い（壁量）", spec: base + tail, qty: "", cost: 0, note: "簡易計算（配置のバランス・風の力は未確認）", sjNote: true, zoNote: true};
+        const windT = w.wind ? `。風の力（見付面積×${+S.windC || 50}）の方が大きいので 横${fmt(w.rx)}・縦${fmt(w.ry)}cmで計算` : "";
+        const colT = w.col120 ? "　⚠ 2階建の1階・瓦＋塗り壁は、1階の柱（杉）は120角が目安です（ヒノキ等の強い材なら105角でも可の場合あり）" : "";
+        const tail = windT + (w.menzai ? ` → 面材（倍率2.5）で 横${fmt(w.hx)}・縦${fmt(w.hy)}cm${n > 0 ? `、足りない分は筋交い${n}本（横${w.nx}・縦${w.ny}）` : "で足ります"}（余裕1.2倍）` : ` → 筋交い${n}本${S.sujiN == null ? "（余裕1.2倍）" : "（手で入れた本数）"}`);
+        const row = {name: w.menzai ? "耐力面材＋筋交い（壁量）" : "筋交い（壁量）", spec: base + (S.solar ? "・太陽光パネルあり" : "") + tail, qty: "", cost: 0, note: "簡易計算（配置のバランス＝四分割法は未確認）" + colT, sjNote: true, zoNote: true};
         let last = -1; C.rows.forEach((r, i) => { if (r.zoNote) last = i; });
         if (last >= 0) C.rows.splice(last + 1, 0, row); else C.rows.unshift({grp: "ご注意"}, row);
       }
@@ -6617,6 +6623,7 @@ function calc00(){
   const addS = (kind, a) => addG(GOMI[kind][2], a * GOMI[kind][0], a * GOMI[kind][1]);
   const ap = (p, x) => ({cost: p ? p.p * x : null, miss: !p, avg: p && p.avg, conv: p && p.conv});
   const POOL = {};   // 余り材（樹種・断面ごと）
+  window.__J406 = 0;   /* CAD-406：4mを超えて継ぐ横架材（桁・胴差・梁）の継手の数 */
   const jtA = (arr, add) => S.precut ? arr.slice() : arr.map(n => n + add);   // CAD-121: 継ぎの見込み（1か所150mm）は材木単価の方法だけ。プレカットは長さ通り
   function lum(key, name, a, b, needs, spec, inPrecut){
     if (!needs.length) return;
@@ -6624,6 +6631,7 @@ function calc00(){
     // CAD-121: プレカットは「加工費のみ」。材木はどちらの方法でも材木単価で拾う（0円化しない）。
     // プレカット方法の工場材（inPrecut）は長さ通りの1本で発注する（4m制限・継ぎ見込みなし、余り材も使わない）
     const sp = S.sp[key] || "スギ", PC = !!(S.precut && inPrecut), jt = !PC && name !== "通し柱" && needs.some(n => n > 4000) ? "（4m以下の材を継ぐ）" : ""; let m, upool = 0;
+    if (jt && (key === "keta" || key === "hari" || key === "yukabari")) needs.forEach(n => { if (n > 4000) window.__J406 += Math.ceil(n / 3850 - 1e-9) - 1; });   /* CAD-406：継ぎ目は柱の上から150持ち出した所。1片≦4m（継ぎ目150込み） */
     if (PC){ m = {}; needs.forEach(n => { const L = Math.round(n); m[L] = (m[L] || 0) + 1; }); }
     else if (name !== "通し柱"){ const pk = sp + "|" + a + "|" + b, pr = packStock(needs, POOL[pk] = POOL[pk] || []); m = pr.m; upool = pr.up; }
     else m = stocks(needs, true);
@@ -7418,8 +7426,13 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("hashira", "柱", 105, 105, Array(colsEach).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
-    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const ipn = intPostList().n; if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120), `105角・間仕切りとの交点（${zi.rows}列）`, true); { const G402 = intGirderH(); lum("keta", "内部の桁（柱の上）", 105, G402.h, jtA(Array(zi.rows).fill(D), 300), `105×${fmt(G402.h)}・${zi.rows}列${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true); } if (ipn > 0) work("kanamono", "内部の柱の金物", ipn, "本"); } }  /* CAD-344：内部の柱・金物は間仕切りとの交点にある分だけ（intPostList）。桁は支持ラインの列数で従来通り */
   }
+  { const IL406 = intLines406(); if (IL406.sup.length){ const G402 = intGirderH(), ipn = intPostList().n + G402.prop.length, nF = two ? 2 : 1;   /* CAD-406：線は intLines406（壁に寄せた線）。柱は交点＋「柱か壁」の提案分。2階建ては2階の柱を1階の柱の真上に同数 */
+    const lens406 = []; IL406.sup.forEach(l => (typeof lineSegs === "function" ? lineSegs(l.axis, l.c) : [[0, D]]).forEach(q => lens406.push(Math.round(q[1] - q[0]))));
+    if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120).concat(two ? Array(ipn).fill(Lc2 + 120) : []), `105角・間仕切りとの交点${G402.prop.length ? `＋柱か壁の提案${G402.prop.length}か所` : ""}（${IL406.rows}列${two ? "・1階と2階の真上" : ""}）`, true);
+    lum("keta", two ? "内部の桁（2階床梁の受け・柱の上）" : "内部の桁（柱の上）", 105, G402.h, jtA(lens406, 300), `105×${fmt(G402.h)}・${IL406.rows}列${IL406.sup.some(l => l.wall) ? "・間仕切りの上" : ""}${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true);
+    const zR = zoInt(W, D, yose, two); if (two && zR.rowsR > 0) lum("keta", "内部の桁（2階 小屋梁の受け）", 105, Math.max(+S.hari || 180, G402.h), jtA(lens406.slice(0, Math.min(lens406.length, zR.rowsR * Math.max(1, Math.round(lens406.length / IL406.rows)))), 300), `105×${fmt(Math.max(+S.hari || 180, G402.h))}・2階の柱の上`, true);
+    if (ipn > 0) work("kanamono", "内部の柱の金物", ipn * nF, "本"); } }
   /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
      余り材は専用プールで拾う（lum の共有プール POOL を使うと、ほかの行の本数が動いてしまうため）。 */
   { const ukF = F6.ukeFull || 0, ukS = F6.ukeShorts || [];
@@ -7557,12 +7570,15 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   else if (S.mode !== "zo") { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT;   /* CAD-391：新築・増築の刻みは「大工手間（基本）」に含める（行を出さない） */ rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
   if (S.precut){ const wu = workP("precutUnpan"); rows.push({name: "プレカット運搬費", spec: `工場からの配達 ${fmt(wu.p)}円`, qty: "1式", cost: wu.p, avg: wu.avg, fix: {kind: "work", key: "precutUnpan"}}); }   // CAD-122: 運搬費は交通費・移動とは別の行（プレカット方法だけ）
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
+  if (window.__J406 > 0){ const nj = window.__J406; work("tsugite", "継手加工（腰掛け鎌継ぎ・柱の上から150持ち出し）", nj, "か所"); work("tanzaku", "短冊金物（継手の上）", nj, "枚"); }   /* CAD-406 Q1 */
   if (S.kisoNew){
     const w1 = workP("kisoBase"), w2 = workP("kisoRise"), k = S.kiso / 400;
     const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
+    if (S.kisoType === "nuno"){ const wN = workP("kisoNuno"), wB = workP("kisoBoshitsu"); rows.push({name: `基礎（布基礎・立ち上がり${fmt(S.kiso)}）`, spec: `外周 ${fmt(perK / 1000, 1)}m×${fmt(wN.p)} ＋ 床下の防湿コンクリート ${fmt(area, 1)}㎡×${fmt(wB.p)}`, qty: "", cost: wN.p * perK / 1000 + wB.p * area, avg: wN.avg || wB.avg, fix: {kind: "work", key: "kisoNuno"}}); } else
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const w3 = workP("kisoPump"); rows.push({name: "基礎 生コン・ポンプ最低料金", spec: `少量の割増 ${fmt(w3.p)}円`, qty: "1式", cost: w3.p, avg: w3.avg, fix: {kind: "work", key: "kisoPump"}}); }   /* CAD-248：生コン・ポンプの最低料金（新設） */
-    { const zi = zoInt(W, D, yose, two); if (zi.rows > 0){ const L2 = zi.rows * D / 1000; rows.push({name: "内部の基礎（柱の下の立ち上がり）", spec: `${zi.rows}列 × ${fmt(D / 1000, 1)}m・内部の桁の下（位置は目安・構造計算の後で確定）`, qty: "", cost: w2.p * L2, avg: w2.avg, fix: {kind: "work", key: "kisoRise"}}); } }  /* CAD-344：基礎は内部の桁の下に連続で入る物なので列数ベースのまま。文言だけ実態に合わせた（金額不変） */
+    { const IL406 = intLines406(); if (IL406.kiso.length){ const L2 = IL406.kisoM, nS = IL406.kiso.filter(l => l.sup).length, nK = IL406.kiso.length - nS, wN = workP("kisoNuno"), nuno = S.kisoType === "nuno";   /* CAD-406：基礎伏図と同じ線（intLines406）。桁の下＋区画（20㎡・5460）を割る線。輪郭で切った長さ */
+      rows.push({name: "内部の基礎（立ち上がり）", spec: `${nS ? `内部の桁の下${nS}本` : ""}${nS && nK ? "＋" : ""}${nK ? `区画を割る${nK}本（1区画20㎡・長い辺5.46m以内）` : ""} 計${fmt(L2, 1)}m${nuno ? "・布基礎" : ""}`, qty: `${fmt(L2, 1)}m`, cost: (nuno ? wN.p : w2.p) * L2, avg: nuno ? wN.avg : w2.avg, fix: {kind: "work", key: nuno ? "kisoNuno" : "kisoRise"}}); } }
   }
   if (wood) floorFin(Math.max(0, nobe - tatArea() - zoneFinCut()), two ? "1・2階 " : "");   // CAD-192: 土間・浴室ゾーンの足元は残りの床から引く
   else { work("domaCon", "土間コンクリート", area, "㎡"); if (S.floor === "oki"){ okiRows(area, per); floorFin(Math.max(0, area - tatArea()), "1階 "); } else work("domaFin", "土間仕上げ", area, "㎡"); if (two) floorFin(area, "2階 "); }
@@ -11420,12 +11436,89 @@ function beamLimit(h){
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
 function beamNeeded(span){ for (let h = 150; h <= 390; h += 30) if (beamLimit(h) >= span) return h; return null; }
+/* CAD-406：荷重 q(kN/㎡)・受け持ち幅 trib(mm) の梁(幅105・せいh)が飛ばせる長さ（曲げ・たわみL/250・変形増大2・×0.8・455単位） */
+function spanLim406(h, q, trib){
+  const MT = beamMat406(), b = 105, w = q * trib / 1000, Z = b * h * h / 6, I = b * h * h * h / 12;
+  const Lb = Math.sqrt(8 * MT.fb * Z / w), Ld = Math.cbrt(384 * MT.E * I / (5 * 2 * w * DEFL406));
+  return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
+}
+const FLOORQ406 = 2.4;   // 2階の床：床0.6＋1階天井0.2＋積載1.3（大梁・柱・基礎用）＋間仕切り0.3（kN/㎡）
+/* 内部の桁の列数。CAD-406：寄棟も切妻と同じ（桁行の真ん中の小屋梁は同じ掛け方）。2階建ては2階床梁（105×胴差せい・910間隔）の荷重でも見て、多い方 */
 function zoInt(W, D, yose, two){
   try {
-    if (S.mode !== "zo" || two || yose || !(W > 0) || !(D > 0)) return {n: 0, rows: 0};
-    const lim = beamLimit(), rows = Math.max(0, Math.ceil(W / lim - 1e-9) - 1), per = Math.max(0, Math.ceil(D / (+S.colP || 1820) - 1e-9) - 1);
-    return {n: rows * per, rows: per > 0 ? rows : 0, per, lim, W, D};
+    if (S.mode !== "zo" || !(W > 0) || !(D > 0)) return {n: 0, rows: 0};
+    const limR = beamLimit(), rowsR = Math.max(0, Math.ceil(W / limR - 1e-9) - 1);
+    let rows = rowsR, lim = limR, rowsF = 0, limF = 0;
+    if (two){ limF = spanLim406(+S.dosa || 240, FLOORQ406, 910); rowsF = Math.max(0, Math.ceil(W / limF - 1e-9) - 1); if (rowsF > rows){ rows = rowsF; lim = limF; } }
+    const per = Math.max(0, Math.ceil(D / (+S.colP || 1820) - 1e-9) - 1);
+    return {n: rows * per, rows: per > 0 ? rows : 0, per, lim, W, D, rowsR, rowsF, limR, limF, two: !!two};
   } catch(e){ return {n: 0, rows: 0}; }
+}
+/* CAD-406 段階2：内部の線の正本。見積（内部の桁・柱・基礎・鋼製束）と3つの伏図は全部ここから取る。
+   1) 内部の桁の線（sup）：梁間を等分→910通り→端から455以上（従来通り）。そこから±910以内に間仕切り（長さ1365以上）があれば、その壁の上に寄せる。
+      壁の中に桁・柱・基礎が入るので、部屋の真ん中に独立柱が出ない。
+   2) 内部の基礎（kiso）：桁の線の下すべて＋、基礎で囲まれた1区画が20㎡または長い辺5460を超える間は、いちばん広い所を半分に割る線を足す
+      （その線も±910以内の間仕切りに寄せる。無ければ910通り）。ベタ基礎の床版の目安。布基礎も同じ線（大引・間仕切りの下）。
+   3) 長さは輪郭で切って（lineSegs）測る。見積のメーター数＝基礎伏図の線。 */
+const KISO_AMAX406 = 20e6, KISO_SMAX406 = 5460;
+function intLines406(){
+  const out = {sup: [], kiso: [], rows: 0, kisoM: 0};
+  try {
+    if (S.mode !== "zo") return out;
+    const R = roof(), b = bbox(); if (!(b.w > 0 && b.h > 0)) return out;
+    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
+    const F = framePos(), M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
+    const pr = (F.runs || []).filter(r => r.kind === "p" && r.L >= 1365 && (r.ops || []).reduce((a, o) => a + (o[1] - o[0]), 0) < r.L * 0.6);
+    const lo = ax => ax === "y" ? b.y0 : b.x0, hi = ax => ax === "y" ? b.y1 : b.x1;
+    const snap = (ax, ideal, a, c, taken) => {
+      let best = null;
+      pr.forEach(r => {
+        if (ax === "y" ? Math.abs(r.uy) > 0.02 : Math.abs(r.ux) > 0.02) return;
+        const v = ax === "y" ? r.ay : r.ax;
+        if (v <= a + 455 || v >= c - 455 || Math.abs(v - ideal) > 910) return;
+        if (taken.some(t => Math.abs(t - v) < 910)) return;
+        if (best === null || Math.abs(v - ideal) < Math.abs(best - ideal)) best = v;
+      });
+      return best;
+    };
+    const spanY = !!R.spanY, ax = spanY ? "y" : "x", org = lo(ax), span = spanY ? b.h : b.w;
+    /* 910通り→455通り→等分の順に試し、線と線（壁と線）の間が飛ばせる長さ（zi.lim）を超えない置き方を取る */
+    const place = (grid, useWall) => {
+      const res = [], tk = [];
+      for (let i2 = 1; i2 <= (zi.rows || 0); i2++){
+        let lc = org + span * i2 / (zi.rows + 1);
+        if (grid && span > grid * 2) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / grid) * grid));
+        const v = useWall ? snap(ax, lc, org, org + span, tk) : null, c = v !== null ? v : lc;
+        tk.push(c); res.push({axis: ax, c, wall: v !== null});
+      }
+      const p = [org].concat(res.map(l => l.c).sort((u, w) => u - w), [org + span]);
+      let g = 0; for (let k = 0; k + 1 < p.length; k++) g = Math.max(g, p[k + 1] - p[k]);
+      return {res, ok: !(zi.lim > 0) || g <= zi.lim + 1};
+    };
+    let pick = null;
+    [[M4, true], [M2, true], [M4, false], [M2, false], [0, false]].some(o => { const t2 = place(o[0], o[1]); if (t2.ok){ pick = t2.res; return true; } if (!pick) pick = t2.res; return false; });
+    out.sup = pick || [];
+    out.rows = out.sup.length;
+    if (S.kisoNew !== false){
+      const cs = {x: [], y: []}; out.sup.forEach(l => cs[l.axis].push(l.c));
+      const add = [];
+      const big = a2 => { const p = [lo(a2)].concat(cs[a2].slice().sort((u, v) => u - v), [hi(a2)]); let g = {d: 0, a: p[0], c: p[1]}; for (let k = 0; k + 1 < p.length; k++) if (p[k + 1] - p[k] > g.d) g = {d: p[k + 1] - p[k], a: p[k], c: p[k + 1]}; return g; };
+      for (let it = 0; it < 16; it++){
+        const gx = big("x"), gy = big("y");
+        if (gx.d * gy.d <= KISO_AMAX406 && gx.d <= KISO_SMAX406 && gy.d <= KISO_SMAX406) break;
+        const a2 = gx.d >= gy.d ? "x" : "y", g = a2 === "x" ? gx : gy;
+        let mid = lo(a2) + Math.round((g.a + g.d / 2 - lo(a2)) / 910) * 910;
+        if (mid - g.a < 910 || g.c - mid < 910) mid = g.a + g.d / 2;
+        const v = snap(a2, mid, g.a, g.c, cs[a2]), c = v !== null ? v : mid;
+        cs[a2].push(c); add.push({axis: a2, c, wall: v !== null});
+      }
+      out.kiso = out.sup.map(l => ({axis: l.axis, c: l.c, wall: l.wall, sup: true})).concat(add);
+      let m = 0;
+      out.kiso.forEach(l => { const sg = typeof lineSegs === "function" ? lineSegs(l.axis, l.c) : [[l.axis === "y" ? b.x0 : b.y0, l.axis === "y" ? b.x1 : b.y1]]; l.segs = sg; sg.forEach(q => m += q[1] - q[0]); });
+      out.kisoM = m / 1000;
+    }
+  } catch(e){}
+  return out;
 }
 /* CAD-400案：鋼製束は、内部の基礎（内部の桁の通りの下）に大引が乗るので、その線の上には要らない。
    基礎の線の決め方は intPostList と同じ（等分→910通りに寄せ→端から455以上）。位置は構造計算の前の目安。
@@ -11434,19 +11527,12 @@ function kisoEx264(A, B, alongX){
   const ex = {A: [], B: []};
   try {
     if (S.mode !== "zo") return ex;
-    const R = roof(); if (R.two) return ex;
-    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
-    if (!(zi.rows > 0) || !(zi.per > 0)) return ex;
-    const b = bbox(), M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
-    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
-    const useA = (spanY === !!alongX), arr = useA ? A.pos : B.pos, dst = useA ? ex.A : ex.B;
-    for (let i2 = 1; i2 <= zi.rows; i2++){
-      let lc = org + span * i2 / (zi.rows + 1);
-      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+    intLines406().kiso.forEach(l => {   /* CAD-406：内部の基礎の線（桁の下＋区画を割る線）すべて。線の上の束は除く */
+      const useA = (l.axis === "y") === !!alongX, arr = useA ? A.pos : B.pos, dst = useA ? ex.A : ex.B;
       let best = null;
-      arr.forEach(v => { if (Math.abs(v - lc) <= 455 && (best === null || Math.abs(v - lc) < Math.abs(best - lc))) best = v; });
-      if (best !== null) dst.push(best);
-    }
+      arr.forEach(v => { if (Math.abs(v - l.c) <= 455 && (best === null || Math.abs(v - l.c) < Math.abs(best - l.c))) best = v; });
+      if (best !== null && !dst.includes(best)) dst.push(best);
+    });
   } catch(e){}
   return ex;
 }
@@ -11461,18 +11547,13 @@ function kisoOn264(ex, p, c){ return ex.A.some(v => Math.abs(v - p) < 1) || ex.B
 function intPostList(){
   try {
     if (S.mode !== "zo") return {list: [], n: 0};
-    const R = roof(); if (R.two) return {list: [], n: 0};
-    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
-    if (!(zi.rows > 0) || !(zi.per > 0)) return {list: [], n: 0};
+    const IL = intLines406(); if (!IL.sup.length) return {list: [], n: 0};
     const b = bbox(), F = framePos();
-    const M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
     const wallK = new Set((F.posts || []).map(p => Math.round(p.x * 2) + "," + Math.round(p.y * 2)));
     const pruns = (F.runs || []).filter(r => r.kind === "p" && !r.op);
-    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
     const out = [], seen = new Set();
-    for (let i2 = 1; i2 <= zi.rows; i2++){
-      let lc = org + span * i2 / (zi.rows + 1);
-      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
+    IL.sup.forEach(Ln => {
+      const spanY = Ln.axis === "y", lc = Ln.c;
       pruns.forEach(r => {
         const den = spanY ? r.uy : r.ux;
         if (Math.abs(den) < 1e-9) return;
@@ -11486,7 +11567,14 @@ function intPostList(){
         seen.add(kk);
         out.push({x: px, y: py});
       });
-    }
+    });
+    /* CAD-406：使う人が「ここに柱」と決めた所（S.userPosts406＝[{x,y}]。□をタップして決める）。線の上にある物だけ数える */
+    (S.userPosts406 || []).forEach(u => {
+      if (!IL.sup.some(Ln => Math.abs((Ln.axis === "y" ? u.y : u.x) - Ln.c) < 2)) return;
+      const kk = Math.round(u.x * 2) + "," + Math.round(u.y * 2);
+      if (wallK.has(kk) || seen.has(kk)) return;
+      seen.add(kk); out.push({x: u.x, y: u.y, user: true});
+    });
     out.sort((a, c) => a.x - c.x || a.y - c.y);
     return {list: out, n: out.length};
   } catch(e){ return {list: [], n: 0}; }
@@ -11494,37 +11582,44 @@ function intPostList(){
 /* CAD-402：内部の桁（柱の上）の梁せい。小屋梁の目安（beamLimit）は小屋梁1本分の荷重だが、内部の桁は両側の小屋梁を受けるので
    荷重の幅（受け持ち幅＝梁間÷(列数+1)）で計算し直す。柱と柱の間（柱が無ければ壁から壁まで）が飛ばせない時は、柱を足さず
    （部屋の真ん中に独立柱が出るため）梁せいを大きくする。390でも足りない・4m材を超える時は、足りないことを見積に出す（目安）。 */
-function girderLimit402(h, trib){
-  const MT = beamMat406(), b = 105, E = MT.E, fb = MT.fb, q = S.roofW === "light" ? 0.9 : 1.5, w = q * Math.max(910, trib) / 1000;
+function girderLimit402(h, trib, qq){
+  const MT = beamMat406(), b = 105, E = MT.E, fb = MT.fb, q = qq || (S.roofW === "light" ? 0.9 : 1.5), w = q * Math.max(910, trib) / 1000;
   const Z = b * h * h / 6, I = b * h * h * h / 12, Lb = Math.sqrt(8 * fb * Z / w), Ld = Math.cbrt(384 * E * I / (5 * 2 * w * DEFL406));
   return Math.max(910, Math.floor((Math.min(Lb, Ld) * 0.8 + 45) / 455) * 455);
 }
+/* CAD-406：柱が足りない時（Q2）。部屋の真ん中に自動で柱は立てない。順番：線を壁に寄せる（intLines406）→梁せいを上げる→
+   それでも飛ばせない区間は、真ん中（910通り）に「柱か壁を入れる所」の印（prop）を出し、見積にはその柱を先に入れておく（足りないより余る方）。 */
 function intGirderH(){
-  const out = {h: +S.hari || 180, gap: 0, need: null, over: false, long4: false, msg: "", warn: ""};
+  const out = {h: +S.hari || 180, gap: 0, need: null, over: false, long4: false, msg: "", warn: "", prop: []};
   try {
     if (S.mode !== "zo") return out;
-    const R = roof(); if (R.two) return out;
-    const zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
-    if (!(zi.rows > 0) || !(zi.per > 0)) return out;
-    const b = bbox(), M1 = (typeof MOD !== "undefined" && MOD) ? MOD : 227.5, M2 = M1 * 2, M4 = M1 * 4;
-    const spanY = !!R.spanY, org = spanY ? b.y0 : b.x0, span = spanY ? b.h : b.w;
-    const a0 = spanY ? b.x0 : b.y0, a1 = spanY ? b.x1 : b.y1;
+    const R = roof(), IL = intLines406(); if (!IL.sup.length) return out;
+    const b = bbox(), F = framePos();
     const pl = intPostList().list || [];
+    const trib = R.W / (IL.rows + 1), q = R.two ? FLOORQ406 : 0;
+    const cap = Math.min(4000, girderLimit402(390, trib, q));
     let gap = 0;
-    for (let i2 = 1; i2 <= zi.rows; i2++){
-      let lc = org + span * i2 / (zi.rows + 1);
-      if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
-      const xs = pl.filter(p => Math.abs((spanY ? p.y : p.x) - lc) < 2).map(p => spanY ? p.x : p.y).concat([a0, a1]).sort((p, q2) => p - q2);
+    IL.sup.forEach(Ln => {
+      const spanY = Ln.axis === "y", lc = Ln.c, a0 = spanY ? b.x0 : b.y0, a1 = spanY ? b.x1 : b.y1;
+      const onL = p => Math.abs((spanY ? p.y : p.x) - lc) < 2;
+      let xs = pl.filter(onL).concat((F.posts || []).filter(onL)).map(p => spanY ? p.x : p.y).concat([a0, a1]);
+      for (let it = 0; it < 12; it++){
+        xs = Array.from(new Set(xs.map(v => Math.round(v)))).sort((p, q2) => p - q2);
+        let k0 = -1, g0 = 0; for (let k = 0; k + 1 < xs.length; k++) if (xs[k + 1] - xs[k] > g0){ g0 = xs[k + 1] - xs[k]; k0 = k; }
+        if (g0 <= cap) break;
+        let m = a0 + Math.round(((xs[k0] + xs[k0 + 1]) / 2 - a0) / 910) * 910;
+        if (m - xs[k0] < 455 || xs[k0 + 1] - m < 455) m = (xs[k0] + xs[k0 + 1]) / 2;
+        xs.push(m); out.prop.push(spanY ? {x: m, y: lc} : {x: lc, y: m});
+      }
       for (let k = 0; k + 1 < xs.length; k++) gap = Math.max(gap, xs[k + 1] - xs[k]);
-    }
-    const trib = R.W / (zi.rows + 1);
-    let need = null; for (let h = 150; h <= 390; h += 30) if (girderLimit402(h, trib) >= gap){ need = h; break; }
+    });
+    let need = null; for (let h = 150; h <= 390; h += 30) if (girderLimit402(h, trib, q) >= gap){ need = h; break; }
     out.gap = Math.round(gap); out.need = need;
     out.long4 = gap > 4000;
     out.over = need === null || out.long4;
     if (!out.over && need > out.h) out.h = need;
     if (!out.over && need > (+S.hari || 180)) out.msg = `。内部の桁は柱と柱の間が最大${fmt(out.gap)}mmなので105×${need}にしています`;
-    if (out.over) out.warn = need === null ? `内部の桁の柱と柱の間が最大${fmt(out.gap)}mmで、梁せい390でも飛ばせない目安です。この線の上に壁か柱を足してください` : `内部の桁の柱と柱の間が最大${fmt(out.gap)}mmで、4m材を超えます。この線の上に壁か柱を足してください`;
+    if (out.prop.length) out.warn = `内部の桁を受ける柱が足りないので、図の□の${out.prop.length}か所に「柱か壁」を入れる前提で見積しています（収納や壁の位置に動かせます）`;
   } catch(e){}
   return out;
 }
@@ -11539,7 +11634,7 @@ function intGirderH(){
    筋交い 45×105 の壁倍率は2（たすき掛けは4）、1本が受け持つ長さは910mm。余裕1.2倍。
    面材（構造用合板9mm・N50@150）の壁倍率は2.5。開口の無い所で、幅910以上の所だけ数える。足りない分は筋交いを足す。 ---------- */
 function wallCoef406(){
-  const two = roof().two, X = S.roofW === "light" ? 0.81 : 1.50, Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
+  const two = roof().two, X = (S.roofW === "light" ? 0.81 : 1.50) + (S.solar ? 0.20 : 0),   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
   return Math.round(10.204 * (two ? X + 1.5 * Y + F : X + 0.5 * Y));
 }
 // 外まわりの面材の効く長さ（cm）：X方向の壁・Y方向の壁それぞれ。開口を除き、幅910以上の所だけ
@@ -11557,19 +11652,36 @@ function menzaiLen406(){
   } catch(e){}
   return out;
 }
+/* CAD-406：風の力に対する必要壁量（令46条・一般の地域 50cm/㎡。S.windC で 50〜75）。見付面積は床から1.35mより上。
+   x＝X方向の力を受ける壁（横に通る壁）、y＝Y方向。妻側・平側の面の形は屋根の形から。 */
+function windReq406(){
+  const out = {x: 0, y: 0};
+  try {
+    const R = roof(), t = (+S.k || 4) / 10, W = R.W, D = R.D, cw = +S.windC || 50;
+    const hw = Math.max(0, (R.Hk || 0) - (+S.dfl || 0) - 1350), rise = (S.roof === "kata" ? W : W / 2) * t;
+    const eave = (D * hw + (S.roof === "yose" ? (D + Math.max(0, D - W)) / 2 : D) * rise) / 1e6;   // 平側の面（幅D）
+    const gable = (W * hw + W * rise / 2) / 1e6;                                                     // 妻側の面（幅W）
+    if (R.spanY){ out.y = eave * cw; out.x = gable * cw; } else { out.x = eave * cw; out.y = gable * cw; }
+  } catch(e){}
+  return out;
+}
 function sujiWall(){
   const area = areaMM() / 1e6, two = roof().two, coef = wallCoef406();
-  const req = area * coef;                     // cm（縦・横それぞれ）
+  const req = area * coef;                     // cm（縦・横それぞれ・地震）
+  const wd = windReq406(), rx = Math.max(req, wd.x), ry = Math.max(req, wd.y);
   const tas = S.suji === "tasuki", per1 = 2 * 91;   // 片筋交い1本＝壁倍率2×91cm
+  const base = {area, two, coef, req, rx, ry, windX: wd.x, windY: wd.y, wind: rx > req + 0.5 || ry > req + 0.5,
+    col120: two && S.roofW !== "light" && S.gaiheki === "nuri"};   // 早見表：2階建の1階・瓦＋塗り壁は柱の小径 l/24（杉で120角の目安）
   if (S.tr === "menzai"){
     const M = menzaiLen406(), hx = M.x * 2.5, hy = M.y * 2.5;
-    const nx = Math.max(0, Math.ceil((req * 1.2 - hx) / per1 - 1e-9)), ny = Math.max(0, Math.ceil((req * 1.2 - hy) / per1 - 1e-9));
+    const nx = Math.max(0, Math.ceil((rx * 1.2 - hx) / per1 - 1e-9)), ny = Math.max(0, Math.ceil((ry * 1.2 - hy) / per1 - 1e-9));
     let n = nx + ny; if (tas && n % 2) n++;
-    return {n, area, two, coef, req, menzai: true, mx: M.x, my: M.y, hx, hy, nx, ny, have: Math.min(hx + nx * per1, hy + ny * per1)};
+    return Object.assign(base, {n, menzai: true, mx: M.x, my: M.y, hx, hy, nx, ny, have: Math.min(hx + nx * per1, hy + ny * per1)});
   }
-  let n = Math.max(4, Math.ceil(2 * req * 1.2 / per1 - 1e-9));
+  const nx = Math.ceil(rx * 1.2 / per1 - 1e-9), ny = Math.ceil(ry * 1.2 / per1 - 1e-9);
+  let n = Math.max(4, nx + ny);
   if (tas && n % 2) n++;
-  return {n, area, two, coef, req, have: n * per1 / 2};
+  return Object.assign(base, {n, nx, ny, have: n * per1 / 2});
 }
 /* 旧 sujiAuto ラッパー（別名 sa0・フォールバック型）は段階1で blk02 の統合 sujiAuto へ畳み込み済み（冒頭で sujiWall() を試し、例外時のみ旧方式へ）。相方の sujiWall はこのブロックの全局関数のまま残してある。 */
 /* calc の旧ラッパー（別名 c0）は段階1で blk02 の統合 calc へ移設済み（後段：筋交い（壁量）の行）。ここでは除去のみ。 */
@@ -29027,20 +29139,11 @@ return segs;
 
 /* 内部の柱・桁・基礎の支持ライン（intPostList と同じ決め方。平面の座標で返す） */
 function fsIntLines(){
-try {
-if (S.mode!== "zo") return [];
-var R = roof(); if (R.two) return [];
-var zi = zoInt(R.W, R.D, S.roof === "yose", R.two);
-if (!(zi.rows > 0)) return [];
-var b = bbox(), M1 = (typeof MOD!== "undefined" && MOD)? MOD: 227.5, M2 = M1 * 2, M4 = M1 * 4;
-var spanY =!!R.spanY, org = spanY? b.y0: b.x0, span = spanY? b.h: b.w, out = [];
-for (var i2 = 1; i2 <= zi.rows; i2++){
-var lc = org + span * i2 / (zi.rows + 1);
-if (span > M4) lc = Math.max(org + M2, Math.min(org + span - M2, org + Math.round((lc - org) / M4) * M4));
-out.push({axis: spanY? "y": "x", c: lc});
+/* CAD-406：正本は intLines406（壁に寄せた内部の桁の線） */
+try { return intLines406().sup.map(function(l){ return {axis: l.axis, c: l.c};}); } catch(e){ return [];}
 }
-return out;
-} catch(e){ return [];}
+function fsKisoLines406(){
+try { return intLines406().kiso.map(function(l){ return {axis: l.axis, c: l.c};}); } catch(e){ return [];}
 }
 
 /* 屋根の座標（d=棟方向, w=梁間方向）→ 平面の座標 */
@@ -29089,12 +29192,14 @@ return g;
 function intPostsDraw(fr){
 var g = "";
 try { intPostList().list.forEach(function(p){ g += postSq(fr, p.x, p.y, 105, "fsIntPost");});} catch(e){}
+/* CAD-406：「柱か壁を入れる所」の提案は白抜きの□（見積には入れてある） */
+try { intGirderH().prop.forEach(function(p){ var c = fr.P([p.x, p.y]), h = Math.max(3.2, 105 * fr.s / 2 + 1.2); g += "<rect class=\"fsPropPost\" x=\"" + r2(c[0] - h) + "\" y=\"" + r2(c[1] - h) + "\" width=\"" + r2(h * 2) + "\" height=\"" + r2(h * 2) + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.2\"/>";});} catch(e){}
 return g;
 }
 /* 支持ライン（内部の桁・内部の立ち上がり）を、輪郭で切って帯で描く */
-function intBands(fr, cls, wMm){
+function intBands(fr, cls, wMm, lines){
 var g = "";
-fsIntLines().forEach(function(Ln){
+(lines || fsIntLines()).forEach(function(Ln){
 lineSegs(Ln.axis, Ln.c).forEach(function(sg){
 var a = Ln.axis === "y"? [sg[0], Ln.c]: [Ln.c, sg[0]];
 var c = Ln.axis === "y"? [sg[1], Ln.c]: [Ln.c, sg[1]];
@@ -29167,9 +29272,9 @@ g += sizeLbl393(fr, a, c, text);
 return g;
 }
 /* 内部の支持ラインの最初の区間に寸法を書く */
-function intBandLbl393(fr, text){
+function intBandLbl393(fr, text, lines){
 var g = "";
-fsIntLines().forEach(function(Ln){
+(lines || fsIntLines()).forEach(function(Ln){
 if (g) return;
 lineSegs(Ln.axis, Ln.c).forEach(function(sg){
 if (g) return;
@@ -29204,6 +29309,7 @@ else { rows.push({sw: "band", nm: "小つなぎ", sz: SQ}); rows.push({sw: "cir"
 }
 rows.push({sw: "sq", nm: "柱", sz: SQ});
 if (intPosts > 0) rows.push({sw: "sq", nm: "内部の柱", sz: SQ});
+try { if (intGirderH().prop.length) rows.push({sw: "sqO", nm: "柱か壁（提案）", sz: SQ}); } catch(e){}
 return rows;
 }
 rows.push({sw: "band", nm: "桁", sz: "105×" + fmt(S.keta)});
@@ -29216,6 +29322,7 @@ if (S.roof === "yose") rows.push({sw: "line", nm: "隅木", sz: "105×150"});
 if (hasInt) rows.push({sw: "band", nm: "内部の桁", sz: "105×" + fmt(intGirderH().h)});
 rows.push({sw: "sq", nm: "柱", sz: SQ});
 if (intPosts > 0) rows.push({sw: "sq", nm: "内部の柱", sz: SQ});
+try { if (intGirderH().prop.length) rows.push({sw: "sqO", nm: "柱か壁（提案）", sz: SQ}); } catch(e){}
 return rows;
 }
 /* CAD-393：凡例表を図の下に描く（見本・部材名・断面） */
@@ -29233,6 +29340,8 @@ g += "<rect x=\"" + (cx - 11) + "\" y=\"" + r2(cy - 2.6) + "\" width=\"22\" heig
 if (rw.sw === "bandCL") g += "<line x1=\"" + (cx - 11) + "\" y1=\"" + r2(cy) + "\" x2=\"" + (cx + 11) + "\" y2=\"" + r2(cy) + "\" stroke=\"" + C + "\" stroke-width=\"0.6\" stroke-dasharray=\"6 1.6 1.6 1.6\"/>";
 } else if (rw.sw === "line"){
 g += "<line x1=\"" + (cx - 11) + "\" y1=\"" + r2(cy) + "\" x2=\"" + (cx + 11) + "\" y2=\"" + r2(cy) + "\" stroke=\"" + C + "\" stroke-width=\"1.4\"/>";
+} else if (rw.sw === "sqO"){
+g += "<rect x=\"" + r2(cx - 3.6) + "\" y=\"" + r2(cy - 3.6) + "\" width=\"7.2\" height=\"7.2\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"1.1\"/>";
 } else if (rw.sw === "sq"){
 g += "<rect x=\"" + r2(cx - 3.6) + "\" y=\"" + r2(cy - 3.6) + "\" width=\"7.2\" height=\"7.2\" fill=\"#111\"/>";
 } else if (rw.sw === "cir"){
@@ -29253,7 +29362,7 @@ for (var i = 0; i < p.length; i++) g += line(fr, p[i], p[(i + 1) % p.length], "f
 return g;
 }
 /* 立ち上がり：外まわりは基礎の見積行（perK）と同じく母屋側の辺を除く。内部は内部の桁の下の線 */
-return outline(fr, true, 150, "fsKiso") + intBands(fr, "fsKisoInt", 150) + outlineLbl393(fr, true, "幅150") + intBandLbl393(fr, "幅150");
+return outline(fr, true, 150, "fsKiso") + intBands(fr, "fsKisoInt", 150, fsKisoLines406()) + outlineLbl393(fr, true, "幅150") + intBandLbl393(fr, "幅150", fsKisoLines406());
 }
 
 /* ===== 床伏図 ===== */
@@ -29404,7 +29513,7 @@ var target = fsKind === "koya"? S.fl.length - 1: 0;
 if (target!== S.fi){ var snap = S.fl[target] && S.fl[target].snap; if (snap) flLoad(snap);}
 }
 var b = bbox();
-var fsHasInt393 = false; try { fsHasInt393 = fsIntLines().length > 0; } catch(e){}
+var fsHasInt393 = false; try { fsHasInt393 = (fsKind === "kiso"? fsKisoLines406(): fsIntLines()).length > 0; } catch(e){}
 var fsIntPosts393 = 0; try { fsIntPosts393 = intPostList().n; } catch(e){}
 var lgRows393 = fsLegendRows393(fsHasInt393, fsIntPosts393);
 var tblH393 = lgRows393.length? (lgRows393.length + 1) * 13.5 + 10: 0;
