@@ -35440,3 +35440,171 @@ nav.steps{padding:1px 6px 3px}
   }, 250);
 })();
 </script>
+<script id="ux439js">
+/* ===== CAD-439（Opus）：A 実際の原価と比べて自分の基準を作る ／ B 図面の写真をAIに読ませて家を作る。翔伍「お願いします」（2026-11-20）。
+   A：見積（⑤）に「⚖ 実際の原価と比べる」。工事の種類（見積の見出しごと）に アプリ／実際／差。合わせると、その種類の倍率を「あなたの基準」(PR.adj437) として単価と一緒に保存し、次の見積からその倍率をかける。
+      比べた記録 (PR.cal437) を残し、2軒以上あれば種類ごとの平均のずれも出す。「基準を元に戻す」で倍率を消せる。
+   B：①描くに「🤖 図面の写真から作る」。AIに渡す頼み方をコピー → AIの答え（JSON）を貼る → 中身を確かめて（おかしい所・AIが自信のない所を出す）→ 入れる（戻すで元に戻る）。
+      アプリにAIは入っていない（お客さんの好きなAIでよい）。 */
+(function(){
+  "use strict";
+  var css = document.createElement("style");
+  css.textContent = ".ov439{position:fixed;inset:0;z-index:2147483640;background:#fff;display:flex;flex-direction:column;font-size:14px}"
+    + ".ov439 .hd{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #d5dbe3}.ov439 .hd b{flex:1;font-size:17px}"
+    + ".ov439 .bd{flex:1;overflow:auto;padding:10px 12px}.ov439 .ft{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #d5dbe3;flex-wrap:wrap}"
+    + ".ov439 button{min-height:44px;border-radius:10px;border:1.5px solid #1a73e8;background:#fff;color:#1a73e8;font-weight:900;font-size:14px;padding:0 12px}.ov439 button.pri{background:#1a73e8;color:#fff}"
+    + ".ov439 table{width:100%;border-collapse:collapse}.ov439 td,.ov439 th{border-bottom:1px solid #e3e8ef;padding:6px 4px;text-align:right}.ov439 td:first-child,.ov439 th:first-child{text-align:left}"
+    + ".ov439 input[type=text],.ov439 input[type=number]{width:100%;min-height:40px;font-size:16px;border:1px solid #c7cfd9;border-radius:8px;padding:0 8px;box-sizing:border-box;text-align:right}"
+    + ".ov439 textarea{width:100%;min-height:200px;font-size:13px;border:1px solid #c7cfd9;border-radius:8px;padding:8px;box-sizing:border-box}"
+    + ".ov439 .note{color:#546e7a;font-size:12.5px;line-height:1.6}.ov439 .bad{color:#C62828;font-weight:800}.ov439 .ok{color:#2e7d32;font-weight:800}"
+    + "#cal439btn,#imp439btn{width:100%;min-height:48px;border-radius:12px;border:2px solid #1a73e8;background:#fff;color:#1a73e8;font-size:15px;font-weight:900;margin:8px 0}";
+  document.head.appendChild(css);
+  function ov(title){ var d = document.createElement("div"); d.className = "ov439"; d.innerHTML = '<div class="hd"><b>' + title + '</b><button type="button" class="x">閉じる</button></div><div class="bd"></div><div class="ft"></div>'; document.body.appendChild(d); d.querySelector(".x").onclick = function(){ d.remove(); }; return d; }
+  var yen = function(v){ return fmt(Math.round(v)) + "円"; };
+  /* ---------- A：あなたの基準（倍率）を見積にかける ---------- */
+  function secOf(rows){ var cur = "その他", out = []; rows.forEach(function(r){ if (r.grp){ cur = String(typeof r.grp === "string" ? r.grp : (r.name || "その他")).replace(/^[■◆●\s]+/, "").slice(0, 24); return; } out.push([cur, r]); }); return out; }
+  if (typeof calc === "function" && !calc.__a439){
+    var c0 = calc;
+    calc = function(){
+      var C = c0.apply(this, arguments);
+      try {
+        var A = PR.adj437; if (!C || !C.rows || !A) return C;
+        var keys = Object.keys(A).filter(function(k){ return A[k] && Math.abs(A[k] - 1) > 0.001; }); if (!keys.length) return C;
+        var before = 0, after = 0;
+        secOf(C.rows).forEach(function(e){ var f = A[e[0]], r = e[1]; if (!f || !(r.cost > 0)) return; before += r.cost; r.cost = r.cost * f; after += r.cost; r.adj437 = f; });
+        var d = after - before; if (d && C.genka > 0){ var k = (C.genka + d) / C.genka; C.genka += d; if (C.genkaReal) C.genkaReal += d; if (C.mitsu) C.mitsu *= k; }
+      } catch(e){}
+      return C;
+    };
+    calc.__a439 = true;
+  }
+  function calOpen(){
+    var C = calc(), S2 = {}, order = [];
+    secOf(C.rows).forEach(function(e){ var r = e[1]; if (!(r.cost > 0) || r.note) return; if (!S2[e[0]]){ S2[e[0]] = {app: 0, rows: []}; order.push(e[0]); } S2[e[0]].app += r.cost; S2[e[0]].rows.push(r); });
+    var d = ov("⚖ 実際の原価と比べる"), bd = d.querySelector(".bd"), ft = d.querySelector(".ft"), A = PR.adj437 || {};
+    var h = '<p class="note" style="margin:0 0 8px">この家で実際にかかった原価を入れてください。合計だけでも、分かる種類だけでもかまいません。差の大きい種類を押すと、中の行が見られます。</p>'
+      + '<label class="note">実際の原価（合計）</label><input type="number" inputmode="numeric" id="act439" placeholder="例：4800000">'
+      + '<table style="margin-top:10px"><tr><th>工事の種類</th><th>アプリ</th><th style="width:34%">実際</th><th>差</th></tr>';
+    order.forEach(function(k, i){ var s = S2[k]; h += '<tr><td><a href="#" data-s="' + i + '" style="color:#1a73e8;font-weight:800">' + k + '</a>' + (A[k] && Math.abs(A[k] - 1) > 0.001 ? '<br><small class="note">基準 ×' + A[k].toFixed(2) + '</small>' : '') + '</td><td>' + fmt(Math.round(s.app)) + '</td><td><input type="number" inputmode="numeric" data-i="' + i + '" placeholder="—"></td><td data-df="' + i + '">—</td></tr>'; });
+    h += '<tr><th>合計</th><th>' + fmt(Math.round(C.genka)) + '</th><th></th><th id="dft439">—</th></tr></table><div id="rows439" style="margin-top:10px"></div>';
+    var hist = PR.cal437 || []; if (hist.length >= 2){ var avg = {}; hist.forEach(function(x){ Object.keys(x.secs || {}).forEach(function(k){ var v = x.secs[k]; if (v[0] > 0 && v[1] > 0){ avg[k] = avg[k] || []; avg[k].push(v[1] / v[0]); } }); });
+      h += '<h4 style="margin:14px 0 4px">これまで ' + hist.length + '軒の平均のずれ</h4><div class="note">' + Object.keys(avg).map(function(k){ var a = avg[k].reduce(function(p, q){ return p + q; }, 0) / avg[k].length; return k + "：" + (a >= 1 ? "+" : "") + Math.round((a - 1) * 100) + "%（" + avg[k].length + "軒）"; }).join("<br>") + '</div>'; }
+    bd.innerHTML = h;
+    var diff = function(){
+      var tot = +bd.querySelector("#act439").value || 0, sumIn = 0;
+      order.forEach(function(k, i){ var v = +bd.querySelector('[data-i="' + i + '"]').value || 0, td = bd.querySelector('[data-df="' + i + '"]'); sumIn += v; if (v > 0){ var p = Math.round((v / S2[k].app - 1) * 100); td.innerHTML = '<span class="' + (Math.abs(p) >= 15 ? "bad" : "ok") + '">' + (p >= 0 ? "+" : "") + p + "%</span>"; } else td.textContent = "—"; });
+      var t = tot || sumIn, el = bd.querySelector("#dft439"); if (t > 0){ var p = Math.round((t / C.genka - 1) * 100); el.innerHTML = '<span class="' + (Math.abs(p) >= 10 ? "bad" : "ok") + '">' + (p >= 0 ? "+" : "") + p + "%</span>"; } else el.textContent = "—";
+    };
+    bd.querySelectorAll("input").forEach(function(i){ i.oninput = diff; });
+    bd.querySelectorAll("[data-s]").forEach(function(a){ a.onclick = function(ev){ ev.preventDefault(); var k = order[+a.dataset.s], s = S2[k];
+      bd.querySelector("#rows439").innerHTML = '<h4 style="margin:6px 0">' + k + ' の中身（金額の大きい順）</h4><table>' + s.rows.slice().sort(function(p, q){ return q.cost - p.cost; }).slice(0, 12).map(function(r){ return '<tr><td>' + r.name + '<br><small class="note">' + (r.q || r.qty || "") + (r.avg ? "　仮の単価" : "　あなたの単価") + '</small></td><td>' + fmt(Math.round(r.cost)) + '</td></tr>'; }).join("") + '</table><p class="note">「仮の単価」の行が違いの元になりやすいです。見積の画面で行を押すと単価を直せます。</p>'; }; });
+    var rec = function(fac){ var secs = {}; order.forEach(function(k, i){ var v = +bd.querySelector('[data-i="' + i + '"]').value || 0; secs[k] = [S2[k].app, v || (fac ? S2[k].app * fac : 0)]; }); PR.cal437 = (PR.cal437 || []).concat([{d: new Date().toISOString().slice(0, 10), g: S.genba || "", app: C.genka, act: +bd.querySelector("#act439").value || 0, secs: secs}]).slice(-30); };
+    var bA = document.createElement("button"); bA.className = "pri"; bA.textContent = "入れた種類だけ合わせる";
+    bA.onclick = function(){ var n = 0; PR.adj437 = PR.adj437 || {}; order.forEach(function(k, i){ var v = +bd.querySelector('[data-i="' + i + '"]').value || 0; if (v > 0){ var base = S2[k].app / (PR.adj437[k] || 1); PR.adj437[k] = +(v / base).toFixed(4); n++; } }); if (!n){ toast("種類ごとの実際の金額を入れてください"); return; } rec(0); saveP(); d.remove(); try { go(5); } catch(e){} toast(n + "種類を、あなたの基準に合わせました"); };
+    var bT = document.createElement("button"); bT.textContent = "合計に合わせる（全部同じ割合）";
+    bT.onclick = function(){ var t = +bd.querySelector("#act439").value || 0; if (!(t > 0)){ toast("実際の原価（合計）を入れてください"); return; } var f = t / C.genka; PR.adj437 = PR.adj437 || {}; order.forEach(function(k){ PR.adj437[k] = +(((PR.adj437[k] || 1)) * f).toFixed(4); }); rec(f); saveP(); d.remove(); try { go(5); } catch(e){} toast("全部を ×" + f.toFixed(2) + " にしました（あなたの基準）"); };
+    var bR = document.createElement("button"); bR.textContent = "基準を元に戻す"; bR.onclick = function(){ PR.adj437 = {}; saveP(); d.remove(); try { go(5); } catch(e){} toast("あなたの基準（倍率）を消しました"); };
+    ft.appendChild(bA); ft.appendChild(bT); ft.appendChild(bR);
+  }
+  /* ---------- B：AIに読ませる ---------- */
+  var PROMPT = [
+    "あなたは日本の木造住宅の図面を読む係です。添付した図面（平面図・矩計図・立面図など）を読み、下のJSONだけを返してください（説明文は不要）。",
+    "・単位はmm。平面の座標は、建物の外形の左上を(0,0)、右がx、下がyのプラス。",
+    "・壁の線は柱の芯（通り芯）で。図面に寸法が書いてある所はその数字を使い、推測した所は unsure に書く。",
+    "・読めない項目は null にする（でっち上げない）。",
+    "{",
+    '  "v": 1,',
+    '  "name": "現場名（分かれば）",',
+    '  "floors": 1 または 2,',
+    '  "outline": [[0,0],[10010,0],[10010,7280],[0,7280]],   // 1階の外形の角を時計回りに',
+    '  "walls": [[x1,y1,x2,y2], ...],                         // 間仕切り（縦か横の直線）',
+    '  "rooms": [{"name":"洋室","x":1820,"y":1820}, ...],      // 部屋名と、部屋の中の1点',
+    '  "openings": [{"type":"window|sweep|door|sliding|entrance","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
+    '  "ceiling": 2400,                                        // 天井高',
+    '  "roof": {"shape":"kiri|yose|kata|riku","pitch":4,"eave":450,"verge":300,"ridge":"x|y","material":"metal|slate|tile"},  // pitchは寸（4寸=4）、ridgeは棟の向き（xが横）',
+    '  "foundation": {"type":"beta|nuno","height":400},',
+    '  "exterior": "siding|metal|plaster",',
+    '  "total_area": 72.87,                                    // 延床面積（㎡、書いてあれば）',
+    '  "unsure": ["自信のない所を日本語で1行ずつ"]',
+    "}"
+  ].join("\n");
+  function parse(txt){
+    var t = String(txt || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+    var i = t.indexOf("{"), j = t.lastIndexOf("}"); if (i < 0 || j < i) throw new Error("JSONが見つかりません");
+    t = t.slice(i, j + 1).replace(/\/\/[^\n"]*$/gm, "");
+    return JSON.parse(t);
+  }
+  function checkD(D){
+    var bad = [], warn = [], o = D.outline;
+    if (!Array.isArray(o) || o.length < 4) bad.push("外形（outline）の角が4つ未満です");
+    else {
+      for (var i = 0; i < o.length; i++){ var a = o[i], b = o[(i + 1) % o.length]; if (Math.abs(a[0] - b[0]) > 30 && Math.abs(a[1] - b[1]) > 30) bad.push("外形の" + (i + 1) + "番目の辺が斜めです（縦か横の直線にしてください）"); }
+      var ar = 0; o.forEach(function(p, k){ var q = o[(k + 1) % o.length]; ar += p[0] * q[1] - q[0] * p[1]; }); ar = Math.abs(ar) / 2e6;
+      if (D.total_area){ var fl = (D.floors === 2 ? 2 : 1), dd = Math.abs(ar * fl - D.total_area) / D.total_area; if (dd > 0.08) warn.push("外形の面積 " + ar.toFixed(1) + "㎡" + (fl === 2 ? "×2" : "") + " と延床 " + D.total_area + "㎡ が " + Math.round(dd * 100) + "% 違います"); }
+      D.__area = ar;
+    }
+    (D.walls || []).forEach(function(w, k){ if (!Array.isArray(w) || w.length < 4) bad.push("間仕切り " + (k + 1) + " の形が違います"); else if (Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30) warn.push("間仕切り " + (k + 1) + " が斜めなので入れません"); });
+    if (!D.rooms || !D.rooms.length) warn.push("部屋名がありません");
+    return {bad: bad, warn: warn};
+  }
+  function pickS(cat, name, w){ var L = SASH.filter(function(s){ return s.cat === cat && (!name || s.name === name); }); if (!L.length) L = SASH.filter(function(s){ return s.cat === cat; }); if (!L.length) return null; L.sort(function(p, q){ return Math.abs(p.w - w) - Math.abs(q.w - w); }); return L[0]; }
+  function applyD(D){
+    pushUndo();
+    var o = D.outline.map(function(p){ return [Math.round(+p[0]), Math.round(+p[1])]; }), ar = 0;
+    o.forEach(function(p, k){ var q = o[(k + 1) % o.length]; ar += p[0] * q[1] - q[0] * p[1]; }); if (ar < 0) o.reverse();
+    var s0 = 0; o.forEach(function(p, k){ if (p[1] < o[s0][1] || (p[1] === o[s0][1] && p[0] < o[s0][0])) s0 = k; }); o = o.slice(s0).concat(o.slice(0, s0));
+    var ox = o[0][0], oy = o[0][1], E = [];
+    o.forEach(function(p, k){ var q = o[(k + 1) % o.length], dx = q[0] - p[0], dy = q[1] - p[1]; if (Math.abs(dx) >= Math.abs(dy)){ if (Math.abs(dx) > 0) E.push({d: dx > 0 ? "R" : "L", v: Math.abs(dx), set: true}); } else E.push({d: dy > 0 ? "D" : "U", v: Math.abs(dy), set: true}); });
+    S.edges = E; try { solve(); } catch(e){}
+    var b = bbox(), tx = function(x){ return b.x0 + (x - ox); }, ty = function(y){ return b.y0 + (y - oy); };
+    S.parts2D = (D.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
+    S.roomNames = (D.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
+    S.sashes = (S.sashes || []).filter(function(sa){ return !sa.drawn; });
+    var MAP = {window: ["腰窓", null], sweep: ["掃き出し", null], door: ["室内ドア", "片開き"], sliding: ["室内ドア", "片引き戸"], entrance: ["玄関", null]}, skipped = 0;
+    (D.openings || []).forEach(function(op){
+      try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ skipped++; return; }
+        var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ skipped++; return; }
+        var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
+        var along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w;
+        S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"});
+      } catch(e){ skipped++; }
+    });
+    if (D.name) S.genba = String(D.name).slice(0, 40);
+    if (+D.ceiling) S.ch = +D.ceiling;
+    var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)) S.roof = R.shape; if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = R.material;
+    var F = D.foundation || {}; if (F.type === "beta" || F.type === "nuno") S.kisoType = F.type; if (+F.height) S.kiso = +F.height;
+    if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior;
+    if (S.mode === "zo" && (D.floors === 2 || D.floors === 1)) S.floors = D.floors;
+    save(); try { HB.__pinH = 0; } catch(e){} try { go("M"); } catch(e){ try { drawPlan(); } catch(e2){} }
+    toast("図面から家を作りました" + (skipped ? "（入れられなかった窓・ドア " + skipped + "）" : ""));
+  }
+  function impOpen(){
+    var d = ov("🤖 図面の写真から作る"), bd = d.querySelector(".bd"), ft = d.querySelector(".ft");
+    bd.innerHTML = '<p class="note" style="margin:0 0 6px"><b>① </b>下の「頼み方をコピー」を押して、使っているAI（ChatGPT・Claude・Gemini など）に、図面の写真と一緒に貼って送ります。<br><b>② </b>AIの答えを全部コピーして、下の枠に貼ります。<br><b>③ </b>「中身を確かめる」→ よければ「この家を入れる」。</p>'
+      + '<textarea id="ta439" placeholder="ここにAIの答えを貼る"></textarea><div id="ck439" style="margin-top:8px"></div>';
+    var bC = document.createElement("button"); bC.textContent = "頼み方をコピー";
+    bC.onclick = function(){ var done = function(){ toast("頼み方をコピーしました。AIに図面の写真と一緒に送ってください"); }; try { navigator.clipboard.writeText(PROMPT).then(done, function(){ prompt("コピーしてください", PROMPT); }); } catch(e){ prompt("コピーしてください", PROMPT); } };
+    var bK = document.createElement("button"); bK.textContent = "中身を確かめる"; var bI = document.createElement("button"); bI.className = "pri"; bI.textContent = "この家を入れる"; bI.disabled = true;
+    var D = null;
+    bK.onclick = function(){ var ck = bd.querySelector("#ck439"); try { D = parse(bd.querySelector("#ta439").value); } catch(e){ D = null; ck.innerHTML = '<p class="bad">読めませんでした：' + e.message + '。AIの答えを全部貼ってください。</p>'; bI.disabled = true; return; }
+      var r = checkD(D), h = "";
+      h += '<p class="note">外形の角 ' + (D.outline || []).length + '・間仕切り ' + (D.walls || []).length + '・部屋 ' + (D.rooms || []).length + '・窓とドア ' + (D.openings || []).length + (D.__area ? '・1階 ' + D.__area.toFixed(1) + '㎡' : '') + '</p>';
+      r.bad.forEach(function(t){ h += '<p class="bad">✕ ' + t + '</p>'; }); r.warn.forEach(function(t){ h += '<p style="color:#E8742C;font-weight:800">！ ' + t + '</p>'; });
+      (D.unsure || []).forEach(function(t){ h += '<p style="color:#E8742C">？ AIの自信がない所：' + String(t).replace(/[<>&]/g, "") + '</p>'; });
+      if (!r.bad.length) h += '<p class="ok">✓ 入れられます。入れた後、「？」の所は図面で確かめてください（「戻す」で元に戻せます）。</p>';
+      ck.innerHTML = h; bI.disabled = !!r.bad.length; };
+    bI.onclick = function(){ if (!D) return; d.remove(); applyD(D); };
+    ft.appendChild(bC); ft.appendChild(bK); ft.appendChild(bI);
+  }
+  HB.__cal439 = calOpen; HB.__imp439 = impOpen; HB.__parse439 = parse; HB.__check439 = checkD; HB.__apply439 = applyD; HB.__PROMPT439 = PROMPT;
+  /* ボタンを置く：見積の上（⑤）と、①描く */
+  setInterval(function(){
+    try {
+      var top = document.getElementById("estTop"), st5 = document.getElementById("st5");
+      if (top && st5 && !st5.hidden && !document.getElementById("cal439btn")){ var b = document.createElement("button"); b.id = "cal439btn"; b.type = "button"; b.textContent = "⚖ 実際の原価と比べる（自分の単価に寄せる）"; b.onclick = calOpen; var gb = document.getElementById("growBox"); (gb || top).after(b); }
+      var st1 = document.getElementById("st1"), dr = document.getElementById("draw");
+      if (st1 && !st1.hidden && dr && !document.getElementById("imp439btn")){ var c = document.createElement("button"); c.id = "imp439btn"; c.type = "button"; c.textContent = "🤖 図面の写真から作る（AIに読ませる）"; c.onclick = impOpen; var card = dr.closest(".card"); (card || dr).before(c); }
+    } catch(e){}
+  }, 500);
+})();
+</script>
