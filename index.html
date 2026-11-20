@@ -11842,8 +11842,8 @@ function withFloor416(fl, fn){
 /* その階の外形と間仕切り（図面用） */
 function fl416(fl){ return withFloor416(fl === 2 ? 2 : 1, () => ({p: pts().map(q => q.slice()), parts: (S.parts2D || []).filter(q => { try { return pState(q) !== "remove"; } catch(e){ return true; } }).map(q => ({x1: q.x1, y1: q.y1, x2: q.x2, y2: q.y2}))})); }
 /* CAD-453（Opus）：片筋交いの向き（柱頭＝筋交いの上が付く柱）。
-   ① 外周の角の柱は、筋交いの上を角に（現場の普通の入れ方。角はホールダウン等の強い金物が付く所）。
-   ② 同じ通りで続く筋交いは、向きを交互に（ハの字・Vの字）。左右どちらから押されても同じ効き方になるように。
+   ① 外周の角の柱：1階は筋交いの下（柱脚）を角に、2階は上（柱頭）を角に（CAD-456 で実物の柱壁伏図に合わせて修正）。
+   ② 同じ通りで続く筋交いは、向きを交互に。1階は上どうしを真ん中の柱で合わせる（Λ）、2階は下どうし（V）。
    ③ 離れて1本ずつある筋交いは、その方向（X・Y）で右上がり・左上がりの数がそろうように。
    ④ 2階の筋交いは、真下の1階の筋交いと「くの字」（1階の上の端と2階の下の端が同じ柱）。その柱の金物（N値）が小さくなる。
    N値は柱頭側＋0.5・柱脚側−0.5（45×90片筋交いの補正）で、この向きのまま計算される。本数・壁量は変わらない。 */
@@ -11867,15 +11867,18 @@ function braceHeads453(out, below){
       const fi = ch.findIndex(sg => fix.has(sg));
       if (fi >= 0){ fill(ch, fi, fix.get(ch[fi])); ch.forEach(sg => { if (fix.has(sg)) sg.hb = fix.get(sg); }); return; }
       const c0 = corner.has(ch[0].a), c1 = corner.has(ch[ch.length - 1].b);
-      if (c0 && c1 && ch.length > 1){   /* 両端が角：両方とも角を上に。数が合わない時は真ん中の1組だけ同じ向き */
-        const h = Math.ceil(ch.length / 2); for (let i = 0; i < ch.length; i++) ch[i].hb = i < h ? (i % 2 === 1) : ((ch.length - 1 - i) % 2 === 0); return; }
-      if (c0){ fill(ch, 0, false); return; }
-      if (c1){ fill(ch, ch.length - 1, true); return; }
-      if (ch.length === 1 && corner.has(ch[0].b)){ ch[0].hb = true; return; }
+      /* CAD-456：田村ビルズの性能表示 柱壁伏図（綾羅木本町1-2）で答え合わせ。1階は角に筋交いの下（柱脚）、隣どうしは上（柱頭）を真ん中の柱で合わせる（Λ）。
+         2階は1階と「くの字」になるので、角に上・隣どうしは下を合わせる（V）。真ん中の柱は左右の補正が打ち消し合ってN値が小さい（図面でも「い」「ろ」） */
+      const top = out.fl === 2;
+      if (c0 && c1 && ch.length > 1){   /* 両端が角：両方の角をそろえる。数が合わない時は真ん中の1組だけ同じ向き */
+        const h = Math.ceil(ch.length / 2); for (let i = 0; i < ch.length; i++) ch[i].hb = i < h ? (top ? i % 2 === 1 : i % 2 === 0) : (top ? (ch.length - 1 - i) % 2 === 0 : (ch.length - 1 - i) % 2 === 1); return; }
+      if (c0){ fill(ch, 0, !top); return; }
+      if (c1){ fill(ch, ch.length - 1, top); return; }
       free.push(ch);
     });
     /* 角に付かない鎖：方向ごとに傾きの数をそろえる（長い鎖から） */
     free.sort((a, c) => c.length - a.length).forEach(ch => {
+      if (ch.length % 2 === 0){ fill(ch, 0, !(out.fl === 2)); return; }   /* 偶数本：1階はΛ（上を合わせる）、2階はV */
       const d = ch[0].dirX, done = ks.filter(sg => sg.dirX === d && sg.hb !== undefined && !ch.includes(sg)), nUp = done.filter(lean).length, nDn = done.length - nUp;
       fill(ch, 0, true); const upT = ch.filter(lean).length; fill(ch, 0, false); const upF = ch.filter(lean).length;
       const bT = Math.abs(nUp + upT - (nDn + ch.length - upT)), bF = Math.abs(nUp + upF - (nDn + ch.length - upF));
