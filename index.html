@@ -35100,11 +35100,11 @@ nav.steps{padding:1px 6px 3px}
     (S.sashes || []).forEach(function(sa){
       if (!sa.drawn || !sa.host) return; var seg = hostSeg(sa.host); if (!seg) return;
       var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L], n = [-u[1], u[0]];
-      var p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), m = [a[0] + u[0] * (p0 + w / 2), a[1] + u[1] * (p0 + w / 2)], off = R.st + 80, isWin = typeOf(sa) === "win";
+      var p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), m = [a[0] + u[0] * (p0 + w / 2), a[1] + u[1] * (p0 + w / 2)], off = R.st + 80, isWin = typeOf(sa) === "win" && sa.cat !== "開口";   /* 開口（建具なし）は通れる */
       [1, -1].forEach(function(sg){ var r = roomAtMM(R, m[0] + n[0] * off * sg, m[1] + n[1] * off * sg); if (r){ if (isWin){ win[r.cid] = (win[r.cid] || 0) + (+sa.w || 0) * (+sa.h || 0) / 1e6; } else touch[r.cid] = 1; } });
     });
     var big = R.rooms.filter(function(r){ return r.area >= 1; });
-    if (big.length > 1) big.forEach(function(r){ if (!touch[r.cid]) out.push({lv: 2, t: nameOf(r, R) + "：ドアがありません", p: r.p}); });
+    if (big.length > 1) big.forEach(function(r){ var nm0 = nameOf(r, R); if (/クローゼット|押入|収納|物入|PS/.test(nm0)) return; if (!touch[r.cid]) out.push({lv: 2, t: nm0 + "：ドアがありません", p: r.p}); });
     big.forEach(function(r){ var nm = nameOf(r, R); if (!/洋室|寝室|LDK|リビング|ダイニング|子供|和室|居間|書斎/.test(nm)) return;
       if (!win[r.cid]) out.push({lv: 2, t: nm + "：窓がありません（居室は採光の窓が要ります）", p: r.p});
       else if (win[r.cid] < r.area / 7) out.push({lv: 1, t: nm + "：採光の窓が小さめ（床の1/7＝" + (r.area / 7).toFixed(2) + "㎡ に対し 窓 " + win[r.cid].toFixed(2) + "㎡。窓の大きさの合計での目安）", p: r.p}); });   /* CAD-435：建築基準法28条 居室の採光 1/7（有効採光面積の細かい計算はしない目安） */
@@ -35115,6 +35115,26 @@ nav.steps{padding:1px 6px 3px}
       lines.forEach(function(z){ if (z === q) return; var zh = Math.abs(z.y1 - z.y2) < 1; if (zh !== h) return; var zl = h ? Math.min(z.x1, z.x2) : Math.min(z.y1, z.y2), zr = h ? Math.max(z.x1, z.x2) : Math.max(z.y1, z.y2), ov = Math.min(hi, zr) - Math.max(lo, zl); if (ov < 450) return;
         var d = Math.abs((h ? z.y1 : z.x1) - at); if (d > 1 && d < 455){ nar++; var mid = (Math.max(lo, zl) + Math.min(hi, zr)) / 2; if (nar <= 6 && !out.some(function(o){ return o.k === Math.round(d) + "|" + Math.round(mid); })) out.push({lv: 2, k: Math.round(d) + "|" + Math.round(mid), t: "すき間 芯々" + fmt(Math.round(d)) + "（内法 約" + fmt(Math.max(0, Math.round(d) - 130)) + "mm）：人が通れません", p: h ? [mid, (at + (h ? z.y1 : z.x1)) / 2] : [(at + z.x1) / 2, mid]}); } });
     });
+    /* CAD-444：玄関から、ドア・開口を通って入れない部屋（階段の上り口が無い、壁だけで区切られた土間など） */
+    try {
+      var adj = {}, start = {};
+      (S.sashes || []).forEach(function(sa){
+        if (!sa.drawn || !sa.host || typeof typeOf !== "function" || (typeOf(sa) === "win" && sa.cat !== "開口")) return; var seg = hostSeg(sa.host); if (!seg) return;
+        var a = seg[0], c = seg[1], L = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1, u = [(c[0] - a[0]) / L, (c[1] - a[1]) / L], n = [-u[1], u[0]], p0 = Math.max(0, Math.min(sa.pos || 0, L - sa.w)), w = Math.min(sa.w, L), m = [a[0] + u[0] * (p0 + w / 2), a[1] + u[1] * (p0 + w / 2)], off = R.st + 80;
+        var r1 = roomAtMM(R, m[0] + n[0] * off, m[1] + n[1] * off), r2 = roomAtMM(R, m[0] - n[0] * off, m[1] - n[1] * off);
+        if (/玄関|勝手口/.test(sa.cat || "")){ if (r1) start[r1.cid] = 1; if (r2) start[r2.cid] = 1; }
+        if (r1 && r2 && r1.cid !== r2.cid){ (adj[r1.cid] = adj[r1.cid] || []).push(r2.cid); (adj[r2.cid] = adj[r2.cid] || []).push(r1.cid); }
+      });
+      var upper = Array.isArray(S.fl) && S.fl.length > 1 && S.fi > 0;   /* 2階は階段から入る */
+      if (upper){ start = {}; big.forEach(function(r){ if (/階段/.test(nameOf(r, R))) start[r.cid] = 1; }); }
+      var seen = {}, q = Object.keys(start).map(Number);
+      if (q.length && big.length > 1){
+        q.forEach(function(c){ seen[c] = 1; }); while (q.length){ var c0 = q.shift(); (adj[c0] || []).forEach(function(c1){ if (!seen[c1]){ seen[c1] = 1; q.push(c1); } }); }
+        big.forEach(function(r){ if (seen[r.cid]) return; var nm = nameOf(r, R); if (/収納|押入|クローゼット|PS|物入/.test(nm)) return;
+          out.unshift({lv: 2, t: (/階段/.test(nm) ? "階段：上り口がありません（壁で囲まれて入れない）" : nm + (upper ? "：階段から入れません" : "：玄関から入れません") + "（壁で囲まれていて、ドア・開口が無い）"), p: r.p}); });
+      } else if (!q.length && big.length > 1) out.push({lv: 1, t: upper ? "この階に階段がありません" : "玄関（玄関ドア）がありません", p: big[0].p});
+    } catch(e){}
+    try { if (S.mode === "zo" && (S.floors === 2 || (R0 && roof && roof().two)) && !(Array.isArray(S.fl) && S.fl.length > 1)) out.unshift({lv: 2, t: "2階建てなのに、2階の間取りがありません（階の切り替えで2階を作ってください）", p: big.length ? big[0].p : [0, 0]}); } catch(e){}
     var und = big.filter(function(r){ try { var f = roomFinOf(r); return !(f && f.f && f.f !== "none") && roomZoneKind(r) !== "ub"; } catch(e){ return false; } });
     if (und.length) out.push({lv: 1, t: "床を決めていない部屋 " + und.length + "（" + und.slice(0, 3).map(function(r){ return nameOf(r, R); }).join("・") + (und.length > 3 ? "…" : "") + "）", p: und[0].p});
     return out;
@@ -35268,6 +35288,16 @@ nav.steps{padding:1px 6px 3px}
     d.querySelector("#cv434l").onclick = function(){ toPng(svg, function(bl){ try { var f = new File([bl], nm, {type: "image/png"}); if (navigator.canShare && navigator.canShare({files: [f]})){ navigator.share({files: [f], title: nm}).catch(function(){}); return; } } catch(e){} dl(bl); toast("画像を保存しました。LINEで送ってください"); }); };
   }
   HB.__check434 = check; HB.__custSvg434 = custSvg;
+  /* CAD-444：おかしい所は自分で出す。図面から作った直後と、⑤見直しに入った時に一覧を出す。チェックのボタンには赤い数を付ける */
+  var lastAuto = "";
+  HB.__autoCheck444 = function(force){ try { var L = check().filter(function(o){ return o.lv > 1; }); if (!L.length) return; var sig = L.map(function(o){ return o.t; }).join("|"); if (!force && sig === lastAuto) return; lastAuto = sig; showCheck(); } catch(e){} };
+  var lastStep444 = "";
+  setInterval(function(){ try {
+    if (!onM()) return; var s = step();
+    if (s === "all" && lastStep444 !== "all") HB.__autoCheck444(false);
+    lastStep444 = s;
+    var b = document.querySelector('#chips434 [data-w="check"]'); if (b){ var n = check().filter(function(o){ return o.lv > 1; }).length, t = "✔ チェック" + (n ? " " + n : ""); if (b.textContent !== t){ b.textContent = t; b.className = n ? "red" : ""; } }
+  } catch(e){} }, 1500);
   try { if (typeof drawPlan === "function" && !drawPlan.__f434){ var d0 = drawPlan; window.drawPlan = function(){ var r = d0.apply(this, arguments); try { paint(); chips(); } catch(e){} return r; }; window.drawPlan.__f434 = true; } } catch(e){}
   setInterval(function(){ try { hook(); chips(); var sv = document.getElementById("plan"); if (onM() && sv && !sv.querySelector("#f434") && ((S.furn434 || []).length || mark)) paint(); if (mark && Date.now() - mark.t > 6000){ mark = null; paint(); } } catch(e){} }, 400);
 })();
@@ -35517,6 +35547,9 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     "・単位はmm。平面の座標は、建物の外形の左上を(0,0)、右がx、下がyのプラス。",
     "・壁の線は柱の芯（通り芯）で。図面に寸法が書いてある所はその数字を使い、推測した所は unsure に書く。",
     "・読めない項目は null にする（でっち上げない）。",
+    "・壁は図面で実際に壁がある所だけ。部屋の続き（LDKと廊下など）・土間とホールの境目は壁にしない。",
+    "・階段は壁で囲み、上り口（下りる所）に type \"opening\"（建具の無い開口）を置く。2階建てなら1階と2階の両方の階段に。",
+    "・窓とドアは、それぞれ実際にある壁の位置に。2階の窓は floors2 に入れる（1階に入れない）。",
     "{",
     '  "v": 1,',
     '  "name": "現場名（分かれば）",',
@@ -35524,11 +35557,13 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     '  "outline": [[0,0],[10010,0],[10010,7280],[0,7280]],   // 1階の外形の角を時計回りに',
     '  "walls": [[x1,y1,x2,y2], ...],                         // 間仕切り（縦か横の直線）',
     '  "rooms": [{"name":"洋室","x":1820,"y":1820}, ...],      // 部屋名と、部屋の中の1点',
-    '  "openings": [{"type":"window|sweep|door|sliding|entrance","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
+    '  "openings": [{"type":"window|sweep|door|sliding|entrance|opening","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
     '  "ceiling": 2400,                                        // 天井高',
     '  "roof": {"shape":"kiri|yose|kata|riku","pitch":4,"eave":450,"verge":300,"ridge":"x|y","material":"metal|slate|tile"},  // pitchは寸（4寸=4）、ridgeは棟の向き（xが横）',
     '  "foundation": {"type":"beta|nuno","height":400},',
     '  "exterior": "siding|metal|plaster",',
+    '  "floor_changes": [{"type":"doma","rect":[x0,y0,x1,y1]}],   // 土間など、壁は無いが床だけ変わる所（壁にしない）',
+    '  "floors2": {"walls":[...], "rooms":[...], "openings":[...], "floor_changes":[...]},  // 2階建ての時の2階（座標は1階と同じ基準）',
     '  "total_area": 72.87,                                    // 延床面積（㎡、書いてあれば）',
     '  "unsure": ["自信のない所を日本語で1行ずつ"]',
     "}"
@@ -35567,7 +35602,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     S.sashes = (S.sashes || []).filter(function(sa){ return !sa.drawn; });
     /* CAD-443：前の家の床の範囲・器具・照明などを残さない（新しい家として入れる） */
     ["tatami", "zones", "roomFin", "roomRecs", "fx", "lights", "tenken", "tare", "furn434"].forEach(function(k){ if (Array.isArray(S[k])) S[k] = []; });
-    var MAP = {window: ["腰窓", null], sweep: ["掃き出し", null], door: ["室内ドア", "片開き"], sliding: ["室内ドア", "片引き戸"], entrance: ["玄関", null]}, skipped = 0;
+    var MAP = {window: ["腰窓", null], sweep: ["掃き出し", null], door: ["室内ドア", "片開き"], sliding: ["室内ドア", "片引き戸"], entrance: ["玄関", null], opening: ["開口", null]}, skipped = 0;
     (D.openings || []).forEach(function(op){
       try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ skipped++; return; }
         var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ skipped++; return; }
@@ -35576,14 +35611,33 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"});
       } catch(e){ skipped++; }
     });
+    var addFC = function(L){ (L || []).forEach(function(fc){ try { var r = fc.rect; if (!Array.isArray(r) || r.length < 4) return; var fk = fc.type === "doma" ? "flDoma" : fc.type === "tatami" ? "tatami" : null; if (!fk) return; S.tatami = S.tatami || []; S.tatami.push({x0: tx(Math.min(r[0], r[2])), y0: ty(Math.min(r[1], r[3])), x1: tx(Math.max(r[0], r[2])), y1: ty(Math.max(r[1], r[3])), fk: fk, st: "fl:" + fk}); } catch(e){} }); };
+    addFC(D.floor_changes);
     if (D.name) S.genba = String(D.name).slice(0, 40);
     if (+D.ceiling) S.ch = +D.ceiling;
     var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)) S.roof = R.shape; if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = R.material;
     var F = D.foundation || {}; if (F.type === "beta" || F.type === "nuno") S.kisoType = F.type; if (+F.height) S.kiso = +F.height;
     if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior;
     if (S.mode === "zo" && (D.floors === 2 || D.floors === 1)) S.floors = D.floors;
-    save(); try { HB.__pinH = 0; } catch(e){} try { go("M"); } catch(e){ try { drawPlan(); } catch(e2){} }
-    toast("図面から家を作りました" + (skipped ? "（入れられなかった窓・ドア " + skipped + "）" : ""));
+    save();
+    /* CAD-444：2階。今の階（1階）の外形を写した新しい階を作り、2階の間仕切り・部屋名・窓とドアを入れて1階に戻る */
+    var two = null;
+    try {
+      if (D.floors === 2 && D.floors2 && typeof flAdd === "function"){
+        if (Array.isArray(S.fl) && S.fl.length > 1){ while (S.fl.length > 1){ S.fl.pop(); } S.fi = 0; }
+        flAdd();
+        var F2 = D.floors2, sk2 = 0;
+        S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
+        S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
+        S.sashes = []; S.tatami = [];
+        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: 0, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: 0, st: "new"}); } catch(e){ sk2++; } });
+        addFC(F2.floor_changes);
+        save(); two = {sk: sk2}; flSwitch(0);
+      }
+    } catch(e){ two = null; }
+    try { HB.__pinH = 0; } catch(e){} try { go("M"); } catch(e){ try { drawPlan(); } catch(e2){} }
+    toast("図面から家を作りました" + (two ? "（2階も）" : "") + (skipped ? "（入れられなかった窓・ドア " + skipped + "）" : ""));
+    setTimeout(function(){ try { if (HB.__autoCheck444) HB.__autoCheck444(true); } catch(e){} }, 900);
   }
   function impOpen(){
     var d = ov("🤖 図面の写真から作る"), bd = d.querySelector(".bd"), ft = d.querySelector(".ft");
