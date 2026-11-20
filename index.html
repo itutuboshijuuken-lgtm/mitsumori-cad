@@ -586,7 +586,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div id="rfRes"></div></div>
     <div class="zo">
     <h2>屋根の形</h2>
-    <div class="seg" id="roofSeg"><button data-roof="kata" type="button">片流れ</button><button data-roof="kiri" type="button">切妻</button><button data-roof="yose" type="button">寄棟</button><button data-roof="mune" type="button">棟違い</button><button data-rk412="1" type="button">陸屋根</button></div>
+    <style>#roofSeg [data-iri446],#roofSeg [data-rk412]{white-space:nowrap;font-size:12px;padding-left:2px;padding-right:2px}</style><div class="seg" id="roofSeg"><button data-roof="kata" type="button">片流れ</button><button data-roof="kiri" type="button">切妻</button><button data-roof="yose" type="button">寄棟</button><button data-roof="mune" type="button">招き屋根</button><button data-iri446="1" type="button">入母屋</button><button data-rk412="1" type="button">陸屋根</button></div>
     <div id="dirBox"></div>
     <h2>屋根の勾配</h2>
     <div class="chips" id="kCh"></div>
@@ -5488,7 +5488,9 @@ function roof(){
   }
   ms.forEach(m => { const rise = (S.roof === "kata" ? m.x : mune ? (m.side === "A" ? m.x : W - m.x) : Math.min(m.x, W - m.x)) * t; m.rise = rise; m.L = rise - S.moya; });
   const topRise = (S.roof === "kata" ? W : mune ? W - mp : W / 2) * t;
-  return {b, hs, high, spanY, W, D, nokiA, nokiB, kerA, kerB, t, n, Lc, Lc2, Hd, two, Hk, ms, topRise, mune, mp, step};
+  /* CAD-446：入母屋＝寄棟（S.roof "yose"）＋S.iri446。ia＝壁の線から妻（三角の壁）までの水平距離。下は寄棟、ia より上は切妻 */
+  const iri = S.roof === "yose" && !!S.iri446 && W > 1200, ia = iri ? Math.round(Math.max(300, Math.min(W / 2 - 300, W / 2 * (+S.iriR || 0.5)))) : 0;
+  return {b, hs, high, spanY, W, D, nokiA, nokiB, kerA, kerB, t, n, Lc, Lc2, Hd, two, Hk, ms, topRise, mune, mp, step, iri, ia};
 }
 function drawDir(){
   const hs = houseSide();
@@ -5512,7 +5514,10 @@ function drawDir(){
     $("dirBox").querySelectorAll("[data-mwn]").forEach(b => b.addEventListener("click", () => { S.muneWin = Object.assign({w: 1690}, S.muneWin || {}, {n: +b.dataset.mwn}); save(); drawSec(); }));
     $("dirBox").querySelectorAll("[data-mww]").forEach(b => b.addEventListener("click", () => { S.muneWin = Object.assign({n: 1}, S.muneWin || {}, {w: +b.dataset.mww}); save(); drawSec(); }));
   } else if (S.roof === "yose"){
-    $("dirBox").innerHTML = `<p class="hint">寄棟は、棟を長手方向に自動で配置します。四方とも軒の出になります。</p>`;
+    if (S.iri446){ const rr = +S.iriR || 0.5, Ri = roof();   /* CAD-446：入母屋の妻の大きさ */
+      $("dirBox").innerHTML = `<h2>妻（三角の壁）の大きさ</h2><div class="seg">${[[0.67, "小さい"], [0.5, "ふつう"], [0.34, "大きい"]].map(o => `<button data-irr="${o[0]}" aria-pressed="${Math.abs(rr - o[0]) < 0.02}" type="button">${o[1]}</button>`).join("")}</div><p class="hint" style="margin-top:0">下は寄棟、上は切妻。棟は長手方向に自動。妻は壁の線から ${fmt(Ri.ia)} 内側（三角の幅 ${fmt(Ri.W - 2 * Ri.ia)}）。</p>`;
+      $("dirBox").querySelectorAll("[data-irr]").forEach(b => b.onclick = () => { S.iriR = +b.dataset.irr; save(); drawSec(); }); }
+    else $("dirBox").innerHTML = `<p class="hint">寄棟は、棟を長手方向に自動で配置します。四方とも軒の出になります。</p>`;
   } else {
     $("dirBox").innerHTML = `<h2>棟の向き（図面の向き）</h2><div class="seg"><button data-rd="x" aria-pressed="${S.ridge === "x"}" type="button">横（←→）</button><button data-rd="y" aria-pressed="${S.ridge === "y"}" type="button">縦（↑↓）</button></div>`;
     $("dirBox").querySelectorAll("[data-rd]").forEach(b => b.addEventListener("click", () => { S.ridge = b.dataset.rd; save(); drawSec(); }));
@@ -5528,9 +5533,10 @@ function drawSec(){
   chipRow($("nokiCh"), [0, 300, 450, 600, 750, 900], "noki", "", drawSec);
   $("kerBox").hidden = S.roof === "yose";
   chipRow($("kerCh"), [0, 150, 300, 450, 600], "keraba", "", drawSec);
-  document.querySelectorAll("[data-roof]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.roof === S.roof && !(S.riku412 && S.roof === "kata"))); b.onclick = () => { S.roof = b.dataset.roof; S.riku412 = false; save(); drawSec(); }; });
+  document.querySelectorAll("[data-roof]").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.roof === S.roof && !(S.riku412 && S.roof === "kata") && !(S.iri446 && S.roof === "yose"))); b.onclick = () => { S.roof = b.dataset.roof; S.riku412 = false; S.iri446 = false; save(); drawSec(); }; });
+  document.querySelectorAll("[data-iri446]").forEach(b => { b.setAttribute("aria-pressed", String(!!(S.iri446 && S.roof === "yose"))); b.onclick = () => { S.roof = "yose"; S.iri446 = true; S.riku412 = false; save(); drawSec(); }; });   /* CAD-446 */
   /* CAD-412：陸屋根＝片流れの0.5寸（5/100）＋三方パラペット＋金属防水の仕組みで見積・図面を出す（呼び方だけ陸屋根） */
-  document.querySelectorAll("[data-rk412]").forEach(b => { b.setAttribute("aria-pressed", String(!!(S.riku412 && S.roof === "kata"))); b.onclick = () => { S.roof = "kata"; S.riku412 = true; S.parapet = true; S.k = 0.5; S.roofW = "light"; save(); drawSec(); }; });
+  document.querySelectorAll("[data-rk412]").forEach(b => { b.setAttribute("aria-pressed", String(!!(S.riku412 && S.roof === "kata"))); b.onclick = () => { S.roof = "kata"; S.riku412 = true; S.iri446 = false; S.parapet = true; S.k = 0.5; S.roofW = "light"; save(); drawSec(); }; });
   drawDir(); drawSets(); drawGeya();
   if (RF()){
     $("ch2Box").hidden = true; $("chH").textContent = (typeof RF === "function" && RF()) ? "天井の高さ（全体）" : "天井高";
@@ -5634,7 +5640,7 @@ function drawSec(){
     <div><span>${kata ? "一番高い母屋の天" : "棟木の天"}</span><b>${fmt(Hk + topRise)}<small>mm</small></b></div>
     <div><span>GLから一番高い所</span><b>${fmt(Hk + topRise + th + 105 + S.kiso)}<small>mm</small></b></div>
   </div><p>小屋束の長さ（${kata ? "低い側から" : "軒から棟へ"}）：<b>${tsk}</b>　※ほぞ別</p>
-  <p>小屋梁 105×${fmt(S.hari)}・スパン ${fmt(W)}　勾配 ${fmt(S.k, 1)}寸　${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: "寄棟", mune: "切妻（棟違い）"}[S.roof]}${R.mune ? `・棟の位置 ${fmt(R.mp)}（段差 ${fmt(R.step)}）` : ""}${geyaInfo(R)}${S.roof === "yose" ? `・隅木 ${fmt((W / 2 + S.noki) * Math.sqrt(2 + t * t))}（√${fmt(2 + t * t, 4)}）` : ""}${R.b && !isRect() ? "　※L字は外まわりの四角で屋根を計算" : ""}</p></div>`;
+  <p>小屋梁 105×${fmt(S.hari)}・スパン ${fmt(W)}　勾配 ${fmt(S.k, 1)}寸　${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: (S.iri446 ? "入母屋" : "寄棟"), mune: "切妻（棟違い・招き）"}[S.roof]}${R.mune ? `・棟の位置 ${fmt(R.mp)}（段差 ${fmt(R.step)}）` : ""}${geyaInfo(R)}${S.roof === "yose" ? `・隅木 ${fmt((W / 2 + S.noki) * Math.sqrt(2 + t * t))}（√${fmt(2 + t * t, 4)}）` : ""}${R.b && !isRect() ? "　※L字は外まわりの四角で屋根を計算" : ""}</p></div>`;
 }
 
 
@@ -7399,9 +7405,10 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
       if (m.top) return;
       const x = Math.min(m.x, W - m.x), lenL = D - 2 * x + 2 * 0, lenS = W - 2 * x;
       if (m.x > W / 2) return;                         // 片側で両側ぶん数える
-      [lenL, lenL, lenS, lenS].forEach(L => { if (L > 300){ moyaNeeds.push(L + 200); const c = Math.ceil(L / S.hariP) + 1; if (m.L > 0){ const k = Math.round(m.L); tsuka[k] = (tsuka[k] || 0) + c; } } });
+      const upI = R.iri && x >= R.ia, LgI = D - 2 * R.ia + 600;   /* CAD-446：入母屋の上（切妻の所）は、母屋が妻の外まで通る（妻の外へ300ずつ）。短い辺の母屋は無い */
+      (upI ? [LgI, LgI] : [lenL, lenL, lenS, lenS]).forEach(L => { if (L > 300){ moyaNeeds.push(L + 200); const c = Math.ceil(L / S.hariP) + 1; if (m.L > 0){ const k = Math.round(m.L); tsuka[k] = (tsuka[k] || 0) + c; } } });
     });
-    ridgeLen = Math.max(0, D - W);
+    ridgeLen = R.iri ? D - 2 * R.ia + 600 : Math.max(0, D - W);
     const top = ms.find(m => m.top);
     if (ridgeLen > 0){ moyaNeeds.push(ridgeLen + 400); if (top.L > 0){ const k = Math.round(top.L); tsuka[k] = (tsuka[k] || 0) + Math.ceil(ridgeLen / S.hariP) + 1; } }
     else if (top.L > 0){ const k = Math.round(top.L); tsuka[k] = (tsuka[k] || 0) + 1; }
@@ -7417,6 +7424,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   else { const taruN = Math.floor((D + kerA + kerB) / S.taruP) + 1; taruNeeds = runs.flatMap(r => Array(taruN).fill(r * n)); }
   const hafu = [];
   if (!yose) runs.forEach(r => { if (kerA > 0) hafu.push(r * n); if (kerB > 0) hafu.push(r * n); });
+  if (R.iri) for (let i = 0; i < 4; i++) hafu.push((W / 2 - R.ia + 300) * n);   /* CAD-446：入母屋の妻の破風（両妻×左右） */
   if (!yose && !PT){ // CAD-113: 欠け側の妻の破風（項目23）
     const P = pts(), B = bbox();
     for (let i = 0; i < S.edges.length; i++){ const e = S.edges[i], a = P[i], c = P[(i + 1) % P.length];
@@ -7450,6 +7458,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   let wallLen = 0; S.edges.forEach((e, i) => { if (i !== S.house && i !== S.noWall) wallLen += e.v; });
   let wallA = wallLen * (Hk + 105) / 1e6, gableA = 0;
   if (isRect() && !yose){ const gable = kata ? W * W * t / 2 : R.mune ? (R.mp * R.mp + (W - R.mp) * (W - R.mp)) * t / 2 : W * (W / 2 * t) / 2; [kerA, kerB].forEach(k => { if (k > 0){ wallA += gable / 1e6; gableA += gable / 1e6; } }); }
+  if (R.iri){ const gI = (W - 2 * R.ia) * (W / 2 - R.ia) * t / 1e6; wallA += gI; gableA += gI; }   /* CAD-446：入母屋の妻の三角の壁（両側） */
   if (R.mune){ wallA += R.step * D / 1e6; const MW412 = muneWin412(); if (MW412.n) wallA -= MW412.n * MW412.w * MW412.h / 1e6; }   /* CAD-412：高窓の分は外壁から引く */
   let paraEffH = 0;
   if (kata && S.parapet){ paraEffH = Math.max(S.paraH || 1350, Math.round(R.topRise) + 300); wallA += (D + 2 * W) * paraEffH / 1e6; }
@@ -7564,7 +7573,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (window.__capCut368){ const kn368 = []; Object.keys(tsuka).forEach(k => { for (let i = 0; i < tsuka[k]; i++) kn368.push(+k); }); if (kn368.length) window.__capCut368.push({key: "tsuka", name: "小屋束", sp: S.sp.tsuka || "スギ", a: S.tsuka, b: S.tsuka, needs: kn368, spec: ""}); }   /* CAD-368：小屋束は1本ごとの正寸（tsuka の集計）で取る */
   lum("tsuka", "小屋束", S.tsuka, S.tsuka, cutTsuka(tsNeeds), `${fmt(S.tsuka)}角・${tsNeeds.length}本を3m材から・長さ ${Object.keys(tsuka).map(k => fmt(+k)).join("/")}`, true);
   lum("moya", "母屋・棟木", S.moya, S.moya, moyaNeeds, `${fmt(S.moya)}角`, true);
-  if (yose) lum("sumigi", "隅木", 105, 150, Array(4).fill((W / 2 + S.noki) * Math.sqrt(2 + t * t) + 200), `105×150・長さ${fmt((W / 2 + S.noki) * Math.sqrt(2 + t * t))}（√${fmt(2 + t * t, 4)}）`, true);
+  if (yose){ const hr446 = (R.iri ? R.ia : W / 2) + S.noki; lum("sumigi", "隅木", 105, 150, Array(4).fill(hr446 * Math.sqrt(2 + t * t) + 200), `105×150・長さ${fmt(hr446 * Math.sqrt(2 + t * t))}（√${fmt(2 + t * t, 4)}）${R.iri ? "・入母屋（妻まで）" : ""}`, true); }
   lum("taruki", "垂木", 45, 60, taruNeeds, `45×60・${fmt(S.taruP)}間隔${yose ? "・配付垂木込み" : ""}`, false);
   lum("hafu", "破風板", 24, 180, hafu, "24×180", false);
   lum("hafu", "鼻隠し", 24, 180, hanakakushi, `24×180・軒 ${fmt(eaveLen / 1000, 1)}m`, false);
@@ -7674,6 +7683,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("hari", "火打梁", 90, 90, Array(nC).fill(750), `90×90・外周の角${nC}か所（小屋${two ? "・2階床は剛床" : ""}）`, true); work("hiuchiKana", "火打金物", nC, "本");
   } catch(e){}
   if (R.mune) work("roofYaku", "棟違い 雨押え・段差の役物", (D + kerA + kerB) / 1000, "m");
+  if (R.iri) work("roofYaku", "入母屋 妻の下の水切り・雨押え", 2 * (W - 2 * R.ia) / 1000, "m");
   { const MW412 = muneWin412(); if (MW412.n){ work("takamado", `高窓 FIX窓 ${fmt(MW412.w)}×${fmt(MW412.h)}（棟違いの段差）`, MW412.n, "か所"); work("takamadoWaku", "高窓まわり（窓台・まぐさ・防水テープ・水切り）", MW412.n, "か所"); } }
   { const kerL = hafu.reduce((x, y) => x + y, 0), na = (eaveLen * S.noki + kerL * S.keraba) / 1e6;
     if (na > 0) work("nokiten", "軒天", na, "㎡", `軒 ${fmt(eaveLen / 1000, 1)}m×${fmt(S.noki / 1000, 2)}m${kerL ? ` ＋ ケラバ ${fmt(kerL / 1000, 1)}m×${fmt(S.keraba / 1000, 2)}m` : ""} ＝ ${fmt(na, 1)}㎡ × ${fmt(workP("nokiten").p)}円`); }
@@ -7785,8 +7795,8 @@ function drawEst(){
   $("mat").innerHTML = html;
   $("mat").querySelectorAll("[data-row]").forEach(tr => tr.onclick = () => fixRow(C.rows[+tr.dataset.row]));
   const name = S.genba || "増築工事";
-  lastText = `【${name}】内訳（原価）\n${C.two ? "2階建 延床" : "床"} ${fmt(C.nobeT, 2)}坪／天井高 ${fmt(S.ch)}${C.two ? "・" + fmt(S.ch2) : ""}／${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: "寄棟", mune: "切妻（棟違い）"}[S.roof]} ${fmt(S.k, 1)}寸\n柱 ${fmt(C.Lc)}／桁天 ${fmt(C.Hk)}\n\n` + C.rows.filter(r => !r.hide).map(r => r.grp ? `■${r.grp}` : `・${r.name} ${r.qty}（${r.spec}）… ${r.note ? r.note : r.miss ? "単価なし" : fmt(Math.round(r.cost)) + "円" + (r.avg ? "（仮・平均単価）" : "")}`).join("\n") + `${C.ouen && C.ouen.H > 0 ? `\n応援大工 ${fmt(C.ouen.H, 1)}人工（1日${fmt(C.ouen.wO)}円）… 原価 −${fmt(Math.round(C.ouen.diff))}円` : ""}\n\n原価合計 ${fmt(Math.round(C.genkaReal))}円\n利益率 大工・材料${fmt(S.margin, 1)}%／設備・外注${fmt(S.marginEq ?? 15, 1)}%\n見積（税抜）${fmt(Math.round(C.mitsu))}円`;
-  custText = `${name} お見積り（概算）\n\n工事内容：増築${C.two ? "（2階建）" : ""} 延床 約${fmt(C.nobeT, 1)}坪（${fmt(C.nobe, 1)}㎡）\n天井高 ${fmt(S.ch)}mm／屋根 ${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: "寄棟", mune: "切妻（棟違い）"}[S.roof]}／外壁 ${{siding: "サイディング", yakisugi: "焼杉", nuri: "塗り壁"}[S.gaiheki]}${S.sashes.some(s => sState(s) !== "keep") ? `\nサッシ ${S.sashes.filter(s => sState(s) !== "keep").reduce((a, s) => a + s.n, 0)}か所` : ""}\n\n概算金額 ${fmt(Math.round(C.mitsu))}円（税抜）\n消費税 ${fmt(tax)}円\n合計 ${fmt(Math.round(C.mitsu) + tax)}円（税込）${HB.__kouteiDays ? `\n工期の目安：約${HB.__kouteiDays}日` : ""}\n\n※概算のため、現地調査後に正式なお見積りをお出しします。\n（会社名）`;
+  lastText = `【${name}】内訳（原価）\n${C.two ? "2階建 延床" : "床"} ${fmt(C.nobeT, 2)}坪／天井高 ${fmt(S.ch)}${C.two ? "・" + fmt(S.ch2) : ""}／${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: (S.iri446 ? "入母屋" : "寄棟"), mune: "切妻（棟違い・招き）"}[S.roof]} ${fmt(S.k, 1)}寸\n柱 ${fmt(C.Lc)}／桁天 ${fmt(C.Hk)}\n\n` + C.rows.filter(r => !r.hide).map(r => r.grp ? `■${r.grp}` : `・${r.name} ${r.qty}（${r.spec}）… ${r.note ? r.note : r.miss ? "単価なし" : fmt(Math.round(r.cost)) + "円" + (r.avg ? "（仮・平均単価）" : "")}`).join("\n") + `${C.ouen && C.ouen.H > 0 ? `\n応援大工 ${fmt(C.ouen.H, 1)}人工（1日${fmt(C.ouen.wO)}円）… 原価 −${fmt(Math.round(C.ouen.diff))}円` : ""}\n\n原価合計 ${fmt(Math.round(C.genkaReal))}円\n利益率 大工・材料${fmt(S.margin, 1)}%／設備・外注${fmt(S.marginEq ?? 15, 1)}%\n見積（税抜）${fmt(Math.round(C.mitsu))}円`;
+  custText = `${name} お見積り（概算）\n\n工事内容：増築${C.two ? "（2階建）" : ""} 延床 約${fmt(C.nobeT, 1)}坪（${fmt(C.nobe, 1)}㎡）\n天井高 ${fmt(S.ch)}mm／屋根 ${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: (S.iri446 ? "入母屋" : "寄棟"), mune: "切妻（棟違い・招き）"}[S.roof]}／外壁 ${{siding: "サイディング", yakisugi: "焼杉", nuri: "塗り壁"}[S.gaiheki]}${S.sashes.some(s => sState(s) !== "keep") ? `\nサッシ ${S.sashes.filter(s => sState(s) !== "keep").reduce((a, s) => a + s.n, 0)}か所` : ""}\n\n概算金額 ${fmt(Math.round(C.mitsu))}円（税抜）\n消費税 ${fmt(tax)}円\n合計 ${fmt(Math.round(C.mitsu) + tax)}円（税込）${HB.__kouteiDays ? `\n工期の目安：約${HB.__kouteiDays}日` : ""}\n\n※概算のため、現地調査後に正式なお見積りをお出しします。\n（会社名）`;
   if (C.rf){
     const FL = {none: "", fin: "床 重ね張り", base: "床 下地合板＋仕上げ", frame: "床 床組から改修", joist: "床 根太からやり替え", strip: "床 はがして張替え", tat: "床 畳から床へ", new: "床 土間に床を新設", oki: "床 置き床"}[S.rfFloor], WL = {none: "", cloth: "壁 クロス張替え", board: "壁 ボード張替え"}[S.rfWall], CL = {none: "", cloth: "天井 クロス張替え", board: "天井 ボード張替え", frame: "天井 下地から改修"}[S.rfCeil];
     const nm = S.genba || "内装リフォーム工事", what = [FL, WL, CL].filter(Boolean).join("・");
@@ -9608,6 +9618,7 @@ function drawIso0(){
   // 屋根の下面（壁の上端）
   function dist(x, y){
     if (kata){ const h = R.high; return h === "U" ? b.y1 - y : h === "D" ? y - b.y0 : h === "L" ? b.x1 - x : x - b.x0; }
+    if (S.roof === "yose" && R.iri){ const dE = R.spanY ? Math.min(x - b.x0, b.x1 - x) : Math.min(y - b.y0, b.y1 - y), dL = R.spanY ? Math.min(y - b.y0, b.y1 - y) : Math.min(x - b.x0, b.x1 - x); return dE < R.ia ? Math.min(dE, dL) : dL; }
     if (S.roof === "yose") return Math.min(y - b.y0, b.y1 - y, x - b.x0, b.x1 - x);
     if (R.mune){ const sp = R.spanY ? y - b.y0 : x - b.x0; return sp <= R.mp ? sp : R.W - sp; }
     return S.ridge === "x" ? Math.min(y - b.y0, b.y1 - y) : Math.min(x - b.x0, b.x1 - x);
@@ -11767,7 +11778,7 @@ function windReq406(fl){
   try {
     const R = roof(), t = (+S.k || 4) / 10, W = R.W, D = R.D, cw = +S.windC || 50;
     const hw = Math.max(0, (R.Hk || 0) - (R.two && fl === 2 ? (R.Hd || 0) : (+S.dfl || 0)) - 1350), rise = (S.roof === "kata" ? W : W / 2) * t;
-    const eave = (D * hw + (S.roof === "yose" ? (D + Math.max(0, D - W)) / 2 : D) * rise) / 1e6;   // 平側の面（幅D）
+    const eave = (D * hw + (R.iri ? (D - 2 * R.ia) + R.ia * R.ia / (W / 2) : S.roof === "yose" ? (D + Math.max(0, D - W)) / 2 : D) * rise) / 1e6;   /* CAD-446：入母屋は妻の所で棟まで立つ */   // 平側の面（幅D）
     const gable = (W * hw + W * rise / 2) / 1e6;                                                     // 妻側の面（幅W）
     if (R.spanY){ out.y = eave * cw; out.x = gable * cw; } else { out.x = eave * cw; out.y = gable * cw; }
   } catch(e){}
@@ -11969,6 +11980,16 @@ function braceSvg413(P, fl, pxmm, offPx){
    面ごとに {poly:[[x,y]..], run:"x"|"y"（流れの向き＝垂木の向き）, eave:流れの下端の座標} */
 function roofPlanes413(){
   const R = roof(), b = bbox(), out = {planes: [], ridges: [], hips: [], t: R.t, n: Math.sqrt(1 + R.t * R.t)};
+  if (S.roof === "yose" && R.iri){   /* CAD-446：入母屋。隅木は軒の角から妻の線まで、その上は切妻（棟は妻の線まで） */
+    const n0 = +S.noki || 0, X0 = b.x0 - n0, X1 = b.x1 + n0, Y0 = b.y0 - n0, Y1 = b.y1 + n0, ah = R.ia + n0;
+    if (R.spanY){ const m = (Y0 + Y1) / 2, xa = X0 + ah, xb = X1 - ah, ya = Y0 + ah, yb = Y1 - ah;
+      out.planes.push({poly: [[X0, Y0], [X1, Y0], [xb, ya], [xb, m], [xa, m], [xa, ya]], run: "y", eave: Y0}, {poly: [[xa, yb], [xa, m], [xb, m], [xb, yb], [X1, Y1], [X0, Y1]], run: "y", eave: Y1}, {poly: [[X0, Y0], [xa, ya], [xa, yb], [X0, Y1]], run: "x", eave: X0}, {poly: [[X1, Y0], [X1, Y1], [xb, yb], [xb, ya]], run: "x", eave: X1});
+      out.ridges.push([[xa, m], [xb, m]], [[xa, ya], [xa, yb]], [[xb, ya], [xb, yb]]); out.hips.push([[X0, Y0], [xa, ya]], [[X0, Y1], [xa, yb]], [[X1, Y0], [xb, ya]], [[X1, Y1], [xb, yb]]); }
+    else { const m = (X0 + X1) / 2, ya = Y0 + ah, yb = Y1 - ah, xa = X0 + ah, xb = X1 - ah;
+      out.planes.push({poly: [[X0, Y0], [xa, ya], [m, ya], [m, yb], [xa, yb], [X0, Y1]], run: "x", eave: X0}, {poly: [[X1, Y0], [X1, Y1], [xb, yb], [m, yb], [m, ya], [xb, ya]], run: "x", eave: X1}, {poly: [[X0, Y0], [X1, Y0], [xb, ya], [xa, ya]], run: "y", eave: Y0}, {poly: [[X0, Y1], [xa, yb], [xb, yb], [X1, Y1]], run: "y", eave: Y1});
+      out.ridges.push([[m, ya], [m, yb]], [[xa, ya], [xb, ya]], [[xa, yb], [xb, yb]]); out.hips.push([[X0, Y0], [xa, ya]], [[X1, Y0], [xb, ya]], [[X0, Y1], [xa, yb]], [[X1, Y1], [xb, yb]]); }
+    return out;
+  }
   if (S.roof === "yose"){
     const n0 = +S.noki || 0, X0 = b.x0 - n0, X1 = b.x1 + n0, Y0 = b.y0 - n0, Y1 = b.y1 + n0, w = X1 - X0, h = Y1 - Y0;
     if (h <= w){ const hw = h / 2, ra = [X0 + hw, (Y0 + Y1) / 2], rb = [X1 - hw, (Y0 + Y1) / 2];
@@ -12118,6 +12139,7 @@ function drw415(kind){
     else if (R.spanY){ ov.U = R.nokiA || 0; ov.D = R.nokiB || 0; ov.L = R.kerA || 0; ov.R = R.kerB || 0; } else { ov.L = R.nokiA || 0; ov.R = R.nokiB || 0; ov.U = R.kerA || 0; ov.D = R.kerB || 0; }
     const X0 = b.x0 - ov.L, X1 = b.x1 + ov.R, Y0 = b.y0 - ov.U, Y1 = b.y1 + ov.D;
     const zTop = (x, y) => {
+      if (S.roof === "yose" && R.iri){ const dE = R.spanY ? Math.min(x - b.x0, b.x1 - x) : Math.min(y - b.y0, b.y1 - y), dL = R.spanY ? Math.min(y - b.y0, b.y1 - y) : Math.min(x - b.x0, b.x1 - x); return zW + (dE < R.ia ? Math.min(dE, dL) : dL) * t; }
       if (S.roof === "yose") return zW + Math.min(x - b.x0, b.x1 - x, y - b.y0, b.y1 - y) * t;
       if (S.roof === "kata"){ const h = R.high; return zW + (h === "U" ? b.y1 - y : h === "D" ? y - b.y0 : h === "L" ? b.x1 - x : x - b.x0) * t; }
       const sp = R.spanY ? y - b.y0 : x - b.x0; return zW + (R.mune ? (sp <= R.mp ? sp : R.W - sp) : Math.min(sp, R.W - sp)) * t;
@@ -12142,6 +12164,9 @@ function drw415(kind){
       // 屋根
       if (eaveFace(f)) g += `<polygon points="${[[0, zEave], ...top, [HL, zEave]].map(q => PX(q[0]).toFixed(1) + "," + PZ(q[1]).toFixed(1)).join(" ")}" fill="#bfc4ca" stroke="#111" stroke-width="1.2"/>`;
       else g += `<polyline points="${top.map(q => PX(q[0]).toFixed(1) + "," + PZ(q[1]).toFixed(1)).join(" ")}" fill="none" stroke="#111" stroke-width="${Math.max(1.6, 150 * sc).toFixed(1)}"/>`;
+      /* CAD-446：入母屋の妻（三角の壁と破風）。妻側の面＝棟に直角の面 */
+      if (R.iri && (R.spanY ? (f === "E" || f === "W") : (f === "N" || f === "S"))){ const mid = (wa[0] + wa[1]) / 2, hw = R.W / 2 - R.ia, zb = zW + R.ia * t, za = zW + R.W / 2 * t;
+        g += `<polygon points="${PX(mid - hw).toFixed(1)},${PZ(zb).toFixed(1)} ${PX(mid).toFixed(1)},${PZ(za).toFixed(1)} ${PX(mid + hw).toFixed(1)},${PZ(zb).toFixed(1)}" fill="#fff" stroke="#111" stroke-width="1"/><polyline points="${PX(mid - hw - 300).toFixed(1)},${PZ(zb - 300 * t).toFixed(1)} ${PX(mid).toFixed(1)},${PZ(za + 60).toFixed(1)} ${PX(mid + hw + 300).toFixed(1)},${PZ(zb - 300 * t).toFixed(1)}" fill="none" stroke="#111" stroke-width="${Math.max(1.4, 120 * sc).toFixed(1)}"/>`; }
       // 棟違いの段差の壁と高窓（低い側から見える面）
       if (R.mune && eaveFace(f) && ((R.spanY && f === "N") || (!R.spanY && f === "W"))){ const zA = zW + R.mp * t, zB = zW + (R.W - R.mp) * t, MW = muneWin412();
         g += `<rect x="${PX(wa[0])}" y="${PZ(zB)}" width="${(wa[1] - wa[0]) * sc}" height="${(zB - zA) * sc}" fill="#fff" stroke="#111" stroke-width="1"/>`;
@@ -23948,7 +23973,8 @@ function build(S,T,opt){
  /* 壁（開口つき） */
  const wallsOpenings=[];
  const SILL={'腰窓':900,'小窓':1200,'掃き出し':0,'FIX':900,'玄関':0,'室内ドア':0,'クローゼット':0,'勝手口':0};
- function openingsFor(host){return (S.sashes||[]).filter(s=>s.host&&s.host.t===host.t&&s.host.i===host.i)}
+ let BASE449=0,SRC449=null;/* CAD-449：2階の壁は BASE449 だけ上げて、2階の窓（SRC449）で作る */
+ function openingsFor(host){return (SRC449||S.sashes||[]).filter(s=>s.host&&s.host.t===host.t&&s.host.i===host.i)}
  const TH_O=.16,TH_P=.105;const SK=M({color:0xf4f1ea,roughness:.55});
  function wall(a,b,th,h,host,outer,off){off=off||0;/* a,b: m。軸に平行 */
   const horiz=Math.abs(a.z-b.z)<1e-6;const len=horiz?Math.abs(b.x-a.x):Math.abs(b.z-a.z);const dir=horiz?Math.sign(b.x-a.x):Math.sign(b.z-a.z);
@@ -23957,12 +23983,12 @@ function build(S,T,opt){
   const seg=(s0,s1,y0,y1)=>{if(s1-s0<1e-4||y1-y0<1e-4)return;const p0=pos(s0),p1=pos(s1);let x0=Math.min(p0.x,p1.x),x1=Math.max(p0.x,p1.x),z0=Math.min(p0.z,p1.z),z1=Math.max(p0.z,p1.z);
    if(horiz){const c=a.z;if(outer){if(outer.nz){z0=c;z1=c+th}else{z0=c-th;z1=c}}else{z0=c-th/2;z1=c+th/2}}else{const c=a.x;if(outer){if(outer.nx){x0=c;x1=c+th}else{x0=c-th;x1=c}}else{x0=c-th/2;x1=c+th/2}}
    const over={};if(outer){if(outer.nz)over.nz=mat.siding;if(outer.pz)over.pz=mat.siding;if(outer.nx)over.nx=mat.siding;if(outer.px)over.px=mat.siding}
-   add(box(x0,FL+y0,z0,x1,FL+y1,z1,six(mat.cloth,over)));if(y0===0&&mode!=='doll'){const e=.008,sk=.07;const ov2=outer?(outer.nz||outer.pz?{x0:x0,x1:x1,z0:z0-(outer.nz?0:0),z1:z1}:null):null;add(box(x0-(horiz?0:e),FL,z0-(horiz?e:0),x1+(horiz?0:e),FL+sk,z1+(horiz?e:0),six(SK)),false)}};
+   add(box(x0,FL+BASE449+y0,z0,x1,FL+BASE449+y1,z1,six(mat.cloth,over)));if(y0===0&&mode!=='doll'&&!BASE449){const e=.008,sk=.07;const ov2=outer?(outer.nz||outer.pz?{x0:x0,x1:x1,z0:z0-(outer.nz?0:0),z1:z1}:null):null;add(box(x0-(horiz?0:e),FL,z0-(horiz?e:0),x1+(horiz?0:e),FL+sk,z1+(horiz?e:0),six(SK)),false)}};
   let cur=0;ops.forEach(o=>{seg(cur,o.s0,0,h);if(o.sill>0)seg(o.s0,o.s1,0,o.sill);if(o.top<h)seg(o.s0,o.s1,o.top,h);cur=o.s1});seg(cur,len,0,h);
   ops.forEach(o=>fitting(o,a,b,th,horiz,dir,outer,pos));
  }
  function fitting(o,a,b,th,horiz,dir,outer,pos){/* 建具 */
-  const s=o.s,w=o.s1-o.s0,h=o.top-o.sill;const mid=pos((o.s0+o.s1)/2);const g=new T.Group();g.position.set(mid.x,FL+o.sill,mid.z);if(!horiz)g.rotation.y=Math.PI/2;/* ローカルx=壁方向、z=壁厚方向 */
+  const s=o.s,w=o.s1-o.s0,h=o.top-o.sill;const mid=pos((o.s0+o.s1)/2);const g=new T.Group();g.position.set(mid.x,FL+BASE449+o.sill,mid.z);if(!horiz)g.rotation.y=Math.PI/2;/* ローカルx=壁方向、z=壁厚方向 */
   let zc=0;if(outer){const c=horiz?a.z:a.x;const ns=horiz?(outer.nz?1:-1):(outer.nx?1:-1);zc=(horiz?(outer.nz?th/2:-th/2):(outer.nx?th/2:-th/2))}
   const fl=(x,y,z,w_,h_,d_,m)=>{const q=box(-w_/2,-h_/2,-d_/2,w_/2,h_/2,d_/2,six(m));q.geometry.translate(0,0,0);q.position.set(x,y,z);return q};
   const mk=(w_,h_,d_,m)=>{const g2=new T.BoxGeometry(w_,h_,d_);const q=new T.Mesh(g2,m);q.castShadow=q.receiveShadow=true;return q};
@@ -23984,15 +24010,24 @@ function build(S,T,opt){
  /* 外壁4辺 */
  const P={0:[{x:0,z:0},{x:W,z:0},{nz:1}],1:[{x:W,z:0},{x:W,z:D},{px:0,nx:0}],2:[{x:W,z:D},{x:0,z:D},{pz:0}],3:[{x:0,z:D},{x:0,z:0},{nx:1}]};
  /* outer: 外側面にsidingを張る。北:外=-z → 壁をz∈[0,th]に置き外面nz。 */
+ try{if((S.floors||1)===2&&(S.fi||0)===1&&S.fl&&S.fl[0]&&S.fl[0].snap)SRC449=S.fl[0].snap.sashes||[]}catch(e){}/* CAD-449：2階を開いている時も、1階の壁には1階の窓 */
  wall({x:0,z:0},{x:W,z:0},TH_O,H,{t:'e',i:0},{nz:1});
  wall({x:W,z:0},{x:W,z:D},TH_O,H,{t:'e',i:1},{px:1});
  wall({x:W,z:D},{x:0,z:D},TH_O,H,{t:'e',i:2},{pz:1});
- wall({x:0,z:D},{x:0,z:0},TH_O,H,{t:'e',i:3},{nx:1});
+ wall({x:0,z:D},{x:0,z:0},TH_O,H,{t:'e',i:3},{nx:1});SRC449=null;
+ /* CAD-449：2階建て（外から見る時）。1階の上に胴差の帯、2階の外壁と2階の窓を足し、屋根はその上に載せる */
+ let LIFT=0;
+ try{if(mode==='out'&&(S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1){const fi=S.fi||0,f2=fi===1?S.sashes:(S.fl[1].snap&&S.fl[1].snap.sashes)||[],f1=fi===1?((S.fl[0].snap&&S.fl[0].snap.sashes)||[]):null;
+  const B=mm((+S.fuko||300)+(+S.dosa||240)+40),H2=mm(+S.ch2||2400);
+  add(box(0,FL+H0,0,W,FL+H0+B,D,six(mat.siding)));
+  const band=M({color:0xd9d2c3,roughness:.6});add(box(-.02,FL+H0+B*.35,-.02,W+.02,FL+H0+B*.35+.06,D+.02,six(band)));
+  BASE449=H0+B;SRC449=f2;[0,1,2,3].forEach(i=>wall(P[i][0],P[i][1],TH_O,H2,{t:'e',i},P[i][2]));BASE449=0;SRC449=null;
+  LIFT=B+H2;}}catch(e){BASE449=0;SRC449=null;LIFT=0}
  /* 外壁の上（梁・小屋裏）：片流れ。北が高い */
  const RISE=.3*D;
- if(mode!=='doll')add(box(0,FL+H,0,W,FL+H0+RISE,TH_O,six(mat.cloth,{nz:mat.siding})));
+ if(mode!=='doll')add(box(0,FL+H+LIFT,0,W,FL+H0+LIFT+RISE,TH_O,six(mat.cloth,{nz:mat.siding})));
  if(mode!=='doll'){ const sh=new T.Shape();sh.moveTo(0,0);sh.lineTo(D,0);sh.lineTo(D,RISE);sh.closePath();
-   [[0,'nx'],[W-TH_O,'px']].forEach(([x])=>{const g=new T.ExtrudeGeometry(sh,{depth:TH_O,bevelEnabled:false});g.rotateY(Math.PI/2);g.translate(x,FL+H0,D);const m=new T.Mesh(g,mat.siding);m.castShadow=m.receiveShadow=true;add(m)}) }
+   [[0,'nx'],[W-TH_O,'px']].forEach(([x])=>{const g=new T.ExtrudeGeometry(sh,{depth:TH_O,bevelEnabled:false});g.rotateY(Math.PI/2);g.translate(x,FL+H0+LIFT,D);const m=new T.Mesh(g,mat.siding);m.castShadow=m.receiveShadow=true;add(m)}) }
  /* 間仕切り */
  (S.parts2D||[]).forEach((p,i)=>{const cl=(x,z)=>({x:x<=.001?TH_O:x>=W-.001?W-TH_O:x,z:z<=.001?TH_O:z>=D-.001?D-TH_O:z});
   let A=cl(mm(p.x1),mm(p.y1)),B=cl(mm(p.x2),mm(p.y2));const horiz=Math.abs(mm(p.y1)-mm(p.y2))<1e-6;if(horiz){A.z=B.z=mm(p.y1)}else{A.x=B.x=mm(p.x1)}
@@ -24003,7 +24038,7 @@ function build(S,T,opt){
   wall(A,B,TH_P,H,{t:'p',i},null,off)});
  /* 屋根（片流れ・北が高い） */
  const OV=.55,run=D+2*OV,sl=Math.atan2(RISE,D);const len=Math.hypot(run,RISE*(run/D)-0)/1;const Lr=run/Math.cos(sl);
- const rg=new T.Group();rg.position.set(W/2,FL+H0+RISE/2,D/2);
+ const rg=new T.Group();rg.position.set(W/2,FL+H0+LIFT+RISE/2,D/2);
  X.tile.repeat.set((W+2*OV)/1.4,Lr/1.1);
  const rb=new T.Mesh(new T.BoxGeometry(W+2*OV,.14,Lr),[mat.fascia,mat.fascia,mat.roof,mat.fascia,mat.fascia,mat.fascia]);rb.rotation.x=sl;rb.castShadow=rb.receiveShadow=true;rg.add(rb);ceilG.add(rg);
  /* 破風・鼻隠し */
@@ -24188,7 +24223,7 @@ function build(S,T,opt){
   root.traverse(o=>{if(!o.isMesh)return;let p=o,ex=false;while(p){if(p===ceilG){ex=true;break}p=p.parent}if(ex)return;[].concat(o.material).forEach(m=>{if(m){m.clippingPlanes=pl303;m.clipShadows=true}})})}catch(e){}
  return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name)};
 }
- function supported(S){try{const E=S.edges||[];return E.length===4&&(S.floors||1)===1&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
+ function supported(S){try{const E=S.edges||[];return E.length===4&&((S.floors||1)===1||((S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1))&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
  /* render: canvasに描く。ハンドル {rotate(n), view(v), dispose(), ms} を返す。静止画（動かす時だけ再描画）なので軽い。 */
  function render(canvas,S,o){o=o||{};const T=o.THREE||window.THREE;if(!T||!supported(S))return null;
   const w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height;
@@ -30464,6 +30499,7 @@ var x = Math.min(m.x, R.W - m.x);
 if (!(x > 0) || seenX[x]) return; seenX[x] = 1;
 var lenL = R.D - 2 * x, lenS = R.W - 2 * x;
 var c1 = rp(R, b, x, x), c2 = rp(R, b, R.D - x, x), c3 = rp(R, b, R.D - x, R.W - x), c4 = rp(R, b, x, R.W - x);
+if (R.iri && x >= R.ia){ lenL = R.D - 2 * R.ia + 600; lenS = 0; c1 = rp(R, b, R.ia - 300, x); c2 = rp(R, b, R.D - R.ia + 300, x); c3 = rp(R, b, R.D - R.ia + 300, R.W - x); c4 = rp(R, b, R.ia - 300, R.W - x); }   /* CAD-446 入母屋 */
 var gg = "";
 if (lenL > 300) gg += band(fr, c1, c2, moyaW, "fsMoyaSeg") + band(fr, c3, c4, moyaW, "fsMoyaSeg") + ctrLine393(fr, c1, c2, "fsMoyaCL") + ctrLine393(fr, c3, c4, "fsMoyaCL") + sizeLbl393(fr, c1, c2, fmt(+S.moya || 105) + "×" + fmt(+S.moya || 105));
 if (lenS > 300) gg += band(fr, c2, c3, moyaW, "fsMoyaSeg") + band(fr, c4, c1, moyaW, "fsMoyaSeg") + ctrLine393(fr, c2, c3, "fsMoyaCL") + ctrLine393(fr, c4, c1, "fsMoyaCL");
@@ -30473,8 +30509,8 @@ if (lenL > 300) g += tsukaOnSeg(fr, c1, c2, lenL, tsukaW) + tsukaOnSeg(fr, c3, c
 if (lenS > 300) g += tsukaOnSeg(fr, c2, c3, lenS, tsukaW) + tsukaOnSeg(fr, c4, c1, lenS, tsukaW);
 }
 });
-var ridgeLen = Math.max(0, R.D - R.W);
-var e1 = rp(R, b, R.W / 2, R.W / 2), e2 = rp(R, b, R.D - R.W / 2, R.W / 2);
+var ridgeLen = R.iri ? R.D - 2 * R.ia + 600 : Math.max(0, R.D - R.W);
+var e1 = R.iri ? rp(R, b, R.ia - 300, R.W / 2) : rp(R, b, R.W / 2, R.W / 2), e2 = R.iri ? rp(R, b, R.D - R.ia + 300, R.W / 2) : rp(R, b, R.D - R.W / 2, R.W / 2);
 if (ridgeLen > 1) g += band(fr, e1, e2, moyaW, "fsMune") + ctrLine393(fr, e1, e2, "fsMuneCL") + sizeLbl393(fr, e1, e2, fmt(+S.moya || 105) + "×" + fmt(+S.moya || 105));
 var topM = null;
 R.ms.forEach(function(m){ if (m.top) topM = m;});
@@ -30483,7 +30519,9 @@ if (ridgeLen > 1) g += tsukaOnSeg(fr, e1, e2, ridgeLen, tsukaW);
 else g += postSq(fr, e1[0], e1[1], tsukaW, "fsTsuka");
 }
 var cn = [rp(R, b, 0, 0), rp(R, b, R.D, 0), rp(R, b, R.D, R.W), rp(R, b, 0, R.W)];
-g += line(fr, cn[0], e1, "fsSumigi", "#111", 2) + line(fr, cn[3], e1, "fsSumigi", "#111", 2)
+if (R.iri){ var hA = rp(R, b, R.ia, R.ia), hB = rp(R, b, R.ia, R.W - R.ia), hC = rp(R, b, R.D - R.ia, R.ia), hD = rp(R, b, R.D - R.ia, R.W - R.ia);
+g += line(fr, cn[0], hA, "fsSumigi", "#111", 2) + line(fr, cn[3], hB, "fsSumigi", "#111", 2) + line(fr, cn[1], hC, "fsSumigi", "#111", 2) + line(fr, cn[2], hD, "fsSumigi", "#111", 2) + line(fr, hA, hB, "fsSumigi", "#111", 1.2) + line(fr, hC, hD, "fsSumigi", "#111", 1.2); }
+else g += line(fr, cn[0], e1, "fsSumigi", "#111", 2) + line(fr, cn[3], e1, "fsSumigi", "#111", 2)
 + line(fr, cn[1], e2, "fsSumigi", "#111", 2) + line(fr, cn[2], e2, "fsSumigi", "#111", 2);
 } else {
 /* 切妻・片流れ・棟違い：母屋は棟方向に通る線（roof の ms。同じ位置は1本にまとめる） */
@@ -35580,7 +35618,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     '  "rooms": [{"name":"洋室","x":1820,"y":1820}, ...],      // 部屋名と、部屋の中の1点',
     '  "openings": [{"type":"window|sweep|door|sliding|entrance|opening","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
     '  "ceiling": 2400,                                        // 天井高',
-    '  "roof": {"shape":"kiri|yose|kata|riku","pitch":4,"eave":450,"verge":300,"ridge":"x|y","material":"metal|slate|tile"},  // pitchは寸（4寸=4）、ridgeは棟の向き（xが横）',
+    '  "roof": {"shape":"kiri|yose|kata|riku|irimoya|maneki","pitch":4,"eave":450,"verge":300,"ridge":"x|y","material":"metal|slate|tile"},  // pitchは寸（4寸=4）、ridgeは棟の向き（xが横）',
     '  "foundation": {"type":"beta|nuno","height":400},',
     '  "exterior": "siding|metal|plaster",',
     '  "floor_changes": [{"type":"doma","rect":[x0,y0,x1,y1]}],   // 土間など、壁は無いが床だけ変わる所（壁にしない）',
@@ -35640,7 +35678,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     addFC(D.floor_changes);
     if (D.name) S.genba = String(D.name).slice(0, 40);
     if (+D.ceiling) S.ch = +D.ceiling;
-    var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)) S.roof = R.shape; if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = R.material;
+    var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)){ S.roof = R.shape; S.iri446 = false; } if (R.shape === "irimoya"){ S.roof = "yose"; S.iri446 = true; } if (R.shape === "maneki"){ S.roof = "mune"; S.iri446 = false; } if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = R.material;
     var F = D.foundation || {}; if (F.type === "beta" || F.type === "nuno") S.kisoType = F.type; if (+F.height) S.kiso = +F.height;
     if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior;
     if (S.mode === "zo" && (D.floors === 2 || D.floors === 1)) S.floors = D.floors;
@@ -35889,7 +35927,7 @@ body.gz448 #plan *,body.gz448 #iso *,body.gz448 #pvSvg *,body.gz448 #sec *{shape
       var b = t && t.closest ? t.closest('[data-h3d="fine"]') : null;
       if (!b) return;
       if (window.House3D && typeof House3D.supported === "function" && typeof S !== "undefined" && S && !House3D.supported(S)){
-        if (typeof toast === "function") toast("キレイ表示は、まだ平屋の四角い家だけです。この家では軽い表示のままです");
+        if (typeof toast === "function") toast("キレイ表示は、まだ四角い家だけです（2階建ては、2階を作った家）。この家では軽い表示のままです");
       }
     } catch(err){}
   }, true);
