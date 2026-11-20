@@ -15744,7 +15744,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__partDraw = true;
     document.body.classList.add("partdraw");
     try { drawToolsUI(); } catch(e){}
-    toast("間仕切り：置きたい所を長押ししながら、指で線をなぞると描けます");
+    toast("間仕切り：指でなぞると描けます。タップで選べます");
   }
   HB.__partDrawOn = pdOn;
 
@@ -16412,7 +16412,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     }catch(e){}
     try{
       var covered = !!(HB.__partDraw || HB.__eraTool || HB.__delMode || (typeof enclMode !== "undefined" && enclMode));
-      if (covered && fsState === "off" && HB.__pageM && !document.body.classList.contains("nbtutRun") && !(window.__pinchBusy383 && window.__pinchBusy383())) fsEnter("auto");
+      if (covered && fsState === "off" && !HB.__noAutoFs430 && HB.__pageM && !document.body.classList.contains("nbtutRun") && !(window.__pinchBusy383 && window.__pinchBusy383())) fsEnter("auto");
       else if (!covered && fsState === "auto" && !(window.__pinchBusy383 && window.__pinchBusy383())) fsExit();
       if (fsState !== "off"){ var sm2 = document.getElementById("stM"), s2 = document.getElementById("st2"); if (sm2 && s2 && sm2.hidden && s2.hidden && !(window.__pinchBusy383 && window.__pinchBusy383())) fsExit(); }
     }catch(e){}
@@ -18071,7 +18071,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       try { if (typeof toolOpen !== "undefined" && toolOpen) open = true; } catch(e2){}
       if (window.grp136) open = true;
       if (HB.__floorTab) open = true;
-      if (open && HB.__fsEnterWork) HB.__fsEnterWork();
+      if (open && HB.__fsEnterWork && !HB.__noAutoFs430) HB.__fsEnterWork();   /* CAD-430：道具を持っても画面の大きさを変えない */
     } catch(e){}
   }, false);
   HB.__workFs150 = true;
@@ -34522,9 +34522,7 @@ nav.steps{padding:1px 6px 3px}
       R.rooms.forEach(function(rm){
         var ok = false;
         try { var f = roomFinOf(rm); if (f && f.f && f.f !== "none") ok = true; } catch(e){}
-        if (!ok && typeof roomZoneKind === "function"){
-          try { if (roomZoneKind(rm)) ok = true; } catch(e){}
-        }
+        /* CAD-430：部屋の種類（トイレ・浴室など）だけでは「床を決めた」にしない（翔伍：床を決めるまで何も表示しない） */
         if (ok) decided[rm.cid] = true;
       });
       /* 決めた部屋のセルを行ラン（mm）にまとめる */
@@ -34548,10 +34546,11 @@ nav.steps{padding:1px 6px 3px}
       var sx = pb.width / bb.w, sy = pb.height / bb.h;
       var sig = runs.length + "|" + pb.x.toFixed(1) + "," + pb.y.toFixed(1) + "," + pb.width.toFixed(1) + "|" + Object.keys(decided).join(",");
       var defs = svg.querySelector("defs");
-      if (sig !== lastSig){
+      if (sig !== lastSig || !svg.querySelector("#clipF423")){   /* CAD-430：描き直しで消えたら作り直す（消えたまま＝床が全部見えていた） */
         lastSig = sig;
         var old = svg.querySelector("#clipF423");
         if (old) old.remove();
+        if (!defs){ defs = document.createElementNS(NS, "defs"); svg.insertBefore(defs, svg.firstChild); }
         if (defs){
           var cp = document.createElementNS(NS, "clipPath");
           cp.setAttribute("id", "clipF423");
@@ -34602,7 +34601,20 @@ nav.steps{padding:1px 6px 3px}
       });
     } catch(e){}
   }
-  setInterval(fix423, 500);
+  /* CAD-430（Opus）：チカチカ止め。0.5秒ごとの見回りだけだと、床の絵が一瞬見えてから消えていた。
+     #plan が描き変わったら、画面に出る前（同じ流れの中）で消す。①drawPlan の直後に呼ぶ ②#plan の中身が変わったら呼ぶ（MutationObserver は描画の前に動く）。 */
+  try {
+    if (typeof drawPlan === "function" && !drawPlan.__f430){
+      var dp0 = drawPlan;
+      window.drawPlan = function(){ var r = dp0.apply(this, arguments); try { fix423(); } catch(e){} return r; };
+      window.drawPlan.__f430 = true;
+    }
+  } catch(e){}
+  try {
+    var pl = document.getElementById("plan"), busy = false;
+    if (pl && typeof MutationObserver === "function") new MutationObserver(function(){ if (busy) return; busy = true; try { fix423(); } finally { busy = false; } }).observe(pl, {childList: true, subtree: true});
+  } catch(e){}
+  setInterval(fix423, 1000);
   fix423();
 })();
 </script>
@@ -34682,3 +34694,146 @@ nav.steps{padding:1px 6px 3px}
 })();
 </script>
 
+<script id="ux430js">
+/* ===== CAD-430（Opus）：「最初の1手」が分かる画面。翔伍の画面録画（2026-11-20）の困りごとの直し。表示と操作の入口だけ。計算・保存データには触らない。
+   1) 図面の真ん中に、今やる事を大きく出す（指の絵＋1行＋補足1行）。図面に指が触れたら消える。その手順を1回やったら次からは出さない（localStorage coach430）。
+      上の黄色い1行（#stepGuide400）を押すと、もう一度出る。
+   2) 手順に入ったら、すぐ使える構えにする：①間仕切り＝指で描ける（「描く・選ぶ」を押さなくてよい）、③ドア・サッシ＝ドアを選ぶ所を開く、④置く物＝置く物を選ぶ所を開く。
+   3) ②床に「囲んで一部だけ」ボタン（土間・続き部屋の一部だけ床を変える入口。前のボタンが外れて入口が無くなっていた）。
+   4) 「部屋の見本（何畳）」は出さない（置いても動かせず、指で描く方が早いため。機能は残す）。
+   5) 図面の大きさをどの手順でも同じにする：床・置く物の手順だけにある上の段（allFlRow401・putRooms401）は、図面の上に重ねて出す（図面の枠は縮めない）。 */
+(function(){
+  "use strict";
+  var KEY = "coach430";
+  HB.__noAutoFs430 = true;   /* 道具を持った時に全画面へ自動で切り替えない（どの手順でも図面の大きさを同じにする）。全画面は手動のボタンだけ */
+  try { if (HB.__fsState && HB.__fsState() === "auto" && HB.__fsExit) HB.__fsExit(); } catch(e){}
+  var done = {}; try { done = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch(e){ done = {}; }
+  function mark(k){ done[k] = 1; try { localStorage.setItem(KEY, JSON.stringify(done)); } catch(e){} }
+  var TXT = {
+    d1:    ["指で、家の外形をなぞってください", "1筆でぐるっと囲むと、自動でまっすぐになります。広さから作る時は下の「坪数から」。"],
+    part:  ["指で壁をなぞると、間仕切りが入ります", "引いた壁や部屋をタップすると、寸法と名前を直せます。"],
+    floor: ["部屋をタップして、床をえらびます", "土間など一部だけ変える時は、上の「囲んで一部だけ」を押してから、指で囲みます。"],
+    encl:  ["変えたい範囲を、指でぐるっと囲みます", "囲んだら床をえらびます。やめる時は、もう一度「囲んで一部だけ」。"],
+    ds:    ["下でドア・窓をえらんで、壁をタップ", "置いたドア・窓をタップすると、寸法や向きを直せます。"],
+    put:   ["下で置く物をえらんで、置く場所をタップ", "置いた物は、指で動かせます。"]
+  };
+  var css = document.createElement("style");
+  css.textContent =
+    ".co430{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:7}"
+  + ".co430[hidden]{display:none}"
+  + ".co430 .cb{max-width:84%;background:rgba(255,255,255,.94);border:2px solid #1a73e8;border-radius:14px;padding:12px 14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.12)}"
+  + ".co430 .ct{font-size:17px;font-weight:900;color:#0b3d91;line-height:1.45}"
+  + ".co430 .cs{font-size:13px;font-weight:700;color:#37474F;line-height:1.55;margin-top:4px}"
+  + ".co430 .cf{font-size:34px;line-height:1;margin-bottom:4px;display:inline-block;animation:fg430 1.6s ease-in-out infinite}"
+  + "@keyframes fg430{0%{transform:translate(-18px,6px)}50%{transform:translate(18px,-6px)}100%{transform:translate(-18px,6px)}}"
+  + "#stepGuide400{cursor:pointer}#stepGuide400::after{content:'　？使い方';color:#1a73e8;font-weight:800}"
+  + "#rpOpen365,#rpBox365{display:none!important}"
+  + "#stM{position:relative}"
+  + "#stM #partCh{position:absolute!important;left:6px;top:var(--ov430,140px);z-index:8;margin:0!important;width:auto!important}"
+  + "#stM #allFlRow401,#stM #putRooms401{position:absolute!important;left:6px;right:6px;top:var(--ov430,140px);z-index:8;margin:0!important;background:rgba(255,255,255,.96);border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.12)}"
+  + "#stM #allFlRow401:not([hidden]){display:flex;gap:6px;align-items:center;padding:4px}"
+  + "#encl430{min-height:44px;border:2px solid #1a73e8;border-radius:10px;background:#fff;color:#1a73e8;font-size:14px;font-weight:900;padding:0 10px;white-space:nowrap}"
+  + "#encl430[aria-pressed='true']{background:#1a73e8;color:#fff}";
+  document.head.appendChild(css);
+
+  var boxes = {};
+  function coachIn(host){
+    if (!host) return null;
+    var id = host.id || "d1host";
+    if (boxes[id] && boxes[id].isConnected) return boxes[id];
+    if (getComputedStyle(host).position === "static") host.style.position = "relative";
+    var d = document.createElement("div"); d.className = "co430"; d.hidden = true;
+    d.innerHTML = '<div class="cb"><div class="cf">👆</div><div class="ct"></div><div class="cs"></div></div>';
+    host.appendChild(d); boxes[id] = d;
+    host.addEventListener("pointerdown", function(){ if (!d.hidden){ d.hidden = true; if (cur) mark(cur); } }, true);
+    return d;
+  }
+  function vis(id){ var e = document.getElementById(id); return !!(e && !e.hidden && e.getClientRects().length); }
+  function keyNow(){
+    try {
+      if (document.body.classList.contains("nbtutRun")) return null;   /* チュートリアル中は出さない */
+      if (vis("st1")) return "d1";
+      if (vis("stM") && typeof HB !== "undefined" && HB.__step399){
+        var s = HB.__step399();
+        if (s === "floor" && typeof enclMode !== "undefined" && enclMode) return "encl";
+        return s;
+      }
+    } catch(e){}
+    return null;
+  }
+  function hostOf(k){ if (k === "d1"){ var dr = document.getElementById("draw"); return dr ? dr.parentElement : null; } return document.getElementById("slotM"); }
+  var cur = null, forced = false;
+  function show(k, force){
+    var host = hostOf(k), d = coachIn(host); if (!d) return;
+    Object.keys(boxes).forEach(function(i){ if (boxes[i] !== d) boxes[i].hidden = true; });
+    if (!force && done[k] && k !== "encl") { d.hidden = true; return; }
+    if (k === "d1"){ try { if (typeof strokes !== "undefined" && strokes.length) { d.hidden = true; return; } } catch(e){} }
+    d.querySelector(".ct").textContent = TXT[k][0]; d.querySelector(".cs").textContent = TXT[k][1]; d.hidden = false;
+  }
+  /* 手順に入った時の構え */
+  function arm(k){
+    try {
+      if (k === "part"){
+        if (typeof toolOpen !== "undefined" && toolOpen !== "part" && !(typeof enclMode !== "undefined" && enclMode)){
+          toolOpen = "part"; if (HB.__partDrawOn) HB.__partDrawOn(); drawToolsUI();
+        }
+      } else if (k === "ds" || k === "put"){
+        var mine = k === "ds" ? ["door", "win", "gen"] : ["mizu", "etc", "light"];
+        if (typeof toolOpen !== "undefined" && mine.indexOf(toolOpen) < 0){
+          if (HB.__partDrawOff) HB.__partDrawOff(true);
+          window.grp136 = "put"; window.putLeaf136 = mine[0]; toolOpen = mine[0]; drawToolsUI(); drawPlan();
+        }
+      }
+    } catch(e){}
+  }
+  /* 床の手順の「囲んで一部だけ」 */
+  function enclBtn(){
+    var row = document.getElementById("allFlRow401"); if (!row) return;
+    var b = document.getElementById("encl430");
+    if (!b){
+      b = document.createElement("button"); b.id = "encl430"; b.type = "button"; b.textContent = "✋ 囲んで一部だけ";
+      b.onclick = function(){
+        try {
+          if (HB.__delMode && HB.__delSet) HB.__delSet(false);
+          if (enclMode){ enclOff(); }
+          else {
+            if (HB.__partDrawOff) HB.__partDrawOff(true);
+            enclMode = true; encl = {r: null}; tatMode = false; eraMode = false; ltTool = null; sel = null; enclNew = S.mode === "zo"; toolOpen = null;
+            document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
+            drawToolsUI(); drawPlan();
+          }
+        } catch(e){}
+        tick(true);
+      };
+      row.appendChild(b);
+    }
+    try { b.setAttribute("aria-pressed", enclMode ? "true" : "false"); } catch(e){}
+  }
+  /* 上に重ねる段の位置（図面の枠の上端に合わせる） */
+  function ovTop(){
+    var st = document.getElementById("stM"), sl = document.getElementById("slotM");
+    if (!st || !sl || st.hidden) return;
+    var t = sl.getBoundingClientRect().top - st.getBoundingClientRect().top + 6;
+    st.style.setProperty("--ov430", Math.round(t) + "px");
+  }
+  var last = null;
+  function tick(force){
+    var k = keyNow();
+    if (k !== last || force === true){
+      var prev = last; last = k; cur = k;
+      if (k && k !== prev && (k === "part" || k === "ds" || k === "put")) arm(k);
+      if (k) show(k, forced); else Object.keys(boxes).forEach(function(i){ boxes[i].hidden = true; });
+      forced = false;
+    }
+    if (k === "floor" || k === "encl") enclBtn();
+    ovTop();
+  }
+  /* 黄色い1行を押すと、今の手順の使い方をもう一度出す */
+  document.addEventListener("click", function(e){
+    if (e.target && e.target.closest && e.target.closest("#stepGuide400")){ var k = keyNow(); if (k){ cur = k; show(k, true); } }
+  });
+  /* ①描く：描き終わったら案内は消えたまま */
+  setInterval(tick, 300); tick();
+  HB.__coach430 = {show: function(k){ show(k || keyNow(), true); }, reset: function(){ done = {}; try { localStorage.removeItem(KEY); } catch(e){} last = null; }};
+})();
+</script>
