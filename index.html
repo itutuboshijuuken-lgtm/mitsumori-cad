@@ -31736,7 +31736,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
     }
   }
   function sig368(){
-    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length].join("|"); } catch(e){ return ""; }
+    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length, S.ch || "", S.ch2 || "", S.ceilOrder || "", S.ceilKata || "", S.gbW || "", S.gbC || "", S.mabaSec || "", S.mabaKata || "", S.tenjoSec || "", S.ceilFrame || "", S.joistSec || "", S.floorKoho || ""].join("|"); } catch(e){ return ""; }   /* CAD-479：仕様の部材設定（間柱の断面・型ほか）も署名に入れる。設定を変えて戻っても材料の一覧が古いまま残る不具合の修正（巾木受け・間柱の行が連動しなかった） */
   }
   function cutInit368(){
     var seg = document.getElementById("pvSeg");
@@ -33764,7 +33764,7 @@ lab391
   }
 
   function sig390(){
-    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length, S.ch || "", S.ch2 || "", S.ceilOrder || "", S.ceilKata || "", S.gbW || "", S.gbC || "", (S.roomFin || []).length].join("|"); } catch(e){ return ""; }
+    try { return [S.mode, S.fi, S.precut ? 1 : 0, (S.edges || []).length, JSON.stringify(S.edges || []).length, (S.sashes || []).length, (S.tenken || []).length, (S.parts2D || []).length, (S.zones || []).length, (S.tatami || []).length, (S.geya || []).length, (S.fl || []).length, S.ch || "", S.ch2 || "", S.ceilOrder || "", S.ceilKata || "", S.gbW || "", S.gbC || "", (S.roomFin || []).length, S.mabaSec || "", S.mabaKata || "", S.tenjoSec || "", S.ceilFrame || "", S.joistSec || "", S.floorKoho || ""].join("|"); } catch(e){ return ""; }   /* CAD-479：仕様の部材設定（間柱の断面・型ほか）も署名に入れる。設定を変えて戻ってもカット寸法・本数が古いまま残る不具合の修正（巾木受け・間柱の行が連動しなかった） */
   }
 
   function setTab390(t){
