@@ -23921,7 +23921,7 @@ function winWarn250(n0){
       let el = document.getElementById("pv252");
       if (!el){ el = document.createElementNS("http://www.w3.org/2000/svg", "line"); el.id = "pv252"; el.setAttribute("pointer-events", "none"); }
       el.setAttribute("x1", A[0]); el.setAttribute("y1", A[1]); el.setAttribute("x2", B[0]); el.setAttribute("y2", B[1]);
-      el.setAttribute("stroke", "#E8742C"); el.setAttribute("stroke-width", "5"); el.setAttribute("stroke-opacity", ".55"); el.setAttribute("stroke-linecap", "round");
+      el.setAttribute("stroke", "#E8742C"); el.setAttribute("stroke-width", "5"); el.setAttribute("stroke-opacity", ".55"); el.setAttribute("stroke-linecap", "butt");
       sv.appendChild(el);
     } catch(e){}
   }, 120);
@@ -35292,7 +35292,7 @@ nav.steps{padding:1px 6px 3px}
             if (p < at && (lo === null || p > lo)) lo = p; if (p > at && (hi === null || p < hi)) hi = p;
           });
           var A = h ? P(z.x1, z.y1) : P(z.x1, z.y1), B = h ? P(z.x2, z.y2) : P(z.x2, z.y2);
-          g.appendChild(el("line", {x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#E8742C", "stroke-width": (5 * k).toFixed(2), "stroke-linecap": "round"}));
+          g.appendChild(el("line", {x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#E8742C", "stroke-width": (5 * k).toFixed(2), "stroke-linecap": "butt"}));   /* CAD-462：先端は四角（本人「先が丸いのが嫌」） */
           var chip = function(cx, cy, v){ var w2 = (String(fmt(v)).length * 9 + 16) * k, h2 = 22 * k, cf = v < 455 ? "#C62828" : "#E8742C"; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: cf})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (14 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, fmt(v))); };
           [[lo, -1], [hi, 1]].forEach(function(e){
             if (e[0] === null) return;
@@ -36534,8 +36534,8 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
       var T = HB.__planT; if (!T) return;
       var P = function(x, y){ return [x * T.s + T.ox, y * T.s + T.oy]; }, g = "";
       if (r){ var A = axis(q), a = A.h ? P(r[0], A.c) : P(A.c, r[0]), b = A.h ? P(r[1], A.c) : P(A.c, r[1]);
-        g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#F28C28" stroke-width="7" stroke-linecap="round" opacity=".85"/>'; }
-      if (drag && drag.q){ var a2 = P(drag.q[0], drag.q[1]), b2 = P(drag.q[2], drag.q[3]); g += '<line x1="' + a2[0] + '" y1="' + a2[1] + '" x2="' + b2[0] + '" y2="' + b2[1] + '" stroke="#D32F2F" stroke-width="8" stroke-linecap="round" opacity=".7"/>'; }
+        g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#F28C28" stroke-width="7" stroke-linecap="butt" opacity=".85"/>'; }
+      if (drag && drag.q){ var a2 = P(drag.q[0], drag.q[1]), b2 = P(drag.q[2], drag.q[3]); g += '<line x1="' + a2[0] + '" y1="' + a2[1] + '" x2="' + b2[0] + '" y2="' + b2[1] + '" stroke="#D32F2F" stroke-width="8" stroke-linecap="butt" opacity=".7"/>'; }
       if (g){ var ns = "http://www.w3.org/2000/svg", el = document.createElementNS(ns, "g"); el.id = "seg460"; el.setAttribute("pointer-events", "none"); el.innerHTML = g; sv.appendChild(el); }
     } catch(e){}
   }
