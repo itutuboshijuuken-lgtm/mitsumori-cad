@@ -35885,9 +35885,9 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     addFC(D.floor_changes);
     if (D.name) S.genba = String(D.name).slice(0, 40);
     if (+D.ceiling) S.ch = +D.ceiling;
-    var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)){ S.roof = R.shape; S.iri446 = false; } if (R.shape === "irimoya"){ S.roof = "yose"; S.iri446 = true; } if (R.shape === "maneki"){ S.roof = "mune"; S.iri446 = false; } if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = R.material;
+    var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)){ S.roof = R.shape; S.iri446 = false; } if (R.shape === "irimoya"){ S.roof = "yose"; S.iri446 = true; } if (R.shape === "maneki"){ S.roof = "mune"; S.iri446 = false; } if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = {metal: "light", slate: "slate", tile: "kawara"}[R.material];   /* CAD-457：アプリの値は light / slate / kawara（"metal" のままだと瓦＝一番重い扱いになり、壁量が多く出ていた） */
     var F = D.foundation || {}; if (F.type === "beta" || F.type === "nuno") S.kisoType = F.type; if (+F.height) S.kiso = +F.height;
-    if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior;
+    if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior === "plaster" ? "nuri" : D.exterior;   /* CAD-457：塗り壁は "nuri" */
     if (S.mode === "zo" && (D.floors === 2 || D.floors === 1)) S.floors = D.floors;
     save();
     /* CAD-444：2階。今の階（1階）の外形を写した新しい階を作り、2階の間仕切り・部屋名・窓とドアを入れて1階に戻る */
