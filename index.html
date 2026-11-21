@@ -36474,3 +36474,105 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
 #st3 .fs420scroll #dirBox>div:not([class]){font-size:15px!important}
 #st3 .fs420scroll .res .grid div span{font-size:14px}
 </style>
+<script id="partcut460js">
+/* CAD-461（Opus。じゅうちゃんの CAD-460 と番号が重なったので 461）：間仕切りを一部だけ消す。
+   ① タップで選んだ間仕切りは、他の壁と交わる所から交わる所までの区間が選ばれる（オレンジで表示）。「消す」でその区間だけ消える。
+   ② 「🧽 消しゴム」：間仕切りの消したい所を指でなぞると、なぞった分（455の割り付けにそろえる）だけ消える。
+   窓・ドアが乗っている時は、消した区間の物は一緒に消し、残った側の物は位置を付け替える。戻すは今まで通り「↶戻す」 */
+(function(){
+  "use strict";
+  var M = 455, tap = null, erase = false, drag = null;
+  function bb(){ try { return bbox(); } catch(e){ return {x0: 0, y0: 0}; } }
+  function horiz(q){ return Math.abs(q.y1 - q.y2) < 1; }
+  function axis(q){ var h = horiz(q); return {h: h, a: h ? Math.min(q.x1, q.x2) : Math.min(q.y1, q.y2), b: h ? Math.max(q.x1, q.x2) : Math.max(q.y1, q.y2), c: h ? q.y1 : q.x1}; }
+  /* この間仕切りの上の「交わる所」（他の間仕切り・外壁の線が触れる・横切る所）。軸の座標の並び */
+  function cuts(i){
+    var q = S.parts2D[i], A = axis(q), out = [A.a, A.b];
+    var lines = []; (S.parts2D || []).forEach(function(o, j){ if (j === i) return; try { if (pState(o) === "remove") return; } catch(e){} lines.push([o.x1, o.y1, o.x2, o.y2]); });
+    try { var p = pts(); for (var k = 0; k < p.length; k++){ var r = p[(k + 1) % p.length]; lines.push([p[k][0], p[k][1], r[0], r[1]]); } } catch(e){}
+    lines.forEach(function(L){ var lh = Math.abs(L[1] - L[3]) < 1, lv = Math.abs(L[0] - L[2]) < 1;
+      if (A.h && lv){ var x = L[0], y0 = Math.min(L[1], L[3]), y1 = Math.max(L[1], L[3]); if (x > A.a + 1 && x < A.b - 1 && A.c >= y0 - 1 && A.c <= y1 + 1) out.push(x); }
+      if (!A.h && lh){ var y = L[1], x0 = Math.min(L[0], L[2]), x1 = Math.max(L[0], L[2]); if (y > A.a + 1 && y < A.b - 1 && A.c >= x0 - 1 && A.c <= x1 + 1) out.push(y); } });
+    return out.sort(function(a, b){ return a - b; }).filter(function(v, k, arr){ return !k || v - arr[k - 1] > 1; });
+  }
+  function segAt(i, v){ var c = cuts(i); for (var k = 0; k + 1 < c.length; k++) if (v >= c[k] - 1 && v <= c[k + 1] + 1) return [c[k], c[k + 1]]; return null; }
+  /* 区間 [s0,s1]（軸の座標）を消す。残りは最大2本 */
+  function removeRange(i, s0, s1){
+    var q = S.parts2D[i], A = axis(q); s0 = Math.max(A.a, s0); s1 = Math.min(A.b, s1); if (s1 - s0 < 50) return false;
+    if (s0 <= A.a + 1 && s1 >= A.b - 1){ delPart(i); return true; }
+    var fwd = A.h ? q.x2 >= q.x1 : q.y2 >= q.y1, st = fwd ? A.a : A.b;   // sa.pos は (x1,y1) からの距離
+    var mk = function(u0, u1){ var n = JSON.parse(JSON.stringify(q)); if (A.h){ n.x1 = fwd ? u0 : u1; n.x2 = fwd ? u1 : u0; } else { n.y1 = fwd ? u0 : u1; n.y2 = fwd ? u1 : u0; } return n; };
+    var left = s0 - A.a > 50 ? mk(A.a, s0) : null, right = A.b - s1 > 50 ? mk(s1, A.b) : null;
+    var keepIdx = i, newIdx = -1;
+    if (left){ S.parts2D[i] = left; if (right){ S.parts2D.push(right); newIdx = S.parts2D.length - 1; } }
+    else { S.parts2D[i] = right; }
+    var startOf = function(n){ var B = axis(n); return fwd ? B.a : B.b; };
+    S.sashes = (S.sashes || []).filter(function(sa){
+      if (!sa.host || sa.host.t !== "p" || sa.host.i !== i) return true;
+      var w = +sa.w || 0, p0 = fwd ? st + (+sa.pos || 0) : st - (+sa.pos || 0) - w, p1 = p0 + w;   // 軸の座標
+      if (p1 > s0 + 1 && p0 < s1 - 1) return false;   // 消した区間にかかる物は消す
+      var into = (left && p1 <= s0 + 1) ? {i: keepIdx, n: left} : {i: left ? newIdx : keepIdx, n: right};
+      sa.host = {t: "p", i: into.i}; var s2 = startOf(into.n); sa.pos = Math.max(0, Math.round(fwd ? p0 - s2 : s2 - p1)); return true;
+    });
+    save(); return true;
+  }
+  HB.__cut460 = {cuts: cuts, removeRange: removeRange};
+  /* ① タップした位置を覚える（選んだ区間を出すため） */
+  document.addEventListener("pointerdown", function(e){ var sv = document.getElementById("plan"); if (!sv || erase) return; var R = sv.getBoundingClientRect(); if (e.clientX < R.left || e.clientX > R.right || e.clientY < R.top || e.clientY > R.bottom || (e.target && e.target.closest && e.target.closest("button,#selBar,#chips434"))) return; try { tap = {p: toMM(planPt(e)), t: Date.now()}; } catch(er){} }, true);
+  function selSeg(){
+    try { if (typeof sel === "undefined" || !sel || sel.t !== "p" || !S.parts2D[sel.i]) return null;
+      if (sel.__seg460 && sel.__seg460.i === sel.i) return sel.__seg460.r;
+      if (!tap || Date.now() - tap.t > 3000) return null;
+      var q = S.parts2D[sel.i], A = axis(q), v = A.h ? tap.p[0] : tap.p[1], d = Math.abs((A.h ? tap.p[1] : tap.p[0]) - A.c); if (d > 600) return null;
+      var r = segAt(sel.i, v); if (!r || (r[0] <= A.a + 1 && r[1] >= A.b - 1)) { sel.__seg460 = {i: sel.i, r: null}; return null; }
+      sel.__seg460 = {i: sel.i, r: r}; return r; } catch(e){ return null; }
+  }
+  function paint(){
+    try { var sv = document.getElementById("plan"); if (!sv) return; var old = sv.querySelector("#seg460"); if (old) old.remove();
+      var r = selSeg(), q = r && S.parts2D[sel.i]; var sb = document.getElementById("sbDel");
+      if (sb) sb.textContent = r ? "この区間を消す" : "消す";
+      var T = HB.__planT; if (!T) return;
+      var P = function(x, y){ return [x * T.s + T.ox, y * T.s + T.oy]; }, g = "";
+      if (r){ var A = axis(q), a = A.h ? P(r[0], A.c) : P(A.c, r[0]), b = A.h ? P(r[1], A.c) : P(A.c, r[1]);
+        g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#F28C28" stroke-width="7" stroke-linecap="round" opacity=".85"/>'; }
+      if (drag && drag.q){ var a2 = P(drag.q[0], drag.q[1]), b2 = P(drag.q[2], drag.q[3]); g += '<line x1="' + a2[0] + '" y1="' + a2[1] + '" x2="' + b2[0] + '" y2="' + b2[1] + '" stroke="#D32F2F" stroke-width="8" stroke-linecap="round" opacity=".7"/>'; }
+      if (g){ var ns = "http://www.w3.org/2000/svg", el = document.createElementNS(ns, "g"); el.id = "seg460"; el.setAttribute("pointer-events", "none"); el.innerHTML = g; sv.appendChild(el); }
+    } catch(e){}
+  }
+  try { var od = window.drawPlan; if (od && !od.__w460){ window.drawPlan = function(){ var r = od.apply(this, arguments); paint(); return r; }; window.drawPlan.__w460 = true; } } catch(e){}
+  try { new MutationObserver(function(){ if (!document.getElementById("seg460") && (selSeg() || drag)) paint(); var sb = document.getElementById("sbDel"); if (sb){ var want = selSeg() ? "この区間を消す" : "消す"; if (sb.textContent !== want) sb.textContent = want; } }).observe(document.body, {childList: true, subtree: true}); } catch(e){}
+  /* 「消す」：区間が選ばれていれば、その区間だけ */
+  document.addEventListener("click", function(e){ var b = e.target && e.target.closest && e.target.closest("#sbDel"); if (!b) return; var r = selSeg(); if (!r) return;
+    e.preventDefault(); e.stopImmediatePropagation(); pushUndo(); var i = sel.i; sel = null; if (removeRange(i, r[0], r[1])) toast("その区間だけ消しました（↶戻すで戻せます）"); drawPlan(); try { drawToolsUI(); } catch(er){} }, true);
+  /* ② 消しゴム：なぞった所を消す */
+  function nearestPart(p){ var best = null; (S.parts2D || []).forEach(function(q, i){ try { if (pState(q) === "remove") return; } catch(e){} var A = axis(q), v = A.h ? p[0] : p[1], d = Math.abs((A.h ? p[1] : p[0]) - A.c); if (v < A.a - 200 || v > A.b + 200) return; if (!best || d < best.d) best = {i: i, d: d}; }); return best && best.d < 500 ? best.i : null; }
+  function snap(v){ var B = bb(), o = horizNow ? B.x0 : B.y0; return o + Math.round((v - o) / M) * M; }
+  var horizNow = true;
+  ["pointerdown", "pointermove", "pointerup", "pointercancel"].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      if (!erase) return; var sv = document.getElementById("plan"); if (!sv) return;
+      var R = sv.getBoundingClientRect(), inPlan = e.clientX >= R.left && e.clientX <= R.right && e.clientY >= R.top && e.clientY <= R.bottom && !(e.target && e.target.closest && e.target.closest("button,input,select,textarea,#chips434,#selBar,#toolTabs,#stepBar399,.steps,header"));
+      if (!inPlan && !drag) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      var p; try { p = toMM(planPt(e)); } catch(er){ return; }
+      if (ev === "pointerdown"){ var i = nearestPart(p); if (i === null){ toast("消したい間仕切りの上をなぞってください"); return; } drag = {i: i, p0: p}; try { sv.setPointerCapture && sv.setPointerCapture(e.pointerId); } catch(er){} }
+      if (!drag) return;
+      var q = S.parts2D[drag.i], A = axis(q); horizNow = A.h;
+      var v0 = A.h ? drag.p0[0] : drag.p0[1], v1 = A.h ? p[0] : p[1], s0 = snap(Math.min(v0, v1)), s1 = snap(Math.max(v0, v1)); if (s1 - s0 < M) { s1 = s0 + M; }
+      s0 = Math.max(A.a, s0); s1 = Math.min(A.b, s1);
+      drag.r = [s0, s1]; drag.q = A.h ? [s0, A.c, s1, A.c] : [A.c, s0, A.c, s1];
+      if (ev === "pointerup"){ var dd = drag; drag = null; pushUndo(); try { sel = null; } catch(er){} if (removeRange(dd.i, dd.r[0], dd.r[1])) toast("🧽 " + fmt(dd.r[1] - dd.r[0]) + " 消しました"); drawPlan(); return; }
+      if (ev === "pointercancel"){ drag = null; }
+      paint();
+    }, {capture: true, passive: false});
+  });
+  /* ボタン（CAD-434/437 のボタン列に足す） */
+  try {
+    var oe = HB.__extra437, ol = HB.__lab437 || {}, oa = HB.__act437, os = HB.__sig437;
+    HB.__extra437 = function(s, fsel, want){ var x = oe ? oe(s, fsel, want) : want; if ((s === "part" || s === "all") && x.indexOf("erase460") < 0) x = ["erase460"].concat(x); return x; };
+    ol.erase460 = "🧽 消しゴム"; HB.__lab437 = ol;
+    HB.__sig437 = function(){ return (os ? os() : "") + (erase ? "E" : ""); };
+    HB.__act437 = function(w){ if (w === "erase460"){ erase = !erase; ol.erase460 = erase ? "🧽 消しゴム中（押して終わる）" : "🧽 消しゴム"; try { if (erase && HB.__partDrawOff) HB.__partDrawOff(true); } catch(e){} toast(erase ? "🧽 消したい所を、間仕切りの上でなぞってください" : "消しゴムを終わりました"); return true; } return oa ? oa(w) : false; };
+  } catch(e){}
+})();
+</script>
