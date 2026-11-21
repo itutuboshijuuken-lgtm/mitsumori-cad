@@ -35993,7 +35993,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
       var top = document.getElementById("estTop"), st5 = document.getElementById("st5");
       if (top && st5 && !st5.hidden && !document.getElementById("cal439btn")){ var b = document.createElement("button"); b.id = "cal439btn"; b.type = "button"; b.textContent = "⚖ 実際の原価と比べる（自分の単価に寄せる）"; b.onclick = calOpen; var gb = document.getElementById("growBox"); (gb || top).after(b); }
       var st1 = document.getElementById("st1"), dr = document.getElementById("draw");
-      if (st1 && !st1.hidden && dr && !document.getElementById("imp439btn")){ var c = document.createElement("button"); c.id = "imp439btn"; c.type = "button"; c.textContent = "🤖 図面の写真から作る（AIに読ませる）"; c.onclick = impOpen; var card = dr.closest(".card"); (card || dr).before(c); }
+      if (st1 && !st1.hidden && dr && !document.getElementById("imp439btn")){ var c = document.createElement("button"); c.id = "imp439btn"; c.type = "button"; c.textContent = "🤖 図面の写真から作る（AIに読ませる）"; c.onclick = impOpen; c.style.display = "block"; var h2 = st1.querySelector(":scope > h2.shp"), card = dr.closest(".card"); if (h2) h2.appendChild(c); else (card || dr).before(c); }   /* CAD-468：#st1 の並びは nth-child の CSS で決まっている。間に挟むと描く欄（card）が隠れて外周が描けなくなっていたので、見出しの中に入れる */
     } catch(e){}
   }, 500);
 })();
