@@ -6810,7 +6810,7 @@ function framePos(){
       if (c.f){ Z.studN++; if (S0.thick) Z.thick++; else Z.thin++; }
       else if (c.p){ Z.partStudN++; if (S0.thick){ Z.partThick++; Z.partThickLens.push(c.hq + 100); } else { Z.partThin++; Z.partThinLens.push(c.hq + 100); } }
     });
-    Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind, ops: r.ops, op: (r.kind === "p" && r.q && typeof partForm292 === "function" && partForm292(r.q) === "open") ? 1 : 0}));  /* CAD-344：開口区間と開放形の印も控える（内部の柱の交点判定に使う） */
+    Z.runs = runs.map(r => ({ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, ux: r.ux, uy: r.uy, kind: r.kind, ops: r.ops, opsD: r.opsD, postT: [...(r.postT || [])], op: (r.kind === "p" && r.q && typeof partForm292 === "function" && partForm292(r.q) === "open") ? 1 : 0}));  /* CAD-344：開口区間と開放形の印も控える（内部の柱の交点判定に使う） */
     return Z;
   } catch(e){ Z.err = true; try { HB.__frameErr154 = true; } catch(_){} return Z; }
 }
@@ -7674,6 +7674,36 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     lum("yukabari", "2階床梁", 105, S.dosa, jtA(joistRuns(true).raw, 300), `105×${fmt(S.dosa)}・910間隔`, true);
   }
   lum("keta", "桁", 105, S.keta, jtA(lens, 300), `105×${fmt(S.keta)}`, true);
+  /* CAD-490（Opus・本人の決定 2026-11-21「105×45の間柱で作る」）：窓台・まぐさを見積に入れる（今まで材が行に無かった）。
+     まぐさ＝開口1か所に1本、窓台＝窓だけ（掃き出し・ドア・開口は無し）。長さは開口の両側の柱から柱まで（柱に欠き込んで掛けるため。間仕切りは枠脇の間柱から間柱まで＝開口幅＋90）。
+     もう一つ：窓が広くて柱を抜いた所は、上の横架材の柱の間が長くなる。外周で柱の間が1820を超える所は、横架材の高さをスパンの1/11（2階建の1階＝胴差は2階の壁と床を受けるので1/10）以上にし、
+     今の太さとの差額を「太くする分」として足す（理由：柱の間が長いほど曲げが大きく、たわみを抑えるのに高さが要る。翔伍さんの覚え方のスパン1/10〜1/12の中）。目安で、正式は構造計算。 */
+  if (S.mode === "zo"){ try {
+    const lin490 = [], sill490 = [], up490 = [];
+    const scan490 = (FZ, fl) => (FZ.runs || []).forEach(r => {
+      const P = [...(r.postT || [])].sort((x, y) => x - y);
+      (r.ops || []).forEach((o, oi) => {
+        const cat = ((r.opsD || [])[oi] || {}).cat || "";
+        let a0 = null, c0 = null; P.forEach(t => { if (t <= o[0] + 1) a0 = t; if (c0 === null && t >= o[1] - 1) c0 = t; });
+        const span = (r.kind === "e" && a0 !== null && c0 !== null) ? c0 - a0 : (o[1] - o[0]) + 90;
+        lin490.push(Math.round(span)); if (/窓|FIX/.test(cat) && !/掃/.test(cat) && !/玄関|勝手口|ドア/.test(cat)) sill490.push(Math.round(span));
+        if (r.kind === "e" && a0 !== null && c0 !== null && span > 1821){
+          const lower = two && fl === 1, base = lower ? +S.dosa : +S.keta, hN = Math.max(base, Math.ceil(span / (lower ? 10 : 11) / 30) * 30);
+          if (hN > base) up490.push({span: Math.round(span), base, h: hN, nm: lower ? "胴差" : "桁", fl});
+        }
+      });
+    });
+    scan490(framePos(), 1);
+    if (two && Array.isArray(S.fl) && S.fl.length > 1){ try { scan490(withFloor416(2, () => framePos()), 2); } catch(e){} }
+    if (lin490.length) lum("mabashira", "まぐさ", 105, 45, lin490, `105×45（間柱と同じ）・${lin490.length}か所・開口の両側の柱から柱まで`, false);
+    if (sill490.length) lum("mabashira", "窓台", 105, 45, sill490, `105×45（間柱と同じ）・${sill490.length}か所・窓だけ（掃き出し・ドアは無し）`, false);
+    if (up490.length){
+      const spK = S.sp.keta || "スギ"; let cost = 0, miss = false;
+      up490.forEach(u => { const L = Math.min(6000, Math.ceil((u.span + 300) / 1000) * 1000), pN = lumberPrice(spK, 105, u.h, L), pB = lumberPrice(spK, 105, u.base, L); if (!pN || !pB) miss = true; else cost += Math.max(0, pN.p - pB.p); });
+      const txt = up490.map(u => `${u.fl === 2 ? "2階" : two ? "1階" : ""}${u.nm} 柱の間${fmt(u.span)}→105×${fmt(u.h)}`).join("・");
+      rows.push({name: `窓の上の横架材を太くする分 ${spK}`, spec: `${txt}（柱の間が1820を超える所。スパン÷${two ? "10〜11" : "11"}の目安・今の太さとの差額）`, qty: `${up490.length}か所`, cost: miss ? null : cost, miss});
+    }
+  } catch(e){ window.__err490 = String(e); } }
   lum("hari", "小屋梁", 105, S.hari, jtA(Array(beams).fill(W), 300), `105×${fmt(S.hari)}・スパン${fmt(W)}`, true);
   /* CAD-110: 小屋の間柱・小屋筋交い・棟違いの段差（項目18・19・24）
      本人のルール（2026-11-07、承認済み図の形）：壁面では455ピッチに部材が立ち、
