@@ -30004,6 +30004,15 @@ window.__len309txt = function(){ return null; };
 /* CAD-326：無加工PNGの表示倍率（ファイルは触らず、見せ方だけ） */
 .btn325i.big376 .row325{overflow:hidden}
 .btn325i.big376 img.ic325{will-change:transform}
+/* CAD-489（見た目の直しA）：モード切替の「内装リフォーム」が「内装リフォー」で切れる直し。
+   原因は絵（img.ic325・高さ100%）と文字の gap:6px で幅117pxに入らない事（Claudeの診断）。
+   実測（390px幅・仕様の画面）：行の幅113pxに対し、土台は絵34＋すき間6＋文字98（14px）＝138pxで25pxあふれる。
+   Claudeの案（絵78%・すき間2px・文字13px）でも絵27＋2＋文字91＝120pxで7px足りなかったため、
+   実物で確かめて絵70%・文字12pxに微調整した（絵24＋2＋文字84＝110px、3pxの余り）。
+   モード切替の中だけに効かせ、他の絵ボタン・計算・金額には触らない */
+.modeSeg .btn325i .row325{gap:2px}
+.modeSeg .btn325i img.ic325{height:70%}
+.modeSeg .btn325i .lb325{font-size:12px}
 </style>
 <script id="btn376js">
 /* ===== CAD-325（2026-11-17）：絵ボタンの表示の作り直し =====
