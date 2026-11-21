@@ -21990,6 +21990,20 @@ setInterval(gkSync208, 600);
     var b = bbox(), pad = 420, W = b.w + pad * 2, H = b.h + pad * 2;
     var X = function(x){ return x - b.x0 + pad; }, Y = function(y){ return y - b.y0 + pad; };
     var h = "";
+    /* CAD-502：間仕切りの端の判定用に空けたマス（線の無い所）が白く欠けて見えていたので、隣の部屋の色で埋める（表示だけ） */
+    try {
+      var pp502 = pts(), gap502 = {};
+      for (var j502 = 0; j502 < R.NY; j502++) for (var i502 = 0; i502 < R.NX; i502++){
+        var k502 = j502 * R.NX + i502; if (R.comp[k502] >= 0) continue;
+        var cx502 = R.b.x0 + (i502 + 0.5) * R.st, cy502 = R.b.y0 + (j502 + 0.5) * R.st;
+        if (!inside([cx502, cy502], pp502)) continue;
+        var nb502 = [];
+        for (var rr502 = 1; rr502 <= 4 && !nb502.length; rr502++) [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){ var a = i502 + d[0] * rr502, c = j502 + d[1] * rr502; var v = (a < 0 || c < 0 || a >= R.NX || c >= R.NY) ? -1 : R.comp[c * R.NX + a]; if (v >= 0) nb502.push(v); });
+        if (!nb502.length) continue;
+        var c502 = nb502.indexOf(sr.cid) >= 0 && nb502.every(function(v){ return v === sr.cid; }) ? sr.cid : nb502[0];
+        h += "<rect x=\"" + (X(R.b.x0 + i502 * R.st) - 1) + "\" y=\"" + (Y(R.b.y0 + j502 * R.st) - 1) + "\" width=\"" + (R.st + 2) + "\" height=\"" + (R.st + 2) + "\" fill=\"" + (c502 === sr.cid ? "#FFE7C7" : "#EDF2F8") + "\"/>";
+      }
+    } catch(e502){}
     R.rooms.forEach(function(r){
       var on = r.cid === sr.cid;
       h += "<g class=\"mfRoom\" data-mroom=\"" + r.cid + "\">";
@@ -22006,14 +22020,43 @@ setInterval(gkSync208, 600);
     var pp = pts();
     h += "<polygon points=\"" + pp.map(function(q){ return X(q[0]) + "," + Y(q[1]); }).join(" ") + "\" fill=\"none\" stroke=\"#1F2833\" stroke-width=\"60\"/>";
     R.rooms.forEach(function(r){
-      var on = r.cid === sr.cid;
-      h += "<text x=\"" + X(r.p[0]) + "\" y=\"" + Y(r.p[1]) + "\" text-anchor=\"middle\" pointer-events=\"none\" style=\"font-size:300px;font-weight:900;fill:" + (on ? "#C2571A" : "#5B7BA6") + "\">" + esc(roomLbl(r)) + "</text>";
+      var on = r.cid === sr.cid, lb = roomLbl(r) || "";
+      /* CAD-502：名前は部屋の真ん中（真ん中が部屋の外の時は今まで通りの点）。部屋の幅に収まる大きさにして、壁にかからない */
+      var lx = r.p[0], ly = r.p[1];
+      try {
+        var xs = r.cells.map(function(k){ return k % R.NX; }), ys = r.cells.map(function(k){ return Math.floor(k / R.NX); });
+        var mi = Math.round((Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2), mj = Math.round((Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2);
+        if (R.comp[mj * R.NX + mi] === r.cid){ lx = R.b.x0 + (mi + 0.5) * R.st; ly = R.b.y0 + (mj + 0.5) * R.st; }
+      } catch(e){}
+      var ci = Math.floor((lx - R.b.x0) / R.st), cj = Math.floor((ly - R.b.y0) / R.st), a0 = ci, a1 = ci, b0 = cj, b1 = cj;
+      while (a0 > 0 && R.comp[cj * R.NX + a0 - 1] === r.cid) a0--;
+      while (a1 < R.NX - 1 && R.comp[cj * R.NX + a1 + 1] === r.cid) a1++;
+      while (b0 > 0 && R.comp[(b0 - 1) * R.NX + ci] === r.cid) b0--;
+      while (b1 < R.NY - 1 && R.comp[(b1 + 1) * R.NX + ci] === r.cid) b1++;
+      var wmm = (a1 - a0 + 1) * R.st, hmm = (b1 - b0 + 1) * R.st, n = Math.max(1, [...lb].length);
+      var fs = Math.max(120, Math.min(300, wmm * 0.85 / n, hmm * 0.6));
+      lx = R.b.x0 + (a0 + a1 + 1) / 2 * R.st;
+      h += "<text x=\"" + X(lx) + "\" y=\"" + (Y(ly) + fs * 0.35) + "\" text-anchor=\"middle\" pointer-events=\"none\" style=\"font-size:" + Math.round(fs) + "px;font-weight:900;fill:" + (on ? "#C2571A" : "#5B7BA6") + "\">" + esc(lb) + "</text>";
     });
     var F = faces219();
+    /* CAD-502：L字などの部屋では、面（上下左右の4面）が部屋の外接の四角で出るため、青い線が隣の部屋や家の外にはみ出していた。
+       線は、その面が本当にこの部屋に接している区間だけに描く（タップできる所も同じ区間）。面のカードと見積は変えない */
+    var onRoom502 = function(x, y){ var i = Math.floor((x - R.b.x0) / R.st), j = Math.floor((y - R.b.y0) / R.st); return i >= 0 && j >= 0 && i < R.NX && j < R.NY && R.comp[j * R.NX + i] === sr.cid; };
     F.forEach(function(f, fi){
-      var ax = X(f.o[0]), ay = Y(f.o[1]), bx = X(f.o[0] + f.r[0] * f.len), by = Y(f.o[1] + f.r[1] * f.len), selF = fi === state.selFi;
-      h += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"95\" stroke-linecap=\"round\" opacity=\".85\" pointer-events=\"none\"/>";
-      h += "<line class=\"mfHit\" data-mfi=\"" + fi + "\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"520\" stroke-linecap=\"round\"/>";
+      var selF = fi === state.selFi, step = R.st / 2, n0 = -f.n[0], n1 = -f.n[1], runs = [], cur = null;
+      for (var t = 0; t <= f.len + 0.1; t += step){
+        var px = f.o[0] + f.r[0] * Math.min(t, f.len), py = f.o[1] + f.r[1] * Math.min(t, f.len), hit = false;
+        for (var d = 40; d <= 320 && !hit; d += 40) hit = onRoom502(px + n0 * d, py + n1 * d);
+        if (hit){ if (!cur) cur = [t, t]; cur[1] = Math.min(t, f.len); } else if (cur){ runs.push(cur); cur = null; }
+      }
+      if (cur) runs.push(cur);
+      runs.forEach(function(rn){
+        if (rn[1] - rn[0] < R.st) return;
+        var t0 = Math.max(0, rn[0] - step), t1 = Math.min(f.len, rn[1] + step);
+        var ax = X(f.o[0] + f.r[0] * t0), ay = Y(f.o[1] + f.r[1] * t0), bx = X(f.o[0] + f.r[0] * t1), by = Y(f.o[1] + f.r[1] * t1);
+        h += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"95\" stroke-linecap=\"round\" opacity=\".85\" pointer-events=\"none\"/>";
+        h += "<line class=\"mfHit\" data-mfi=\"" + fi + "\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"520\" stroke-linecap=\"round\"/>";
+      });
     });
     svg.setAttribute("viewBox", "0 0 " + W + " " + H);
     svg.innerHTML = h;
