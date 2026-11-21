@@ -38492,3 +38492,17 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   setInterval(tick, 200); setTimeout(tick, 80); tick();
 })();
 </script>
+<style id="cmpLb518css">
+/* ===== CAD-518：見た目の直しG（Claude申し送り「見た目の直し一覧-1121」・本人の決定）
+   寸法画面（描き終わった後）の上の道具段 #zRow で、方位（十字）の #planCmp だけ
+   文字が無い。他のボタン（btn325i col325＝絵の下に10pxの文字）と同じ形で、
+   十字の下に「方位」と入れる。表示だけの変更：計算・保存・金額には触らない。
+   #planCmp は drawPlanCompass() が呼ぶたびに cssText と innerHTML を上書きする
+   ため、文字は ::after（DOMの外）で出す。間取り（step=M）では #planCmp は
+   #planBarCmp へ移るので、この形は寸法画面だけに効く（#zRow 配下の時だけ一致）。
+   高さ42は他のボタンと同じ段の高さ（段全体の高さは変わらない）。svg 30px は
+   従来の見た目（36px×scale.8≒29px）をほぼ維持する大きさ。 */
+#zRow #planCmp{position:relative;height:42px!important;transform:none!important}
+#zRow #planCmp svg{display:block;width:30px;height:30px;margin:0 auto}
+#zRow #planCmp::after{content:"方位";position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;color:var(--ink)}
+</style>
