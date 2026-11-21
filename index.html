@@ -723,6 +723,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <h2>交通費・移動の手間</h2>
     <div id="kotsuBox"></div>
     <h2>諸経費（現場管理費・交通費・駐車場など）</h2>
+    <p class="hint" style="margin:0 2px">元請けで受ける時の目安は5〜10%（段取り・打合せ・検査の立会い・書類の手間）。手間請けなら「なし」か3%。</p>
     <div class="chips" id="skCh"></div>
     <div id="hojo"></div>
     <div class="area" id="areaBox4"></div>
@@ -1199,6 +1200,10 @@ const WORK = [
   ["kakuninShinsei", "確認申請・中間検査・完了検査", "円/件", 0, 250000],
   ["kasetsuAll", "仮設工事（電気・水道・トイレ・仮囲い）", "円/式", 0, 150000],
   ["hikomi", "水道・排水の引込工事", "円/式", 0, 300000],
+  ["denkiHik478", "電気の引込（引込柱・幹線・分電盤まで）（仮）", "円/式", 0, 100000],
+  ["chouki478", "長期優良住宅の申請（技術審査・認定）（仮）", "円/件", 0, 150000],
+  ["tq3_478", "耐震等級3の上乗せ（構造計算・金物の追加）（仮）", "円/式", 0, 200000],
+  ["junT478", "省令準耐火の上乗せ（石膏ボード増し・ファイヤーストップ）（仮）", "円/㎡", 0, 1500],
   ["bouiBouyou", "防蟻・防腐処理（床下・土台まわり）", "円/㎡", 0, 1500],
   ["gaikoDoma", "外構 土間コンクリート", "円/㎡", 0, 13000],
   ["gaikoFence", "外構 フェンス", "円/m", 0, 12000],
@@ -6093,7 +6098,7 @@ const EXT = {
   gaiheki: {n: "外壁張替え（一面・部分）", f: [["w", "幅", "m", 3.64], ["h", "高さ", "m", 2.7], ["minus", "窓など引く", "㎡", 0]], d: {type: "siding", kaitai: true, sheet: true, mizu: false, ashiba: true}},
   tosou: {n: "外壁塗装", f: [["w", "幅", "m", 10], ["h", "高さ", "m", 3], ["minus", "窓など引く", "㎡", 0], ["nA", "軒天の面積", "㎡", 0], ["fM", "破風・鼻隠し・雨樋", "m", 0], ["yA", "屋根塗装の面積", "㎡", 0]], d: {senjo: true, yojo: true, ashiba: true}},
   shikkui: {n: "漆喰塗り（内壁）", f: [["a", "塗る面積", "㎡", 25]], d: {yojo: true, gbTear: false}},
-  shinchiku: {n: "新築の費用（地盤・申請・仮設・引込・防蟻）", f: [["jiban", "地盤調査", "回", 1], ["jbk", "地盤改良（表層）の面積", "㎡", 0], ["kakunin", "確認申請・検査", "件", 1], ["kasetsu", "仮設（電気・水道・トイレ・仮囲い）", "式", 1], ["hikomi", "水道・排水の引込", "式", 1], ["boui", "防蟻・防腐（0＝1階の床面積）", "㎡", 0]], d: {v24: ""}},
+  shinchiku: {n: "新築の費用（地盤・申請・仮設・引込・防蟻）", f: [["jiban", "地盤調査", "回", 1], ["jbk", "地盤改良（表層）の面積", "㎡", 0], ["kakunin", "確認申請・検査", "件", 1], ["kasetsu", "仮設（電気・水道・トイレ・仮囲い）", "式", 1], ["hikomi", "水道・排水の引込", "式", 1], ["denkiHik", "電気の引込", "式", 1], ["chouki", "長期優良住宅の申請（1＝する）", "件", 0], ["tq3", "耐震等級3の上乗せ（1＝する）", "式", 0], ["junT", "省令準耐火（1＝する・延床で計算）", "", 0], ["boui", "防蟻・防腐（0＝1階の床面積）", "㎡", 0]], d: {v24: ""}},
   gaiko: {n: "外構工事（土間コン・フェンス・門まわり）", f: [["dt", "土間 縦", "m", 0], ["dy", "土間 横", "m", 0], ["doma", "土間（直接入力・縦×横が優先）", "㎡", 0], ["fence", "フェンス", "m", 0], ["fh", "フェンスの高さ", "m", 1.2], ["car", "カーポート", "台", 0], ["mon", "門まわり", "式", 0]], d: {}},
   denki: {n: "電気工事", f: [["kae", "コンセント・スイッチ取替", "か所", 0], ["hik", "天井引掛取替", "か所", 0], ["zou", "コンセント増設", "か所", 0], ["iso", "コンセント移設", "か所", 0], ["light", "照明取付", "か所", 0]], d: {panel: false, tekkyo: false}},
   aircon: {n: "エアコン本体 取付・取替", f: [["n", "台数", "台", 1]], d: {tear: true}},
@@ -6279,7 +6284,7 @@ function stocks(needs, allow6){ const m = {}, ST = allow6 ? STOCK_T : STOCK; nee
 const stockTxt = m => Object.keys(m).sort((a, b) => b - a).map(k => `${k / 1000}m×${m[k]}`).join("、");
 function openArea(){ return S.sashes.reduce((a, s) => a + opW308(s) * s.h * s.n, 0) / 1e6; }   /* CAD-308：片引き（戸袋あり）は開口の半分だけ引く */
 const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","eLockB","eLockS","eLockE","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
-["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
+["jibanSurvey", "jibanKairyo", "kakuninShinsei", "hikomi", "denkiHik478", "chouki478", "tq3_478", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
 // 「外周が同じを2階建て」の計算で、③階の図面の中身（窓・ドア・設備・間仕切りなど）も足して数える
 function mergeUpperFloor(b){
@@ -7293,6 +7298,11 @@ function calc00(){
         if (e.kakunin > 0) work("kakuninShinsei", "確認申請・中間検査・完了検査", e.kakunin, "件");
         if (e.kasetsu > 0) work("kasetsuAll", "仮設工事（電気・水道・トイレ・仮囲い）", e.kasetsu, "式");
         if (e.hikomi > 0) work("hikomi", "水道・排水の引込工事", e.hikomi, "式");
+        /* CAD-478：新築の付帯で、今まで無かった物（電気の引込・長期優良の申請・耐震等級3・省令準耐火の上乗せ） */
+        if (e.denkiHik > 0) work("denkiHik478", "電気の引込（引込柱・幹線・分電盤まで）", e.denkiHik, "式");
+        if (e.chouki > 0) work("chouki478", "長期優良住宅の申請（技術審査・認定）", e.chouki, "件");
+        if (e.tq3 > 0) work("tq3_478", "耐震等級3の上乗せ（構造計算・金物の追加）", e.tq3, "式");
+        if (e.junT > 0){ const nb = S.floors === 2 ? 2 : 1, ea = areaMM() / 1e6 * nb; work("junT478", "省令準耐火の上乗せ（石膏ボード増し・ファイヤーストップ）", ea, "㎡", `延床 約${fmt(ea, 1)}㎡ × ${fmt(workP("junT478").p)}円`); }
         { const A1 = (() => { const pp2 = pts(); let a = 0; pp2.forEach((q, i) => { const r = pp2[(i + 1) % pp2.length]; a += q[0] * r[1] - r[0] * q[1]; }); return Math.abs(a) / 2 / 1e6; })(), ba = e.boui > 0 ? e.boui : A1; if (ba > 0) work("bouiBouyou", "防蟻・防腐処理（床下・土台まわり）", ba, "㎡"); }
         if (e.v24 === "first") work("v24First", "24時間換気（第1種・熱交換型）", 1, "式");
         else if (e.v24 === "third") work("v24Third", "24時間換気（第3種）", 1, "式");
@@ -37325,6 +37335,37 @@ function ohInfo477(a, b){
       var g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.id = "oh477ov"; g.setAttribute("pointer-events", "none");
       g.innerHTML = '<polygon points="' + O.map(f).join(" ") + '" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="7 4"/>';
       sv.appendChild(g);
+    } catch(e){}
+    return r;
+  };
+})();
+</script>
+<script id="futai478">
+/* CAD-478（Opus）：新築なのに付帯工事（地盤・申請・仮設・引込）や外構が見積に入っていない時、見積の画面で知らせて1回で入れられるようにする。
+   入れるのは今ある「部分工事」の「新築の費用」「外構工事」と同じ物（新しい行は作らない＝被らない）。外構は寸法が要るので、入れた後に部分工事の欄で数字を入れる。 */
+(function(){
+  if (typeof drawEst !== "function") return;
+  var od = drawEst;
+  function addEx(k){ var e = {k: k}; EXT[k].f.forEach(function(f){ e[f[0]] = f[3]; }); Object.assign(e, JSON.parse(JSON.stringify(EXT[k].d))); S.extras = S.extras || []; S.extras.push(e); save(); try { drawExtras(); } catch(er){} drawEst(); }
+  function anyEx(k){ var has = (S.extras || []).some(function(e){ return e.k === k && !e.auto; }); try { (S.fl || []).forEach(function(f, i){ if (i !== S.fi && f.snap && (f.snap.extras || []).some(function(e){ return e.k === k; })) has = true; }); } catch(er){} return has; }
+  drawEst = function(){
+    var r = od.apply(this, arguments);
+    try {
+      var top = document.getElementById("estTop"); if (!top) return r;
+      var box = document.getElementById("fz478box"); if (!box){ box = document.createElement("div"); box.id = "fz478box"; }   /* script の id と同じ名前にしない（getElementById が script を返す） */
+      var place = function(){ var g = document.getElementById("growBox"), at = (g && g.parentNode === top.parentNode) ? g : top; if (at.nextSibling !== box) at.after(box); };
+      place(); setTimeout(place, 50);   /* 成長メーターの下（無ければ見積金額の下） */
+      var isNew = S.mode === "zo" && !(+S.house >= 0);
+      var noS = isNew && !anyEx("shinchiku"), noG = isNew && !anyEx("gaiko");
+      if (!noS && !noG){ box.innerHTML = ""; return r; }
+      var h = '<div style="border:2px solid #E0A800;background:#FFF8E1;border-radius:12px;padding:10px 12px;margin:10px 0">' +
+        '<b style="color:#8A5A00">新築で入っていない工事があります</b>';
+      if (noS) h += '<div style="font-size:13px;color:#6B4F00;line-height:1.5;margin:4px 0 6px">地盤調査・確認申請・仮設・水道と電気の引込（家の工事とは別にかかる物）</div><button class="btn pri" id="fz478s" type="button" style="width:100%">新築の費用を入れる</button>';
+      if (noG) h += '<div style="font-size:13px;color:#6B4F00;line-height:1.5;margin:8px 0 6px">外構（駐車場の土間・フェンス・門まわり）。入れた後に、部分工事の欄で広さを入れます</div><button class="btn sub" id="fz478g" type="button" style="width:100%">外構を入れる</button>';
+      h += '</div>';
+      box.innerHTML = h;
+      if (noS) document.getElementById("fz478s").onclick = function(){ addEx("shinchiku"); toast("新築の費用を入れました（中身は「部分工事」で直せます）"); };
+      if (noG) document.getElementById("fz478g").onclick = function(){ addEx("gaiko"); toast("外構を入れました。部分工事の欄で広さを入れてください"); };
     } catch(e){}
     return r;
   };
