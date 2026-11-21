@@ -7693,13 +7693,30 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
      もう一つ：窓が広くて柱を抜いた所は、上の横架材の柱の間が長くなる。外周で柱の間が1820を超える所は、横架材の高さをスパンの1/11（2階建の1階＝胴差は2階の壁と床を受けるので1/10）以上にし、
      今の太さとの差額を「太くする分」として足す（理由：柱の間が長いほど曲げが大きく、たわみを抑えるのに高さが要る。翔伍さんの覚え方のスパン1/10〜1/12の中）。目安で、正式は構造計算。 */
   if (S.mode === "zo"){ try {
-    const lin490 = [], sill490 = [], up490 = [];
+    const lin490 = [], sill490 = [], up490 = [], fill490 = {s45: [], s30: [], blk: [], p12: 0, p9: 0, n: 0, big: 0};
     const scan490 = (FZ, fl) => (FZ.runs || []).forEach(r => {
       const P = [...(r.postT || [])].sort((x, y) => x - y);
       (r.ops || []).forEach((o, oi) => {
         const cat = ((r.opsD || [])[oi] || {}).cat || "";
         let a0 = null, c0 = null; P.forEach(t => { if (t <= o[0] + 1) a0 = t; if (c0 === null && t >= o[1] - 1) c0 = t; });
         const span = (r.kind === "e" && a0 !== null && c0 !== null) ? c0 - a0 : (o[1] - o[0]) + 90;
+        /* CAD-494（本人のやり方 2026-11-21）：窓の横のすき間（窓台とまぐさの間）。片側＝柱の面から窓まで−クリアランス7.5（両側で15）。
+           9未満＝何も入れない（ビスが下地に効く）／9〜30＝合板12か9を割いて入れる／30〜135＝間柱（30・45）を3本までの組み合わせで埋める（断熱を詰めるより早い）／
+           135超＝サッシの横に間柱を1本立て、柱との間に上下2本、間柱を水平に切って入れる（横の間柱を釘で横打ちするため）。残りのすき間は断熱材。長さ＝サッシの高さ＋10 */
+        if (r.kind === "e" && a0 !== null && c0 !== null && /窓|掃|FIX/.test(cat) && !/玄関|勝手口|ドア/.test(cat)){
+          const H = (((r.opsD || [])[oi] || {}).h || 1100) + 10;
+          [o[0] - a0 - 52.5 - 7.5, c0 - 52.5 - o[1] - 7.5].forEach(g => {
+            if (!(g >= 9)) return;
+            if (g > 135){ fill490.s45.push(H); fill490.blk.push(Math.round(g - 45), Math.round(g - 45)); fill490.big++; return; }
+            let best = [0, 0, 0];   // [合計, 45の本数, 30の本数]
+            for (let n45 = 0; n45 <= 3; n45++) for (let n30 = 0; n45 + n30 <= 3; n30++){ const t = n45 * 45 + n30 * 30; if (t <= g + 0.5 && t > best[0]) best = [t, n45, n30]; }
+            for (let k = 0; k < best[1]; k++) fill490.s45.push(H);
+            for (let k = 0; k < best[2]; k++) fill490.s30.push(H);
+            const rest = g - best[0];
+            if (rest >= 12) fill490.p12 += H; else if (rest >= 9) fill490.p9 += H;
+            fill490.n++;
+          });
+        }
         lin490.push(Math.round(span)); if (/窓|FIX/.test(cat) && !/掃/.test(cat) && !/玄関|勝手口|ドア/.test(cat)) sill490.push(Math.round(span));
         if (r.kind === "e" && a0 !== null && c0 !== null && span > 1821){
           const lower = two && fl === 1, base = lower ? +S.dosa : +S.keta, hN = Math.max(base, Math.ceil(span / (lower ? 10 : 11) / 30) * 30);
@@ -7711,6 +7728,10 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     if (two && Array.isArray(S.fl) && S.fl.length > 1){ try { scan490(withFloor416(2, () => framePos()), 2); } catch(e){} }
     if (lin490.length) lum("mabashira", "まぐさ", 105, 45, lin490, `105×45（間柱と同じ）・${lin490.length}か所・開口の両側の柱から柱まで`, false);
     if (sill490.length) lum("mabashira", "窓台", 105, 45, sill490, `105×45（間柱と同じ）・${sill490.length}か所・窓だけ（掃き出し・ドアは無し）`, false);
+    if (fill490.s45.length) lum("mabashira", "窓の横の埋め材（間柱）", 45, 105, fill490.s45, `45×105・窓台とまぐさの間・サッシの高さ＋10${fill490.big ? `・すき間が135を超える所${fill490.big}か所はサッシの横に1本立てる` : ""}`, false);
+    if (fill490.s30.length) lum("mabashira", "窓の横の埋め材（間柱30）", 30, 105, fill490.s30, "30×105・窓台とまぐさの間（片側のすき間を3本までの組み合わせで埋める）", false);
+    if (fill490.blk.length) lum("mabashira", "窓の横の水平の受け（間柱を切って）", 45, 105, fill490.blk, `45×105・${fill490.blk.length}本・サッシの横の間柱と柱の間に上下2本（横打ちの受け）・残りは断熱材`, false);
+    [[12, fill490.p12], [9, fill490.p9]].forEach(([tk, len]) => { if (len > 0) sheet("構造用合板", tk, `窓の横の埋め材 合板${tk}mm（割いて使う）`, 910, 1820, Math.ceil(len / (1820 * 8)), `すき間9〜30の所・105幅に割いて 計${fmt(Math.round(len))}mm（1枚から8本）`); });
     if (up490.length){
       const spK = S.sp.keta || "スギ"; let cost = 0, miss = false;
       up490.forEach(u => { const L = Math.min(6000, Math.ceil((u.span + 300) / 1000) * 1000), pN = lumberPrice(spK, 105, u.h, L), pB = lumberPrice(spK, 105, u.base, L); if (!pN || !pB) miss = true; else cost += Math.max(0, pN.p - pB.p); });
