@@ -38460,3 +38460,35 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   try { HB.__radHgHide514Fix = fixRad; } catch(e){}
 })();
 </script>
+<script id="tgDbl517js">
+/* ===== CAD-517：見た目の直しF（Claude申し送り「見た目の直し一覧-1121」・本人の決定）
+   ①描くの画面で、最初の案内カード（CAD-430 のコーチカード「指で、家の外形を
+   なぞってください」）が出ている間、その後ろで古いなぞる案内（CAD-246 の
+   #tg246：点線の四角を ☝️ がなぞる）が残って見え、指の絵が2つになっていた。
+   カードが出ている間は #tg246 を出さない様にし、指はカード側の 👆 1つに
+   そろえる。
+   残す方をカードの 👆 にした理由：カードの 👆 は全手順の案内カード共通の形
+   （34px・題の上・中央）で、文も今の言い方（CAD-430）。#tg246 は古い案内で、
+   題の文（指でなぞって、家の形を描きます）ごとカードと二重になっている。
+   ただし #tg246 自体は消さない：カードが消えた後（カードを終えた人が新しい
+   現場で白紙の描く画面を開いた時など）は、今まで通り図面上の hint として
+   働く。やる事は「カードが見えている間だけ CSS で #tg246 を止める」だけ。
+   本体関数・カードの文と絵・チュートリアル（#drawGhost）には一切触らない。 */
+(function(){ "use strict";
+  if (window.__tgDbl517) return; window.__tgDbl517 = true;
+  var st = document.createElement("style"); st.id = "tgDbl517css";
+  st.textContent = "body.tgDbl517 #tg246{display:none!important}";
+  document.head.appendChild(st);
+  function cardShown(){
+    try {
+      var dr = document.getElementById("draw"); if (!dr || !dr.parentElement) return false;
+      var c = dr.parentElement.querySelector(".co430"); if (!c) return false;
+      return !c.hidden && c.getClientRects().length > 0;
+    } catch(e){ return false; }
+  }
+  function tick(){
+    try { document.body.classList.toggle("tgDbl517", cardShown()); } catch(e){}
+  }
+  setInterval(tick, 200); setTimeout(tick, 80); tick();
+})();
+</script>
