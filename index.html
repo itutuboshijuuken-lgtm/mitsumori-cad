@@ -38376,3 +38376,88 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   try { HB.__hgHide513Apply = apply; } catch(e){}
 })();
 </script>
+<script id="radHgHide514js">
+/* ===== CAD-514：見た目の直しEの追加（本人の決定 2026-11-21 23:10）
+   CAD-513 で②間取りの「解体」ボタン（#hgBtn）を新築で隠したが、円（ラジアル）
+   メニューの「解体」の入口は新築でも残っていて、選ぶと #hgBtn を押した事に
+   なり解体モードに入れてしまった。円メニュー側も新築（mode="zo" かつ
+   S.house<0）では出さない・押せない形にそろえる。表示と入口の制御だけで、
+   解体の指定データ・見積の計算・保存キーには一切触らない。本体関数は無変更。
+   やり方：
+   (1) 円メニューの項目「解体」を、新築の間だけ display:none にする。
+       円の項目は開くたびに作られるため、#radial381 の出現は body の
+       MutationObserver で、出現後の変化（指を滑らせた時の選択表示）は
+       円自身の MutationObserver で見て、その都度直す。項目の並び順・
+       他の項目の動きは変えない（消えた所は空きになる）。滑らせた時に
+       真ん中の名前が「解体」になったり、消えた項目が光ったりしたら戻す。
+   (2) 入口の止め：円メニューの決定は最終的に #hgBtn の click になるため、
+       #hgBtn の onclick を包み、新築の間だけ元の処理を呼ばない様にする。
+       CAD-513 のボタン非表示と合わせ、新築ではどの入口からも解体モードに
+       入れない。増築（S.house>=0）・内装リフォーム（rf）・部分工事（pt）
+       では今まで通り（包みは素通し）。
+   ボタンが後から作られる場合に備え、CAD-513 と同じく HB.__dtPost14 の
+   包みの後段でも (2) を掛け直す。 */
+(function(){ "use strict";
+  if (window.__radHgHide514) return; window.__radHgHide514 = true;
+  function isPureNew(){
+    try { return typeof S !== "undefined" && !!S && S.mode === "zo" && typeof S.house === "number" && S.house < 0; }
+    catch(e){ return false; }
+  }
+  /* (2) #hgBtn の onclick を包む（新築の間だけ元の処理を呼ばない） */
+  function guardBtn(){
+    var b = document.getElementById("hgBtn");
+    if (!b) return;
+    var oc = b.onclick;
+    if (typeof oc === "function" && !oc.__radHg514){
+      var w = function(){ if (isPureNew()) return; return oc.apply(this, arguments); };
+      w.__radHg514 = true;
+      b.onclick = w;
+    }
+  }
+  try {
+    var orig = (typeof HB !== "undefined") ? HB.__dtPost14 : null;
+    if (typeof orig === "function" && !orig.__radHg514){
+      var w2 = function(){ var r = orig.apply(this, arguments); try { guardBtn(); } catch(e){} return r; };
+      w2.__radHg514 = true;
+      HB.__dtPost14 = w2;
+    }
+  } catch(e){}
+  try { guardBtn(); } catch(e){}
+  /* (1) 円メニューの「解体」を新築の間だけ隠す */
+  function fixRad(host){
+    if (!host) return;
+    var hide = isPureNew();
+    var its = host.querySelectorAll(".it381");
+    for (var i = 0; i < its.length; i++){
+      var el = its[i];
+      if (el.textContent !== "解体") continue;
+      if (hide){
+        if (el.style.display !== "none") el.style.display = "none";
+        if (el.classList.contains("on381")) el.classList.remove("on381");
+      } else if (el.style.display === "none"){
+        el.style.display = "";
+      }
+    }
+    if (hide){
+      var cen = host.querySelector(".cen381");
+      if (cen && cen.textContent === "解体") cen.textContent = "道具を選ぶ";
+    }
+  }
+  var hostObs = null;
+  function watchHost(host){
+    if (hostObs && hostObs.__host514 === host){ fixRad(host); return; }
+    if (hostObs) hostObs.disconnect();
+    hostObs = new MutationObserver(function(){ try { fixRad(host); } catch(e){} });
+    hostObs.__host514 = host;
+    hostObs.observe(host, { childList: true, subtree: true, attributes: true, attributeFilter: ["class"], characterData: true });
+    fixRad(host);
+  }
+  try {
+    new MutationObserver(function(){
+      var host = document.getElementById("radial381");
+      if (host) watchHost(host);
+    }).observe(document.body, { childList: true });
+  } catch(e){}
+  try { HB.__radHgHide514Fix = fixRad; } catch(e){}
+})();
+</script>
