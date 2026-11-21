@@ -34415,7 +34415,7 @@ function daikuBaseRows391(nobeT){
     var sr = slot.getBoundingClientRect();
     var naturalBottom = sr.bottom + applied400;   /* 余白が無い時の slotM の下端 */
     var top = Infinity;
-    ["roomBar176", "grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){
+    ["grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){   /* CAD-508：部屋を押した時の床のパネル（roomBar176）では図面を縮めない（選ぶ間だけ図面に重ねる。本人「図面の大きさが変わる」） */
       var el = document.getElementById(id);
       if (!el || el.hidden) return;
       if (!el.getClientRects().length) return;   /* display:none（ux-sheet-off 含む）は数えない */
@@ -38100,4 +38100,16 @@ function kozo478(C){
 /* CAD-507：床の囲みのパネルの床の種類ボタン（1段に横並び・はみ出たら横に送る） */
 #enclBar .fl507{display:flex!important;flex-wrap:nowrap!important;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
 #enclBar .fl507 button{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid #2563B0;background:#fff;color:#1F4E8C;font-size:14px;font-weight:800;white-space:nowrap}
+</style>
+<style id="flbar508css">
+/* ===== CAD-508：床を決める時のパネルをすっきり（本人「ボタンがごちゃつきすぎ」） =====
+   床の種類は横1列（横に送る）、説明文は出さない、「他の部屋もまとめて」は小さく。パネルは図面に重ねて、図面の大きさは変えない */
+#roomBar176{max-height:none!important;padding:6px 8px!important}
+#roomBar176 .rmFlT176{font-size:12.5px;margin:2px 2px 4px}
+#roomBar176 .rmMulti375:not(.on375){margin:0 0 6px}
+#roomBar176 .rmMulti375:not(.on375)>button{width:auto!important;min-height:34px!important;font-size:13px!important;padding:0 12px!important}
+#roomBar176 #rmFlHost367 #floorPanel{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:6px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+#roomBar176 #rmFlHost367 #floorPanel>button{flex:0 0 92px!important;width:92px!important;min-width:92px!important;height:52px!important;min-height:52px!important;font-size:12.5px!important;padding:0 4px!important;margin:0!important}
+#roomBar176 #rmFlHost367 #floorPanel>button .ic325,#roomBar176 #rmFlHost367 #floorPanel>button img.ic325{display:none!important}
+#roomBar176 #rmFlHost367 #floorPanel>div{display:none!important}
 </style>
