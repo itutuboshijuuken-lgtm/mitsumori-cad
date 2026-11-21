@@ -37517,6 +37517,50 @@ function kozo478(C){
   };
 })();
 </script>
+<script id="win492js">
+/* CAD-492（Opus・本人の決定 2026-11-21「窓を置く所を基準に、柱を455にするか910にするかを決める」）：
+   外周の窓を置いた時・指で動かした時、窓を「455の割り付けの間（柱の間）」の真ん中にそろえる。柱の間の広さは窓の幅＋柱105が入る一番小さい455の倍数
+   （780→910、1690→1820、2600→2730）。柱は CAD-454/487 の決まりで窓の外側の割り付けに立つので、窓と柱の間に半端なすき間ができない。
+   数字で位置を入れた時はそろえない（指は大まかに、細かくは数字で）。ドア・玄関・勝手口・開口と間仕切りの上はそろえない。 */
+(function(){
+  if (typeof moveOpening !== "function" || moveOpening.__w492) return;
+  var M2 = 455, PW = 105;
+  function isWin(sa){ var c = sa && sa.cat || ""; return /窓|掃|FIX/.test(c) && !/玄関|勝手口|ドア/.test(c); }
+  function snap(sa){
+    try {
+      if (!sa || S.mode !== "zo" || !sa.drawn || !sa.host || sa.host.t !== "e" || !isWin(sa)) return false;
+      var seg = hostSeg(sa.host); if (!seg) return false;
+      var dx = seg[1][0] - seg[0][0], dy = seg[1][1] - seg[0][1], L = Math.hypot(dx, dy); if (!(L > 1)) return false;
+      var hx = Math.abs(dx) > Math.abs(dy) * 50, vy = Math.abs(dy) > Math.abs(dx) * 50; if (!hx && !vy) return false;
+      var b = bbox(), o0 = hx ? b.x0 : b.y0, s0 = hx ? seg[0][0] : seg[0][1], sg = Math.sign(hx ? dx : dy), w = +sa.w || 0; if (!(w > 0)) return false;
+      var c = s0 + sg * ((+sa.pos || 0) + w / 2), n = Math.ceil((w + PW) / M2 - 1e-9);
+      var i = Math.round((c - o0) / M2 - n / 2), cN = o0 + (i + n / 2) * M2, pos = sg * (cN - s0) - w / 2;
+      pos = Math.round(pos * 2) / 2;
+      if (pos < -0.5 || pos + w > L + 0.5) return false;
+      pos = Math.max(0, Math.min(L - w, pos));
+      var clash = (S.sashes || []).some(function(o){ return o !== sa && o.drawn && o.host && o.host.t === "e" && o.host.i === sa.host.i && pos < o.pos + o.w && pos + w > o.pos; });
+      if (clash) return false;
+      if (Math.abs(pos - (+sa.pos || 0)) < 0.5) return false;
+      sa.pos = pos; return true;
+    } catch(e){ return false; }
+  }
+  HB.__winSnap492 = snap;
+  var m0 = moveOpening;
+  window.moveOpening = function(sa){ var r = m0.apply(this, arguments); snap(sa); return r; };
+  window.moveOpening.__w492 = true;
+  var lastNote = 0;
+  function after(fn){
+    if (typeof window[fn] !== "function") return;
+    var f0 = window[fn];
+    window[fn] = function(){
+      var n0 = (S.sashes || []).length, r = f0.apply(this, arguments);
+      try { if ((S.sashes || []).length > n0){ var sa = S.sashes[S.sashes.length - 1]; if (snap(sa)){ save(); drawPlan(); if (Date.now() - lastNote > 8000){ lastNote = Date.now(); toast("窓を柱の間（455の割り付け）の真ん中にそろえました。細かい位置は数字で直せます"); } } } } catch(e){}
+      return r;
+    };
+  }
+  after("placeOpening"); after("addStdOpening");
+})();
+</script>
 <script id="join491js">
 /* CAD-491：別棟（エキスパンション）でつなぐ時は、つなぐ辺にも壁・柱・外壁・断熱を拾う（見積の時だけ S.noWall を外す。図面は今のまま） */
 (function(){
