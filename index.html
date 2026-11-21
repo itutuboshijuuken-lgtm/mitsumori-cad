@@ -38338,3 +38338,41 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
    手順は右下の丸ボタン（CAD-510）と、押した物での自動切り替え（CAD-511）で選ぶ。チュートリアル中は今まで通り出す。中身・計算は変えない */
 body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body:not(.nbtutRun) #next443{display:none!important}
 </style>
+<script id="hgHide513js">
+/* ===== CAD-513：見た目の直しE（Claude申し送り「見た目の直し一覧-1121」・本人の決定）
+   ②間取りの「解体」ボタン（#hgBtn）が新築でも出てしまうため、新築では出さない。
+   新築の定義は申し送り通り：mode="zo" かつ S.house<0（母屋の指定が無い）。
+   増築（S.house>=0）・内装リフォーム（rf）・部分工事（pt）では今まで通り出す。
+   表示だけの変更：解体の指定データ・見積の計算・保存キーには一切触らない。
+   実装は、ボタンを #partCh へ置く後段 HB.__dtPost14 の包み＋読み込み直後の1回適用のみ。
+   本体関数は無変更。枝分かれパネル #hgBranch もボタンの表示の一部として一緒に隠す
+   （閉じている時は renderHgBr が display:none＋中身なしにしているので、戻す時は
+   中身がある時だけ表示へ戻す）。
+   経緯：当初 CAD-511 として CAD-510（4251c9b）の上に作り確認したが、公開確認の間に
+   Claude が CAD-510（025c943）・CAD-511（a3e2972）・CAD-512（3da0c8b、C+Bの3回）
+   を連続公開したため、変更内容は同一のまま各土台へ載せ替え、CAD-513 として再確認した。 */
+(function(){ "use strict";
+  if (window.__hgHide513) return; window.__hgHide513 = true;
+  function isPureNew(){
+    try { return typeof S !== "undefined" && !!S && S.mode === "zo" && typeof S.house === "number" && S.house < 0; }
+    catch(e){ return false; }
+  }
+  function apply(){
+    var hide = isPureNew();
+    var b = document.getElementById("hgBtn");
+    if (b) b.style.display = hide ? "none" : "";
+    var br = document.getElementById("hgBranch");
+    if (br) br.style.display = hide ? "none" : (br.innerHTML ? "" : "none");
+  }
+  try {
+    var orig = (typeof HB !== "undefined") ? HB.__dtPost14 : null;
+    if (typeof orig === "function" && !orig.__hgHide513){
+      var w = function(){ var r = orig.apply(this, arguments); try { apply(); } catch(e){} return r; };
+      w.__hgHide513 = true;
+      HB.__dtPost14 = w;
+    }
+  } catch(e){}
+  try { apply(); } catch(e){}
+  try { HB.__hgHide513Apply = apply; } catch(e){}
+})();
+</script>
