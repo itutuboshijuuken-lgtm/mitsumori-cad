@@ -38103,24 +38103,8 @@ function kozo478(C){
 #enclBar .fl507 button{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid #2563B0;background:#fff;color:#1F4E8C;font-size:14px;font-weight:800;white-space:nowrap}
 </style>
 <style id="flbar508css">
-/* ===== CAD-508：床を決める時のパネルをすっきり（本人「ボタンがごちゃつきすぎ」） =====
-   床の種類は横1列（横に送る）、説明文は出さない、「他の部屋もまとめて」は小さく。パネルは図面に重ねて、図面の大きさは変えない */
-#roomBar176{max-height:none!important;padding:6px 8px!important}
-#roomBar176 .rmFlT176{font-size:12.5px;margin:2px 2px 4px}
-#roomBar176 .rmMulti375:not(.on375){margin:0 0 6px}
-#roomBar176 .rmMulti375:not(.on375)>button{width:auto!important;min-height:34px!important;font-size:13px!important;padding:0 12px!important}
-#roomBar176 #rmFlHost367 #floorPanel{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto;gap:6px;padding-bottom:2px;-webkit-overflow-scrolling:touch}
-#roomBar176 #rmFlHost367 #floorPanel>button{flex:0 0 92px!important;width:92px!important;min-width:92px!important;height:52px!important;min-height:52px!important;font-size:12.5px!important;padding:0 4px!important;margin:0!important}
-#roomBar176 #rmFlHost367 #floorPanel>button .ic325,#roomBar176 #rmFlHost367 #floorPanel>button img.ic325{display:none!important}
-#roomBar176 #rmFlHost367 #floorPanel>div{display:none!important}
-/* CAD-509：さらに詰める（本人「まだ余白潰せそう」）。「床の仕上げ」の見出しは出さず、「他の部屋もまとめて」は上の行（閉じるの左）へ。上の行のボタンを低く */
-body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
-#roomBar176 .r1{min-height:34px;margin-bottom:6px}
-#roomBar176 .r1 button{min-height:34px!important}
-#roomBar176 .rmMulti375:not(.on375){position:absolute;top:6px;right:92px;margin:0!important}
-#roomBar176 .rmMulti375:not(.on375)>button{min-height:34px!important;font-size:12.5px!important;padding:0 10px!important}
-#roomBar176 #rmFlHost367{margin:0!important}
-#roomBar176 #rmFlHost367 #floorPanel{margin:0!important;padding:0 0 2px!important}
+/* CAD-516：本人の決定「選ぶ物は小さくしなくていい。選ぶ時は図面が見えなくても問題ない。大きい方が選びやすい」。
+   CAD-508/509 の小さくする形は取りやめ、床のボタンは元の大きさに戻す。図面を縮めない所（CAD-508 の refit400 から外した分）はそのまま */
 </style>
 <script id="same507js">
 /* ===== CAD-508：③室内図も「置いたら構えを外す＋同じ物を置く」に統一（本人の決定 2026-11-21 22:26「室内図も統一させよう」）
