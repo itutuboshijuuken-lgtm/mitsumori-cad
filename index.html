@@ -36824,3 +36824,14 @@ body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .ar,body:not(.pad474) #selBar
 body:not(.pad474) #selBar:not([data-k^="p"]) .dpad{grid-template-rows:32px!important;grid-template-columns:36px!important}
 body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .rot{grid-area:1/1!important}
 </style>
+<style id="drw475css">
+/* CAD-475：①描くの「坪数から・見本・定型・方位」の引き出しが、#st1 の nth-child 隠しに当たって出なかった（CAD-468 で並びが1つずれた）。引き出しは常に出せるようにする */
+#st1>.fs418drawer:not([hidden]){display:block!important;order:99}
+</style>
+<script id="drw475js">
+/* CAD-475：見本・定型を選んだら引き出しを閉じる（図面が見えるように） */
+document.addEventListener("click", function(e){
+  var d = e.target.closest && e.target.closest("#st1 .fs418drawer"); if (!d) return;
+  if (e.target.closest("#presetBox363 button,#presetBox363 [data-k],#presetBox363 .card,[data-preset]")) setTimeout(function(){ d.hidden = true; }, 50);
+}, true);
+</script>
