@@ -36035,7 +36035,7 @@ nav.steps{padding:1px 6px 3px}
     var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*";
     inp.onchange = function(){ var f = inp.files && inp.files[0]; if (!f) return; var rd = new FileReader();
       rd.onload = function(){ var im = new Image(); im.onload = function(){ var k = Math.min(1, 1200 / Math.max(im.width, im.height)), c = document.createElement("canvas"); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
-        var b = bbox(); TR = {src: c.toDataURL("image/jpeg", 0.6), ar: c.height / c.width, x: b.x0, y: b.y0, w: b.w || 9100, op: 0.45, pid: pid()}; trSave(); adj = true; drawPlan(); toast("下絵を入れました。下のボタンで大きさ・位置を合わせます"); }; im.src = rd.result; };
+        var b = bbox(); TR = {src: c.toDataURL("image/jpeg", 0.6), ar: c.height / c.width, x: b.x0, y: b.y0, w: b.w || 9100, op: 0.85, pid: pid()}; trSave(); adj = true; drawPlan(); toast("下絵を入れました。下のボタンで大きさ・位置を合わせます"); }; im.src = rd.result; };
       rd.readAsDataURL(f); };
     inp.click();
   }
@@ -36098,7 +36098,7 @@ nav.steps{padding:1px 6px 3px}
     if (TR && TR.pid !== pid()) trLoad();
     if (adj) return ["tbig", "tsml", "tl", "tr", "tu", "td", "top", "tdel", "tok"];
     var x = [];
-    if (s === "part"){ x.push(TR ? "tadj" : "trace"); x.push("tpl"); if (typeof sel !== "undefined" && sel && sel.t === "p") x.push("mic"); }
+    if (s === "part"){ x.push(TR ? "tadj" : "trace");   /* CAD-506：ひな形ボタンは本人の決定で出さない */ if (typeof sel !== "undefined" && sel && sel.t === "p") x.push("mic"); }
     return x.concat(want);
   };
   HB.__act437 = function(w){
@@ -36127,7 +36127,7 @@ nav.steps{padding:1px 6px 3px}
       var ctm = sv.getScreenCTM(); if (!ctm || !ctm.a) return; var k = 1 / ctm.a, a = toMM([0, 0]), c = toMM([100, 100]), sx = 100 / (c[0] - a[0]), sy = 100 / (c[1] - a[1]);
       var P = function(x, y){ return [(x - a[0]) * sx, (y - a[1]) * sy]; };
       if (TR){
-        var q = P(TR.x, TR.y), im = document.createElementNS(NS, "image"); im.id = "t437"; im.setAttribute("href", TR.src); im.setAttribute("x", q[0]); im.setAttribute("y", q[1]); im.setAttribute("width", TR.w * sx); im.setAttribute("height", TR.w * TR.ar * sx); im.setAttribute("opacity", TR.op); im.setAttribute("preserveAspectRatio", "none"); im.setAttribute("pointer-events", "none");
+        var q = P(TR.x, TR.y), im = document.createElementNS(NS, "image"); im.id = "t437"; im.setAttribute("href", TR.src); im.setAttribute("x", q[0]); im.setAttribute("y", q[1]); im.setAttribute("width", TR.w * sx); im.setAttribute("height", TR.w * TR.ar * sx); im.setAttribute("opacity", TR.op); im.setAttribute("preserveAspectRatio", "none"); im.setAttribute("pointer-events", "none"); im.style.mixBlendMode = "multiply";   /* CAD-506：白い紙の地は消えて、線だけが図面の上に重なる（前は薄く出すだけで、白い紙の写真だと何も見えなかった） */
         var fl = sv.querySelector("#flDefs"); sv.insertBefore(im, fl ? fl.nextSibling : sv.firstChild);
       }
       var g = document.createElementNS(NS, "g"); g.id = "e437"; g.setAttribute("pointer-events", "none");
@@ -38052,3 +38052,7 @@ function kozo478(C){
   HB.__armSame502 = armSame502;
 })();
 </script>
+<style id="rm506css">
+/* CAD-506：本人の決定（2026-11-21）。ひな形ボタン・「中の物：隠す」・「物を隠す」は使わないので出さない。表示の初期状態・計算は変えない */
+#dimShowBtn,#hideFxBtn369{display:none!important}
+</style>
