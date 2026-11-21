@@ -9753,7 +9753,7 @@ function drawIso(){
   try {
     if (S.mode === "zo" && S.fl && S.fl.length === 2){   // 2階の窓・ドアも完成図に出すため、見積と同じく2階の中身を足して描く
       flEnsure(); const k = flSnap(), a = S.fi === 0 ? k : S.fl[0].snap, b = S.fi === 1 ? k : S.fl[1].snap;
-      if (a && b && JSON.stringify(a.edges) === JSON.stringify(b.edges) && JSON.stringify(a.house) === JSON.stringify(b.house)){ keep0 = k; flLoad(a); S.rot = k.rot; S.floors = 2; mergeUpperFloor(b); }
+      if (a && b && JSON.stringify(a.house) === JSON.stringify(b.house) && (JSON.stringify(a.edges) === JSON.stringify(b.edges) || (typeof ohInfo477 === "function" && ohInfo477(a, b)))){ keep0 = k; flLoad(a); S.rot = k.rot; S.floors = 2; mergeUpperFloor(b); }   /* CAD-484：2階がはね出す家も、2階の窓を出す */
     }
     return drawIso0();
   } finally { if (keep0) flLoad(keep0); S.floors = f0; }
