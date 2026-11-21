@@ -5466,7 +5466,7 @@ function roof(){
   if (mune){ mp = (W - S.muneStep / t) / 2; if (mp < W * 0.25) mp = W * 0.25; step = (W - 2 * mp) * t; }
   const two = S.floors === 2 && S.mode !== "rf";
   const Lc = S.dfl + S.ch + S.fuko;              // 1階の柱（土台天〜桁・胴差の下）
-  const Lc2 = two ? 40 + S.ch2 + S.fuko : 0;     // 2階の柱（胴差天〜桁下）
+  const Lc2 = two ? 40 + S.ch2 + (S.fuko2 != null ? +S.fuko2 : S.fuko) : 0;     // 2階の柱（胴差天〜桁下）。CAD-459：図面の階高から2階の懐（S.fuko2）を別に持てる
   const Hd = two ? Lc + S.dosa : 0;              // 胴差天
   const Hk = two ? Hd + Lc2 + S.keta : Lc + S.keta; // 桁天（土台天から）
   // 母屋の位置
@@ -11955,7 +11955,11 @@ function wallSegs406core(fl){
       const have = () => mine.reduce((a, sg) => a + cm(sg), 0);
       const sideHave = si => mine.filter(sg => sideOf(sg, Q) === si).reduce((a, sg) => a + cm(sg), 0);
       const free = () => mine.filter(sg => sg.bok && !sg.user && (sg.kind === "none" || (sg.kind === "menzai" && false)));
-      const rank = arr => arr.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (c.L - a.L));
+      /* CAD-459：同じ通りでは2本1組（Λ・V）で置き、3本以上続けない。実物の柱壁伏図の置き方（角の2本・離れた所に2本）に近づける */
+      const isB = sg => sg.kind !== "none" && sg.kind !== "menzai";
+      const nbs = sg => mine.filter(o => o !== sg && o.ri === sg.ri && (o.a === sg.b || o.b === sg.a));
+      const pairScore = sg => { const nb = nbs(sg).filter(isB); if (nb.length === 1 && nbs(nb[0]).filter(isB).length === 0) return 2; if (nb.length === 0) return 1; return 0; };
+      const rank = arr => arr.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (pairScore(c) - pairScore(a)) || (c.L - a.L));
       const put = sg => { sg.kind = autoKind; sg.auto = true; };
       // 1) 両端の1/4の帯：充足率1を超えるまで
       [0, 1].forEach(si => { let guard = 0; while (sideHave(si) < Q.sideReq && guard++ < 60){ const c2 = rank(free().filter(sg => sideOf(sg, Q) === si)); if (!c2.length){ const t2 = !tas && rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) === si)); if (t2 && t2.length){ t2[0].kind = "tasuki"; t2[0].auto = true; continue; } break; } put(c2[0]); } });
@@ -35829,6 +35833,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     '  "rooms": [{"name":"洋室","x":1820,"y":1820}, ...],      // 部屋名と、部屋の中の1点',
     '  "openings": [{"type":"window|sweep|door|sliding|entrance|opening","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
     '  "ceiling": 2400,                                        // 天井高',
+    '  "heights": {"story1":2900,"story2":2800,"ceiling2":2400},  // 矩計図・断面図から：1階の階高（1FL〜2FL）、2階の階高（2FL〜軒桁の上端）、2階の天井高。読めなければ書かない',
     '  "roof": {"shape":"kiri|yose|kata|riku|irimoya|maneki","pitch":4,"eave":450,"verge":300,"ridge":"x|y","material":"metal|slate|tile"},  // pitchは寸（4寸=4）、ridgeは棟の向き（xが横）',
     '  "foundation": {"type":"beta|nuno","height":400},',
     '  "exterior": "siding|metal|plaster",',
@@ -35906,6 +35911,10 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     addFC(D.floor_changes);
     if (D.name) S.genba = String(D.name).slice(0, 40);
     if (+D.ceiling) S.ch = +D.ceiling;
+    /* CAD-459：階高を入れる。1階の天井懐＝階高−天井高−胴差−40（1FLは土台天＋40の扱い）。2階は桁で同じように。風の見付面積・柱の長さ・壁量のAiに効く */
+    try { var HT = D.heights || {}; delete S.fuko2; if (+HT.ceiling2) S.ch2 = +HT.ceiling2;
+      if (+HT.story1 > 2000){ var f1 = +HT.story1 - S.ch - (+S.dosa || 240) - 40; if (f1 >= 0 && f1 < 1500) S.fuko = Math.round(f1); }
+      if (+HT.story2 > 2000){ var f2 = +HT.story2 - (+S.ch2 || 2400) - (+S.keta || 180); if (f2 >= 0 && f2 < 1500) S.fuko2 = Math.round(f2); } } catch(e){}
     var R = D.roof || {}; if (R.shape && /^(kiri|yose|kata|riku)$/.test(R.shape)){ S.roof = R.shape; S.iri446 = false; } if (R.shape === "irimoya"){ S.roof = "yose"; S.iri446 = true; } if (R.shape === "maneki"){ S.roof = "mune"; S.iri446 = false; } if (+R.pitch) S.k = +R.pitch; if (R.eave != null && +R.eave >= 0) S.noki = +R.eave; if (R.verge != null && +R.verge >= 0) S.keraba = +R.verge; if (R.ridge === "x" || R.ridge === "y") S.ridge = R.ridge; if (/^(metal|slate|tile)$/.test(R.material || "")) S.roofW = {metal: "light", slate: "slate", tile: "kawara"}[R.material];   /* CAD-457：アプリの値は light / slate / kawara（"metal" のままだと瓦＝一番重い扱いになり、壁量が多く出ていた） */
     var F = D.foundation || {}; if (F.type === "beta" || F.type === "nuno") S.kisoType = F.type; if (+F.height) S.kiso = +F.height;
     if (/^(siding|metal|plaster)$/.test(D.exterior || "")) S.gaiheki = D.exterior === "plaster" ? "nuri" : D.exterior;   /* CAD-457：塗り壁は "nuri" */
@@ -36332,5 +36341,111 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
     }
   } catch(e){}
   sync();
+})();
+</script>
+<script id="voice459js">
+/* CAD-459（Opus）：声で画面を出す。🎤を押して「間仕切り」と言えば間仕切りを描ける状態、「浴槽」と言えば浴槽を置ける状態になる。
+   聞き取りは端末（Safari/Chrome）の音声認識。言葉は表のどれかを含めばよい（ひらがな・カタカナ・聞き間違いもいくつか入れてある）。
+   見つからない時は、今の画面に出ているボタンの文字から探す。見積・保存データには触らない（今までのボタンを押すのと同じ） */
+(function(){
+  "use strict";
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  function kana(t){ return String(t || "").replace(/[ァ-ヶ]/g, function(c){ return String.fromCharCode(c.charCodeAt(0) - 0x60); }).replace(/[\s、。・]/g, ""); }
+  function clickSel(q){ var b = document.querySelector(q); if (b && !b.disabled){ b.click(); return true; } return false; }
+  function step(s){ var b = document.querySelector('.steps [data-step="' + s + '"]'); if (b && !b.getAttribute("aria-current") && b.getAttribute("aria-pressed") !== "true") b.click(); else if (b) b.click(); }
+  function sub(k){ try { if (HB.__setStep399) HB.__setStep399(k); } catch(e){} }
+  function later(f, ms){ setTimeout(function(){ try { f(); } catch(e){} }, ms || 120); }
+  function leaf(k){
+    try { window.grp136 = "put"; window.putLeaf136 = k; toolOpen = k; if (HB.__partDrawOff) HB.__partDrawOff(true); drawToolsUI(); drawPlan(); } catch(e){}
+  }
+  /* その場のボタンの中から、言葉に合う物を押す（data-tk・data-tool・data-lt の行） */
+  function pressIn(rows, words){
+    var bs = []; rows.forEach(function(id){ var r = document.getElementById(id); if (r && !r.hidden) bs = bs.concat([].slice.call(r.querySelectorAll("button"))); });
+    for (var i = 0; i < words.length; i++){ var w = kana(words[i]); for (var j = 0; j < bs.length; j++){ var t = kana(bs[j].textContent); if (t && (t.indexOf(w) >= 0 || w.indexOf(t) >= 0) && t.length > 1){ bs[j].click(); return bs[j].textContent.trim(); } } }
+    return null;
+  }
+  /* 言葉の表：[聞こえる言葉の候補], 動き, ボタンの名前（押す物） */
+  var PUT = [
+    [["浴槽", "よくそう", "よく想", "欲そう", "お風呂", "おふろ", "風呂", "ふろ", "ユニットバス", "バス"], "mizu", ["浴槽"]],
+    [["便器", "べんき", "トイレ", "といれ"], "mizu", ["便器"]],
+    [["手洗", "てあらい"], "mizu", ["手洗い"]],
+    [["洗面", "せんめん"], "mizu", ["洗面台"]],
+    [["洗濯", "せんたく", "パン"], "mizu", ["洗濯機パン"]],
+    [["キッチン", "きっちん", "台所", "だいどころ", "流し"], "mizu", ["キッチン"]],
+    [["ダウンライト", "だうんらいと"], "light", ["ダウンライト"]],
+    [["シーリング", "しーりんぐ"], "light", ["シーリング"]],
+    [["エアコン", "えあこん"], "light", ["エアコン"]],
+    [["コンセント", "こんせんと"], "light", ["コンセント"]],
+    [["スイッチ", "すいっち"], "light", ["スイッチ"]],
+    [["照明", "しょうめい", "電気", "でんき", "ライト"], "light", []],
+    [["カウンター"], "etc", ["カウンター"]],
+    [["枕棚", "まくらだな"], "etc", ["枕棚"]],
+    [["中段", "ちゅうだん"], "etc", ["中段棚"]],
+    [["点検口", "てんけん"], "etc", ["点検"]],
+    [["手すり", "手摺", "てすり"], "etc", ["手すり"]],
+    [["掃き出", "はきだし"], "win", ["掃き出し"]],
+    [["小窓", "こまど"], "win", ["小窓"]],
+    [["FIX", "ふぃっくす", "はめ殺", "はめごろし"], "win", ["FIX"]],
+    [["引違", "引き違", "ひきちがい"], "win", ["腰窓"]],
+    [["腰窓", "こしまど"], "win", ["腰窓"]],
+    [["窓", "まど", "サッシ", "さっし"], "win", []],
+    [["玄関", "げんかん"], "gen", ["玄関"]],
+    [["勝手口", "かってぐち"], "gen", ["勝手口"]],
+    [["片引", "かたびき"], "door", ["片引"]],
+    [["片開", "かたびらき"], "door", ["片開"]],
+    [["折れ戸", "おれど"], "door", ["折れ"]],
+    [["クローゼット", "くろーぜっと"], "door", ["クローゼット"]],
+    [["ドア", "どあ", "扉", "とびら", "建具", "たてぐ", "引き戸", "ひきど"], "door", []]
+  ];
+  var STEP = [
+    [["見積", "みつもり", "金額", "いくら"], "5"], [["仕様", "しよう"], "4"], [["屋根", "やね", "勾配"], "3"],
+    [["完成図", "図面", "伏図", "立面", "パース", "立体"], "6"], [["室内図", "しつない"], "7"], [["外形", "外周", "がいしゅう", "描き直", "書き直"], "1"]
+  ];
+  function has(said, list){ for (var i = 0; i < list.length; i++){ if (said.indexOf(kana(list[i])) >= 0) return true; } return false; }
+  function run(alts){
+    var all = alts.map(kana);
+    var hit = function(list){ for (var a = 0; a < all.length; a++) if (has(all[a], list)) return true; return false; };
+    /* 間仕切り・壁 */
+    if (hit(["間仕切", "まじきり", "まじきる", "仕切", "しきり", "壁を描", "壁をかく", "かべ"])){
+      step("M"); later(function(){ sub("part"); try { toolOpen = "part"; if (HB.__partDrawOn) HB.__partDrawOn(); drawToolsUI(); drawPlan(); } catch(e){} toast("🎤 間仕切り：指でなぞって描けます"); }, 150); return true; }
+    /* 床 */
+    var FL = ["床", "ゆか", "畳", "たたみ", "土間", "どま", "フローリング", "ふろーりんぐ", "クッションフロア", "フロアタイル", "ふろあ"];
+    if (hit(FL)){
+      step("M"); later(function(){ sub("floor"); later(function(){ var w = null; FL.slice(2).forEach(function(x){ if (!w && hit([x])) w = x; });
+        var got = w ? pressIn(["floorPanel", "floorTypes", "toolCh", "toolCh2"], [w === "どま" ? "土間" : w === "たたみ" ? "畳" : w]) : null;
+        toast("🎤 床" + (got ? "：" + got : "") + "：床を決める部屋をタップしてください（一部だけなら「囲んで一部だけ」）"); }, 200); }, 150); return true; }
+    for (var i = 0; i < PUT.length; i++){
+      if (!hit(PUT[i][0])) continue;
+      var lf = PUT[i][1], names = PUT[i][2];
+      step("M");
+      (function(lf, names){ later(function(){ sub(lf === "door" || lf === "win" || lf === "gen" ? "ds" : "put"); leaf(lf);
+        later(function(){ var got = names.length ? pressIn(["toolCh2", "toolCh3", "toolCh"], names) : null;
+          toast("🎤 " + (got || ({door: "建具", win: "窓", gen: "玄関", mizu: "水まわり", light: "電気", etc: "造作"})[lf]) + (got ? "：置く場所をタップしてください" : "：種類を選んでください")); }, 150); }, 150); })(lf, names);
+      return true;
+    }
+    for (var s = 0; s < STEP.length; s++) if (hit(STEP[s][0])){ step(STEP[s][1]); toast("🎤 " + STEP[s][0][0] + "の画面"); return true; }
+    /* 表に無い言葉：今出ているボタンの文字から探す */
+    var vis = [].slice.call(document.querySelectorAll("button")).filter(function(b){ return b.offsetParent && !b.disabled && b.id !== "mic459"; });
+    for (var a = 0; a < all.length; a++){ for (var j = 0; j < vis.length; j++){ var t = kana(vis[j].textContent); if (t.length >= 2 && all[a].indexOf(t) >= 0){ vis[j].click(); toast("🎤 " + vis[j].textContent.trim()); return true; } } }
+    return false;
+  }
+  HB.__voice459 = run;   /* テスト用：HB.__voice459(["浴槽"]) */
+  function listen(){
+    if (!SR){ toast("この端末では声の入力が使えません"); return; }
+    var r = new SR(); r.lang = "ja-JP"; r.interimResults = false; r.maxAlternatives = 5;
+    var mb = document.getElementById("mic459"); if (mb) mb.classList.add("on459");
+    toast("🎤 やりたいことを言ってください（例：間仕切り・浴槽・窓・見積）");
+    r.onresult = function(ev){ var alts = []; for (var i = 0; i < ev.results[0].length; i++) alts.push(ev.results[0][i].transcript);
+      if (!run(alts)) toast("聞き取れたけど、分かりませんでした：「" + (alts[0] || "") + "」"); };
+    r.onerror = function(){ toast("声の入力ができませんでした（マイクの許可を確認してください）"); };
+    r.onend = function(){ if (mb) mb.classList.remove("on459"); };
+    try { r.start(); } catch(e){ if (mb) mb.classList.remove("on459"); toast("声の入力を始められませんでした"); }
+  }
+  try {
+    var st = document.createElement("style"); st.textContent = "#mic459{font-size:16px;padding:0 8px;flex:0 0 auto}#mic459.on459{background:#d23;color:#fff;border-color:#d23;animation:mic459 1s infinite}@keyframes mic459{50%{opacity:.6}}";
+    document.head.appendChild(st);
+    var host = document.getElementById("themeBtn227"); host = host && host.parentElement;
+    if (host && !document.getElementById("mic459")){ var b = document.createElement("button"); b.type = "button"; b.id = "mic459"; b.textContent = "🎤"; b.title = "声で操作"; b.onclick = listen; host.insertBefore(b, host.firstChild); }
+  } catch(e){}
 })();
 </script>
