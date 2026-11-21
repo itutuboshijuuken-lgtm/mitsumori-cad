@@ -25922,15 +25922,17 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
    切替バー・3D・きれい/軽い切替の動作は一切変えず、3D表示中だけコンパスを切替バー(#h3dBar254)の下へずらす。
    3Dでない時（軽い表示・室内図など）は元の位置（top:6px）のまま。コンパスは pointer-events:none で、
    重なりの問題は「文字が見えない」事だけなので、位置の移動で足りる。 ===== */
+/* ===== CAD-496（見た目の直しB・本人の決定 2026-11-21）：CAD-269 のずらしを「バーが見えている時はいつも」へ広げる。
+   軽い表示（SVG）では h3dView254 が隠れて きれい/軽い の seg が横いっぱいに広がり、コンパス（top:6px）が
+   「軽い」ボタンの右端に重なって隠していた（実測：重なり 38×38px）。バーが見えている時は 3D・軽いを問わず
+   コンパスをバーの下＝図の右上の角へ置く。バーが無い時（室内図など）は元の top:6px のまま。 ===== */
 (function(){ "use strict";
   function tick269(){
     try {
       var cmp = document.getElementById("isoCmp");
       if (!cmp) return;
-      var cnv = document.getElementById("h3d");
       var bar = document.getElementById("h3dBar254");
-      var on3d = !!(cnv && cnv.style.display !== "none" && cnv.getClientRects().length);
-      if (on3d && bar && bar.getClientRects().length){
+      if (bar && bar.getClientRects().length){
         var t = (bar.offsetTop + bar.offsetHeight + 4) + "px";
         if (cmp.style.top !== t) cmp.style.top = t;
       } else if (cmp.style.top && cmp.style.top !== "6px"){
