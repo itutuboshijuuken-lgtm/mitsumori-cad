@@ -550,6 +550,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div id="edgeList"></div>
     <div id="dimStatus"></div>
     <div class="area" id="areaBox"></div>
+    <style>body.fsDraw #st2 #flBox493{display:none!important}</style><div class="zo" id="flBox493" hidden><h2>階数</h2>
+    <div class="seg" id="flSeg"><button data-fls="1" type="button">平屋</button><button data-fls="2" type="button">2階建（総2階）</button></div></div>
     <div class="row flowNext"><button class="btn pri" data-go="M" type="button">次へ（間取り）</button></div>
   </section>
 
@@ -578,8 +580,6 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
 
   <!-- ③ 高さ・屋根 -->
   <section id="st3" hidden>
-    <div class="zo"><h2>階数</h2>
-    <div class="seg" id="flSeg"><button data-fls="1" type="button">平屋</button><button data-fls="2" type="button">2階建（総2階）</button></div></div>
     <div id="ceHome3"></div><div id="ceBox"><h2 id="chH">天井高</h2>
     <div class="chips" id="chCh"></div>
     <div id="ch2Box"><h2>2階の天井高</h2><div class="chips" id="ch2Ch"></div></div>
@@ -5426,6 +5426,14 @@ function drawPlan(){
     : `<div class="status ok">寸法がそろいました。</div>`;
   const a = areaMM() / 1e6;
   $("areaBox").innerHTML = u || dimErr.length ? "" : `<div><span>床面積</span><b>${fmt(a, 2)}<small>㎡</small></b></div><div><span>坪数</span><b>${fmt(a * 0.3025, 2)}<small>坪</small></b></div><div><span>畳</span><b>${fmt(a / 1.62, 1)}<small>畳</small></b></div>`;
+  /* CAD-493（決定2・本人の決定 2026-11-21）：階数（平屋／2階建）を④屋根から①描くの後（この画面）の
+     床面積・坪数の段のすぐ下へ移した（④の階数は削除。同じ設定を2か所に置かない）。
+     外形が決まる（寸法がそろう）までは階数を出さない（床面積・坪数と同じ条件）。
+     ボタンは今まで通り data-fls で、押した時の動きも今まで通り：S.floors を書いて保存し、
+     drawSec() で屋根画面側（天井高の見出し・2階の天井高）も追随させる。変数・計算は無変更。 */
+  const fb493 = $("flBox493");
+  if (fb493) fb493.hidden = !!(u || dimErr.length);
+  document.querySelectorAll("[data-fls]").forEach(b => { b.setAttribute("aria-pressed", String(+b.dataset.fls === S.floors)); b.onclick = () => { S.floors = +b.dataset.fls; save(); drawSec(); drawPlan(); }; });
   /* --- 後段（内側→外側） --- */
   try { if (HB.__upd46) HB.__upd46(); } catch(e){}   /* 旧 blk46（_dp）後段：案内文・ボタンの説明の更新（実体 upd は blk46 で登録） */
   try { if (HB.__overlay120) HB.__overlay120(); } catch(e){}   /* 旧 blk59（dp0）後段：開放辺・袖壁の線の重ね描き（実体 overlay120 は blk59 で登録） */
