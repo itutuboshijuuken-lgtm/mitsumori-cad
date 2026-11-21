@@ -2084,10 +2084,16 @@ HB.__cands = cands;
     sel = {t: pk.t, i}; pushUndo();
     const obj = isP ? S.parts2D[i] : pk.t === "k" ? S.tenken[i] : S.sashes[i];
     dragging = {isP, kind: pk.t, obj, start: [e.clientX, e.clientY], orig: JSON.parse(JSON.stringify(obj)), moved: false, cands, wasSel: !!keep, armed: false, cancel: false};
-    { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel && !dg.isP){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); }
+    { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); }   /* CAD-476：間仕切りも長押しでつかめるようにした（dg.isP の除外を外した。トイレ等の部屋パーツの壁もこれで動かせる） */
+    /* CAD-476：置いた直後の物は、選択が続いている間だけ長押しなしでつかめる（ドラッグで位置を決めるため）。
+       選択を外すと固定され、もう一度動かす時は長押しが要る（本人の確定仕様 2026-11-21） */
+    if (keep && HB.__grab476 && HB.__grab476 === pk.t + pk.i){ dragging.armed = true; clearTimeout(dragging.timer); try { $("planWrap").classList.add("dragArmed"); } catch(er){} }
     try { $("plan").setPointerCapture(e.pointerId); } catch(er){}
     drawSelBar(); e.stopImmediatePropagation(); return;
   }
+  /* CAD-476：照明も他の置く物と同じく、長押しでつかんでドラッグできるようにする（従来は選ぶだけだった）。
+     照明の道具を構えている時・置く物の配置中・辺や建具の要素の上では受けない（従来の流れを守る） */
+  if (HB.__pageM && !ltTool && !HB.__put && !onItem){ const li476 = ltNear(toMM(planPt(e))); if (li476 >= 0 && S.lights && S.lights[li476]){ sel = {t: "lt", i: li476}; pushUndo(); const obj476 = S.lights[li476]; dragging = {isP: false, kind: "lt", obj: obj476, start: [e.clientX, e.clientY], orig: JSON.parse(JSON.stringify(obj476)), moved: false, cands: [], wasSel: false, armed: false, cancel: false}; { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); } try { $("plan").setPointerCapture(e.pointerId); } catch(er){} drawSelBar(); e.stopImmediatePropagation(); return; } }
   /* CAD-217：ドア・窓・玄関の配置中（置いた建具が選択中）は、押した瞬間の選択解除をしない。
      解除→再描画で図面の収まりが変わると、続くクリックの位置がずれて次の1つが置けなくなるため。
      タップの意味（選ぶ／次を置く／外す）はクリック側の ltPlanClick（段5a・段5）が決める。
@@ -2108,9 +2114,9 @@ $("plan").addEventListener("pointermove", e => {
   }
   if (dragging && touches.size === 1){
     if (!dragging.armed){ const mv474 = Math.abs(e.clientX - dragging.start[0]) + Math.abs(e.clientY - dragging.start[1]);
-      /* CAD-474：置いた物（戸・窓・水まわり・造作）は、家具と同じく指を動かしたらすぐ動く（長押し不要）。間仕切りは今まで通り */
-      if (!dragging.isP && !dragging.cancel && mv474 > 6){ dragging.armed = true; clearTimeout(dragging.timer); try { $("planWrap").classList.add("dragArmed"); } catch(er){} }
-      else { if (mv474 > 12) dragging.cancel = true; e.stopImmediatePropagation(); return; } }
+      /* CAD-476：CAD-474の「動かしたらすぐ動く」は廃止（本人の確定仕様 2026-11-21：触ってすぐ反応して
+         間違えて動かしてしまうため、普段は長押しでつかんだ時だけ動く。置いた直後の物は pointerdown 側で armed 済み） */
+      if (mv474 > 12) dragging.cancel = true; e.stopImmediatePropagation(); return; }
     const r = $("plan").getBoundingClientRect(), k = (HB.__pageM ? PV.W : PV.W / PV.z) / r.width / HB.__planT.s;
     const dx = (e.clientX - dragging.start[0]) * k, dy = (e.clientY - dragging.start[1]) * k;
     if (Math.abs(dx) + Math.abs(dy) > 20 || dragging.armed) dragging.moved = true;
@@ -2120,7 +2126,7 @@ $("plan").addEventListener("pointermove", e => {
         if (!dragging) return; dragging.raf = 0;
         Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig)));
         const r5 = v => Math.round(v / 5) * 5;
-        if (dragging.kind === "k"){ moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); snapTenken474(dragging.obj); } else if (dragging.isP){ /* CAD-137: 間仕切りのドラッグ移動は廃止 (位置直しはコントローラーだけ) */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
+        if (dragging.kind === "k"){ moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); snapTenken474(dragging.obj); } else if (dragging.kind === "lt"){ moveLight476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); } else if (dragging.isP){ movePart476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); /* CAD-476：CAD-137で廃止した間仕切りのドラッグを、長押しでつかんだ時だけ復活（トイレ等の部屋パーツも動かせるように） */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
         drawPlan();
       });
     }
@@ -35494,7 +35500,7 @@ nav.steps{padding:1px 6px 3px}
     pushUndo(); S.parts2D = S.parts2D || [];
     add.forEach(function(q){ q.isNew = S.mode === "zo"; S.parts2D.push(q); });
     S.roomNames = S.roomNames || []; S.roomNames.push({p: [(x0 + x1) / 2, (y0 + y1) / 2], name: it[0]});
-    save(); drawPlan(); toast(it[0] + "（" + fmt(w) + "×" + fmt(h) + "）を入れました。壁は選んで動かせます");
+    save(); drawPlan(); toast(it[0] + "（" + fmt(w) + "×" + fmt(h) + "）を入れました。壁は長押しでつかんで動かせます");
   }
   /* ---------- ⑤ 家具 ---------- */
   function fAt(m){ var F = S.furn434 || []; for (var i = F.length - 1; i >= 0; i--){ var f = F[i], w = f.r ? f.h : f.w, h = f.r ? f.w : f.h; if (m[0] >= f.x - w / 2 && m[0] <= f.x + w / 2 && m[1] >= f.y - h / 2 && m[1] <= f.y + h / 2) return i; } return -1; }
@@ -35507,7 +35513,7 @@ nav.steps{padding:1px 6px 3px}
       var P = function(x, y){ return [(x - a[0]) * sx, (y - a[1]) * sy]; }, g = document.createElementNS(NS, "g"); g.id = "f434"; g.setAttribute("pointer-events", "none");
       (S.furn434 || []).forEach(function(f, i){
         var w = f.r ? f.h : f.w, h = f.r ? f.w : f.h, q0 = P(f.x - w / 2, f.y - h / 2), q1 = P(f.x + w / 2, f.y + h / 2), on = i === fsel;
-        g.insertAdjacentHTML("beforeend", '<rect x="' + q0[0].toFixed(1) + '" y="' + q0[1].toFixed(1) + '" width="' + (q1[0] - q0[0]).toFixed(1) + '" height="' + (q1[1] - q0[1]).toFixed(1) + '" rx="' + (3 * k).toFixed(1) + '" fill="' + (/ベッド/.test(f.n) ? "rgba(91,127,168,.22)" : "rgba(165,131,92,.22)") + '" stroke="' + (on ? "#E8742C" : (/ベッド/.test(f.n) ? "#5b7fa8" : "#a5835c")) + '" stroke-width="' + ((on ? 3 : 1.5) * k).toFixed(2) + '"/>'
+        g.insertAdjacentHTML("beforeend", '<rect x="' + q0[0].toFixed(1) + '" y="' + q0[1].toFixed(1) + '" width="' + (q1[0] - q0[0]).toFixed(1) + '" height="' + (q1[1] - q0[1]).toFixed(1) + '" rx="' + (3 * k).toFixed(1) + '" fill="' + (/ベッド/.test(f.n) ? "rgba(91,127,168,.22)" : "rgba(165,131,92,.22)") + '" stroke="' + ((on && drag && drag.armed) ? "#FF00C8" : on ? "#E8742C" : (/ベッド/.test(f.n) ? "#5b7fa8" : "#a5835c")) + '" stroke-width="' + ((on ? 3 : 1.5) * k).toFixed(2) + '"/>'
           + '<text x="' + ((q0[0] + q1[0]) / 2).toFixed(1) + '" y="' + ((q0[1] + q1[1]) / 2 + 4 * k).toFixed(1) + '" text-anchor="middle" style="font-size:' + (11 * k).toFixed(2) + 'px;font-weight:800;fill:#37474F">' + f.n + '</text>');
       });
       if (mark && Date.now() - mark.t < 6000){ var m = P(mark.p[0], mark.p[1]); g.insertAdjacentHTML("beforeend", '<circle cx="' + m[0].toFixed(1) + '" cy="' + m[1].toFixed(1) + '" r="' + (26 * k).toFixed(1) + '" fill="none" stroke="#C62828" stroke-width="' + (4 * k).toFixed(1) + '"><animate attributeName="opacity" values="1;.3;1" dur="1s" repeatCount="indefinite"/></circle>'); }
@@ -35521,21 +35527,23 @@ nav.steps{padding:1px 6px 3px}
     if (!onM()){ box.style.display = "none"; return; } box.style.display = "";
     var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : s === "all" ? ["parts", "furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
     try { if (HB.__extra437) want = HB.__extra437(s, fsel, want); } catch(e){}   /* CAD-437：下絵・ひな形・声のボタン */
+    if (arm && arm.kind === "part" && want.indexOf("rotp") < 0) want.push("rotp");   /* CAD-476：定番の部屋は、置く前に向き（縦・横）を変えられる */
     var sig = want.join(",") + "|" + (arm ? arm.kind : "") + "|" + (HB.__sig437 ? HB.__sig437() : "");
     if (box.dataset.sig !== sig){
       box.dataset.sig = sig; box.innerHTML = "";
-      var lab = {parts: "🚽 部品", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", del: "消す", done: "OK"}; try { if (HB.__lab437) Object.assign(lab, HB.__lab437); } catch(e){}
+      var lab = {parts: "🚽 定番の部屋", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", rotp: "↻ 向き", del: "消す", done: "OK"}; try { if (HB.__lab437) Object.assign(lab, HB.__lab437); } catch(e){}
       want.forEach(function(w){ var b = document.createElement("button"); b.type = "button"; b.textContent = lab[w]; b.dataset.w = w; if (arm && ((w === "parts" && arm.kind === "part") || (w === "furn" && arm.kind === "furn"))) b.className = "on"; if (w === "del") b.className = "red"; b.onclick = function(e){ e.stopPropagation(); act(w); }; box.appendChild(b); });
     }
     var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176", "selBar"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
   }
   function act(w){
     try { if (HB.__act437 && HB.__act437(w)) { chips(); return; } } catch(e){}
+    if (w === "rotp" && arm && arm.kind === "part"){ var swp = arm.it[1]; arm.it[1] = arm.it[2]; arm.it[2] = swp; toast(arm.it[0] + "：" + fmt(arm.it[1]) + "×" + fmt(arm.it[2]) + " で置きます"); chips(); return; }   /* CAD-476：定番の部屋の向きを入れ替え */
     if (w === "check") return showCheck();
     if (w === "cust") return cust();
     if (w === "parts" || w === "furn"){
       if (arm){ arm = null; chips(); return; }
-      var L = w === "parts" ? PARTS : FURN, h = "<h3>" + (w === "parts" ? "部品をえらんで、置く所をタップ" : "家具をえらんで、置く所をタップ（見積には入りません）") + '</h3><div class="gr">';
+      var L = w === "parts" ? PARTS : FURN, h = "<h3>" + (w === "parts" ? "定番の部屋をえらんで、置く所をタップ" : "家具をえらんで、置く所をタップ（見積には入りません）") + '</h3><div class="gr">';
       L.forEach(function(it, i){ h += '<button type="button" data-i="' + i + '">' + it[0] + '<br><small style="font-weight:700">' + fmt(it[1]) + "×" + fmt(it[2]) + "</small></button>"; });
       h += '</div><button class="btn sub" type="button" id="pk434c" style="width:100%;margin-top:8px">やめる</button>';
       var mb = sheet(h); mb.querySelector("#pk434c").onclick = closeSheet;
@@ -35558,13 +35566,20 @@ nav.steps{padding:1px 6px 3px}
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
         var it = arm.it, kind = arm.kind; arm = null;
         if (kind === "part") placePart(it, m);
-        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; try { var fz = S.furn434[fsel], sz = HB.__snapBox474(fz.x, fz.y, fz.w / 2, fz.h / 2, []); fz.x = sz[0]; fz.y = sz[1]; } catch(er){} save(); drawPlan(); toast("指で動かせます。↻で回す"); }
+        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; try { var fz = S.furn434[fsel], sz = HB.__snapBox474(fz.x, fz.y, fz.w / 2, fz.h / 2, []); fz.x = sz[0]; fz.y = sz[1]; } catch(er){} save(); drawPlan(); toast("指で動かせます。↻で回す");
+          /* CAD-476：置いた直後は掴んだままの状態にして、そのままドラッグで位置を決められるようにする */
+          var nf476 = S.furn434[fsel]; drag = {id: e.pointerId, dx: nf476.x - m[0], dy: nf476.y - m[1], moved: false, armed: true, born: true};
+          try { sl.setPointerCapture(e.pointerId); } catch(er){} }
         chips(); return;
       }
       var i = (step() === "put" || step() === "all") ? fAt(m) : -1;   /* CAD-443：家具は ④置く物 と ⑤見直し だけ */
       if (i >= 0){
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
-        fsel = i; var f = S.furn434[i]; drag = {id: e.pointerId, dx: f.x - m[0], dy: f.y - m[1], moved: false};
+        fsel = i; var f = S.furn434[i];
+        /* CAD-476：置いてある家具も長押しでつかんでからドラッグ（触ってすぐ反応して間違えて動かしてしまうため）。
+           長押しの前に指が動いたら掴まない（ただの選択で終わる） */
+        drag = {id: e.pointerId, dx: f.x - m[0], dy: f.y - m[1], moved: false, armed: false, cx0: e.clientX, cy0: e.clientY, cancel: false};
+        drag.timer = setTimeout(function(){ if (drag && drag.id === e.pointerId && !drag.cancel){ drag.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} paint(); } }, 350);
         try { sl.setPointerCapture(e.pointerId); } catch(er){} chips(); drawPlan(); return;
       }
       if (fsel >= 0){ fsel = -1; chips(); drawPlan(); }
@@ -35572,12 +35587,15 @@ nav.steps{padding:1px 6px 3px}
     sl.addEventListener("pointermove", function(e){
       if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); e.stopImmediatePropagation();
       var m; try { m = toMM(planPt(e)); } catch(er){ return; } var f = S.furn434[fsel]; if (!f) return;
+      /* CAD-476：長押しで掴むまでは動かさない。掴む前に指が動いたら、その指では掴まない */
+      if (!drag.armed){ if (Math.abs(e.clientX - drag.cx0) + Math.abs(e.clientY - drag.cy0) > 12) drag.cancel = true; return; }
+      if (drag.cancel) return;
       if (!drag.moved){ pushUndo(); drag.moved = true; }
       f.x = Math.round((m[0] + drag.dx) / 50) * 50; f.y = Math.round((m[1] + drag.dy) / 50) * 50;
       try { var hw = (f.r ? f.h : f.w) / 2, hh = (f.r ? f.w : f.h) / 2, oth = (S.furn434 || []).filter(function(x){ return x !== f; }).map(function(x){ return [x.x, x.y, (x.r ? x.h : x.w) / 2, (x.r ? x.w : x.h) / 2]; }).concat((S.tenken || []).map(function(x){ var e2 = tkExt(x); return [x.x, x.y, e2[0], e2[1]]; })); var sn = HB.__snapBox474(f.x, f.y, hw, hh, oth); f.x = sn[0]; f.y = sn[1]; } catch(er){}   /* CAD-474：壁・他の物に吸い付く */
       paint();
     }, true);
-    var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); var mv = drag.moved; drag = null; if (mv){ save(); drawPlan(); } };
+    var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); if (drag.timer) clearTimeout(drag.timer); var mv = drag.moved; drag = null; if (mv){ save(); drawPlan(); } };
     sl.addEventListener("pointerup", up, true); sl.addEventListener("pointercancel", up, true);
   }
   /* ---------- ⑥ お客さん用 ---------- */
@@ -36834,4 +36852,47 @@ document.addEventListener("click", function(e){
   var d = e.target.closest && e.target.closest("#st1 .fs418drawer"); if (!d) return;
   if (e.target.closest("#presetBox363 button,#presetBox363 [data-k],#presetBox363 .card,[data-preset]")) setTimeout(function(){ d.hidden = true; }, 50);
 }, true);
+</script>
+<style id="pad476css">
+/* CAD-476：置いた後にコントローラーで微調整できるよう、CAD-474で隠した矢印と刻みを、選択中は出す。
+   バー自体は従来通り選択中だけ出る。大きさは CAD-473 の小さいまま */
+html body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .ar{display:block!important}
+html body:not(.pad474) #selBar:not([data-k^="p"]) #sbStep{display:block!important}
+html body:not(.pad474) #selBar:not([data-k^="p"]) .dpad{grid-template-rows:repeat(3,32px)!important;grid-template-columns:repeat(3,36px)!important}
+html body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .rot{grid-area:2/2!important}
+</style>
+<script id="drag476js">
+/* ===== CAD-476（じゅうちゃん）：置く物の置き方・動かし方の統一（本人の確定仕様 2026-11-21）
+   ・普段は触っても動かない。動かせるのは「置く時」と「長押しでつかんでいる間」だけ
+   ・置いた直後の物は、選択が続いている間だけ長押しなしでつかめる（HB.__grab476）
+   ・間仕切り（定番の部屋の壁も含む）と照明のドラッグ移動は本体側の編集で有効化し、ここは移動の下請けと見張り
+   ・壁への吸着は CAD-474 の snapBox474 / snapTenken474 をそのまま使う ===== */
+function movePart476(q, dx, dy){
+  try {
+    var b = bbox();
+    var x0 = Math.min(q.x1, q.x2), x1 = Math.max(q.x1, q.x2), y0 = Math.min(q.y1, q.y2), y1 = Math.max(q.y1, q.y2);
+    dx = Math.max(b.x0 - x0, Math.min(b.x1 - x1, dx));
+    dy = Math.max(b.y0 - y0, Math.min(b.y1 - y1, dy));
+    q.x1 += dx; q.x2 += dx; q.y1 += dy; q.y2 += dy;
+  } catch(e){}
+}
+function moveLight476(o, dx, dy){
+  try { var b = bbox(); o.x = Math.max(b.x0, Math.min(b.x1, o.x + dx)); o.y = Math.max(b.y0, Math.min(b.y1, o.y + dy)); } catch(e){}
+}
+(function(){
+  "use strict";
+  HB.__grab476 = null;
+  var last = null;
+  setInterval(function(){
+    try {
+      if (typeof S === "undefined" || !S) return;
+      var c = { k: (S.tenken || []).length, o: (S.sashes || []).length };
+      if (last && typeof sel !== "undefined" && sel){
+        if ((sel.t === "k" && c.k > last.k && sel.i === c.k - 1) || (sel.t === "o" && c.o > last.o && sel.i === c.o - 1)) HB.__grab476 = sel.t + sel.i;
+      }
+      if (HB.__grab476 && (typeof sel === "undefined" || !sel || sel.t + sel.i !== HB.__grab476)) HB.__grab476 = null;
+      last = c;
+    } catch(e){}
+  }, 300);
+})();
 </script>
