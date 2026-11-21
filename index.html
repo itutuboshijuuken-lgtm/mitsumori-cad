@@ -3497,7 +3497,7 @@ function eraFromStroke(pm){
   return {x0: X0, x1: X1, y0: Y0, y1: Y1, ax0, ax1, ay0, ay1};
 }
 // 外周から四角を切り取る。うまくいけば {ok:true}、だめなら理由の文字列を返す
-function eraseRect(r, pre){
+function eraseRect(r, pre, op){   /* CAD-477：op "add" で外形に四角を足す（はね出し・張り出し）。既定は消す */
   const P = pts(), N = P.length;
   let ar = 0; P.forEach((q, i) => { const c = P[(i + 1) % N]; ar += q[0] * c[1] - c[0] * q[1]; });
   const X = [...new Set(P.map(q => q[0]).concat([r.x0, r.x1]))].sort((a, b) => a - b);
@@ -3506,9 +3506,9 @@ function eraseRect(r, pre){
   let gone = 0;
   for (let j = 0; j < ny; j++){ ins[j] = []; for (let i = 0; i < nx; i++){
     const cx = (X[i] + X[i + 1]) / 2, cy = (Y[j] + Y[j + 1]) / 2, inP = inside([cx, cy], P), inR = cx > r.x0 && cx < r.x1 && cy > r.y0 && cy < r.y1;
-    ins[j][i] = inP && !inR; if (inP && inR) gone += (X[i + 1] - X[i]) * (Y[j + 1] - Y[j]);
+    ins[j][i] = op === "add" ? (inP || inR) : (inP && !inR); if (op === "add" ? (inR && !inP) : (inP && inR)) gone += (X[i + 1] - X[i]) * (Y[j + 1] - Y[j]);
   } }
-  if (gone < 1) return "消える所がありません（図の外側をなぞっています）";
+  if (gone < 1) return op === "add" ? "足す所がありません（もう外形の中です）" : "消える所がありません（図の外側をなぞっています）";
   const get = (i, j) => i >= 0 && j >= 0 && i < nx && j < ny && ins[j][i];
   const out = new Map(); let cnt = 0;
   const add = (a, c) => { const k = a.join(","); if (!out.has(k)) out.set(k, []); out.get(k).push(c); cnt++; };
@@ -3534,7 +3534,7 @@ function eraseRect(r, pre){
   let s0 = V.findIndex(q => q[0] === P[0][0] && q[1] === P[0][1]);
   if (s0 < 0){ let bd = Infinity; V.forEach((q, k) => { const d = Math.hypot(q[0] - P[0][0], q[1] - P[0][1]); if (d < bd){ bd = d; s0 = k; } }); }
   V = V.slice(s0).concat(V.slice(0, s0));
-  const M = V.length, st = V[0], tx = -st[0], ty = -st[1];
+  const M = V.length, st = V[0]; let tx = -st[0], ty = -st[1];
   const newE = V.map((a, k) => { const c = V[(k + 1) % M], dx = c[0] - a[0], dy = c[1] - a[1]; return {d: dx > 0 ? "R" : dx < 0 ? "L" : dy > 0 ? "D" : "U", v: Math.round(Math.abs(dx || dy)), set: true}; });
   // 古い辺と同じ線の上にある、新しい辺を探す
   const onLine = oi => {
@@ -3569,6 +3569,9 @@ function eraseRect(r, pre){
   S.sashes = sashes;
   S.fx = (S.fx || []).filter(f => { if (typeof f.w === "number" && f.w >= 0 && f.w < 100){ const k = f.w < N ? whole(f.w) : -1; if (k < 0) return false; f.w = k; } return true; });
   if (S.house >= 0) S.house = S.house < N ? whole(S.house) : -1;
+  /* CAD-477：階が2つ以上の時は、物を動かさず、外形の始点（S.po）をずらす（1階と2階の位置関係を崩さない） */
+  if (Array.isArray(S.fl) && S.fl.length > 1){ if (st[0] || st[1]) S.po = [st[0], st[1]]; else delete S.po; tx = 0; ty = 0; }
+  else delete S.po;
   if (tx || ty){
     (S.parts2D || []).forEach(q => { q.x1 += tx; q.x2 += tx; q.y1 += ty; q.y2 += ty; });
     (S.tatami || []).forEach(q => { q.x0 += tx; q.x1 += tx; q.y0 += ty; q.y1 += ty; });
@@ -4897,7 +4900,7 @@ $("listBtn").addEventListener("click", () => { drawToolsUI(); $("mbox").innerHTM
 /* CAD-216: ②間取りの ＋・－・全体 ボタンは廃止（拡大はピンチだけ）。ボタンの配線も撤去 */
 $("slotM").addEventListener("scroll", () => {}, {passive: true});
 /* ---------- 階（1階・2階…）の切り替え。いま開いている階のデータは、これまでと同じ場所に入れ、ほかの階は別に保管する ---------- */
-const FLOOR_KEYS = ["edges", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfSakanBase", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "floorKoho", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
+const FLOOR_KEYS = ["edges", "po", "house", "ch", "parts2D", "sashes", "tatami", "tenken", "fx", "lights", "zones", "extras", "roomNames", "roomFin", "roomRecs", "roomPt", "rot", "rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfSakanBase", "rfCeilMat", "flType", "tfr", "tare", "rfCur", "rfCeilCur", "rfFloorBaseT", "lamiT", "rfMawari", "tenjoSec", "ceilKata", "ceilFrame", "mabaSec", "mabaKata", "joistSec", "floorKoho", "underMat", "kPanelG", "parapet", "paraH", "noWall", "wallLines", "gk"];
 const flClone = v => v === undefined ? undefined : JSON.parse(JSON.stringify(v));
 function flEnsure(){ if (!Array.isArray(S.fl) || !S.fl.length){ S.fl = [{name: "1階", snap: null}]; S.fi = 0; } if (typeof S.fi !== "number" || S.fi < 0 || S.fi >= S.fl.length) S.fi = 0; }
 function flSnap(){ const o = {}; FLOOR_KEYS.forEach(k => { if (S[k] !== undefined) o[k] = flClone(S[k]); }); return o; }
@@ -4921,7 +4924,7 @@ function flSwitch(i){
 }
 function flAdd(){
   flEnsure(); const cur = flSnap(), snap = {};
-  ["edges", "house", "ch", "rot"].forEach(k => { if (cur[k] !== undefined) snap[k] = flClone(cur[k]); });
+  ["edges", "po", "house", "ch", "rot"].forEach(k => { if (cur[k] !== undefined) snap[k] = flClone(cur[k]); });
   snap.zones = (cur.zones || []).filter(z => z.k === "stair").map(flClone);
   Object.assign(snap, {rfFloor: "none", rfWall: "none", rfCeil: "none", rfWallMat: "cloth", rfCeilMat: "cloth"}); if (cur.flType) snap.flType = cur.flType;   // 新しい階は、「工事なし」から始める
   S.fl.push({name: (S.fl.length + 1) + "階", snap}); if (S.mode === "zo" && S.floors !== 2) S.floors = 2;   // CAD-230: 階を足したら、見積の2階建て判定（S.floors）も合わせる（階段・2階分が見積から落ちる不具合の修正）
@@ -4937,11 +4940,13 @@ function flSheet(){
   flEnsure();
   $("mbox").innerHTML = `<h3>階の切り替え</h3><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0">${S.fl.map((f, i) => `<button type="button" class="btn sub" data-fi="${i}" aria-pressed="${i === S.fi}" style="min-height:46px;font-size:16px">${f.name}</button>`).join("")}</div>
   <button class="btn sub" id="flAddBtn" type="button" style="width:100%;margin-top:6px">＋ 階を足す（外周と階段を、この階からコピー）</button>
+  <button class="btn sub" id="oh477Btn" type="button" style="width:100%;margin-top:6px">この階の外周を変える（2階のはね出し・玄関の引っ込みなど）</button>
   ${S.fl.length > 1 ? `<button class="btn sub" id="flDelBtn" type="button" style="width:100%;margin-top:6px;color:#C62828">この階（${S.fl[S.fi].name}）を消す</button>` : ""}
   <p class="hint" style="margin-top:8px">階ごとに、図面・部屋・仕様が別になります。見積は、すべての階を合算して出ます（階ごとの小計も出ます）。</p>
   <div class="row" style="margin-top:10px"><button class="btn pri" id="flOk" type="button">閉じる</button></div>`;
   $("mbox").querySelectorAll("[data-fi]").forEach(b => b.onclick = () => { $("modal").hidden = true; flSwitch(+b.dataset.fi); });
   $("flAddBtn").onclick = () => { $("modal").hidden = true; flAdd(); };
+  if ($("oh477Btn")) $("oh477Btn").onclick = () => { $("modal").hidden = true; try { HB.__oh477ui(); } catch(e){ toast("開けませんでした"); } };
   if ($("flDelBtn")) $("flDelBtn").onclick = () => { $("modal").hidden = true; askOK(`${S.fl[S.fi].name}の図面を削除しますか？\n元に戻せません。`, "削除する", flDel); };
   $("flOk").onclick = () => { $("modal").hidden = true; };
   $("modal").hidden = false;
@@ -5180,7 +5185,7 @@ function solve(){
     S.edges[a].v = need; S.edges[a].auto = unset.length === 1;
   });
 }
-function pts(){ let x = 0, y = 0; const p = [[0, 0]]; S.edges.forEach(e => { if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v; if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v; p.push([x, y]); }); p.pop(); return p; }
+function pts(){ let x = S.po ? +S.po[0] || 0 : 0, y = S.po ? +S.po[1] || 0 : 0; const p = [[x, y]];   /* CAD-477：S.po＝この階の外形の始点（2階の外形を1階とずらして持つ時だけ。無ければ0,0） */ S.edges.forEach(e => { if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v; if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v; p.push([x, y]); }); p.pop(); return p; }
 function bbox(){ const p = pts(), xs = p.map(q => q[0]), ys = p.map(q => q[1]); return {x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys)}; }
 function areaMM(){ const p = pts(); let a = 0; p.forEach((q, i) => { const r = p[(i + 1) % p.length]; a += q[0] * r[1] - r[0] * q[1]; }); return Math.abs(a) / 2; }
 const isRect = () => S.edges && S.edges.length === 4;
@@ -6307,9 +6312,13 @@ function calc(){
   if (S.mode === "zo" && S.fl.length === 2){
     // 増築で、2階の外周が1階と同じなら、細かい項目（通し柱・管柱・胴差・2階床梁・階段など）の入った「2階建」の計算を使う
     const keep0 = flSnap(), fl00 = S.floors, a = S.fi === 0 ? keep0 : S.fl[0].snap, b = S.fi === 1 ? keep0 : S.fl[1].snap;
-    if (a && b && JSON.stringify(a.edges) === JSON.stringify(b.edges) && JSON.stringify(a.house) === JSON.stringify(b.house)){
-      try { flLoad(a); S.floors = 2; mergeUpperFloor(b); return calcFloor(); }
-      finally { flLoad(keep0); S.floors = fl00; }
+    /* CAD-477：2階が1階を全部覆って外に出ている（はね出し・玄関の引っ込み）時も、この2階建の計算を使い、出た所の分（軒天・水切り・床の断熱・受け梁・柱）を足す */
+    const hEq477 = a && b && JSON.stringify(a.house) === JSON.stringify(b.house);
+    const same477 = hEq477 && JSON.stringify(a.edges) === JSON.stringify(b.edges) && JSON.stringify(a.po || null) === JSON.stringify(b.po || null);
+    const oh477 = (!same477 && hEq477 && S.oh477 !== false && typeof ohInfo477 === "function") ? ohInfo477(a, b) : null;
+    if (same477 || oh477){
+      try { flLoad(a); S.floors = 2; mergeUpperFloor(b); window.__oh477 = oh477; return calcFloor(); }
+      finally { window.__oh477 = null; flLoad(keep0); S.floors = fl00; }
     }
   }
   const cur = S.fi, keep = flSnap(), parts = [], fl0 = S.floors; if (S.mode === "zo") S.floors = 1;   // 増築：階ごとに1階建として数え、下の仕分けで、基礎・土台は1階だけ、屋根は最上階だけにする
@@ -7740,6 +7749,21 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     work("toi", "下屋 軒樋", g.L / 1000 * 1.05, "m"); work("tatedoi", "下屋 竪樋", (S.kiso + 105 + g.H1) / 1000 + 0.3, "m");
     if (S.kisoNew){ const w1 = workP("kisoBase"), w2 = workP("kisoRise"), a2 = g.L * g.d / 1e6, pr = (g.L + 2 * g.d) / 1000; rows.push({name: "下屋 基礎（ベタ基礎）", spec: `ベース ${fmt(a2, 1)}㎡ ＋ 立上り ${fmt(pr, 1)}m`, qty: "", cost: w1.p * a2 + w2.p * pr, avg: w1.avg || w2.avg, fix: {kind: "work", key: "kisoBase"}}); }
   });
+  /* CAD-477：2階のはね出し（1階より外に出た所）。calc が2階建の計算で回す時だけ window.__oh477 が入っている */
+  try { const O = window.__oh477; if (O && O.A > 0){
+    grp("2階のはね出し（1階より外に出た所）");
+    const Am = O.A / 1e6, Lb = O.beams.reduce((t, q) => t + q.L, 0);
+    O.beams.forEach(q => { const len = Math.ceil((q.L + 210) / 100) * 100;
+      lum("yukabari", "はね出しの受け梁", 105, q.h, [len], `105×${q.h}・飛ぶ長さ${fmt(q.L)}（梁せいの目安は長さの1/10〜1/12）・2階の外壁を受ける${len > 4000 ? "。途中で継げない梁なので6m材（運べなければ真ん中に柱）" : ""}`); });
+    if (O.posts.length){ lum("hashira", "はね出しを受ける柱（ポーチ柱など）", 105, 105, Array(O.posts.length).fill(3000), `${O.posts.length}本・梁の端の下（2階の重さが集まる）`);
+      work("kanaTo", "はね出しの柱 ホールダウン（柱頭・柱脚）", O.posts.length * 2, "個"); }
+    sheet("構造用合板", banT264, `はね出し 2階床合板 ${banT264}mm`, 910, 1820, Math.ceil(Am / 1.6562 * 1.05), `床 ${fmt(Am, 2)}㎡`);
+    work("nokiten", "はね出しの下 軒天", Am, "㎡", `${fmt(Am, 2)}㎡ × ${fmt(workP("nokiten").p)}円（2階の床の下が外になる所）`);
+    work("danF", "はね出しの床 断熱（下が外）", Am, "㎡");
+    if (Lb > 0) work("mizukiri", "はね出しの先 水切り・見切り", Lb / 1000, "m");
+    if (O.per2 > O.per1 + 1){ const gk = ({nuri: "nuri", yakisugi: "yakisugi"})[S.gaiheki] || "siding", wa = (O.per2 - O.per1) / 1000 * ((+S.ch2 || 2400) + 600) / 1000; work(gk, "外壁（2階が外に出た分）", wa, "㎡"); }
+    if (O.roofA > 0){ let k = 4; try { k = +roof().k || 4; } catch(e){} work(roofKey(), "屋根（2階が出た分）", O.roofA / 1e6 * Math.hypot(1, k / 10), "㎡"); }
+  } } catch(e){ console.error("oh477", e); }
   if (S.danF || S.danW || S.danC){
     grp("断熱材");
     if (wood) dan("danF", "断熱 床", area);
@@ -14768,13 +14792,13 @@ function num(v){ return (typeof fmt === "function") ? fmt(v) : String(Math.round
 
 // ---------- 形の計算（画面に関係なし） ----------
 function polyOf(edges){
-  let x = 0, y = 0; const p = [[0, 0]];
+  let x = (edges === S.edges && S.po) ? +S.po[0] || 0 : 0, y = (edges === S.edges && S.po) ? +S.po[1] || 0 : 0; const p = [[x, y]]; const x0p = x, y0p = y;   /* CAD-477 */
   edges.forEach(e => {
     if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v;
     if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v;
     p.push([rnd(x), rnd(y)]);
   });
-  const end = p.pop(); return {pts: p, gap: Math.hypot(end[0], end[1])};
+  const end = p.pop(); return {pts: p, gap: Math.hypot(end[0] - x0p, end[1] - y0p)};
 }
 function inside(P, x, y){
   let c = false;
@@ -24188,9 +24212,21 @@ function build(S,T,opt){
  X.floor.repeat.set(1,1);
  const flat=(x0,z0,x1,z1,y,m,per)=>{const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);g.translate((x0+x1)/2,y,(z0+z1)/2);const uv=g.attributes.uv,p=g.attributes.position;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)/per,p.getZ(i)/per);const o=new T.Mesh(g,m);o.receiveShadow=true;return o};
  /* 基礎 */
- add(box(-.02,0,-.02,W+.02,FLH,D+.02,six(mat.conc),true));
+ /* CAD-477：外形が四角でなくても（L字・玄関の欠き込みなど）立体にする。外形を四角の集まりに分けて、基礎・床・外壁を作る。2階は2階の外形で */
+ const OX477=B307?B307.x0:0,OY477=B307?B307.y0:0;
+ const polyE477=(E2,po)=>{let x=po?+po[0]||0:0,y=po?+po[1]||0:0;const q=[[x,y]];(E2||[]).forEach(e=>{if(e.d==="R")x+=e.v;if(e.d==="L")x-=e.v;if(e.d==="D")y+=e.v;if(e.d==="U")y-=e.v;q.push([x,y])});q.pop();return q};
+ const inPoly477=(P,x,y)=>{let c=false;for(let i=0,j=P.length-1;i<P.length;j=i++){const a=P[i],d=P[j];if(((a[1]>y)!==(d[1]>y))&&(x<(d[0]-a[0])*(y-a[1])/(d[1]-a[1])+a[0]))c=!c}return c};
+ const rects477=P=>{const X2=[...new Set(P.map(q=>q[0]))].sort((a,c)=>a-c),Y2=[...new Set(P.map(q=>q[1]))].sort((a,c)=>a-c),out=[];for(let j=0;j<Y2.length-1;j++){let st=-1;for(let i=0;i<=X2.length-1;i++){const ins=i<X2.length-1&&inPoly477(P,(X2[i]+X2[i+1])/2,(Y2[j]+Y2[j+1])/2);if(ins&&st<0)st=i;if(!ins&&st>=0){out.push([X2[st],Y2[j],X2[i],Y2[j+1]]);st=-1}}}return out.map(r=>[mm(r[0]-OX477),mm(r[1]-OY477),mm(r[2]-OX477),mm(r[3]-OY477)])};
+ const fi477=S.fi||0,sn477=k=>(S.fl&&S.fl[k]&&S.fl[k].snap)||null;
+ const P1_477=(fi477===1&&sn477(0))?polyE477(sn477(0).edges,sn477(0).po):polyE477(S.edges,S.po);
+ const P2_477=((S.floors||1)===2&&S.fl&&S.fl.length>1)?(fi477===1?polyE477(S.edges,S.po):(sn477(1)&&sn477(1).edges&&sn477(1).edges.length?polyE477(sn477(1).edges,sn477(1).po):P1_477)):null;
+ const R1_477=rects477(P1_477);
+ R1_477.forEach(r=>add(box(r[0]-.02,0,r[1]-.02,r[2]+.02,FLH,r[3]+.02,six(mat.conc),true)));
  const FL=FLH;/* 床高さ */
- add(flat(0,0,W,D,FL+.002,mat.floor,1.0));
+ R1_477.forEach(r=>add(flat(r[0],r[1],r[2],r[3],FL+.002,mat.floor,1.0)));
+ /* 外形の辺ごとの外壁：時計回り（画面の下が+y）なので、右へ行く辺の外は北(-z) */
+ const OUT477={R:{nz:1},D:{px:1},L:{pz:1},U:{nx:1}};
+ const edgeWalls477=(P,h)=>{const n=P.length;let ar=0;P.forEach((q,i)=>{const c=P[(i+1)%n];ar+=q[0]*c[1]-c[0]*q[1]});P.forEach((q,i)=>{const c=P[(i+1)%n],dx=c[0]-q[0],dy=c[1]-q[1];let d=dx>0?"R":dx<0?"L":dy>0?"D":"U";const o=ar>=0?OUT477[d]:OUT477[{R:"L",L:"R",U:"D",D:"U"}[d]];wall({x:mm(q[0]-OX477),z:mm(q[1]-OY477)},{x:mm(c[0]-OX477),z:mm(c[1]-OY477)},TH_O,h,{t:'e',i},o)})};
  const R=r=>({x0:mm(Math.min(r.x0,r.x1)),x1:mm(Math.max(r.x0,r.x1)),z0:mm(Math.min(r.y0,r.y1)),z1:mm(Math.max(r.y0,r.y1))});
  /* CAD-297（Claude CAD-285メモの取り込み2）：範囲は家の内側（0..W×0..D）に切り詰める。家と重ならない範囲は描かない */
  const clipR297=r=>{const q={x0:Math.max(0,r.x0),x1:Math.min(W,r.x1),z0:Math.max(0,r.z0),z1:Math.min(D,r.z1)};return (q.x1-q.x0>1e-4&&q.z1-q.z0>1e-4)?q:null};
@@ -24241,17 +24277,15 @@ function build(S,T,opt){
  const P={0:[{x:0,z:0},{x:W,z:0},{nz:1}],1:[{x:W,z:0},{x:W,z:D},{px:0,nx:0}],2:[{x:W,z:D},{x:0,z:D},{pz:0}],3:[{x:0,z:D},{x:0,z:0},{nx:1}]};
  /* outer: 外側面にsidingを張る。北:外=-z → 壁をz∈[0,th]に置き外面nz。 */
  try{if((S.floors||1)===2&&(S.fi||0)===1&&S.fl&&S.fl[0]&&S.fl[0].snap)SRC449=S.fl[0].snap.sashes||[]}catch(e){}/* CAD-449：2階を開いている時も、1階の壁には1階の窓 */
- wall({x:0,z:0},{x:W,z:0},TH_O,H,{t:'e',i:0},{nz:1});
- wall({x:W,z:0},{x:W,z:D},TH_O,H,{t:'e',i:1},{px:1});
- wall({x:W,z:D},{x:0,z:D},TH_O,H,{t:'e',i:2},{pz:1});
- wall({x:0,z:D},{x:0,z:0},TH_O,H,{t:'e',i:3},{nx:1});SRC449=null;
+ edgeWalls477(P1_477,H);SRC449=null;
  /* CAD-449：2階建て（外から見る時）。1階の上に胴差の帯、2階の外壁と2階の窓を足し、屋根はその上に載せる */
  let LIFT=0;
  try{if(mode==='out'&&(S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1){const fi=S.fi||0,f2=fi===1?S.sashes:(S.fl[1].snap&&S.fl[1].snap.sashes)||[],f1=fi===1?((S.fl[0].snap&&S.fl[0].snap.sashes)||[]):null;
   const B=mm((+S.fuko||300)+(+S.dosa||240)+40),H2=mm(+S.ch2||2400);
-  add(box(0,FL+H0,0,W,FL+H0+B,D,six(mat.siding)));
-  const band=M({color:0xd9d2c3,roughness:.6});add(box(-.02,FL+H0+B*.35,-.02,W+.02,FL+H0+B*.35+.06,D+.02,six(band)));
-  BASE449=H0+B;SRC449=f2;[0,1,2,3].forEach(i=>wall(P[i][0],P[i][1],TH_O,H2,{t:'e',i},P[i][2]));BASE449=0;SRC449=null;
+  const R2_477=rects477(P2_477||P1_477);
+  R2_477.forEach(r=>add(box(r[0],FL+H0,r[1],r[2],FL+H0+B,r[3],six(mat.siding))));
+  const band=M({color:0xd9d2c3,roughness:.6});R2_477.forEach(r=>add(box(r[0]-.02,FL+H0+B*.35,r[1]-.02,r[2]+.02,FL+H0+B*.35+.06,r[3]+.02,six(band))));
+  BASE449=H0+B;SRC449=f2;edgeWalls477(P2_477||P1_477,H2);BASE449=0;SRC449=null;
   LIFT=B+H2;}}catch(e){BASE449=0;SRC449=null;LIFT=0}
  const RISE=.3*D;/* CAD-450：外壁の上と屋根は、下の「屋根（選んだ形）」で作る。作れない時だけ従来の片流れ */
  let OLDROOF450=true;
@@ -24488,7 +24522,7 @@ function build(S,T,opt){
   root.traverse(o=>{if(!o.isMesh)return;let p=o,ex=false;while(p){if(p===ceilG){ex=true;break}p=p.parent}if(ex)return;[].concat(o.material).forEach(m=>{if(m){m.clippingPlanes=pl303;m.clipShadows=true}})})}catch(e){}
  return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name)};
 }
- function supported(S){try{const E=S.edges||[];return E.length===4&&((S.floors||1)===1||((S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1))&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
+ function supported(S){try{const E=S.edges||[];return E.length>=4&&E.every(e=>/^[RLUD]$/.test(e.d)&&e.v>0)&&((S.floors||1)===1||((S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1))&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
  /* render: canvasに描く。ハンドル {rotate(n), view(v), dispose(), ms} を返す。静止画（動かす時だけ再描画）なので軽い。 */
  function render(canvas,S,o){o=o||{};const T=o.THREE||window.THREE;if(!T||!supported(S))return null;
   const w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height;
@@ -36008,6 +36042,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     "・壁の線は柱の芯（通り芯）で。図面に寸法が書いてある所はその数字を使い、推測した所は unsure に書く。",
     "・読めない項目は null にする（でっち上げない）。",
     "・壁は図面で実際に壁がある所だけ。部屋の続き（LDKと廊下など）・土間とホールの境目は壁にしない。",
+    "・2階の外形が1階と違う時（玄関の上に2階がかぶる・2階がはね出す・2階が小さい等）は、outline2 に2階の外形の角を書く。同じなら outline2 は書かない。",
     "・階段は壁で囲み、上り口（下りる所）に type \"opening\"（建具の無い開口）を置く。2階建てなら1階と2階の両方の階段に。",
     "・階段の上り口は、図面の「UP」（1階）・「DN」（2階）の字と矢印の根元の所。踏板の線が途中で曲がる（回り階段）時は、曲がった先の、廊下や部屋に出る所が上り口。分からなければ unsure に「階段の上り口」と書く。",
     "・窓とドアは、それぞれ実際にある壁の位置に。2階の窓は floors2 に入れる（1階に入れない）。",
@@ -36016,6 +36051,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     '  "name": "現場名（分かれば）",',
     '  "floors": 1 または 2,',
     '  "outline": [[0,0],[10010,0],[10010,7280],[0,7280]],   // 1階の外形の角を時計回りに',
+    '  "outline2": [[0,0],[10010,0],[10010,7280],[0,7280]],  // 2階の外形（1階と違う時だけ。2階が玄関の上にかぶる・はね出す等。座標は1階と同じ基準）',
     '  "walls": [[x1,y1,x2,y2], ...],                         // 間仕切り（縦か横の直線）',
     '  "rooms": [{"name":"洋室","x":1820,"y":1820}, ...],      // 部屋名と、部屋の中の1点',
     '  "openings": [{"type":"window|sweep|door|sliding|entrance|opening","x":1200,"y":0,"w":1690,"h":970}, ...],  // 窓・掃き出し・室内ドア・引戸・玄関。x,yは壁の上の開口の中心',
@@ -36118,6 +36154,15 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         S.zones = (keep1.zones || []).filter(function(z){ return z.k === "stair"; }).map(flClone);
         Object.assign(S, {rfFloor: "none", rfWall: "none", rfCeil: "none", rfWallMat: "cloth", rfCeilMat: "cloth"}); if (keep1.flType) S.flType = keep1.flType;
         var F2 = D.floors2, sk2 = 0;
+        /* CAD-477：2階の外形が1階と違う時（outline2）。1階と同じ基準で2階の外形を作る（始点のずれは S.po） */
+        try { var O2 = (D.outline2 && D.outline2.length >= 4) ? D.outline2 : (F2.outline && F2.outline.length >= 4 ? F2.outline : null);
+          if (O2){ var g2 = function(v, o0){ return o0 + Math.round((v - o0) / 227.5) * 227.5; };
+            var o2 = O2.map(function(p){ return [g2(+p[0], ox), g2(+p[1], oy)]; }), ar2 = 0;
+            o2.forEach(function(p, k){ var q = o2[(k + 1) % o2.length]; ar2 += p[0] * q[1] - q[0] * p[1]; }); if (ar2 < 0) o2.reverse();
+            var s2 = 0; o2.forEach(function(p, k){ if (p[1] < o2[s2][1] || (p[1] === o2[s2][1] && p[0] < o2[s2][0])) s2 = k; }); o2 = o2.slice(s2).concat(o2.slice(0, s2));
+            var E2 = []; o2.forEach(function(p, k){ var q = o2[(k + 1) % o2.length], dx = q[0] - p[0], dy = q[1] - p[1]; if (Math.abs(dx) >= Math.abs(dy)){ if (Math.abs(dx) > 0) E2.push({d: dx > 0 ? "R" : "L", v: Math.abs(dx), set: true}); } else if (Math.abs(dy) > 0) E2.push({d: dy > 0 ? "D" : "U", v: Math.abs(dy), set: true}); });
+            if (E2.length >= 4 && JSON.stringify(E2) !== JSON.stringify(S.edges)){ S.edges = E2; var pox = tx(o2[0][0]), poy = ty(o2[0][1]); if (pox || poy) S.po = [pox, poy]; else delete S.po; try { solve(); } catch(e){} }
+          } } catch(e){}
         S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
         S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
         S.sashes = []; S.tatami = [];
@@ -37159,4 +37204,129 @@ function lenTxtDec478(needs){
   return ks.map(function(r){ return r.toLocaleString("ja-JP") + " × " + m[r] + "本"; }).join("／");
 }
 try { HB.__habaki478 = habakiUke478; HB.__habakiFloor478 = habakiFloor478; } catch(e){}
+</script>
+<script id="oh477ui">
+/* CAD-477（Opus）：この階の外周を、四角を足す（はね出し）・引っ込める で変える。1階と2階で別の外周にできる。
+   上・右・下・左のどの辺に、出幅いくつ、端から何mm、長さ何mm、を選ぶ。図で先に見せて「この形にする」で決める。 */
+(function(){
+  function polyOfSnap(sn){ if (!sn || !sn.edges) return null; var x = sn.po ? +sn.po[0] || 0 : 0, y = sn.po ? +sn.po[1] || 0 : 0, q = [[x, y]]; sn.edges.forEach(function(e){ if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v; if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v; q.push([x, y]); }); q.pop(); return q; }
+  HB.__polySnap477 = polyOfSnap;
+  function otherPoly(){ try { if (!Array.isArray(S.fl) || S.fl.length < 2) return null; var k = S.fi === 0 ? 1 : 0; return polyOfSnap(S.fl[k].snap); } catch(e){ return null; } }
+  var st = null;
+  function rectOf(){
+    var b = bbox(), d = +st.d || 0, a0, a1;
+    if (st.side === "U" || st.side === "D"){ a0 = b.x0 + (+st.pos || 0); a1 = a0 + (+st.len || 0); }
+    else { a0 = b.y0 + (+st.pos || 0); a1 = a0 + (+st.len || 0); }
+    var add = st.op === "add";
+    if (st.side === "U") return {x0: a0, x1: a1, y0: add ? b.y0 - d : b.y0, y1: add ? b.y0 : b.y0 + d};
+    if (st.side === "D") return {x0: a0, x1: a1, y0: add ? b.y1 : b.y1 - d, y1: add ? b.y1 + d : b.y1};
+    if (st.side === "L") return {y0: a0, y1: a1, x0: add ? b.x0 - d : b.x0, x1: add ? b.x0 : b.x0 + d};
+    return {y0: a0, y1: a1, x0: add ? b.x1 : b.x1 - d, x1: add ? b.x1 + d : b.x1};
+  }
+  function sideLen(){ var b = bbox(); return (st.side === "U" || st.side === "D") ? b.w : b.h; }
+  function preview(){
+    var P = pts(), O = otherPoly(), r = rectOf(), all = P.concat(O || []).concat([[r.x0, r.y0], [r.x1, r.y1]]);
+    var xs = all.map(function(q){ return q[0]; }), ys = all.map(function(q){ return q[1]; }), x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    var W = 300, H = 200, sc = Math.min((W - 30) / Math.max(1, x1 - x0), (H - 30) / Math.max(1, y1 - y0)), ox = (W - (x1 - x0) * sc) / 2 - x0 * sc, oy = (H - (y1 - y0) * sc) / 2 - y0 * sc;
+    var f = function(q){ return (q[0] * sc + ox).toFixed(1) + "," + (q[1] * sc + oy).toFixed(1); };
+    var h = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;max-width:340px;display:block;margin:6px auto;background:#fff;border:1px solid #DDE3EA;border-radius:8px">';
+    h += '<polygon points="' + P.map(f).join(" ") + '" fill="#EAF2FB" stroke="#1E5AA8" stroke-width="2"/>';
+    if (O) h += '<polygon points="' + O.map(f).join(" ") + '" fill="none" stroke="#475569" stroke-width="1.5" stroke-dasharray="5 4"/>';
+    var add = st.op === "add";
+    h += '<rect x="' + (r.x0 * sc + ox).toFixed(1) + '" y="' + (r.y0 * sc + oy).toFixed(1) + '" width="' + ((r.x1 - r.x0) * sc).toFixed(1) + '" height="' + ((r.y1 - r.y0) * sc).toFixed(1) + '" fill="' + (add ? "rgba(22,163,74,.35)" : "rgba(220,38,38,.3)") + '" stroke="' + (add ? "#15803D" : "#B91C1C") + '" stroke-width="1.5"/>';
+    h += '</svg><div class="hint" style="text-align:center">青＝今の' + (S.fl && S.fl[S.fi] ? S.fl[S.fi].name : "") + '　' + (add ? "緑＝足す所" : "赤＝引っ込める所") + (O ? "　点線＝" + (S.fi === 0 ? "2階" : "1階") : "") + '</div>';
+    return h;
+  }
+  function seg(key, list){ return '<div class="seg" style="margin-top:6px">' + list.map(function(o){ return '<button type="button" data-k477="' + key + '" data-v="' + o[0] + '" aria-pressed="' + (String(st[key]) === String(o[0])) + '">' + o[1] + '</button>'; }).join("") + '</div>'; }
+  function paint(){
+    var mb = $("mbox"), nm = S.fl && S.fl[S.fi] ? S.fl[S.fi].name : "この階";
+    mb.innerHTML = '<h3 style="margin:0 0 4px">' + nm + 'の外周を変える</h3>' +
+      '<div id="oh477pv">' + preview() + '</div>' +
+      seg("op", [["add", "外に出す"], ["cut", "引っ込める"]]) +
+      seg("side", [["U", "上の辺"], ["R", "右の辺"], ["D", "下の辺"], ["L", "左の辺"]]) +
+      '<div class="sub2" style="margin-top:8px">出幅（何mm出す・引っ込めるか）</div>' + seg("d", [[455, "455"], [910, "910"], [1365, "1365"], [1820, "1820"]]) +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">' +
+      '<label class="hint">' + ((st.side === "U" || st.side === "D") ? "左の端から" : "上の端から") + '（mm）<input id="oh477pos" type="number" inputmode="numeric" step="455" value="' + st.pos + '" style="width:100%;font-size:16px;min-height:40px"></label>' +
+      '<label class="hint">長さ（mm）<input id="oh477len" type="number" inputmode="numeric" step="455" value="' + st.len + '" style="width:100%;font-size:16px;min-height:40px"></label></div>' +
+      '<p class="hint" style="margin-top:6px">例：玄関ポーチの上に2階がかぶる家 → 1階で「引っ込める」、下の辺、455。2階が外に出る家 → 2階で「外に出す」。見積には、出た所の軒天・水切り・床の断熱と、受ける梁・柱が自動で入ります。</p>' +
+      '<div class="row" style="margin-top:8px"><button class="btn sub" id="oh477no" type="button">やめる</button><button class="btn pri" id="oh477ok" type="button">この形にする</button></div>';
+    mb.querySelectorAll("[data-k477]").forEach(function(b){ b.onclick = function(){ var k = b.dataset.k477, v = b.dataset.v; st[k] = k === "d" ? +v : v; if (k === "side"){ st.pos = 0; st.len = sideLen(); } paint(); }; });
+    var ip = $("oh477pos"), il = $("oh477len"), upd = function(){ st.pos = +ip.value || 0; st.len = +il.value || 0; $("oh477pv").innerHTML = preview(); };
+    ip.oninput = upd; il.oninput = upd;
+    $("oh477no").onclick = function(){ $("modal").hidden = true; };
+    $("oh477ok").onclick = function(){
+      if (!(st.len > 0) || !(st.d > 0)){ toast("長さと出幅を入れてください"); return; }
+      var res = eraseRect(rectOf(), null, st.op);
+      if (typeof res === "string"){ toast(res); return; }
+      $("modal").hidden = true; try { drawPlan(); } catch(e){} try { calc(); } catch(e){}
+      toast((st.op === "add" ? "外に出しました" : "引っ込めました") + (res.dropped ? "（消えた壁の窓・ドア " + res.dropped + "個は外しました）" : ""));
+    };
+  }
+  HB.__oh477ui = function(){
+    st = {op: (S.fi || 0) === 0 ? "cut" : "add", side: "D", d: (S.fi || 0) === 0 ? 455 : 910, pos: 0, len: 0};
+    st.len = sideLen(); paint(); $("modal").hidden = false;
+  };
+})();
+</script>
+<script id="ohinfo477">
+/* CAD-477（Opus）：2階のはね出しの形を調べる。1階の外形（a）と2階の外形（b）から
+   ・出た所の面積 A（2階の中で1階の外の所）
+   ・下に1階の壁が無い2階の外壁（＝梁で受ける所）beams：[{a,b,L,h}]
+   ・梁の端が1階の壁にも外形にも乗らない所の柱 posts
+   を返す。1階が2階の中に全部入っていない時（下屋など）は null（今まで通りの計算）。 */
+function ohInfo477(a, b){
+  try {
+    const P1 = HB.__polySnap477(a), P2 = HB.__polySnap477(b); if (!P1 || !P2 || P1.length < 4 || P2.length < 4) return null;
+    const inP = (P, x, y) => { let c = false; for (let i = 0, j = P.length - 1; i < P.length; j = i++){ const p = P[i], q = P[j]; if (((p[1] > y) !== (q[1] > y)) && (x < (q[0] - p[0]) * (y - p[1]) / (q[1] - p[1]) + p[0])) c = !c; } return c; };
+    const X = [...new Set(P1.concat(P2).map(q => q[0]))].sort((u, v) => u - v), Y = [...new Set(P1.concat(P2).map(q => q[1]))].sort((u, v) => u - v);
+    let A = 0;
+    for (let j = 0; j < Y.length - 1; j++) for (let i = 0; i < X.length - 1; i++){ const cx = (X[i] + X[i + 1]) / 2, cy = (Y[j] + Y[j + 1]) / 2, i1 = inP(P1, cx, cy), i2 = inP(P2, cx, cy);
+      if (i1 && !i2) return null;                       /* 1階が2階の外に出ている（下屋）→ 今まで通り */
+      if (i2 && !i1) A += (X[i + 1] - X[i]) * (Y[j + 1] - Y[j]); }
+    if (A < 1) return null;
+    const segs = P => P.map((p, i) => [p, P[(i + 1) % P.length]]);
+    const onSeg = (pt, s0, s1) => { const [x, y] = pt; if (Math.abs(s0[0] - s1[0]) < 1) return Math.abs(x - s0[0]) < 1 && y >= Math.min(s0[1], s1[1]) - 1 && y <= Math.max(s0[1], s1[1]) + 1; return Math.abs(y - s0[1]) < 1 && x >= Math.min(s0[0], s1[0]) - 1 && x <= Math.max(s0[0], s1[0]) + 1; };
+    const W1 = (a.parts2D || []).filter(q => { try { return pState(q) !== "remove"; } catch(e){ return true; } }).map(q => [[q.x1, q.y1], [q.x2, q.y2]]);
+    const sup = pt => segs(P1).some(s => onSeg(pt, s[0], s[1])) || W1.some(s => onSeg(pt, s[0], s[1]));
+    const onOutline1 = pt => segs(P1).some(s => onSeg(pt, s[0], s[1]));
+    const beams = [];
+    segs(P2).forEach(([p, q]) => {
+      const hz = Math.abs(p[1] - q[1]) < 1, cuts = (hz ? X : Y).filter(v => v > Math.min(hz ? p[0] : p[1], hz ? q[0] : q[1]) && v < Math.max(hz ? p[0] : p[1], hz ? q[0] : q[1]));
+      const ks = [hz ? p[0] : p[1]].concat(cuts.sort((u, v) => (hz ? (q[0] > p[0]) : (q[1] > p[1])) ? u - v : v - u)).concat([hz ? q[0] : q[1]]);
+      let run = null;
+      for (let k = 0; k < ks.length - 1; k++){ const m = (ks[k] + ks[k + 1]) / 2, mp = hz ? [m, p[1]] : [p[0], m], free = !sup(mp);
+        const A0 = hz ? [ks[k], p[1]] : [p[0], ks[k]], B0 = hz ? [ks[k + 1], p[1]] : [p[0], ks[k + 1]];
+        if (free){ if (run) run.b = B0; else run = {a: A0, b: B0}; } else if (run){ beams.push(run); run = null; } }
+      if (run) beams.push(run);
+    });
+    const STD = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450];
+    beams.forEach(q => { q.L = Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]); const need = Math.max(+S.dosa || 240, q.L > 1820 ? q.L / 11 : 0); q.h = STD.find(v => v >= need - 0.5) || 450; });
+    const pk = [];
+    beams.forEach(q => [q.a, q.b].forEach(pt => { if (!sup(pt) && !pk.some(o => Math.abs(o[0] - pt[0]) < 1 && Math.abs(o[1] - pt[1]) < 1)) pk.push(pt); }));
+    const per = P => segs(P).reduce((t, s) => t + Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]), 0);
+    const bb = P => { const xs = P.map(q => q[0]), ys = P.map(q => q[1]); return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)); };
+    return {A, beams: beams.filter(q => q.L >= 1), posts: pk, per1: per(P1), per2: per(P2), roofA: Math.max(0, bb(P2) - bb(P1)), P1, P2};
+  } catch(e){ return null; }
+}
+</script>
+<script id="ohplan477">
+/* CAD-477：平面図に、もう一方の階の外形を点線で重ねる（現場の図面の「上階外形線」と同じ）。外形が同じなら描かない */
+(function(){
+  if (typeof drawPlan !== "function") return;
+  var od = drawPlan;
+  drawPlan = function(){
+    var r = od.apply(this, arguments);
+    try {
+      var sv = document.getElementById("plan"), T = HB.__planT; if (!sv || !T || !Array.isArray(S.fl) || S.fl.length < 2) return r;
+      var old = document.getElementById("oh477ov"); if (old) old.remove();
+      var k = S.fi === 0 ? 1 : 0, O = HB.__polySnap477 && HB.__polySnap477(S.fl[k] && S.fl[k].snap), P = pts(); if (!O) return r;
+      if (JSON.stringify(O) === JSON.stringify(P)) return r;
+      var f = function(q){ return (q[0] * T.s + T.ox).toFixed(1) + "," + (q[1] * T.s + T.oy).toFixed(1); };
+      var g = document.createElementNS("http://www.w3.org/2000/svg", "g"); g.id = "oh477ov"; g.setAttribute("pointer-events", "none");
+      g.innerHTML = '<polygon points="' + O.map(f).join(" ") + '" fill="none" stroke="#334155" stroke-width="1.2" stroke-dasharray="7 4"/>';
+      sv.appendChild(g);
+    } catch(e){}
+    return r;
+  };
+})();
 </script>
