@@ -6611,63 +6611,43 @@ function framePos(){
         if (!postMap.has(k)) postMap.set(k, {x, y});
       });
     });
+    /* CAD-481：間柱の割り付けの作り直し（本人の指示 2026-11-21 14:27「そらを修正するんじゃなくて、
+       そうならない様な修正しろよ」）。CAD-480 は「全部置いてから、近すぎる物を後で消す」対症療法
+       だったので、そのまとめ処理は外し、生成の順番自体を変える。壁ごとに
+       ①柱（postT）→ ②開口の端とその脇の間柱（CAD-199 の jamb・CAD-454 の窓柱）→
+       ③入隅の受けと枠脇の間柱（CAD-222）→ ④開口の上下の短い間柱（CAD-161）→
+       ⑤残りの区間へ 455 ピッチの間柱、の順に決める。
+       ②では、柱と間柱の兼ねルール（CAD-154：柱から半ピッチ＝M1 以内は柱が兼ねる）と同じ発想を、
+       窓柱と開口端の間柱にも生成時点で適用する：開口の端の近くに柱があれば柱が兼ね、その間柱は
+       最初から立てない（CAD-199 の従来判定は「取り合いの柱だけ・105mm」だったが、埋めの柱を
+       含む柱全体・半ピッチに広げる。柱と窓柱の間に出来ていた 5〜95mm の巾木受けもこれで消える）。
+       ③④⑤では、先に決まった固定点との面間が 150mm 未満になる位置には間柱を置かない。
+       開口の両脇どうし（両方とも開口の受け）は今まで通り両方残す。 */
+    let secW481 = 45; try { secW481 = mabaSecP()[0] || 45; } catch(e){}
+    const mix481 = S.mabaKata === "mix", wOf481 = th => mix481 ? (th ? secW481 : 30) : secW481;
+    const fixed481 = [];   // {x, y, w} 先に決まった固定点（開口端・枠脇・開口上下の間柱）
+    const fixOnRun481 = r => {   // その壁に乗る固定点を、ランの上の位置に投影した物
+      const o = [];
+      fixed481.forEach(P => { const tt = (P.x - r.ax) * r.ux + (P.y - r.ay) * r.uy; if (tt >= -1.5 && tt <= r.L + 1.5 && Math.hypot(P.x - (r.ax + r.ux * tt), P.y - (r.ay + r.uy * tt)) <= 1.5) o.push({t: tt, w: P.w}); });
+      return o;
+    };
+    // CAD-481 ②：開口の端とその脇の間柱（CAD-199 の jamb・CAD-454 の窓柱）を、ピッチ間柱より先に決める。
+    // 柱から半ピッチ（M1）以内にある物は柱が兼ねるので立てない。柱と同位置なら柱を優先。
+    // 決まった物は固定点として控え、後に配る間柱が近づかない様にする（太い間柱＝45×105 として数えるのは従来通り）。
     runs.forEach(r => {
-      for (let k = 1; k * M2 < r.L - 1; k++){
-        const t = k * M2, x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
-        if (postMap.has(kk)) continue;
-        // CAD-154 (N3b): 開口の中の間柱は数えない（柱と同じ扱い。実測で練習の家 12 本あった）
-        if (inOp(r, t)) continue;
-        // CAD-154 (N3c): 本人の決まり「柱芯から455ピッチ」。柱の半ピッチ以内に来る間柱は
-        // 柱がその位置（継目）の役をするので数えない（開口脇の柱から 45〜165mm に立つ二重数えの解消）
-        let nearPost154 = false;
-        r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost154 = true; });
-        if (nearPost154) continue;
-        const ex = studMap.get(kk);
-        if (ex){ if (k % 2 === 0) ex.thick = true; }
-        else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
-      }
-    });
-    // CAD-199: jamb（新設間仕切りのドア・開口・クローゼットの両脇）を太い間柱（45×105）として登録する。柱と同位置なら柱を優先し、グリッド間柱と同位置なら太にまとめて1本に数える
-    runs.forEach(r => {
-      (r.jambs || []).concat((r.jambs454 || []).filter(t => ![...r.postT].some(pt => Math.abs(pt - t) <= 50))).forEach(t => {
+      (r.jambs || []).concat(r.jambs454 || []).forEach(t => {
+        let served481 = false;
+        r.postT.forEach(pt => { if (Math.abs(pt - t) < M1 - 1) served481 = true; });
+        if (served481) return;
         const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
         if (postMap.has(kk)) return;
         Z.jambN++;
         const ex = studMap.get(kk);
         if (ex) ex.thick = true;
         else studMap.set(kk, {x, y, thick: true, ux: r.ux, uy: r.uy});
+        fixed481.push({x, y, w: wOf481(true)});
       });
     });
-    // CAD-161: 開口まわり（まぐさ・窓台）の短い間柱（本人の承認 2026-11-10「満点です」。CAD-154 では数えていなかった）
-    // 対象は外壁の開口だけ。位置は今の間柱と同じ並び（ラン始点の柱芯から 455 ピッチ＝k*M2）で、開口の幅の中に入る位置。
-    // 柱の半ピッチ以内は柱がその位置の役をするので数えない（CAD-154 N3c と同じ扱い）。
-    // 下＝窓台の下（土台天〜窓台：長さは 窓台高さ＋dfl）、上＝まぐさの上（サッシ上端〜桁・胴差の下：長さは ch＋fuko−窓台高さ−h）。
-    // 窓台高さはアプリ全体の約束事（立面図・立体図と同じ：ドア・掃き出しは 0、それ以外は 2030−h）。
-    // ※まぐさ自体の成（高さ）はアプリが持っていないので、上はサッシ上端から測る（柱・間柱を通しで Lc で拾う今の流儀と同じ）。
-    {
-      const sillOf = (cat, h) => (/玄関|勝手口|室内ドア|クローゼット/.test(cat) || /掃き出し/.test(cat)) ? 0 : Math.max(0, 2030 - h);
-      const dfl1 = +S.dfl || 40, ch1 = +S.ch || 2400, fuko1 = +S.fuko || 100;
-      const seen = new Set();
-      runs.forEach(r => {
-        if (r.kind !== "e") return;
-        r.ops.forEach((o, oi) => {
-          const d = r.opsD[oi]; if (!d || !(d.h > 0)) return;
-          const sill = sillOf(d.cat, d.h), upLen = ch1 + fuko1 - sill - d.h;
-          for (let k = 1; k * M2 < r.L - 1; k++){
-            const t = k * M2;
-            if (!(t > o[0] + 1 && t < o[1] - 1)) continue;
-            let nearPost = false;
-            r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost = true; });
-            if (nearPost) continue;
-            const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
-            if (seen.has(kk)) continue; seen.add(kk); Z.opPosN++;
-            const thick = k % 2 === 0;
-            if (sill > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
-            if (upLen > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
-          }
-        });
-      });
-    }
     /* CAD-222: 入隅のボード受け（本人の確定仕様 2026-11-08/09、実装リスト item 29）。
        ボードの端ごとに受け1本（張り伸ばさない前提）。受け材は 36×45。
        ・家の角＝2本/か所 ・T字（間仕切りが外壁の途中にぶつかる所）＝4本/か所
@@ -6712,6 +6692,7 @@ function framePos(){
             if (bd <= 105){
               Z.ukeFull += 1; Z.ukePts.push({x, y, k: "full-off"});
               Z.opStuds.push({x, y, thick: true, k: "f", seg: "side", len: d.h, sill: 0, h: d.h, ux: r.ux, uy: r.uy});
+              fixed481.push({x, y, w: wOf481(true)});   /* CAD-481：枠脇の間柱も固定点（後に配る間柱が近づかない様に） */
               return;
             }
             Z.ukeShorts.push(d.h); Z.ukePts.push({x, y, k: "short"});
@@ -6719,58 +6700,62 @@ function framePos(){
         });
       });
     }
-    /* CAD-480：開口端の間柱（jamb・枠脇＝まぐさと窓枠の受け）が、ピッチ間柱や開口の上下の間柱と
-       近すぎる（面間150mm未満）時は、開口側を残して相手側を置かない（本人の指摘 2026-11-21
-       「20とかありえん数字が出ない様にアプリをやり直せ」）。
-       調査 probe-stud-close：間柱どうしの面間150未満は種データ4軒で32か所・全部が開口脇。
-       原因は、開口端のあと足し（CAD-199/454/222）が柱との距離しか見ず、ピッチ間柱との距離を
-       見ていない事。柱には CAD-154 の「近いと柱が兼ねる」があるが、間柱どうしには無かった。
-       ここで全系統（ピッチ・開口端・窓台の下・まぐさの上・枠脇）を通してそろえる。
-       開口の両脇の間柱どうし（両方とも開口側）は両方残す。 */
+    // CAD-161: 開口まわり（まぐさ・窓台）の短い間柱（本人の承認 2026-11-10「満点です」。CAD-154 では数えていなかった）
+    // 対象は外壁の開口だけ。位置は今の間柱と同じ並び（ラン始点の柱芯から 455 ピッチ＝k*M2）で、開口の幅の中に入る位置。
+    // 柱の半ピッチ以内は柱がその位置の役をするので数えない（CAD-154 N3c と同じ扱い）。
+    // 下＝窓台の下（土台天〜窓台：長さは 窓台高さ＋dfl）、上＝まぐさの上（サッシ上端〜桁・胴差の下：長さは ch＋fuko−窓台高さ−h）。
+    // 窓台高さはアプリ全体の約束事（立面図・立体図と同じ：ドア・掃き出しは 0、それ以外は 2030−h）。
+    // ※まぐさ自体の成（高さ）はアプリが持っていないので、上はサッシ上端から測る（柱・間柱を通しで Lc で拾う今の流儀と同じ）。
     {
-      let secA480 = 45; try { secA480 = mabaSecP()[0] || 45; } catch(e){}
-      const mix480 = S.mabaKata === "mix", wOf480 = th => mix480 ? (th ? secA480 : 30) : secA480;
-      const jambKeys480 = new Set();
+      const sillOf = (cat, h) => (/玄関|勝手口|室内ドア|クローゼット/.test(cat) || /掃き出し/.test(cat)) ? 0 : Math.max(0, 2030 - h);
+      const dfl1 = +S.dfl || 40, ch1 = +S.ch || 2400, fuko1 = +S.fuko || 100;
+      const seen = new Set();
       runs.forEach(r => {
-        (r.jambs || []).concat((r.jambs454 || []).filter(t => ![...r.postT].some(pt => Math.abs(pt - t) <= 50))).forEach(t => {
-          const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
-          if (!postMap.has(kk)) jambKeys480.add(kk);
+        if (r.kind !== "e") return;
+        r.ops.forEach((o, oi) => {
+          const d = r.opsD[oi]; if (!d || !(d.h > 0)) return;
+          const sill = sillOf(d.cat, d.h), upLen = ch1 + fuko1 - sill - d.h;
+          for (let k = 1; k * M2 < r.L - 1; k++){
+            const t = k * M2;
+            if (!(t > o[0] + 1 && t < o[1] - 1)) continue;
+            let nearPost = false;
+            r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost = true; });
+            if (nearPost) continue;
+            // CAD-481：先に決まった固定点（開口端・枠脇の間柱）と面間150mm未満になる位置には置かない
+            let nearFix481 = false;
+            for (let fi = 0; fi < fixed481.length; fi++){ const P = fixed481[fi], tt = (P.x - r.ax) * r.ux + (P.y - r.ay) * r.uy; if (tt < -1.5 || tt > r.L + 1.5) continue; if (Math.hypot(P.x - (r.ax + r.ux * tt), P.y - (r.ay + r.uy * tt)) > 1.5) continue; if (Math.abs(tt - t) - P.w / 2 - wOf481(k % 2 === 0) / 2 < 150){ nearFix481 = true; break; } }
+            if (nearFix481) continue;
+            const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+            if (seen.has(kk)) continue; seen.add(kk); Z.opPosN++;
+            const thick = k % 2 === 0;
+            if (sill > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "dn", len: dfl1 + sill, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opDnN++; }
+            if (upLen > 0){ Z.opStuds.push({x, y, thick, k: "f", seg: "up", len: upLen, sill, h: d.h, ux: r.ux, uy: r.uy}); Z.opUpN++; }
+            if (sill > 0 || upLen > 0) fixed481.push({x, y, w: wOf481(thick)});   /* CAD-481：決まった短い間柱も固定点にする */
+          }
         });
       });
-      const dropStud480 = new Set(), dropOp480 = new Set(), dropPos480 = new Set();
-      /* CAD-199 の間仕切り開口端の間柱は「柱から105mm以内は柱が兼ねる」が決まりだが、その判定は
-         取り合いの柱しか見ておらず、後から910の割り付けで足される柱（埋めの柱）が見えていなかった。
-         そのため埋めの柱の77〜85mm隣に開口端の間柱が立ち、巾木受けに2〜5mmのピースが出ていた（35坪2階で実測）。
-         ここで柱全体に対してそろえる：柱の105mm以内にある CAD-199 の間柱は置かない（柱が受ける）。
-         ※CAD-454 の窓柱（jambs454）は「柱を割り付けへ寄せ、50mm超ずれたら枠の端に窓柱を足す」が
-           決まった設計なので対象にしない（柱と窓柱が55〜85mmで並ぶのは設計どおり）。 */
-      const jamb199Keys480 = new Set();
-      runs.forEach(r => { (r.jambs || []).forEach(t => { const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y); if (!postMap.has(kk)) jamb199Keys480.add(kk); }); });
-      const postPts480 = [...postMap.values()];
-      const nearPost480 = (x, y) => postPts480.some(P => Math.hypot(P.x - x, P.y - y) <= 105);
-      studMap.forEach((S0, kk) => { if (jamb199Keys480.has(kk) && nearPost480(S0.x, S0.y)) dropStud480.add(kk); });
-      runs.forEach(r => {
-        const mem = [];
-        const proj480 = (x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy; if (t < -1.5 || t > r.L + 1.5) return null; return Math.hypot(x - (r.ax + r.ux * t), y - (r.ay + r.uy * t)) <= 1.5 ? t : null; };
-        studMap.forEach((S0, kk) => { const t = proj480(S0.x, S0.y); if (t === null) return; mem.push({t, w: wOf480(S0.thick), pri: jambKeys480.has(kk) ? 2 : 1, sk: kk}); });
-        Z.opStuds.forEach((P, ix) => { const t = proj480(P.x, P.y); if (t === null) return; mem.push({t, w: wOf480(P.thick), pri: P.seg === "side" ? 2 : 1, oi: ix, pk: key(P.x, P.y), seg: P.seg}); });
-        mem.sort((a, b) => a.t - b.t);
-        const grp480 = [];
-        mem.forEach(m => { const g = grp480[grp480.length - 1]; if (g && Math.abs(m.t - g.t) <= 1){ if (m.w > g.w) g.w = m.w; if (m.pri > g.pri) g.pri = m.pri; g.items.push(m); } else grp480.push({t: m.t, w: m.w, pri: m.pri, items: [m]}); });
-        for (let i = 0; i + 1 < grp480.length; i++){
-          const A = grp480[i], B = grp480[i + 1], gap = (B.t - B.w / 2) - (A.t + A.w / 2);
-          if (!(gap < 150)) continue;
-          const drop = (A.pri === 2 && B.pri === 1) ? B : (B.pri === 2 && A.pri === 1) ? A : null;
-          if (!drop) continue;
-          drop.items.forEach(m => { if (m.sk) dropStud480.add(m.sk); if (m.oi !== undefined){ dropOp480.add(m.oi); if (m.seg === "dn" || m.seg === "up") dropPos480.add(m.pk); } });
-        }
-      });
-      dropStud480.forEach(kk => studMap.delete(kk));
-      if (dropOp480.size){
-        Z.opStuds = Z.opStuds.filter((P, ix) => { if (!dropOp480.has(ix)) return true; if (P.seg === "dn") Z.opDnN--; else if (P.seg === "up") Z.opUpN--; return false; });
-        Z.opPosN -= dropPos480.size;
-      }
     }
+    runs.forEach(r => {
+      const fx481 = fixOnRun481(r);   /* CAD-481：この壁に乗る固定点（投影） */
+      for (let k = 1; k * M2 < r.L - 1; k++){
+        const t = k * M2, x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+        if (postMap.has(kk)) continue;
+        // CAD-154 (N3b): 開口の中の間柱は数えない（柱と同じ扱い。実測で練習の家 12 本あった）
+        if (inOp(r, t)) continue;
+        // CAD-154 (N3c): 本人の決まり「柱芯から455ピッチ」。柱の半ピッチ以内に来る間柱は
+        // 柱がその位置（継目）の役をするので数えない（開口脇の柱から 45〜165mm に立つ二重数えの解消）
+        let nearPost154 = false;
+        r.postT.forEach(pt2 => { if (Math.abs(pt2 - t) < M1 - 1) nearPost154 = true; });
+        if (nearPost154) continue;
+        // CAD-481：固定点（開口端・枠脇・開口上下の間柱）と面間150mm未満になる位置には配らない
+        let nearFix481 = false;
+        for (let fi = 0; fi < fx481.length; fi++){ if (Math.abs(fx481[fi].t - t) - fx481[fi].w / 2 - wOf481(k % 2 === 0) / 2 < 150){ nearFix481 = true; break; } }
+        if (nearFix481) continue;
+        const ex = studMap.get(kk);
+        if (ex){ if (k % 2 === 0) ex.thick = true; }
+        else studMap.set(kk, {x, y, thick: k % 2 === 0, ux: r.ux, uy: r.uy});
+      }
+    });
     const chF292 = +S.ch || 2400;
     const cls = (x, y) => {   /* CAD-292: 開放の間仕切りは柱・間柱を数えない。柱・間柱の長さは形（壁のある高さ）に合わせる */
       const prs = runs.filter(r => r.kind === "p" && r.isNew && onRun(r, x, y));
