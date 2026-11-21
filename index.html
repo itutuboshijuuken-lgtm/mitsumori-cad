@@ -3638,6 +3638,7 @@ const ZT = {doma: ["土間", "#D9BF98", "#6B4F2A", "doma"], ub: ["浴室", "#BFD
 const ENCL_TYPES = [["tatami", "畳"], ["doma", "土間"], ["closet", "収納"], ["hall", "廊下"], ["stair", "階段"], ["room", "部屋"], ["erase", "外周消"], ["cut", "配置消"]];
 let enclMode = false, encl = null, enclInk = null, enclNew = false;
 function enclReset(){
+  HB.__flEncl507 = false;   /* CAD-507：床の囲みの印も外す */
   enclMode = false; encl = null; document.body.classList.remove("enclmode"); if ($("enclBar")) $("enclBar").hidden = true;
   try { if (HB.__syncEncl185) HB.__syncEncl185(); } catch(e){}   /* 旧 blk83 後段：囲み編集の同期（HB.__syncEncl185＝sync185 本体そのもの） */
 }
@@ -3692,6 +3693,7 @@ function enclPrevSvg(P){
   if (ZT[pick]){ fill = ZT[pick][1]; fo = ".8"; stroke = ZT[pick][2]; tcol = ZT[pick][2]; name = ZT[pick][0]; }
   else if (pick === "tatami"){ fill = "#E4E9C4"; fo = ".9"; stroke = "#7E8752"; tcol = "#5B6428"; name = "畳"; }
   else if (pick === "erase" || pick === "cut"){ fill = "rgba(198,40,40,.14)"; stroke = "#C62828"; tcol = "#C62828"; name = pick === "erase" ? "外周消" : "配置消"; }
+  else if (pick === "floor507"){ fill = "rgba(242,184,75,.22)"; stroke = "#B7791F"; tcol = "#8A5A12"; name = "床"; }   /* CAD-507：床の囲みは「床」と出す（部屋ではない） */
   return `<g pointer-events="none"><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="${fill}" fill-opacity="${fo}" stroke="${stroke}" stroke-width="3" stroke-dasharray="8 5"/><text x="${cx}" y="${cy + 1}" text-anchor="middle" class="halo" style="font-size:15px;font-weight:900;fill:${tcol}">${name}</text><text x="${cx}" y="${cy + 17}" text-anchor="middle" class="halo" style="font-size:10.5px;font-weight:800;fill:${tcol}">${f5(r.x1 - r.x0)}×${f5(r.y1 - r.y0)}</text></g>`;
   })(P);
   if (HB.__enclPrevSeg77){   /* 旧 blk77 後段：囲み編集中は最初の text を仕上げ名に差し替え（原文 verbatim） */
@@ -4102,10 +4104,43 @@ function ctlArbitrate(){
   if (sk && ek){ sb.hidden = A.last !== "sel"; eb.hidden = A.last === "sel" || !enclMode; }
   else if (sk && !eb.hidden) eb.hidden = true;   // 何かを選んでいる間は、「なぞって範囲を決める」の案内の欄は隠す
 }
+/* ===== CAD-507（Opus）：床の「囲んで一部だけ」を、部屋作りの囲みから切り離す =====
+   本人の実機動画（2026-11-21）：小さく囲むと床でなく間仕切りができる／後から選ぶと部屋全体に貼られる／
+   部屋を囲むと「もう壁で囲まれています」。原因は、床の囲みが部屋作りの囲みと同じ決定（enclApply("room") → 間仕切り）を
+   共用していたこと（じゅうちゃんの診断）。床の囲みは入口で印（HB.__flEncl507）を付け、範囲はなぞった形そのまま、
+   決定は囲みのパネルの中で床の種類を押した時に、その範囲へ床を貼るだけにする（間仕切りは作らない）。 */
+function drawFlEnclBar507(bar){
+  const r = encl.r, b = bbox();
+  const FL507 = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "クッションフロア"], ["flMuku", "無垢板15"], ["flMuku30", "無垢板30"], ["flDoma", "土間"], ["flAge", "座上げ"], ["tatami", "畳"]];
+  bar.innerHTML = `<div class="r1"><span>床にする範囲</span><span style="display:flex;gap:4px"><button id="ecStep" type="button">縮み${ENC_STEP}mm</button><button id="ecX" type="button">やめる</button></span></div>
+    <div style="font-size:12.5px;font-weight:800;color:#1F4E8C;margin:4px 2px 4px">この範囲の床を選ぶ（押すと決まります。横に送れます）</div>
+    <div class="fl507">${FL507.map(([k, n]) => `<button data-fl507="${k}" type="button">${n}</button>`).join("")}</div>
+    <div class="ecd" style="margin-top:6px">${[["w", "幅", r.x1 - r.x0], ["h", "奥行", r.y1 - r.y0], ["x", "左から", r.x0 - b.x0], ["y", "上から", r.y0 - b.y0]].map(([k, n, v]) => `<button data-ed="${k}" type="button"><small>${n}</small><b>${f5(v)}</b></button>`).join("")}</div>`;
+  $("ecX").onclick = enclOff;
+  $("ecStep").onclick = () => { ENC_STEP = ENC_STEPS[(ENC_STEPS.indexOf(ENC_STEP) + 1) % ENC_STEPS.length]; try { localStorage.setItem("yubi-encstep", String(ENC_STEP)); } catch(x){} drawEnclBar(); };
+  bar.querySelectorAll("[data-ed]").forEach(bt => bt.onclick = () => {
+    const k = bt.dataset.ed, cur = k === "w" ? r.x1 - r.x0 : k === "h" ? r.y1 - r.y0 : k === "x" ? r.x0 - b.x0 : r.y0 - b.y0;
+    openPad({title: {w: "幅", h: "奥行", x: "左から", y: "上から"}[k], value: cur > 0 ? cur : "", extra: k === "x" || k === "y" ? [{label: "0（壁ぎわ）", fn: () => { closePad(); enclEdit(k, 0); drawEnclBar(); drawPlan(); }}] : [], done: v => { if (v != null) enclEdit(k, v); drawEnclBar(); drawPlan(); }});
+  });
+  bar.querySelectorAll("[data-fl507]").forEach(bt => bt.onclick = () => {
+    const fk = bt.dataset.fl507, nm = bt.textContent, rc = {x0: Math.min(r.x0, r.x1), y0: Math.min(r.y0, r.y1), x1: Math.max(r.x0, r.x1), y1: Math.max(r.y0, r.y1)};
+    if (rc.x1 - rc.x0 < 100 || rc.y1 - rc.y0 < 100){ toast("範囲が小さすぎます"); return; }
+    pushUndo();
+    try { (HB.__pushFloor || function(){})(rc, fk); } catch(e){ console.warn("CAD-507", e); }
+    try { fixAssign(); } catch(e){}
+    save(); enclOff();
+    toast(`囲んだ範囲（${fmt(Math.round(rc.x1 - rc.x0))}×${fmt(Math.round(rc.y1 - rc.y0))}）を${nm}にしました　↶で戻す`);
+  });
+}
 function drawEnclBar0(){
   const bar = $("enclBar"); if (!bar) return;
   if (!enclMode){ bar.hidden = true; return; }
   bar.hidden = false;
+  if (HB.__flEncl507 && (!encl || !encl.r)){   /* CAD-507：床の囲みの案内 */
+    bar.innerHTML = `<div class="r1"><span style="line-height:1.4"><b>👆 床を変えたい所を、指でなぞって囲む</b></span><span style="display:flex;gap:4px"><button id="ecX" type="button">やめる</button></span></div>`;
+    $("ecX").onclick = enclOff; return;
+  }
+  if (HB.__flEncl507 && encl && encl.fl507 && encl.r && !encl.edit){ drawFlEnclBar507(bar); return; }
   if (!encl || !encl.r){
     const hasRoom = ((S.roomRecs || []).length || (S.parts2D || []).length || (S.zones || []).length) > 0;
     const gOff = HB.__guideOff && HB.__guideOff();
@@ -4190,10 +4225,14 @@ function drawEnclRow(){
       if (zi >= 0){ enclStartEdit("z", zi); return; }
       const ti = (S.tatami || []).findIndex(r => q[0] > r.x0 && q[0] < r.x1 && q[1] > r.y0 && q[1] < r.y1);
       if (ti >= 0){ enclStartEdit("t", ti); return; }
+if (HB.__flEncl507){ toast("床を変えたい所を、指でなぞって囲んでください"); return; }   /* CAD-507：床の囲みでは部屋の編集（壁）に入らない */
 const rr0 = roomRectAt(q[0], q[1]);
 if (rr0){ if (rr0.bad){ toast("「部屋」で四角くなぞると直せます"); return; } enclStartRoom(rr0); return; }
       if (!(typeof encl !== "undefined" && encl && encl.r)) toast("範囲を指でなぞってください"); return; /* CAD-84: 範囲が決まっている時は言わない */
     }
+    /* CAD-507：床の囲みは、なぞった形そのまま（floorRectFromStroke）を範囲にする。壁への吸い付き（消しゴム用の eraFromStroke）は使わない */
+    if (HB.__flEncl507){ const fr = floorRectFromStroke(mm); if (!fr){ toast("もう少し大きくなぞってください"); return; }
+      encl = {r: {x0: fr.x0, y0: fr.y0, x1: fr.x1, y1: fr.y1, ax0: false, ax1: false, ay0: false, ay1: false}, pick: "floor507", raw: fr, fl507: true}; drawEnclBar(); drawPlan(); return; }
     const r = eraFromStroke(mm); if (!r){ toast("もう少し大きくなぞってください"); return; }
     encl = {r, pick: "room", raw: floorRectFromStroke(mm)}; drawEnclBar(); drawPlan();
   };
@@ -35483,6 +35522,7 @@ nav.steps{padding:1px 6px 3px}
           else {
             if (HB.__partDrawOff) HB.__partDrawOff(true);
             enclMode = true; encl = {r: null}; tatMode = false; eraMode = false; ltTool = null; sel = null; enclNew = S.mode === "zo"; toolOpen = null;
+            HB.__flEncl507 = true;   /* CAD-507：ここから入った囲みは「床の囲み」。部屋作り（間仕切りを作る）には流さない */
             document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
             drawToolsUI(); drawPlan();
           }
@@ -38055,4 +38095,9 @@ function kozo478(C){
 <style id="rm506css">
 /* CAD-506：本人の決定（2026-11-21）。ひな形ボタン・「中の物：隠す」・「物を隠す」は使わないので出さない。表示の初期状態・計算は変えない */
 #dimShowBtn,#hideFxBtn369{display:none!important}
+</style>
+<style id="fl507css">
+/* CAD-507：床の囲みのパネルの床の種類ボタン（1段に横並び・はみ出たら横に送る） */
+#enclBar .fl507{display:flex!important;flex-wrap:nowrap!important;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+#enclBar .fl507 button{flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1.5px solid #2563B0;background:#fff;color:#1F4E8C;font-size:14px;font-weight:800;white-space:nowrap}
 </style>
