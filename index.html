@@ -650,6 +650,11 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <h2>完了清掃（美装）</h2>
     <div class="seg"><button data-bs="1" type="button">入れる</button><button data-bs="0" type="button">なし</button></div>
     <p class="hint" style="margin-top:4px">工事した床の広さ×㎡単価で計算します（最低料金あり）。</p>
+    <div id="kz478box"><div class="kz478in"><div class="kz478t">建物の構造（鉄骨・RCの割増）</div><div class="chips" id="kozo478"></div>
+    <div class="kz478s" id="kozo478h"></div>
+    <div class="kz478t">間仕切りの下地</div><div class="chips" id="wallFr478"></div>
+    <div class="kz478s">LGS＝軽天を自分で組む。木の柱・間柱・上下枠の代わりに、LGSの材料を壁の面積で入れます（組む手間は今の大工手間のまま）。</div></div></div>
+    <style>#kz478box .kz478t{font-weight:900;font-size:16px;margin:14px 2px 6px}#kz478box .kz478s{font-size:12.5px;color:#64748B;margin:4px 2px 0;line-height:1.5}#kz478box .hid254{display:block!important}</style>
     <details class="rfAdv"><summary>断熱材・内装ボード（こだわる人向け）</summary>
     <h2>断熱材</h2>
     <div class="sprow"><div>床<small>押出法ポリスチレン 45mm</small></div><div class="seg"><button data-dan="danF" data-v="1" type="button">入れる</button><button data-dan="danF" data-v="0" type="button">なし</button></div></div>
@@ -1066,6 +1071,11 @@ const WORK = [
   ["habaki", "幅木", "円/m", 0, 1000],
   ["mawari", "回り縁（材工）", "円/m", 0, 900],
   ["lgsCeil", "天井 LGS下地（軽鉄・材工）", "円/㎡", 0, 3000],
+  ["lgsWall478", "間仕切り LGS下地 材料（スタッド・ランナー・ビス）（仮）", "円/㎡", 0, 900],
+  ["kozoS478", "構造の割増 鉄骨造（大工手間に対して）（仮）", "%", 0, 15],
+  ["kozoR478", "構造の割増 RC造（大工手間に対して）（仮）", "%", 0, 20],
+  ["rcYojo478", "RC（マンション）共用部の養生（エレベーター・廊下）（仮）", "円/式", 0, 30000],
+  ["rcTodoke478", "RC（マンション）管理組合への工事届・掲示・あいさつ（仮）", "円/式", 0, 10000],
   ["mikiri", "見切り材（1本）", "円/本", 0, 1800],
   ["siding", "外壁 サイディング", "円/㎡", 0, 9600],
   ["yakisugi", "外壁 焼杉", "円/㎡", 0, 9500],
@@ -6492,6 +6502,7 @@ const C = calc0(); if (extra){ Object.assign(C, extra.fields); C.rows = extra.ro
       }
     }
   }
+  try { if (typeof kozo478 === "function" && kozo478(C)) C.genka = C.rows.reduce((a, r) => a + (r.grp ? 0 : (r.cost || 0)), 0); } catch(e){ console.error("kozo478", e); }
   const sk = S.shokei.mode === "pct" ? C.genka * S.shokei.v / 100 : S.shokei.v;
   if (sk > 0){ C.rows.push({grp: "諸経費"}); C.rows.push({name: "諸経費（現場管理費・交通費・駐車場など）", spec: S.shokei.mode === "pct" ? `工事費の${fmt(S.shokei.v, 1)}%` : "1式", qty: "", cost: sk, fix: {kind: "shokei"}}); }
   C.genka = C.rows.reduce((a, r) => a + (r.cost || 0), 0);
@@ -37366,6 +37377,56 @@ function ohInfo477(a, b){
       box.innerHTML = h;
       if (noS) document.getElementById("fz478s").onclick = function(){ addEx("shinchiku"); toast("新築の費用を入れました（中身は「部分工事」で直せます）"); };
       if (noG) document.getElementById("fz478g").onclick = function(){ addEx("gaiko"); toast("外構を入れました。部分工事の欄で広さを入れてください"); };
+    } catch(e){}
+    return r;
+  };
+})();
+</script>
+<script id="kozo478js">
+/* CAD-478（Opus）：リフォーム・部分工事の時の、建物の構造（木造／鉄骨造／RC造）の割増と、間仕切りをLGS（軽天）で自分で組む時。
+   割増の考え方：鉄骨は鉄骨に下地を留める（ドリルビス・下穴）、RCはコンクリートに留める（振動ドリル・アンカー・コンクリートビス）手間が増えるので、
+   大工手間の行の合計に％を掛ける。RCはマンションのことが多いので、共用部の養生と管理組合への届けも足す。値段は全部「仮」（本人の手持ちの値段が無いため）。 */
+function kozo478(C){
+  if (S.mode === "zo") return false;
+  let ch = false;
+  const rowsW = (key, name, qty, specF) => { const w = workP(key); return {name, spec: specF(w.p), qty: "", cost: w.p * qty, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: qty}; };
+  const idx = re => C.rows.findIndex(r => r.grp && re.test(r.grp));
+  if (S.wallFrame478 === "lgs"){
+    const L = (S.parts2D || []).filter(q => { try { return pState(q) === "new"; } catch(e){ return !!q.isNew; } }).reduce((t, q) => t + Math.hypot(q.x2 - q.x1, q.y2 - q.y1), 0);
+    if (L > 0){
+      C.rows = C.rows.filter(r => r.grp || !/^新設間仕切り (柱|間柱|上下枠)/.test(r.name || ""));
+      const a = L / 1000 * (S.ch || 2400) / 1000;
+      let at = idx(/木材/); at = at < 0 ? C.rows.length : at + 1; while (at < C.rows.length && !C.rows[at].grp) at++;
+      C.rows.splice(at, 0, rowsW("lgsWall478", "間仕切り LGS下地 材料（自組み）", a, p => `壁の長さ ${fmt(L / 1000, 1)}m × 高さ ${fmt((S.ch || 2400) / 1000, 2)}m ＝ ${fmt(a, 1)}㎡ × ${fmt(p)}円（木の柱・間柱・上下枠の代わり。組む手間は大工手間の行に入っている）`));
+      ch = true;
+    }
+  }
+  const k = S.kozo478;
+  if (k === "steel" || k === "rc"){
+    const lab = C.rows.filter(r => !r.grp && r.cost > 0 && /大工手間|大工の人工|大工 1人工|^手間/.test(r.name || "")).reduce((t, r) => t + r.cost, 0);
+    const add = [{grp: k === "rc" ? "構造の割増（RC造）" : "構造の割増（鉄骨造）"}];
+    if (lab > 0){ const key = k === "rc" ? "kozoR478" : "kozoS478", w = workP(key);
+      add.push({name: k === "rc" ? "コンクリートに下地を留める手間（振動ドリル・アンカー・コンクリートビス）" : "鉄骨に下地を留める手間（ドリルビス・下穴・タッピング）", spec: `大工手間 ${fmt(Math.round(lab))}円 × ${fmt(w.p, 1)}%`, qty: "", cost: lab * w.p / 100, avg: w.avg, miss: !w.p, fix: {kind: "work", key}, q: 1}); }
+    if (k === "rc"){ add.push(rowsW("rcYojo478", "共用部の養生（エレベーター・廊下）", 1, p => `1式 × ${fmt(p)}円`)); add.push(rowsW("rcTodoke478", "管理組合への工事届・掲示・あいさつ", 1, p => `1式 × ${fmt(p)}円`)); }
+    if (add.length > 1){ let at = idx(/諸経費|交通費/); if (at < 0) at = C.rows.length; C.rows.splice(at, 0, ...add); ch = true; }
+  }
+  return ch;
+}
+(function(){
+  if (typeof drawSpec !== "function") return;
+  var od = drawSpec;
+  drawSpec = function(){
+    var r = od.apply(this, arguments);
+    try {
+      var box = document.getElementById("kz478box"); if (!box) return r;
+      box.hidden = S.mode === "zo"; box.querySelectorAll(".hid254").forEach(function(e){ e.classList.remove("hid254"); });
+      /* リフォーム・部分工事の仕様画面は別の並びなので、面積の青い枠（#rfRes）の上へ移す */
+      var rr = document.getElementById("rfRes"); if (rr && S.mode !== "zo" && box.nextElementSibling !== rr) rr.parentNode.insertBefore(box, rr);
+      var chips = function(id, opts, key, def){ var el = document.getElementById(id); if (!el) return; el.innerHTML = opts.map(function(o){ return '<button data-v="' + o[0] + '" aria-pressed="' + ((S[key] || def) === o[0]) + '" type="button">' + o[1] + '</button>'; }).join(""); el.querySelectorAll("button").forEach(function(b){ b.onclick = function(){ S[key] = b.dataset.v; save(); drawSpec(); }; }); };
+      chips("kozo478", [["wood", "木造"], ["steel", "鉄骨造"], ["rc", "RC造（マンションなど）"]], "kozo478", "wood");
+      chips("wallFr478", [["wood", "木下地"], ["lgs", "LGS（軽天を自組み）"]], "wallFrame478", "wood");
+      var h = document.getElementById("kozo478h");
+      if (h) h.textContent = S.kozo478 === "rc" ? "大工手間に " + workP("kozoR478").p + "%（コンクリートに留める手間）＋共用部の養生・管理組合への届けが入ります。" : S.kozo478 === "steel" ? "大工手間に " + workP("kozoS478").p + "%（鉄骨に留める手間）が入ります。" : "木造は割増なし。";
     } catch(e){}
     return r;
   };
