@@ -31579,7 +31579,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
      spec も「長さ2,540」＝正寸表記で、調査の一覧も正寸がカット寸法） */
   var POST120 = {"柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1};
   /* 定尺だけの並びでも構造の正寸として残す物（念のための保険。通常は混ざる） */
-  var KEEP1 = {"土台": 1, "桁": 1, "小屋梁": 1, "胴差": 1, "2階床梁": 1, "大引": 1, "柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1, "母屋・棟木": 1, "隅木": 1, "鼻隠し": 1, "破風板": 1, "間柱": 1};
+  var KEEP1 = {"土台": 1, "桁": 1, "小屋梁": 1, "胴差": 1, "2階床梁": 1, "大引": 1, "柱": 1, "通し柱": 1, "1階 管柱": 1, "2階 管柱": 1, "内部の柱": 1, "下屋 柱": 1, "母屋・棟木": 1, "隅木": 1, "鼻隠し": 1, "破風板": 1, "間柱": 1, "巾木受け": 1, "巾木受け（和室・土間）": 1};   /* CAD-478：巾木受けは長さが要るので定尺だけの組へ回さない */
 
   /* 窓枠（窓ごと）：見積の wakuLen206 と同じ条件の窓だけ、1台分の部材を出す */
   function sashParts368(){
@@ -31627,6 +31627,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
       var all = []; nonEmpty.forEach(function(x){ all = all.concat(x.caps); });
       floors.push({label: nf > 1 ? "1〜2階（まとめて計算）" : null, caps: all, sash: nonEmpty[0].sash});
     }
+    try { if (typeof mergeHabaki478 === "function") mergeHabaki478(floors); } catch(e){}   /* CAD-478：巾木受けを足す（見積は変えない） */
     return {floors: floors, rows: C && C.rows ? C.rows : []};
   }
 
@@ -31645,7 +31646,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
       var needs = c.needs.slice();
       if (POST120[c.name]) needs = needs.map(function(v){ return v - 120; });
       var k = c.name + "|" + c.a + "x" + c.b + "|" + c.sp;
-      if (!map[k]){ map[k] = {name: c.name, a: c.a, b: c.b, sp: c.sp, needs: []}; order.push(map[k]); }
+      if (!map[k]){ map[k] = {name: c.name, key: c.key, a: c.a, b: c.b, sp: c.sp, needs: []}; order.push(map[k]); }   /* CAD-478：key を残す（巾木受けの小数表示の判定に使う） */
       map[k].needs = map[k].needs.concat(needs);
     });
     var g1 = [], g2 = [];
@@ -31656,7 +31657,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
     var h = "";
     if (fl.label) h += "<div class='cF'>■ " + esc368(fl.label) + "</div>";
     g1.forEach(function(e){
-      h += "<div class='cM'><b>" + esc368(e.name) + "</b> <span class='cS'>" + esc368(e.sp) + " " + n368(e.a) + "×" + n368(e.b) + "</span><br>" + lenTxt368(e.needs) + "</div>";
+      h += "<div class='cM'><b>" + esc368(e.name) + "</b> <span class='cS'>" + esc368(e.sp) + " " + n368(e.a) + "×" + n368(e.b) + "</span><br>" + (e.key === "habakiUke478" && typeof lenTxtDec478 === "function" ? lenTxtDec478(e.needs) : lenTxt368(e.needs)) + "</div>";   /* CAD-478：巾木受けだけ 387.5 のような端数を出す */
     });
     if (fl.sash && fl.sash.length){
       h += "<div class='cM'><b>窓枠</b> <span class='cS'>窓ごと・1台分</span></div>";
@@ -31673,6 +31674,7 @@ body.mSel #rpBox365,body.mSel #rpOpen365,body.enclEdit185 #rpBox365,body.enclEdi
     var h = "<div class='cH'>長さまで分かる材料</div>";   /* CAD-477：改名（旧「カット寸法まで分かる物」） */
     h += "<div class='cN'>今の家の状態で、アプリが持っている材料の長さと数です。見るだけの画面で、見積と保存は変わりません。</div>";
     if (S.mode === "zo") h += "<div class='cN'>" + (S.precut ? "プレカットの方法：長さは実寸です。柱は正寸（ほぞ見込み120を引いた長さ）で出しています。" : "材木の方法：土台は+150、桁と梁は+300の継ぎ見込みが入った長さです。柱は正寸（ほぞ見込み120を引いた長さ）で出しています。") + "</div>";
+    try { if (D.floors.some(function(fl){ return fl.caps.some(function(c){ return c.key === "habakiUke478"; }); })) h += "<div class='cN'>巾木受け：柱と間柱の面と面の間を1本ずつ数えています（巾木受けを先に打って、入隅を後から打つやり方です）。浴室の内側には入れていません。和室と土間は、合板が壁まで伸びていないので45幅では巾木の受けにならないため、30×105をおすすめします。</div>"; } catch(e){}   /* CAD-478 */
     var g2all = [], suji = null;
     if (!D.floors.length) h += "<div class='cM'>まだ図面がありません。</div>";
     D.floors.forEach(function(fl){
@@ -33522,6 +33524,7 @@ lab391
       var all = []; nonEmpty.forEach(function(x){ all = all.concat(x.caps); });
       floors.push({label: nf > 1 ? "1〜2階（まとめて計算）" : null, caps: all, sash: nonEmpty[0].sash, rooms: nonEmpty[0].rooms});
     }
+    try { if (typeof mergeHabaki478 === "function") mergeHabaki478(floors); } catch(e){}   /* CAD-478：巾木受けを足す（見積は変えない） */
     return {floors: floors, rows: C && C.rows ? C.rows : []};
   }
 
@@ -33660,7 +33663,7 @@ lab391
   }
 
   function entry390(e){
-    return "<div class='pM'><b>" + esc390(e.name) + "</b> <span class='pS'>" + esc390(e.sp) + " " + n390(e.a) + "×" + n390(e.b) + "</span><br>" + lenTxt390(e.needs) + "</div>";
+    return "<div class='pM'><b>" + esc390(e.name) + "</b> <span class='pS'>" + esc390(e.sp) + " " + n390(e.a) + "×" + n390(e.b) + "</span><br>" + (e.key === "habakiUke478" && typeof lenTxtDec478 === "function" ? lenTxtDec478(e.needs) : lenTxt390(e.needs)) + "</div>";   /* CAD-478：巾木受けだけ 387.5 のような端数を出す */
   }
 
   function render390(){
@@ -33670,6 +33673,7 @@ lab391
     var h = "<div class='pH'>カット寸法と本数</div>";
     h += "<div class='pN'>プレカットと刻みに出すための、材料ごとの長さと本数です。見るだけの画面で、見積と保存は変わりません。</div>";
     h += "<div class='pN'>大引の長さは「土台の芯々 − 土台の厚み ＋ 大入れ分（両端15mmずつ）」で出しています。</div>";
+    try { if (D.floors.some(function(fl){ return fl.caps.some(function(c){ return c.key === "habakiUke478"; }); })) h += "<div class='pN'>巾木受け：柱と間柱の面と面の間を1本ずつ数えています（巾木受けを先に打って、入隅を後から打つやり方です）。浴室の内側には入れていません。和室と土間は、合板が壁まで伸びていないので45幅では巾木の受けにならないため、30×105をおすすめします。</div>"; } catch(e){}   /* CAD-478 */
     if (!D.floors.length) h += "<div class='pM'>まだ図面がありません。</div>";
 
     /* 骨組み（階ごと） */
@@ -36973,4 +36977,146 @@ function moveLight476(o, dx, dy){
     } catch(e){}
   }, 300);
 })();
+</script>
+<script id="habaki478js">
+/* ================= CAD-478：巾木受けの寸法と本数（プレカット図面・材料に出す） =================
+   翔伍の確定仕様（2026-11-21）：
+   ・巾木受けは壁の足元に、柱と間柱の「面と面の間」を1本ずつ数える。間柱の並びは
+     アプリが実際に置く間柱そのもの（framePos）を使う。通常は厚さ30、ボードの
+     ジョイントに当たる間柱は45。設定で全部45に変えたら、その並びで寸法も変わる。
+     検算（910の柱間・柱105角）：内法805。間柱30なら 387.5×2本、45なら 380×2本、
+     455ピッチで45と30が並ぶ所の内法は 455−22.5−15＝417.5。
+   ・範囲は外周壁の内側と間仕切りの両面。建具・開口（床まで開く所）では切れる
+     （まぐさ・窓台まわりの間柱が区切りになる。腰窓の下は壁が続くので切らない）。
+   ・浴室（UB）の内側には入れない。和室と土間には入れるが、材は45幅でなく
+     30×105（和室と土間は合板が壁まで伸びていないので、土台の上に45を打っても
+     巾木の受けにならず足りないため）。画面に「30×105をおすすめします」と出す。
+   ・数え方の説明（巾木受けを先に打って入隅を打つやり方）を画面に出す。
+   見積の金額には入れない（巾木受けは大工手間の中の受け仕事）。表示だけの追加で、
+   材料取り（__capCut368）の窓口へ、CAD-368・CAD-390 の集計の後から足す。 */
+function habakiFloor478(){
+  var empty = {n45: [], n105: [], pieces: []};
+  try {
+    if (typeof framePos !== "function" || !S.edges || !S.edges.length) return empty;
+    var F = framePos();
+    if (!F || F.err || !F.runs || !F.runs.length) return empty;
+    var secA = 45; try { secA = mabaSecP()[0] || 45; } catch(e){}
+    var mix = S.mabaKata === "mix";
+    var studW = function(th){ return mix ? (th ? secA : 30) : secA; };
+    var zones = S.zones || [], tats = S.tatami || [];
+    var inR = function(x, y, r){ return x >= r.x0 - 1 && x <= r.x1 + 1 && y >= r.y0 - 1 && y <= r.y1 + 1; };
+    /* 壁の脇の点を分類する：ub＝浴室（出さない）／doma＝土間／wasi＝和室／""＝普通 */
+    function clsAt(x, y){
+      var i, z, t;
+      for (i = 0; i < zones.length; i++){ z = zones[i]; if (z.k === "ub" && inR(x, y, z)) return "ub"; }
+      var rm = null, nm = null;
+      try { rm = roomAt(x, y); } catch(e){}
+      if (rm){
+        try { if (roomZoneKind(rm) === "ub") return "ub"; } catch(e){}
+        try { nm = roomNm(rm); } catch(e){}
+        if (nm === "浴室" || nm === "UB") return "ub";
+      }
+      for (i = 0; i < zones.length; i++){ z = zones[i]; if (z.k === "doma" && inR(x, y, z)) return "doma"; }
+      for (i = 0; i < tats.length; i++){ t = tats[i]; if (!inR(x, y, t)) continue; if (t.fk === "flDoma") return "doma"; if (!t.fk || t.fk === "tatami") return "wasi"; }
+      if (nm === "和室") return "wasi";
+      return "";
+    }
+    /* ランとホスト（辺・間仕切り）の対応は framePos と同じ並びで作る */
+    var pv = pts(), hosts = [];
+    (S.edges || []).forEach(function(e, i){ if (i === S.noWall) return; var a = pv[i], c = pv[(i + 1) % pv.length]; if (Math.hypot(c[0] - a[0], c[1] - a[1]) > 1) hosts.push({t: "e", i: i}); });
+    (S.parts2D || []).forEach(function(q, j){ if (pState(q) === "remove") return; if (Math.hypot(q.x2 - q.x1, q.y2 - q.y1) > 1) hosts.push({t: "p", i: j, q: q}); });
+    /* 床まで開く開口だけ、ランの区間として控える（腰窓は下に壁が続くので切らない） */
+    var sillOf478 = function(cat, h){ return (/玄関|勝手口|室内ドア|クローゼット|開口/.test(cat || "") || /掃き出し/.test(cat || "")) ? 0 : Math.max(0, 2030 - (+h || 0)); };
+    var runOps = hosts.map(function(){ return []; });
+    (S.sashes || []).forEach(function(sa){
+      if (!sa.drawn || !sa.host) return;
+      var hk = (sa.host.t === "p" ? "p" : "e") + sa.host.i, hi = -1;
+      for (var k = 0; k < hosts.length; k++){ if ((hosts[k].t + hosts[k].i) === hk){ hi = k; break; } }
+      if (hi < 0) return;
+      var r = F.runs[hi]; if (!r) return;
+      var w = +sa.w || 0; if (!(w > 1) || w >= r.L + 1) return;
+      if (sillOf478(sa.cat, sa.h) > 0) return;
+      var o0 = Math.max(0, Math.min(+sa.pos || 0, Math.max(0, r.L - w)));
+      runOps[hi].push([o0, Math.min(r.L, o0 + w)]);
+    });
+    var out = {n45: [], n105: [], pieces: []};
+    F.runs.forEach(function(r, ri){
+      var host = hosts[ri]; if (!host) return;
+      if (r.kind === "p" && host.q){ var fm = partForm292(host.q); if (fm === "open" || fm === "tare") return; }   /* 開放・垂れ壁は足元に壁が無い */
+      var ms = [];
+      var proj = function(x, y){ var t = (x - r.ax) * r.ux + (y - r.ay) * r.uy; if (t < -2 || t > r.L + 2) return null; var px = r.ax + r.ux * t, py = r.ay + r.uy * t; return Math.hypot(x - px, y - py) <= 2 ? t : null; };
+      (F.posts || []).forEach(function(P){ var t = proj(P.x, P.y); if (t !== null) ms.push({t: t, hw: 52.5}); });
+      (F.studs || []).forEach(function(P){ var t = proj(P.x, P.y); if (t !== null) ms.push({t: t, hw: studW(P.thick) / 2}); });
+      (F.opStuds || []).forEach(function(P){ if (P.seg === "up") return; var t = proj(P.x, P.y); if (t !== null) ms.push({t: t, hw: studW(P.thick) / 2}); });   /* 窓台の下・枠の真横の間柱も区切り */
+      ms.sort(function(a, b){ return a.t - b.t; });
+      var mem = [];
+      ms.forEach(function(m){ var l = mem[mem.length - 1]; if (l && Math.abs(l.t - m.t) <= 10){ if (m.hw > l.hw) l.hw = m.hw; } else mem.push({t: m.t, hw: m.hw}); });
+      if (mem.length < 2) return;
+      var ops = runOps[ri] || [];
+      for (var k = 0; k + 1 < mem.length; k++){
+        var a = mem[k].t + mem[k].hw, b = mem[k + 1].t - mem[k + 1].hw, len = b - a;
+        if (!(len > 1)) continue;
+        var blocked = false;
+        for (var oi = 0; oi < ops.length; oi++){ if (a < ops[oi][1] - 1 && b > ops[oi][0] + 1){ blocked = true; break; } }
+        if (blocked) continue;
+        var mx = r.ax + r.ux * (a + b) / 2, my = r.ay + r.uy * (a + b) / 2;
+        [1, -1].forEach(function(sg){
+          var sx = mx - r.uy * sg * 150, sy = my + r.ux * sg * 150;
+          if (r.kind === "e" && !inside([sx, sy], pv)) return;   /* 外周は内側だけ */
+          var cls = clsAt(sx, sy);
+          if (cls === "ub") return;
+          var L2 = Math.round(len * 10) / 10;
+          out.pieces.push({len: L2, cls: cls || "normal"});
+          if (cls === "doma" || cls === "wasi") out.n105.push(L2); else out.n45.push(L2);
+        });
+      }
+    });
+    return out;
+  } catch(e){ return {n45: [], n105: [], pieces: []}; }
+}
+/* 階ごとに分けて返す（別の階の間取りがあれば withFloor416 でその階の状態で数える） */
+function habakiUke478(){
+  var res = {floors: []};
+  try {
+    if (S.mode !== "zo") return res;
+    var nf = (S.fl && S.fl.length) || 1;
+    if (nf > 1){
+      for (var i = 0; i < nf; i++) res.floors.push(i < 2 ? withFloor416(i + 1, habakiFloor478) : res.floors[res.floors.length - 1]);
+    } else {
+      var one = habakiFloor478();
+      res.floors.push(one);
+      if (S.floors === 2) res.floors.push({n45: one.n45.slice(), n105: one.n105.slice(), pieces: one.pieces.slice()});   /* 階別の間取りが無い総2階は、1階と同じ並びで2階分も数える（間柱と同じ扱い） */
+    }
+  } catch(e){}
+  return res;
+}
+/* CAD-368・CAD-390 の集計（階ごとの材料取り）へ、巾木受けの材料取りを足す */
+function mergeHabaki478(floorsArr){
+  try {
+    if (!floorsArr || !floorsArr.length) return;
+    var H = habakiUke478(); if (!H.floors.length) return;
+    var capsOf = function(fl){
+      var cs = [];
+      if (fl.n45.length) cs.push({key: "habakiUke478", name: "巾木受け", sp: "スギ", a: 30, b: 45, needs: fl.n45.slice(), spec: ""});
+      if (fl.n105.length) cs.push({key: "habakiUke478", name: "巾木受け（和室・土間）", sp: "スギ", a: 30, b: 105, needs: fl.n105.slice(), spec: "和室・土間分は30×105をおすすめします"});
+      return cs;
+    };
+    if (floorsArr.length === 1){ H.floors.forEach(function(fl){ capsOf(fl).forEach(function(c){ floorsArr[0].caps.push(c); }); }); return; }
+    var matched = false;
+    floorsArr.forEach(function(seg){
+      var idx = -1;
+      (S.fl || []).forEach(function(f, k){ if (seg.label && f.name === seg.label) idx = k; });
+      if (idx >= 0 && H.floors[idx]){ capsOf(H.floors[idx]).forEach(function(c){ seg.caps.push(c); }); matched = true; }
+    });
+    if (!matched) H.floors.forEach(function(fl){ capsOf(fl).forEach(function(c){ floorsArr[0].caps.push(c); }); });
+  } catch(e){}
+}
+/* 巾木受けの長さは 387.5 のような端数が出るので、0.1mm 単位でそのまま出す（他の材料の表示は変えない） */
+function lenTxtDec478(needs){
+  var m = {}, ks = [];
+  needs.forEach(function(v){ var r = Math.round(v * 10) / 10; if (!(r in m)){ m[r] = 0; ks.push(r); } m[r]++; });
+  ks.sort(function(a, b){ return b - a; });
+  return ks.map(function(r){ return r.toLocaleString("ja-JP") + " × " + m[r] + "本"; }).join("／");
+}
+try { HB.__habaki478 = habakiUke478; HB.__habakiFloor478 = habakiFloor478; } catch(e){}
 </script>
