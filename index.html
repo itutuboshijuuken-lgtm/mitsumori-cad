@@ -517,7 +517,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <button class="set" id="tsuboIn" type="button"><span>広さ（坪）<small>坪数を入れると、おすすめの縦横が出ます</small></span><b id="tsuboV">— 坪</b></button>
       <div id="tsuboOpts" class="tsopts"></div>
     </div>
-    <h2 class="shp">または、指で外形を描く</h2>
+    <h2 class="shp">家の外形を描く</h2>
     <div class="card"><svg id="draw" viewBox="0 0 360 418" aria-label="指で形を描く所">
       <defs><pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M20 0H0V20" fill="none" stroke="#E3E9F0" stroke-width="1"/></pattern><pattern id="gridGold" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#4A3F24" stroke-width="1"/></pattern></defs>
       <rect id="drawGround" width="360" height="418" fill="#15181C"/><rect id="gridRect" width="360" height="418" fill="url(#grid)"/>
@@ -16057,7 +16057,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__partDraw = true;
     document.body.classList.add("partdraw");
     try { drawToolsUI(); } catch(e){}
-    toast("間仕切り：指でなぞると描けます。タップで選べます");
+    setTimeout(function(){ if (![].some.call(document.querySelectorAll(".co430"), function(c){ return !c.hidden && c.offsetParent; })) toast("間仕切り：指でなぞると描けます。タップで選べます"); }, 50);   /* CAD-488：真ん中の案内が出ている時は同じ事を下に二重に出さない */
   }
   HB.__partDrawOn = pdOn;
 
@@ -35496,13 +35496,13 @@ nav.steps{padding:1px 6px 3px}
       var tick = function(X, Y){ return el("line", {x1: X - tk, y1: Y + tk, x2: X + tk, y2: Y - tk, stroke: col, "stroke-width": (1.4 * k).toFixed(2)}); };
       var lab = function(X, Y, v, fs, rot){ var t = el("text", {x: X.toFixed(1), y: Y.toFixed(1), "text-anchor": "middle", style: "font-size:" + (fs * k).toFixed(2) + "px;font-weight:800;fill:" + col}, fmt(v)); if (rot) t.setAttribute("transform", "rotate(-90 " + X.toFixed(1) + " " + Y.toFixed(1) + ")"); return t; };
       var room = function(px, fs){ return px > (String(fmt(2730)).length * fs * 0.62 + 4); };
-      [[xs, 18, 15], [[b.x0, b.x1], 42, 16]].forEach(function(row){
+      (xs.length > 2 ? [[xs, 18, 15], [[b.x0, b.x1], 42, 16]] : [[[b.x0, b.x1], 18, 16]]).forEach(function(row){   /* CAD-488：区切りが無い時は全体と同じ数字が2段に出るので1段だけ */
         var L = row[0], Y = O0[1] - row[1] * k;
         g.appendChild(el("line", {x1: P(L[0], 0)[0], y1: Y, x2: P(L[L.length - 1], 0)[0], y2: Y, stroke: col, "stroke-width": lw}));
         L.forEach(function(v){ g.appendChild(tick(P(v, 0)[0], Y)); });
         for (var i = 0; i < L.length - 1; i++){ var x1 = P(L[i], 0)[0], x2 = P(L[i + 1], 0)[0]; if (room((x2 - x1) / k, row[2])) g.appendChild(lab((x1 + x2) / 2, Y - 4 * k, L[i + 1] - L[i], row[2], false)); }
       });
-      [[ys, 18, 15], [[b.y0, b.y1], 42, 16]].forEach(function(row){
+      (ys.length > 2 ? [[ys, 18, 15], [[b.y0, b.y1], 42, 16]] : [[[b.y0, b.y1], 18, 16]]).forEach(function(row){
         var L = row[0], X = O0[0] - row[1] * k;
         g.appendChild(el("line", {x1: X, y1: P(0, L[0])[1], x2: X, y2: P(0, L[L.length - 1])[1], stroke: col, "stroke-width": lw}));
         L.forEach(function(v){ g.appendChild(tick(X, P(0, v)[1])); });
