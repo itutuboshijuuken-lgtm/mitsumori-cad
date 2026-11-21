@@ -3226,6 +3226,8 @@ function planExtras(P, sc){
       const k = sa.w > 1200 ? 4 : 2, d = w / k; let path = `M${X(A)}`;
       for (let j = 1; j <= k; j++){ const base = [A[0] + u[0] * d * j, A[1] + u[1] * d * j], peak = [A[0] + u[0] * d * (j - 0.5) + n[0] * d * 0.5, A[1] + u[1] * d * (j - 0.5) + n[1] * d * 0.5]; path += ` L${X(peak)} L${X(base)}`; }
       g += `<path d="${path}" fill="none" stroke="#3E4A57" stroke-width="1.6"/>`;
+    } else if (sa.cat === "開口"){   /* CAD-476：建具の無い開口（階段の上り口など）は窓の水色を描かない。壁を抜いて、両端に壁の小口の線だけ */
+      [A, B].forEach(E => { const e1 = P([E[0] + n[0] * 60, E[1] + n[1] * 60]), e2 = P([E[0] - n[0] * 60, E[1] - n[1] * 60]); g += `<line x1="${e1[0]}" y1="${e1[1]}" x2="${e2[0]}" y2="${e2[1]}" stroke="#1E293B" stroke-width="2"/>`; });
     } else {
       { const q = [[A[0] + n[0] * 45, A[1] + n[1] * 45], [B[0] + n[0] * 45, B[1] + n[1] * 45], [B[0] - n[0] * 45, B[1] - n[1] * 45], [A[0] - n[0] * 45, A[1] - n[1] * 45]];
         g += `<polygon points="${q.map(X).join(" ")}" fill="#5EEAD4" stroke="#0F766E" stroke-width="1.5"/><line x1="${P(A)[0]}" y1="${P(A)[1]}" x2="${P(B)[0]}" y2="${P(B)[1]}" stroke="#0F766E" stroke-width="1"/>`; }
@@ -36007,6 +36009,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     "・読めない項目は null にする（でっち上げない）。",
     "・壁は図面で実際に壁がある所だけ。部屋の続き（LDKと廊下など）・土間とホールの境目は壁にしない。",
     "・階段は壁で囲み、上り口（下りる所）に type \"opening\"（建具の無い開口）を置く。2階建てなら1階と2階の両方の階段に。",
+    "・階段の上り口は、図面の「UP」（1階）・「DN」（2階）の字と矢印の根元の所。踏板の線が途中で曲がる（回り階段）時は、曲がった先の、廊下や部屋に出る所が上り口。分からなければ unsure に「階段の上り口」と書く。",
     "・窓とドアは、それぞれ実際にある壁の位置に。2階の窓は floors2 に入れる（1階に入れない）。",
     "{",
     '  "v": 1,',
@@ -36088,7 +36091,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ skipped++; return; }
         var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
         var along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w;
-        S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"});
+        S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"});
       } catch(e){ skipped++; }
     });
     var addFC = function(L){ (L || []).forEach(function(fc){ try { var r = fc.rect; if (!Array.isArray(r) || r.length < 4) return; var fk = fc.type === "doma" ? "flDoma" : fc.type === "tatami" ? "tatami" : null; if (!fk) return; S.tatami = S.tatami || []; S.tatami.push({x0: tx(Math.min(r[0], r[2])), y0: ty(Math.min(r[1], r[3])), x1: tx(Math.max(r[0], r[2])), y1: ty(Math.max(r[1], r[3])), fk: fk, st: "fl:" + fk}); } catch(e){} }); };
@@ -36118,7 +36121,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
         S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
         S.sashes = []; S.tatami = [];
-        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: +op.h || base.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); } catch(e){ sk2++; } });
+        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); } catch(e){ sk2++; } });
         addFC(F2.floor_changes);
         var snap2 = flSnap(); flLoad(keep1); S.fl.push({name: (S.fl.length + 1) + "階", snap: snap2}); if (S.mode === "zo") S.floors = 2; S.fi = 0; save(); try { flTitle(); } catch(e){} two = {sk: sk2};
       }
