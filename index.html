@@ -36194,6 +36194,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     } catch(e){ two = null; try { if (keep1 && S.fl.length < 2) flLoad(keep1); } catch(e2){} }
     try { HB.__pinH = 0; } catch(e){} try { go("M"); } catch(e){ try { drawPlan(); } catch(e2){} }
     toast("図面から家を作りました" + (two ? "（2階も）" : "") + (skipped ? "（入れられなかった窓・ドア " + skipped + "）" : ""));
+    try { if (HB.__stairAsk480) setTimeout(HB.__stairAsk480, 900); } catch(e){}   /* CAD-480：階段の上り口は人が1回タップで決める */
     setTimeout(function(){ try { if (HB.__autoCheck444) HB.__autoCheck444(true); } catch(e){} }, 900);
   }
   function impOpen(){
@@ -37429,6 +37430,80 @@ function kozo478(C){
       if (h) h.textContent = S.kozo478 === "rc" ? "大工手間に " + workP("kozoR478").p + "%（コンクリートに留める手間）＋共用部の養生・管理組合への届けが入ります。" : S.kozo478 === "steel" ? "大工手間に " + workP("kozoS478").p + "%（鉄骨に留める手間）が入ります。" : "木造は割増なし。";
     } catch(e){}
     return r;
+  };
+})();
+</script>
+<script id="stair480js">
+/* CAD-480（Opus）：図面の写真から入れた後、階段の上り口を人が1回タップで決める（AIは上り口を当てられないため）。
+   1階：上り口（上り始める所）をタップ → その辺に建具なしの開口、階段（直階段）を置く（上る向きは上り口から離れる向き）。
+   2階：下り口（DN）をタップ → その辺に開口だけ（階段の見積は1階の1つだけにする）。「あとで」で飛ばせる。 */
+(function(){
+  function stairLabel(){ return (S.roomNames || []).find(function(r){ return /階段/.test(r.name || ""); }); }
+  function rectAround(p){
+    var segs = [], P = pts();
+    P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; segs.push([a[0], a[1], c[0], c[1]]); });
+    (S.parts2D || []).forEach(function(q){ try { if (pState(q) === "remove") return; } catch(e){} segs.push([q.x1, q.y1, q.x2, q.y2]); });
+    var r = {x0: -Infinity, x1: Infinity, y0: -Infinity, y1: Infinity};
+    segs.forEach(function(g){ var vt = Math.abs(g[0] - g[2]) < 1, hz = Math.abs(g[1] - g[3]) < 1;
+      if (vt && p[1] > Math.min(g[1], g[3]) && p[1] < Math.max(g[1], g[3])){ if (g[0] > p[0]) r.x1 = Math.min(r.x1, g[0]); else if (g[0] < p[0]) r.x0 = Math.max(r.x0, g[0]); }
+      if (hz && p[0] > Math.min(g[0], g[2]) && p[0] < Math.max(g[0], g[2])){ if (g[1] > p[1]) r.y1 = Math.min(r.y1, g[1]); else if (g[1] < p[1]) r.y0 = Math.max(r.y0, g[1]); } });
+    if (!isFinite(r.x0 + r.x1 + r.y0 + r.y1)) return null; return r;
+  }
+  function applyFloor(t, first){
+    var lb = stairLabel(); if (!lb) return "この階に「階段」の部屋がありません";
+    var R = rectAround(lb.p); if (!R) return "階段の部屋の壁が見つかりません";
+    var W = R.x1 - R.x0, H = R.y1 - R.y0;
+    var ds = [["U", Math.abs(t[1] - R.y0)], ["D", Math.abs(t[1] - R.y1)], ["L", Math.abs(t[0] - R.x0)], ["R", Math.abs(t[0] - R.x1)]].sort(function(a, b){ return a[1] - b[1]; });
+    var side = ds[0][0];
+    var onRect = function(seg){ var a = seg[0], c = seg[1]; var onX = function(x){ return Math.abs(a[0] - x) < 2 && Math.abs(c[0] - x) < 2; }, onY = function(y){ return Math.abs(a[1] - y) < 2 && Math.abs(c[1] - y) < 2; }; return onX(R.x0) || onX(R.x1) || onY(R.y0) || onY(R.y1); };
+    pushUndo();
+    /* 今ある開口（取り込みで入った物）のうち、階段の部屋の壁にある物を外す */
+    S.sashes = (S.sashes || []).filter(function(sa){ if (sa.cat !== "開口" || !sa.host) return true; var sg = hostSeg(sa.host); if (!sg) return true; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]), u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L], m = [sg[0][0] + u[0] * ((sa.pos || 0) + sa.w / 2), sg[0][1] + u[1] * ((sa.pos || 0) + sa.w / 2)]; var inR = m[0] >= R.x0 - 2 && m[0] <= R.x1 + 2 && m[1] >= R.y0 - 2 && m[1] <= R.y1 + 2; return !inR; });
+    /* 選んだ辺の上（タップした所）に開口 */
+    var hz = side === "U" || side === "D", len = hz ? W : H, w = Math.min(780, len - 60), c0 = hz ? Math.max(R.x0 + w / 2, Math.min(R.x1 - w / 2, t[0])) : Math.max(R.y0 + w / 2, Math.min(R.y1 - w / 2, t[1]));
+    var pt = side === "U" ? [c0, R.y0] : side === "D" ? [c0, R.y1] : side === "L" ? [R.x0, c0] : [R.x1, c0];
+    var nh = nearestHost(pt);
+    if (nh && nh.d < 30){ var sg = hostSeg(nh.h), L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]), u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L], along = (pt[0] - sg[0][0]) * u[0] + (pt[1] - sg[0][1]) * u[1];
+      S.sashes.push({cat: "開口", name: "建具なし", w: w, h: 2030, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.min(L - w, Math.round(along - w / 2))), flip: 0, st: "new"}); }
+    if (first){
+      /* 階段（直階段）：上る向きは上り口から離れる向き。上り口の辺に直角の長さが短い（1820未満）時は、長い方向へ、上り口に近い端から上る */
+      S.tenken = (S.tenken || []).filter(function(o){ return o.k !== "stair"; });
+      var dir, sw, sd, perp = hz ? H : W, par = hz ? W : H;
+      if (perp >= 1820 || par < 1820){ dir = {D: "n", U: "s", R: "w", L: "e"}[side]; sw = par; sd = perp; }
+      else { if (hz){ dir = (t[0] - R.x0) > (R.x1 - t[0]) ? "w" : "e"; } else { dir = (t[1] - R.y0) > (R.y1 - t[1]) ? "n" : "s"; } sw = perp; sd = par; }
+      S.tenken.push({k: "stair", x: (R.x0 + R.x1) / 2, y: (R.y0 + R.y1) / 2, w: Math.round(sw), d: Math.round(sd), dir: dir, st: "s", isNew: true, state: "new"});
+    }
+    save(); try { solve(); } catch(e){} try { drawPlan(); } catch(e){}
+    return null;
+  }
+  var banner = null, arm = null;
+  function clear(){ if (banner){ banner.remove(); banner = null; } if (arm){ window.removeEventListener("pointerdown", arm, true); arm = null; } }
+  function ask(fi, first, done){
+    try { if (Array.isArray(S.fl) && S.fl.length > 1 && S.fi !== fi) flSwitch(fi); } catch(e){}
+    if (!stairLabel()){ done(); return; }
+    clear();
+    banner = document.createElement("div");
+    banner.style.cssText = "position:fixed;left:8px;right:8px;top:8px;z-index:2147483600;background:#1E3A8A;color:#fff;border-radius:12px;padding:10px 12px;font-size:15px;font-weight:800;box-shadow:0 4px 16px rgba(0,0,0,.3);display:flex;gap:8px;align-items:center";
+    banner.innerHTML = '<span style="flex:1">' + (first ? "1階：階段の上り口（上り始める所）をタップしてください" : (S.fl && S.fl[fi] ? S.fl[fi].name : "2階") + "：階段の下り口（DN）をタップしてください") + '</span><button type="button" style="background:#fff;color:#1E3A8A;border:0;border-radius:8px;min-height:36px;padding:0 10px;font-weight:800">あとで</button>';
+    document.body.appendChild(banner);
+    banner.querySelector("button").onclick = function(){ clear(); toast("階段の上り口は、あとで階段を押して直せます"); };
+    arm = function(e){
+      var sv = document.getElementById("plan"); if (!sv || !e.target.closest || !e.target.closest("#plan")) return;
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      var t = toMM(planPt(e)); clear();
+      var err = applyFloor(t, first); if (err){ toast(err); }
+      else toast(first ? "1階の階段を置きました（種類は階段を押して変えられます）" : "下り口を決めました");
+      setTimeout(done, 400);
+    };
+    window.addEventListener("pointerdown", arm, true);
+  }
+  HB.__stairAsk480 = function(){
+    try {
+      var stepBtn = [].slice.call(document.querySelectorAll(".steps button")).find(function(x){ return /間取り/.test(x.textContent); });
+      if (stepBtn) stepBtn.click();
+      var two = Array.isArray(S.fl) && S.fl.length > 1;
+      setTimeout(function(){ ask(0, true, function(){ if (two) ask(1, false, function(){ try { flSwitch(0); } catch(e){} }); }); }, 300);
+    } catch(e){}
   };
 })();
 </script>
