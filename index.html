@@ -35848,11 +35848,13 @@ nav.steps{padding:1px 6px 3px}
       var i = (step() === "put" || step() === "all") ? fAt(m) : -1;   /* CAD-443：家具は ④置く物 と ⑤見直し だけ */
       if (i >= 0){
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
+        var free498 = (fsel === i && HB.__fFreeI498 === i && Date.now() < (HB.__fFree498 || 0));   /* CAD-500：置いた直後・直した直後3秒は長押しなしでつかめる */
         fsel = i; var f = S.furn434[i];
         /* CAD-476：置いてある家具も長押しでつかんでからドラッグ（触ってすぐ反応して間違えて動かしてしまうため）。
            長押しの前に指が動いたら掴まない（ただの選択で終わる） */
         drag = {id: e.pointerId, dx: f.x - m[0], dy: f.y - m[1], moved: false, armed: false, cx0: e.clientX, cy0: e.clientY, cancel: false};
-        drag.timer = setTimeout(function(){ if (drag && drag.id === e.pointerId && !drag.cancel){ drag.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} paint(); } }, 350);
+        if (free498){ drag.armed = true; HB.__fFree498 = Date.now() + 3000; }
+        else drag.timer = setTimeout(function(){ if (drag && drag.id === e.pointerId && !drag.cancel){ drag.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} paint(); } }, 350);
         try { sl.setPointerCapture(e.pointerId); } catch(er){} chips(); drawPlan(); return;
       }
       if (fsel >= 0){ fsel = -1; chips(); drawPlan(); }
@@ -35878,7 +35880,7 @@ nav.steps{padding:1px 6px 3px}
       try { var hw = (f.r ? f.h : f.w) / 2, hh = (f.r ? f.w : f.h) / 2, oth = (S.furn434 || []).filter(function(x){ return x !== f; }).map(function(x){ return [x.x, x.y, (x.r ? x.h : x.w) / 2, (x.r ? x.w : x.h) / 2]; }).concat((S.tenken || []).map(function(x){ var e2 = tkExt(x); return [x.x, x.y, e2[0], e2[1]]; })); var sn = HB.__snapBox474(f.x, f.y, hw, hh, oth); f.x = sn[0]; f.y = sn[1]; } catch(er){}   /* CAD-474：壁・他の物に吸い付く */
       paint();
     }, true);
-    var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); if (drag.timer) clearTimeout(drag.timer); var mv = drag.moved; drag = null; if (mv){ save(); drawPlan(); } };
+    var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); if (drag.timer) clearTimeout(drag.timer); var mv = drag.moved; if (drag.armed && fsel >= 0){ HB.__fFreeI498 = fsel; HB.__fFree498 = Date.now() + 3000; } drag = null; if (mv){ save(); drawPlan(); } };
     sl.addEventListener("pointerup", up, true); sl.addEventListener("pointercancel", up, true);
     /* CAD-477：定番の部屋の置いた直後ドラッグの終了（動かしたら保存） */
     var upP477 = function(e){ if (!pdrag || e.pointerId !== pdrag.id) return; e.stopImmediatePropagation(); var was477 = pdrag.on; pdrag = null; if (was477){ save(); drawPlan(); } };
@@ -37190,9 +37192,16 @@ function moveLight476(o, dx, dy){
         if ((sel.t === "k" && c.k > last.k && sel.i === c.k - 1) || (sel.t === "o" && c.o > last.o && sel.i === c.o - 1) || (sel.t === "lt" && c.l > last.l && sel.i === c.l - 1)) HB.__grab476 = sel.t + sel.i;   /* CAD-477：照明も見張り対象に */
       }
       if (HB.__grab476 && (typeof sel === "undefined" || !sel || sel.t + sel.i !== HB.__grab476)) HB.__grab476 = null;
+      /* CAD-500：置いた直後・ドラッグや矢印で直した直後は長押しなしでつかめる。最後に触ってから3秒たったら固定（長押しでないと動かない） */
+      if (HB.__grab476 !== key500){ key500 = HB.__grab476; at500 = Date.now(); }
+      if (HB.__grab476 && typeof dragging !== "undefined" && dragging) at500 = Date.now();
+      if (HB.__grab476 && Date.now() - at500 > 3000){ HB.__grab476 = null; key500 = null; }
       last = c;
     } catch(e){}
-  }, 300);
+  }, 150);
+  var key500 = null, at500 = 0;
+  document.addEventListener("pointerdown", function(e){ try { if (e.target.closest && e.target.closest("#selBar [data-ar], #selBar button, #chips434 button")){ at500 = Date.now(); if (Date.now() < (HB.__fFree498 || 0)) HB.__fFree498 = Date.now() + 3000; } } catch(er){} }, true);
+  ["pointerup", "pointercancel"].forEach(function(t){ document.addEventListener(t, function(){ if (HB.__grab476) at500 = Date.now(); }, true); });
 })();
 </script>
 <script id="habaki478js">
