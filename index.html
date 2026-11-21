@@ -35496,6 +35496,7 @@ nav.steps{padding:1px 6px 3px}
   /* 手順に入った時の構え */
   function arm(k){
     try {
+      if (HB.__noArm511 === k){ HB.__noArm511 = null; return; }   /* CAD-511：物を押して自動で手順が変わった時は、道具を持たせない（置く・引くが勝手に始まらない） */
       if (k === "part"){
         if (typeof toolOpen !== "undefined" && toolOpen !== "part" && !(typeof enclMode !== "undefined" && enclMode)){
           toolOpen = "part"; if (HB.__partDrawOn) HB.__partDrawOn(); drawToolsUI();
@@ -36499,11 +36500,11 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
   function onM(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM); }
   function st(){ try { return HB.__step399 ? HB.__step399() : "all"; } catch(e){ return "all"; } }
   function tut(){ try { return document.body.classList.contains("nbtutRun") || !!HB.__nbtut; } catch(e){ return false; } }
-  HB.__lockRoom443 = function(){ if (!onM() || tut()) return false; var s = st(); return s === "part" || s === "ds" || s === "put"; };
+  HB.__lockRoom443 = function(){ if (!onM() || tut() || HB.__auto511) return false; var s = st(); return s === "part" || s === "ds" || s === "put"; };   /* CAD-511：押した物で手順が切り替わる形では、部屋はどの手順でも押せる */
   var ALLOW = {part: {p: 1, r: 1}, floor: {}, ds: {o: 1}, put: {k: 1}};
   if (typeof pickCands === "function" && !pickCands.__l443){
     var pc0 = pickCands;
-    pickCands = function(){ var c = pc0.apply(this, arguments); try { if (onM() && !tut()){ var a = ALLOW[st()]; if (a && Array.isArray(c)) c = c.filter(function(x){ return x && a[x.t]; }); } } catch(e){} return c; };
+    pickCands = function(){ var c = pc0.apply(this, arguments); try { if (onM() && !tut()){ var a = HB.__auto511 ? null : ALLOW[st()]; if (a && Array.isArray(c)) c = c.filter(function(x){ return x && a[x.t]; }); } } catch(e){} return c; };
     pickCands.__l443 = true;
   }
   var css = document.createElement("style");
@@ -38300,5 +38301,35 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
     } catch(e){}
   }
   setInterval(show, 250); show();
+})();
+</script>
+<script id="auto511js">
+/* ===== CAD-511（Opus）：押した物で手順が自動で切り替わる（本人の決定「C＋B」の2回目） =====
+   部屋を押す→②床（床のパネル）、壁・間仕切りを押す→①間仕切り、ドア・窓を押す→③ドア窓、置いた物・照明を押す→④置く物。
+   どの手順の時でも、押した物はさわれる（CAD-443 の「その手順の物だけ」をやめる）。⑤見直しの時は切り替えない。
+   物を置く構え・間仕切りを引く道具を持っている時は、今まで通りその作業が先（置く・引く）。チュートリアル中は今まで通り。データ・見積は触らない */
+(function(){
+  "use strict";
+  HB.__auto511 = true;
+  var MAP = {p: "part", r: "part", o: "ds", k: "put", lt: "put"};
+  var lastKey = "", lastRoom = false;
+  function tut(){ try { return document.body.classList.contains("nbtutRun") || !!HB.__nbtut; } catch(e){ return false; } }
+  function tick(){
+    try {
+      if (tut() || !HB.__pageM || !HB.__step399 || !HB.__setStep399){ lastKey = ""; return; }
+      var st = HB.__step399();
+      var cur = (typeof sel !== "undefined" && sel) ? sel.t + ":" + sel.i : "";
+      if (cur && cur !== lastKey){
+        var want = MAP[sel.t];
+        if (want && st !== "all" && st !== want){ HB.__noArm511 = want; setTimeout(function(){ if (HB.__noArm511 === want) HB.__noArm511 = null; }, 1500); HB.__setStep399(want); }
+      }
+      lastKey = cur;
+      var rb = document.getElementById("roomBar176"), open = !!(rb && !rb.hidden && rb.innerHTML);
+      if (open && !lastRoom && st !== "all" && st !== "floor" && !cur) HB.__setStep399("floor");
+      lastRoom = open;
+    } catch(e){}
+  }
+  setInterval(tick, 120);
+  try { var od = window.drawPlan; if (typeof od === "function" && !od.__a511){ var w = function(){ var r = od.apply(this, arguments); try { tick(); } catch(e){} return r; }; w.__a511 = true; window.drawPlan = w; } } catch(e){}
 })();
 </script>
