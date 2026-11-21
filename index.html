@@ -30262,8 +30262,10 @@ window.__len309txt = function(){ return null; };
     ["#geyaAdd", C("geya")],
     ["#pvSeg [data-pv='iso']", C("iso")],
     ["#pvSeg [data-pv='plan']", C("plan")],
-    ["#rotL", C("mawasu")],
-    ["#rotR", C("mawasu")],
+    /* CAD-497（見た目の直しC・本人の決定 2026-11-21）：#rotL／#rotR には絵を付けない。
+       絵（mawasu）は左右どちらのボタンも同じ絵で両向きの矢印が1枚に入っており、回す方向が分からない。
+       文字の矢印（↺＝左回り／↻＝右回り）は方向が一目で分かるので文字を残し、絵を外して二重を解く。
+       文字だけ表示（gosei-btnstyle-v1="text"）では絵が消えるため、絵を残すと左右が区別できなくなる事も理由。 */
     ["#sbOk", C("ok")],
     ["#sbLen", C("nagasa")],
     ["#sbRot", C("mawasu")],
