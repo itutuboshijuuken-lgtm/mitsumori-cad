@@ -25044,6 +25044,8 @@ body.gold #drawnList .sprow.arm254{background:#3a1f1f}
 /* ===== CAD-254：室内図（壁の面カード）に「いま見ている面」を、家の小さな図で光らせて出す ===== */
 #elevBox .card .th254{margin-left:auto;flex:0 0 auto;align-self:center;line-height:0}
 #elevBox .card .th254 svg{display:block}
+/* CAD-504：室内図では上の小さい平面図で壁が分かるので、カードの中の場所の図（二重）は出さない（本人の決定） */
+#st6[data-v162="room"] #elevBox .card .th254{display:none!important}
 </style>
 <script>
 (function(){ "use strict";
