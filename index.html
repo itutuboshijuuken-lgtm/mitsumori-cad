@@ -36254,7 +36254,7 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
       window.__gz451Hold = holdNow();
       /* CAD-463（Opus）：平色にするのは「指で拡大・移動している最中」だけ。前は拡大している間ずっと平色で、
          床を置いても柄が出ず「反映されない」ように見えていた（本人の動画 2026-11-21）。指を離して300ms静まったら柄に戻す */
-      if (pinchBusy() || touchesNow > 1){
+      if (false){   /* CAD-465：床の柄は、拡大中も指で動かしている最中も、ずっと出す（本人「ずっとフローリングとか表示で」）。平色にしても速さはほぼ変わらないと測って確認済み */
         zLowSince = 0;
         if (!isOn){ isOn = true; document.body.classList.add("gz451z"); }
       } else {
