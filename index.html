@@ -38112,4 +38112,12 @@ function kozo478(C){
 #roomBar176 #rmFlHost367 #floorPanel>button{flex:0 0 92px!important;width:92px!important;min-width:92px!important;height:52px!important;min-height:52px!important;font-size:12.5px!important;padding:0 4px!important;margin:0!important}
 #roomBar176 #rmFlHost367 #floorPanel>button .ic325,#roomBar176 #rmFlHost367 #floorPanel>button img.ic325{display:none!important}
 #roomBar176 #rmFlHost367 #floorPanel>div{display:none!important}
+/* CAD-509：さらに詰める（本人「まだ余白潰せそう」）。「床の仕上げ」の見出しは出さず、「他の部屋もまとめて」は上の行（閉じるの左）へ。上の行のボタンを低く */
+body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
+#roomBar176 .r1{min-height:34px;margin-bottom:6px}
+#roomBar176 .r1 button{min-height:34px!important}
+#roomBar176 .rmMulti375:not(.on375){position:absolute;top:6px;right:92px;margin:0!important}
+#roomBar176 .rmMulti375:not(.on375)>button{min-height:34px!important;font-size:12.5px!important;padding:0 10px!important}
+#roomBar176 #rmFlHost367{margin:0!important}
+#roomBar176 #rmFlHost367 #floorPanel{margin:0!important;padding:0 0 2px!important}
 </style>
