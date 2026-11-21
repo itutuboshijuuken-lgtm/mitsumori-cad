@@ -6719,6 +6719,58 @@ function framePos(){
         });
       });
     }
+    /* CAD-480：開口端の間柱（jamb・枠脇＝まぐさと窓枠の受け）が、ピッチ間柱や開口の上下の間柱と
+       近すぎる（面間150mm未満）時は、開口側を残して相手側を置かない（本人の指摘 2026-11-21
+       「20とかありえん数字が出ない様にアプリをやり直せ」）。
+       調査 probe-stud-close：間柱どうしの面間150未満は種データ4軒で32か所・全部が開口脇。
+       原因は、開口端のあと足し（CAD-199/454/222）が柱との距離しか見ず、ピッチ間柱との距離を
+       見ていない事。柱には CAD-154 の「近いと柱が兼ねる」があるが、間柱どうしには無かった。
+       ここで全系統（ピッチ・開口端・窓台の下・まぐさの上・枠脇）を通してそろえる。
+       開口の両脇の間柱どうし（両方とも開口側）は両方残す。 */
+    {
+      let secA480 = 45; try { secA480 = mabaSecP()[0] || 45; } catch(e){}
+      const mix480 = S.mabaKata === "mix", wOf480 = th => mix480 ? (th ? secA480 : 30) : secA480;
+      const jambKeys480 = new Set();
+      runs.forEach(r => {
+        (r.jambs || []).concat((r.jambs454 || []).filter(t => ![...r.postT].some(pt => Math.abs(pt - t) <= 50))).forEach(t => {
+          const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y);
+          if (!postMap.has(kk)) jambKeys480.add(kk);
+        });
+      });
+      const dropStud480 = new Set(), dropOp480 = new Set(), dropPos480 = new Set();
+      /* CAD-199 の間仕切り開口端の間柱は「柱から105mm以内は柱が兼ねる」が決まりだが、その判定は
+         取り合いの柱しか見ておらず、後から910の割り付けで足される柱（埋めの柱）が見えていなかった。
+         そのため埋めの柱の77〜85mm隣に開口端の間柱が立ち、巾木受けに2〜5mmのピースが出ていた（35坪2階で実測）。
+         ここで柱全体に対してそろえる：柱の105mm以内にある CAD-199 の間柱は置かない（柱が受ける）。
+         ※CAD-454 の窓柱（jambs454）は「柱を割り付けへ寄せ、50mm超ずれたら枠の端に窓柱を足す」が
+           決まった設計なので対象にしない（柱と窓柱が55〜85mmで並ぶのは設計どおり）。 */
+      const jamb199Keys480 = new Set();
+      runs.forEach(r => { (r.jambs || []).forEach(t => { const x = r.ax + r.ux * t, y = r.ay + r.uy * t, kk = key(x, y); if (!postMap.has(kk)) jamb199Keys480.add(kk); }); });
+      const postPts480 = [...postMap.values()];
+      const nearPost480 = (x, y) => postPts480.some(P => Math.hypot(P.x - x, P.y - y) <= 105);
+      studMap.forEach((S0, kk) => { if (jamb199Keys480.has(kk) && nearPost480(S0.x, S0.y)) dropStud480.add(kk); });
+      runs.forEach(r => {
+        const mem = [];
+        const proj480 = (x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy; if (t < -1.5 || t > r.L + 1.5) return null; return Math.hypot(x - (r.ax + r.ux * t), y - (r.ay + r.uy * t)) <= 1.5 ? t : null; };
+        studMap.forEach((S0, kk) => { const t = proj480(S0.x, S0.y); if (t === null) return; mem.push({t, w: wOf480(S0.thick), pri: jambKeys480.has(kk) ? 2 : 1, sk: kk}); });
+        Z.opStuds.forEach((P, ix) => { const t = proj480(P.x, P.y); if (t === null) return; mem.push({t, w: wOf480(P.thick), pri: P.seg === "side" ? 2 : 1, oi: ix, pk: key(P.x, P.y), seg: P.seg}); });
+        mem.sort((a, b) => a.t - b.t);
+        const grp480 = [];
+        mem.forEach(m => { const g = grp480[grp480.length - 1]; if (g && Math.abs(m.t - g.t) <= 1){ if (m.w > g.w) g.w = m.w; if (m.pri > g.pri) g.pri = m.pri; g.items.push(m); } else grp480.push({t: m.t, w: m.w, pri: m.pri, items: [m]}); });
+        for (let i = 0; i + 1 < grp480.length; i++){
+          const A = grp480[i], B = grp480[i + 1], gap = (B.t - B.w / 2) - (A.t + A.w / 2);
+          if (!(gap < 150)) continue;
+          const drop = (A.pri === 2 && B.pri === 1) ? B : (B.pri === 2 && A.pri === 1) ? A : null;
+          if (!drop) continue;
+          drop.items.forEach(m => { if (m.sk) dropStud480.add(m.sk); if (m.oi !== undefined){ dropOp480.add(m.oi); if (m.seg === "dn" || m.seg === "up") dropPos480.add(m.pk); } });
+        }
+      });
+      dropStud480.forEach(kk => studMap.delete(kk));
+      if (dropOp480.size){
+        Z.opStuds = Z.opStuds.filter((P, ix) => { if (!dropOp480.has(ix)) return true; if (P.seg === "dn") Z.opDnN--; else if (P.seg === "up") Z.opUpN--; return false; });
+        Z.opPosN -= dropPos480.size;
+      }
+    }
     const chF292 = +S.ch || 2400;
     const cls = (x, y) => {   /* CAD-292: 開放の間仕切りは柱・間柱を数えない。柱・間柱の長さは形（壁のある高さ）に合わせる */
       const prs = runs.filter(r => r.kind === "p" && r.isNew && onRun(r, x, y));
