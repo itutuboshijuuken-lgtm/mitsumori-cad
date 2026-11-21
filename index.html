@@ -22565,7 +22565,7 @@ setInterval(gkSync208, 600);
     jobs.forEach(function(j){
       j.els.forEach(function(el){
         if (el.getAttribute("fill") === cfg.fillUrl){ el.setAttribute("fill", IGU); }
-        el.setAttribute("data-tat286s", "1");
+        if (el.getAttribute("data-tat286s") !== "1") el.setAttribute("data-tat286s", "1");   /* CAD-470：同じ値なら書かない（アイドル6秒で480回書いていた） */
       });
     });
     var sig = jobs.map(function(j){
@@ -26593,8 +26593,12 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
       var old = svg.querySelector("#dir281");
       if (!vrooms.length){ if (old) old.remove(); return; }
       if (old && old.getAttribute("data-sig281") === sig) return;
-      syncPat(pFl, "pFlV", true);
+      /* CAD-470（Opus）：#plan の #dir281 は cleanLayers383（床の写真は #flAll282 の1層に統一）が毎回消すので、作らない。
+         前は 400ms ごとに「作る→消す」を繰り返し、そのたびに床が描き直されてチカチカしていた（じゅうちゃんの切り分けの残件・アイドル6秒で15回）。
+         向きの柄 pFlV だけは #flAll282 が使うので、形が変わった時だけ合わせる */
+      if (window.__sig470 !== sig || !svg.querySelector("#pFlV")){ window.__sig470 = sig; syncPat(pFl, "pFlV", true); }
       if (old) old.remove();
+      if (svg.id === "plan") return;
       var g = document.createElementNS(NS, "g");
       g.setAttribute("id", "dir281"); g.setAttribute("pointer-events", "none");
       g.setAttribute("data-sig281", sig);
