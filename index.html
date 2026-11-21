@@ -668,6 +668,9 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="chips" id="gbC"></div>
     <div class="sub2">壁のない辺（開放する辺・外壁・面材・柱・間柱・内壁・断熱から除き、既存との取り合いを出す）</div>
     <div class="chips" id="noWall"></div>
+    <div class="sub2">既存とのつなぎ方（増築）</div>
+    <div class="chips" id="join490"></div>
+    <p class="hint" id="join490h" style="margin-top:4px"></p>
     <div class="sub2">床の増し貼り下地（構造用合板の厚み）</div>
     <div class="chips" id="flBaseT"></div>
     <div class="sub2">ラミテンの厚み</div>
@@ -1042,6 +1045,7 @@ const WORK = [
   ["precutUnpan", "プレカット運搬費", "円/式", 0, 50000],
   ["kizami", "刻み人工（坪あたり・15坪以下は2.0）", "人工/坪", 0, 1.5]   /* CAD-248：15坪以下は計算側で2.0に切り替える */,
   ["toriai", "既存との取り合い（既存外壁撤去・雨仕舞い）", "円/m", 0, 8000],
+  ["expJ490", "エキスパンションジョイント（壁・屋根のカバー金物・取付）（仮）", "円/m", 0, 12000], ["anc490", "既存基礎との緊結 差し筋（ケミカルアンカー）（仮）", "円/本", 0, 1500],
   ["kisoBase", "基礎（ベース）", "円/㎡", 0, 18000],
   ["kisoRise", "基礎（立ち上がり）", "円/m", 0, 15000],
   ["kisoPump", "基礎 生コン・ポンプ最低料金", "円/式", 0, 30000],   /* CAD-248：少量の生コン・ポンプの最低料金（新設。案の幅30,000〜50,000の下限） */
@@ -5935,6 +5939,8 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   { const el = $("ceilFrame"); if (el){ el.innerHTML = [["wood", "木下地（野縁）"], ["lgs", "LGS（軽鉄）"]].map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.ceilFrame === "lgs" ? "lgs" : "wood") === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.ceilFrame = b.dataset.v; save(); drawSpec(); }); } }
   const chipsKV = (id, opts, key, def) => { const el = $(id); if (!el) return; el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S[key] || def) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S[key] = b.dataset.v; save(); drawSpec(); }); };
   { const el = $("noWall"); if (el){ const opts = [[-1, "なし（全部の辺に壁）"]].concat((S.edges || []).map((e, i) => [i, `辺${i + 1}（${fmt(e.v)}mm）${i === S.house ? "・母屋側" : ""}`])); el.innerHTML = opts.map(([v, n]) => `<button data-v="${v}" aria-pressed="${(S.noWall == null ? -1 : S.noWall) === v}" type="button">${n}</button>`).join(""); el.querySelectorAll("button").forEach(b => b.onclick = () => { S.noWall = +b.dataset.v; save(); drawSpec(); }); } }
+  chipsKV("join490", [["ittai", "一体（既存の壁を抜いてつなぐ）"], ["betsu", "別棟（エキスパンションで縁を切る）"]], "join490", "ittai");
+  { const h = $("join490h"); if (h) h.textContent = S.join490 === "betsu" ? "つなぐ辺にも新しい壁・柱・基礎を立て、既存との間は隙間を取ってカバー金物で納めます。既存の家は今の基準で見直さずに済む場合が多い（確認申請で設計士さんが決める所）。" : "既存の外壁を撤去してつなぎます。既存の壁の開口に梁の補強、既存の基礎とは差し筋（ケミカルアンカー）で緊結します（基礎の増し打ちでつなぐ方法もあります）。"; }
   chipsKV("mabaSec", [["45x105", "45×105（標準）"], ["30x105", "30×105"], ["30x90", "30×90"], ["45x90", "45×90"]], "mabaSec", "45x105");
   chipsKV("mabaKata", [["all", "全部 同じ太さ"], ["mix", "柱間30厚間柱"]], "mabaKata", "all");
   chipsKV("joistSec", [["45", "45×45（標準）"], ["60", "45×60"]], "joistSec", "45");
@@ -7842,10 +7848,22 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   else if (S.mode !== "zo") { const wk = workP("kizami"), wn = workP("ninku"), kRate248 = wk.avg && nobeT <= 15 ? 2 : wk.p, nk = kRate248 * nobeT;   /* CAD-391：新築・増築の刻みは「大工手間（基本）」に含める（行を出さない） */ rows.push({name: "刻み人工", spec: `${fmt(nk, 1)}人工 × ${fmt(wn.p)}円（${fmt(kRate248, 1)}人工/坪 × ${fmt(nobeT, 2)}坪${kRate248 !== wk.p ? "・15坪以下は2.0人工/坪" : ""}）`, qty: "", cost: nk * wn.p, avg: wk.avg || wn.avg, fix: {kind: "work", key: "kizami"}}); }   /* CAD-248：仮単価の時だけ15坪以下を2.0人工/坪にする（自分の単価を入れていればそちら優先） */
   if (S.precut){ const wu = workP("precutUnpan"); rows.push({name: "プレカット運搬費", spec: `工場からの配達 ${fmt(wu.p)}円`, qty: "1式", cost: wu.p, avg: wu.avg, fix: {kind: "work", key: "precutUnpan"}}); }   // CAD-122: 運搬費は交通費・移動とは別の行（プレカット方法だけ）
   if (S.noWall >= 0 && S.edges[S.noWall]){ const tw = workP("toriai"), tl = S.edges[S.noWall].v / 1000; rows.push({name: "既存との取り合い", spec: `既存外壁撤去・雨仕舞い ${fmt(tl, 1)}m × ${fmt(tw.p)}円`, qty: `${fmt(tl, 1)}m`, cost: tw.p * tl, avg: tw.avg, fix: {kind: "work", key: "toriai"}}); }
+  /* CAD-491（Opus）：増築の既存とのつなぎ方。一体＝今の「既存との取り合い」に、既存の壁の開口の梁補強と既存基礎との緊結（差し筋）を足す。
+     別棟＝つなぐ辺にも壁・柱・基礎を立て（calc の外側で S.noWall を外して計算）、取り合いの代わりにエキスパンションジョイント（壁の高さ＋屋根の分）。
+     理由：一体にすると既存も新しい基準で見られる場合があり、別棟（構造的に縁を切る）にするかは確認申請で設計士さんが決める所。どちらでも見積が出るようにする。値段は仮。 */
+  if (S.mode === "zo"){ try {
+    const jE = S.join490 === "betsu" ? S.__nw490 : S.noWall, jL = (jE >= 0 && S.edges[jE]) ? S.edges[jE].v : 0;
+    if (jL > 0 && S.join490 === "betsu"){ const wj = workP("expJ490"), Lm = (jL + (Hk || 2720) + 600) / 1000; rows.push({name: "エキスパンションジョイント（別棟でつなぐ）", spec: `つなぐ辺${fmt(jL)}＋壁の高さ${fmt(Hk || 2720)}＋屋根600 ＝ ${fmt(Lm, 1)}m × ${fmt(wj.p)}円（既存と隙間を取り、カバー金物で雨仕舞い）`, qty: `${fmt(Lm, 1)}m`, cost: wj.p * Lm, avg: wj.avg, fix: {kind: "work", key: "expJ490"}}); }
+    if (jL > 0 && S.join490 !== "betsu"){
+      const nSp = Math.ceil(jL / 3640 - 1e-9), spanB = jL / nSp, hB = Math.max(150, Math.ceil(spanB / 11 / 30) * 30);   /* 3640を超える開口は途中に柱を立てて割る */
+      lum("keta", "既存の壁の開口の梁補強", 105, hB, jtA([jL], 300), `105×${fmt(hB)}・開口${fmt(jL)}${nSp > 1 ? `（途中に柱${nSp - 1}本・柱の間${fmt(Math.round(spanB))}）` : ""}・スパン÷11の目安。既存の柱・梁の状態を見て決める`, false);
+      if (S.house >= 0 && S.edges[S.house]){ const wa = workP("anc490"), nA = Math.ceil(S.edges[S.house].v / 300) + 1; rows.push({name: "既存基礎との緊結（差し筋）", spec: `ケミカルアンカー D13 @300 ${nA}本 × ${fmt(wa.p)}円（既存の基礎に穴をあけて差し筋。基礎の増し打ちでつなぐ方法もあり、契約前に両方説明）`, qty: `${nA}本`, cost: wa.p * nA, avg: wa.avg, fix: {kind: "work", key: "anc490"}}); }
+    }
+  } catch(e){} }
   if (window.__J406 > 0){ const nj = window.__J406; work("tanzaku", "短冊金物（継手の上）", nj, "枚"); }   /* CAD-427：継手加工の行は出さない（翔伍の決定 2026-11-20：手刻みでも刻みは大工手間（基本）に含まれる形のため、加工費を別に取ると二重取りになる。短冊金物は今までどおり残す） */
   if (S.kisoNew){
     const w1 = workP("kisoBase"), w2 = workP("kisoRise"), k = S.kiso / 400;
-    const perK = (S.house >= 0 && S.edges[S.house]) ? per - S.edges[S.house].v : per;   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
+    const perK = (S.house >= 0 && S.edges[S.house] && S.join490 !== "betsu") ? per - S.edges[S.house].v : per;   /* CAD-491：別棟は母屋側にも自分の基礎を立てる */   // CAD-232: 母屋側の辺は基礎の立ち上がりを拾わない（ベタ基礎・内部の基礎は今までどおり。本人の決定 2026-11-14）
     if (S.kisoType === "nuno"){ const wN = workP("kisoNuno"), wB = workP("kisoBoshitsu"); rows.push({name: `基礎（布基礎・立ち上がり${fmt(S.kiso)}）`, spec: `外周 ${fmt(perK / 1000, 1)}m×${fmt(wN.p)} ＋ 床下の防湿コンクリート ${fmt(area, 1)}㎡×${fmt(wB.p)}`, qty: "", cost: wN.p * perK / 1000 + wB.p * area, avg: wN.avg || wB.avg, fix: {kind: "work", key: "kisoNuno"}}); } else
     rows.push({name: `基礎（ベタ基礎・立ち上がり${fmt(S.kiso)}）`, spec: `ベース ${fmt(area, 1)}㎡×${fmt(w1.p)} ＋ 立上り ${fmt(perK / 1000, 1)}m×${fmt(w2.p)}${S.kiso !== 400 && w2.avg ? `×${fmt(k, 2)}` : ""}`, qty: "", cost: w1.p * area + w2.p * (w2.avg ? k : 1) * perK / 1000, avg: w1.avg || w2.avg, fix: {kind: "work", key: w1.avg ? "kisoBase" : "kisoRise"}});
     { const mo410 = Math.max(1, Math.ceil(area * (two ? 2 : 1) / 3.3058 / 12));   /* CAD-410：仮設トイレの月数＝延床12坪で1か月の目安（新築・増築だけ） */
@@ -37497,6 +37515,18 @@ function kozo478(C){
     } catch(e){}
     return r;
   };
+})();
+</script>
+<script id="join491js">
+/* CAD-491：別棟（エキスパンション）でつなぐ時は、つなぐ辺にも壁・柱・外壁・断熱を拾う（見積の時だけ S.noWall を外す。図面は今のまま） */
+(function(){
+  if (typeof calc !== "function" || calc.__j491) return;
+  var c0 = calc;
+  window.calc = function(){
+    if (S.mode === "zo" && S.join490 === "betsu" && typeof S.noWall === "number" && S.noWall >= 0){ var nw = S.noWall; S.noWall = -1; S.__nw490 = nw; try { return c0.apply(this, arguments); } finally { S.noWall = nw; delete S.__nw490; } }
+    return c0.apply(this, arguments);
+  };
+  window.calc.__j491 = true;
 })();
 </script>
 <script id="stair480js">
