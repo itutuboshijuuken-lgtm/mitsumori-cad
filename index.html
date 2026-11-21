@@ -4776,7 +4776,7 @@ function drawSelBar0(){
   const was = !bar.hidden; bar.hidden = !on; if (!on) holdStop(); if (was !== !!on) setTimeout(() => { if (HB.__pageM && !(window.__dpAt338 && Date.now() - window.__dpAt338 < 250)) drawPlan(); }, 0); if (!on) return;
   if (sel.t === "k") return drawSelBarK(bar);
   const isP = sel.t === "p", q = isP ? S.parts2D[sel.i] : null, sa = isP ? null : S.sashes[sel.i];
-  const title = isP ? `間仕切り ${fmtD319(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}（${q.y1 === q.y2 ? "横" : "縦"}）・${PST[pState(q)][0]}${partForm292(q) !== "full" ? "・" + PFN292[partForm292(q)] : ""}　${q.y1 === q.y2 ? "上から" + fmtDR319(q.y1 - bbox().y0) : "左から" + fmtDR319(q.x1 - bbox().x0)}` : `${sel.i + 1}番 ${sashLabel(sa)}（${fmtD319(sa.w)}）・${SST[sState(sa)][0]}　壁の端から${fmtDR319(sa.pos)} ▸`;
+  const title = isP ? `間仕切り ${fmtD319(Math.hypot(q.x2 - q.x1, q.y2 - q.y1))}（${q.y1 === q.y2 ? "横" : "縦"}）${document.body.classList.contains("zo472") ? "" : "・" + PST[pState(q)][0]}${partForm292(q) !== "full" ? "・" + PFN292[partForm292(q)] : ""}　${q.y1 === q.y2 ? "上から" + fmtDR319(q.y1 - bbox().y0) : "左から" + fmtDR319(q.x1 - bbox().x0)}` : `${sel.i + 1}番 ${sashLabel(sa)}（${fmtD319(sa.w)}）${document.body.classList.contains("zo472") ? "" : "・" + SST[sState(sa)][0]}　壁の端から${fmtDR319(sa.pos)} ▸`;
   // 十字キーを押している間はボタンを作り直さない（指を離したのが届かなくなるため）
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
