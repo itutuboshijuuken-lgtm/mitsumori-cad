@@ -38252,7 +38252,7 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
    上の手順の段（①〜⑤）はまだ残す。切り替えは CAD-399 の setStep399 をそのまま使う（中身・計算は変えない） ===== */
 #fab510{position:fixed;z-index:30;width:0;height:0;pointer-events:none}
 #fab510 .fbM,#fab510 .fbI{position:absolute;border-radius:50%;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.28);font-weight:900;color:#fff;pointer-events:auto;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.1;padding:0;touch-action:manipulation}
-#fab510 .fbM{width:60px;height:60px;right:0;bottom:0;font-size:13px}
+#fab510 .fbM{width:60px;height:60px;right:0;bottom:0;font-size:13px;touch-action:none}
 #fab510 .fbI{width:54px;height:54px;font-size:12px;opacity:0;transform:scale(.4);transition:opacity .15s,transform .15s;pointer-events:none}
 #fab510.open .fbI{opacity:1;transform:scale(1);pointer-events:auto}
 #fab510 .fbI[aria-pressed="true"]{outline:3px solid #FF00C8;outline-offset:1px}
@@ -38269,12 +38269,27 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
   ITEMS.forEach(function(it, i){ h += '<button type="button" class="fbI" data-fb510="' + it[0] + '" style="background:' + it[2] + ';right:' + (3 - POS[i][0] - 30) + 'px;bottom:' + (3 - POS[i][1] - 30) + 'px">' + it[1] + '</button>'; });
   h += '<button type="button" class="fbM" id="fbMain510"></button>';
   root.innerHTML = h; document.body.appendChild(root);
-  POS.forEach(function(p, i){ var b = root.querySelectorAll(".fbI")[i]; b.style.right = (3 - p[0]) + "px"; b.style.bottom = (3 - p[1]) + "px"; });
+  /* CAD-515：扇は画面の内側へ開く（丸が右にあれば左へ、上にあれば下へ） */
+  function layFan(){
+    var x = parseFloat(root.style.left) || 0, y = parseFloat(root.style.top) || 0, sx = x > innerWidth / 2 ? -1 : 1, sy = y > innerHeight / 2 ? -1 : 1;
+    [0, 22.5, 45, 67.5, 90].forEach(function(d, i){ var t = d * Math.PI / 180, R = 135, dx = sx * Math.round(R * Math.sin(t)), dy = sy * Math.round(R * Math.cos(t));
+      var b = root.querySelectorAll(".fbI")[i]; b.style.right = (3 - dx) + "px"; b.style.bottom = (3 - dy) + "px"; });
+  }
   var main = root.querySelector("#fbMain510");
   function cur(){ try { return HB.__step399 ? HB.__step399() : "part"; } catch(e){ return "part"; } }
   function item(k){ for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i][0] === k) return ITEMS[i]; return ITEMS[0]; }
   function close(){ root.classList.remove("open"); }
-  main.onclick = function(e){ e.stopPropagation(); root.classList.toggle("open"); paint(); };
+  /* CAD-515：丸は指で引っぱって好きな所へ動かせる（押すだけなら扇が開く）。置いた所は覚えておく。パネルが開いても動かない */
+  var KEY = "fab515pos", pos = null, drag = null;
+  try { pos = JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){ pos = null; }
+  function clampPos(p){ return {x: Math.max(40, Math.min(innerWidth - 10, p.x)), y: Math.max(130, Math.min(innerHeight - 10, p.y))}; }
+  main.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); drag = {id: e.pointerId, x0: e.clientX, y0: e.clientY, px: parseFloat(root.style.left) || 0, py: parseFloat(root.style.top) || 0, moved: false}; try { main.setPointerCapture(e.pointerId); } catch(er){} });
+  main.addEventListener("pointermove", function(e){ if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); var dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 10) return; drag.moved = true; close(); var p = clampPos({x: drag.px + dx, y: drag.py + dy}); root.style.left = p.x + "px"; root.style.top = p.y + "px"; });
+  function up(e){ if (!drag || e.pointerId !== drag.id) return; var mv = drag.moved; drag = null;
+    if (mv){ pos = {x: parseFloat(root.style.left), y: parseFloat(root.style.top)}; try { localStorage.setItem(KEY, JSON.stringify(pos)); } catch(er){} layFan(); return; }
+    layFan(); root.classList.toggle("open"); paint(); }
+  main.addEventListener("pointerup", up); main.addEventListener("pointercancel", function(){ drag = null; });
+  main.addEventListener("click", function(e){ e.stopPropagation(); e.preventDefault(); });
   root.querySelector(".fbBg").onclick = close;
   root.querySelectorAll(".fbI").forEach(function(b){ b.onclick = function(e){ e.stopPropagation(); try { HB.__setStep399 && HB.__setStep399(b.dataset.fb510); } catch(er){} close(); paint(); }; });
   function paint(){
@@ -38291,12 +38306,12 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
       if (on){ var rb = document.getElementById("roomBar176"); if (rb && !rb.hidden) on = false; }
       if (on && typeof enclMode !== "undefined" && enclMode) on = false;
       if (!on){ root.style.display = "none"; close(); return; }
-      var r = sl.getBoundingClientRect();
-      if (r.height < 120){ root.style.display = "none"; return; }
       root.style.display = "";
-      var by = r.bottom - 12, ch = document.getElementById("chips434");   /* 下の小さいボタンの列（消しゴムなど）がある時は、その上に置く */
-      if (ch && ch.offsetParent){ var cr = ch.getBoundingClientRect(); if (cr.height > 0 && cr.top < by + 60) by = Math.min(by, cr.top - 10); }
-      root.style.left = (r.right - 12) + "px"; root.style.top = by + "px";
+      if (!drag){   /* CAD-515：画面の決まった場所（覚えた場所、無ければ右下）。図面の大きさが変わっても動かない */
+        var p = clampPos(pos || {x: innerWidth - 14, y: innerHeight - 150});
+        root.style.left = p.x + "px"; root.style.top = p.y + "px";
+        if (!root.classList.contains("open")) layFan();
+      }
       paint();
     } catch(e){}
   }
