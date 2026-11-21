@@ -36660,3 +36660,38 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
    にじみ（アンチエイリアス）で隙間が透けるため。床の四角だけ、ふちをにじませない */
 #plan rect[fill^="url(#p"],#plan polygon[fill^="url(#p"],#plan rect[fill="#F2B84B"],#plan g[data-w463] rect{shape-rendering:crispEdges}
 </style>
+<script id="gapfill471js">
+/* CAD-471（Opus）：間仕切りの端から白い短い線が出ていた（本人 2026-11-21）。
+   正体は、開口（建具なしの抜け）や戸の所で壁を消すための「白い線」。床が白い時は見えなかったが、床の柄が出るようになって白く浮いた。
+   直し：その白い線の色を、下にある床と同じ柄にする（柄は図面の座標にそろっているので、継ぎ目なくつながる）。床が無い所は白のまま */
+(function(){
+  "use strict";
+  function inClip(el, pt){
+    for (var n = el; n && n.id !== "plan"; n = n.parentElement){
+      var cp = n.getAttribute && n.getAttribute("clip-path");
+      if (cp && cp.indexOf("clipF423") >= 0){ var c = document.getElementById("clipF423"); if (!c) return true; var ok = false; [].forEach.call(c.children, function(r){ try { if (!ok && r.isPointInFill(pt)) ok = true; } catch(e){} }); return ok; }
+    }
+    return true;
+  }
+  function run(){
+    try {
+      var sv = document.getElementById("plan"); if (!sv) return;
+      var lines = sv.querySelectorAll('line[stroke="#fff"][stroke-width="6"], line[data-gap471]'); if (!lines.length) return;
+      var fl = [].slice.call(sv.querySelectorAll('rect[fill^="url(#p"],polygon[fill^="url(#p"],rect[fill="#F2B84B"]')).filter(function(e){ return !e.closest("defs,pattern"); }).reverse();
+      [].forEach.call(lines, function(L){
+        if ((L.getAttribute("stroke") || "").toUpperCase() === "#FF00C8") return;   /* 選んでいる時の色はそのまま */
+        var x = (+L.getAttribute("x1") + +L.getAttribute("x2")) / 2, y = (+L.getAttribute("y1") + +L.getAttribute("y2")) / 2, pt;
+        try { pt = sv.createSVGPoint(); pt.x = x; pt.y = y; } catch(e){ return; }
+        var hit = null;
+        for (var i = 0; i < fl.length && !hit; i++){ var e = fl[i]; try { if (e.isPointInFill(pt) && inClip(e, pt)) hit = e.getAttribute("fill"); } catch(er){} }
+        if (!L.getAttribute("data-gap471")) L.setAttribute("data-gap471", "1");
+        var want = hit || "#fff"; if (L.getAttribute("stroke") !== want) L.setAttribute("stroke", want);
+      });
+    } catch(e){}
+  }
+  HB.__gap471 = run;
+  try { var od = window.drawPlan; if (od && !od.__g471){ window.drawPlan = function(){ var r = od.apply(this, arguments); run(); return r; }; window.drawPlan.__g471 = true; } } catch(e){}
+  var q = false;
+  try { var mo = new MutationObserver(function(){ if (q) return; q = true; requestAnimationFrame(function(){ q = false; run(); }); }); var hk = function(){ var pl = document.getElementById("plan"); if (pl) mo.observe(pl, {childList: true}); else setTimeout(hk, 500); }; hk(); } catch(e){}
+})();
+</script>
