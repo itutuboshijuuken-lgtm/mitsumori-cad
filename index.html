@@ -25211,8 +25211,7 @@ body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
 </script>
 <style id="fast262css">
 /* ===== CAD-262：なめらかにする。2本指で拡大・移動している間だけ、図の文字のふち取りと線のなめらか処理を止めて軽くする（指を離すと元に戻る） ===== */
-body.pz262 #plan text,body.pz262 #plan text.halo{stroke:none!important;paint-order:normal!important}
-body.pz262 #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optimizeSpeed!important}
+/* CAD-467：2本指の時の見た目の切り替えはやめた（切り替えの瞬間に図面全体を描き直し、床の写真が一瞬消えていた。ピンチ中は CSS transform なので軽くする必要が無い） */
 </style>
 <script id="fast262js">
 (function(){ "use strict";
@@ -25237,7 +25236,7 @@ body.pz262 #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optimi
   }catch(e){} },200);
   /* 2) 2本指の間だけ軽くする */
   function upd(e){ try{ document.body.classList.toggle("pz262",(e.touches&&e.touches.length>=2)); }catch(x){} }
-  ["touchstart","touchmove"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });
+  ["touchstart","touchmove","touchend","touchcancel"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });   /* CAD-467：指を離した時も外す（付いたままだと、描き直しの後の写真の貼り直しが止まっていた） */
   ["touchend","touchcancel"].forEach(function(t){ document.addEventListener(t,upd,{capture:true,passive:true}); });
 })();
 </script>
@@ -25901,6 +25900,10 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   }
   function scan(){ patch(document.getElementById("p263Fl")); patch(document.getElementById("pFl")); }
   setInterval(scan, 400); scan();
+  /* CAD-467（Opus）：図面が描き直されたら、画面に出る前（同じ流れ）で写真のフローリングに戻す。
+     前は描き直しの後段（文字の整理）か 400ms の見回り待ちで、拡大の後などは線だけの薄い木目が一瞬見えていた（本人の動画「消える」） */
+  try { var mo467 = new MutationObserver(function(){ try { var pf = document.getElementById("pFl"); if (pf && !pf.getAttribute("data-w322")) scan(); } catch(e){} });
+    var hk467 = function(){ var pl = document.getElementById("plan"); if (pl) mo467.observe(pl, {childList: true, subtree: true}); else setTimeout(hk467, 500); }; hk467(); } catch(e){}
   /* CAD-338：写真の貼り直しを描き直しの後段（tidyPlanLabels の連鎖）へ移す。
      連鎖の実行順では CAD-264〜267 の装飾の後・dir281 の回転複製より前に scan が
      走るので、描き直しと同じフレームで写真まで戻り、回転複製も写真入りを複製する。
@@ -36643,51 +36646,5 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   window.addEventListener("resize", fit);
   new MutationObserver(function(){ setTimeout(fit, 30); }).observe(st3, { attributes: true, attributeFilter: ["hidden"] });
   setTimeout(fit, 300);
-})();
-</script>
-<script id="pat466js">
-/* CAD-466（Opus）：床の柄が拡大の後などに一瞬（1秒ほど）消えて無地になる件（本人の動画 2026-11-21）。
-   原因：図面を描き直すたびに、柄（pattern の中の写真）が作り直され、iPhone が写真を読み直す間、下地の無地が見えていた。
-   直し：柄を、図面の外の「消えない置き場」（body の先頭の見えない svg）に1回だけ写して持ち続ける。
-   url(#id) は文書の中で先に出てくる同じ id を使うので、図面の中で作り直されても、写真は読み直さない。
-   大きさ（width/height など）が変わった時だけ、置き場の側の数字を書き換える（写真の要素はそのまま） */
-(function(){
-  "use strict";
-  var NS = "http://www.w3.org/2000/svg", store = null;
-  function ensure(){
-    if (store && store.isConnected) return store;
-    var sv = document.createElementNS(NS, "svg"); sv.setAttribute("id", "patStore466"); sv.setAttribute("width", "0"); sv.setAttribute("height", "0"); sv.setAttribute("aria-hidden", "true");
-    sv.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;left:-9999px;top:0;pointer-events:none";
-    var d = document.createElementNS(NS, "defs"); sv.appendChild(d); document.body.insertBefore(sv, document.body.firstChild); store = sv; return sv;
-  }
-  function syncAttrs(dst, src){
-    for (var i = 0; i < src.attributes.length; i++){ var a = src.attributes[i]; if (dst.getAttribute(a.name) !== a.value){ if (a.name === "href" || a.name === "xlink:href"){ if (dst.getAttribute(a.name) !== a.value) dst.setAttribute(a.name, a.value); } else dst.setAttribute(a.name, a.value); } }
-  }
-  function syncEl(dst, src){
-    syncAttrs(dst, src);
-    var sc = src.children, dc = dst.children;
-    if (sc.length !== dc.length){ while (dst.firstChild) dst.removeChild(dst.firstChild); for (var k = 0; k < sc.length; k++) dst.appendChild(sc[k].cloneNode(true)); return; }
-    for (var j = 0; j < sc.length; j++){ if (sc[j].tagName !== dc[j].tagName){ dst.replaceChild(sc[j].cloneNode(true), dc[j]); continue; } syncEl(dc[j], sc[j]); }
-  }
-  function run(){
-    try {
-      var plan = document.getElementById("plan"); if (!plan) return;
-      var pats = plan.querySelectorAll("pattern[id]"); if (!pats.length) return;
-      var d = ensure().firstChild;
-      for (var i = 0; i < pats.length; i++){
-        var p = pats[i]; if (!p.querySelector("image")) continue;   /* 写真を使う柄だけ（線だけの柄は軽いので図面のまま） */
-        var mine = d.querySelector('pattern[id="' + p.id + '"]');
-        /* 完成図など、図面の外にも同じ名前の柄がある時は置き場に持たない（向こうの大きさを奪わないため） */
-        var other = [].some.call(document.querySelectorAll('pattern[id="' + p.id + '"]'), function(x){ return !plan.contains(x) && !(store && store.contains(x)); });
-        if (other){ if (mine) mine.remove(); continue; }
-        if (!mine){ d.appendChild(p.cloneNode(true)); continue; }
-        syncEl(mine, p);
-      }
-    } catch(e){}
-  }
-  HB.__pat466 = run;
-  try { var od = window.drawPlan; if (od && !od.__p466){ window.drawPlan = function(){ var r = od.apply(this, arguments); run(); return r; }; window.drawPlan.__p466 = true; } } catch(e){}
-  try { var mo = new MutationObserver(function(){ run(); }); var hook = function(){ var pl = document.getElementById("plan"); if (pl) mo.observe(pl, {childList: true}); }; hook(); } catch(e){}
-  setTimeout(run, 500);
 })();
 </script>
