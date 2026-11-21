@@ -35625,6 +35625,7 @@ nav.steps{padding:1px 6px 3px}
     try { if (S.mode === "zo" && (S.floors === 2 || (R0 && roof && roof().two)) && !(Array.isArray(S.fl) && S.fl.length > 1)) out.unshift({lv: 2, t: "2階建てなのに、2階の間取りがありません（階の切り替えで2階を作ってください）", p: big.length ? big[0].p : [0, 0]}); } catch(e){}
     var und = big.filter(function(r){ try { var f = roomFinOf(r); return !(f && f.f && f.f !== "none") && roomZoneKind(r) !== "ub"; } catch(e){ return false; } });
     if (und.length) out.push({lv: 1, t: "床を決めていない部屋 " + und.length + "（" + und.slice(0, 3).map(function(r){ return nameOf(r, R); }).join("・") + (und.length > 3 ? "…" : "") + "）", p: und[0].p});
+    try { if (HB.__kozoChk480) HB.__kozoChk480().forEach(function(o){ out.push(o); }); } catch(e){}   /* CAD-483：構造のチェック（2階の柱の下・柱の太さ・床倍率） */
     return out;
   }
   function showCheck(){
@@ -37505,5 +37506,87 @@ function kozo478(C){
       setTimeout(function(){ ask(0, true, function(){ if (two) ask(1, false, function(){ try { flSwitch(0); } catch(e){} }); }); }, 300);
     } catch(e){}
   };
+})();
+</script>
+<script id="kozochk483">
+/* CAD-483（Opus）：構造のチェック（見積の前のチェックに足す）。どれも「目安」で、確認申請・性能評価の正式な計算の代わりではない。
+   ① 2階の柱の下に1階の柱が無い所 → その柱を受ける床梁の大きさ（飛ぶ長さ÷10、柱が乗るので1つ上の大きさ）
+   ② 柱の小径（2025年4月の改正）：横架材の間の高さ÷割合 以上。割合は国交省の早見表の値（2階建ての1階：重い仕様1/24・普通1/27、2階・平屋1/31）
+   ③ 床倍率（耐震等級2・3を取る時）：必要床倍率＝α×耐力壁線の間の距離×必要壁量÷2（品確法の評価方法基準の形）。2階の床（1階の耐力壁線で区切る）と、耐力壁線の間8m以下 */
+(function(){
+  var STD = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450];
+  function postsOf(fl){ try { var Z = withFloor416(fl, function(){ return framePos(); }); return (Z && Z.posts) || []; } catch(e){ return []; } }
+  function chk(){
+    var out = [];
+    if (S.mode !== "zo") return out;
+    var two = Array.isArray(S.fl) && S.fl.length > 1;
+    /* ① 2階の柱の下 */
+    if (two){
+      var p1 = postsOf(1), p2 = postsOf(2), miss = [];
+      /* 1階の壁の線（外形と間仕切り）：柱が無い時に、梁が架かる両側の壁までの長さを測る */
+      var W1 = []; try { withFloor416(1, function(){ var P = pts(); P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; W1.push([a[0], a[1], c[0], c[1]]); }); (S.parts2D || []).forEach(function(q){ try { if (pState(q) === "remove") return; } catch(e){} W1.push([q.x1, q.y1, q.x2, q.y2]); }); }); } catch(e){}
+      var wallSpan = function(q, axis){ var lo = -Infinity, hi = Infinity, v = axis === "x" ? q.x : q.y, o = axis === "x" ? q.y : q.x;
+        W1.forEach(function(g){ var vt = Math.abs(g[0] - g[2]) < 1, hz = Math.abs(g[1] - g[3]) < 1;
+          if (axis === "x" && vt && o > Math.min(g[1], g[3]) - 1 && o < Math.max(g[1], g[3]) + 1){ if (g[0] < v - 1) lo = Math.max(lo, g[0]); if (g[0] > v + 1) hi = Math.min(hi, g[0]); }
+          if (axis === "y" && hz && o > Math.min(g[0], g[2]) - 1 && o < Math.max(g[0], g[2]) + 1){ if (g[1] < v - 1) lo = Math.max(lo, g[1]); if (g[1] > v + 1) hi = Math.min(hi, g[1]); } });
+        return isFinite(lo) && isFinite(hi) ? hi - lo : Infinity; };
+      var P1in = null; try { var PP = withFloor416(1, function(){ return pts(); }); P1in = function(x, y){ var c = false; for (var i = 0, j = PP.length - 1; i < PP.length; j = i++){ var a = PP[i], d = PP[j]; if (((a[1] > y) !== (d[1] > y)) && (x < (d[0] - a[0]) * (y - a[1]) / (d[1] - a[1]) + a[0])) c = !c; } if (c) return true; return W1.slice(0, PP.length).some(function(g){ return Math.abs(g[0] - g[2]) < 1 ? (Math.abs(x - g[0]) < 2 && y >= Math.min(g[1], g[3]) - 2 && y <= Math.max(g[1], g[3]) + 2) : (Math.abs(y - g[1]) < 2 && x >= Math.min(g[0], g[2]) - 2 && x <= Math.max(g[0], g[2]) + 2); }); }; } catch(e){}
+      var onWall1 = function(q){ return W1.some(function(g){ var vt = Math.abs(g[0] - g[2]) < 1; return vt ? (Math.abs(q.x - g[0]) < 40 && q.y > Math.min(g[1], g[3]) - 40 && q.y < Math.max(g[1], g[3]) + 40) : (Math.abs(q.y - g[1]) < 40 && q.x > Math.min(g[0], g[2]) - 40 && q.x < Math.max(g[0], g[2]) + 40); }); };
+      p2.forEach(function(q){
+        if (p1.some(function(r){ return Math.abs(r.x - q.x) < 40 && Math.abs(r.y - q.y) < 40; })) return;
+        if (P1in && !P1in(q.x, q.y)) return;   /* 1階の外（はね出し）の柱は、はね出しの梁と柱で受ける（見積の「2階のはね出し」） */
+        var span = function(axis){ var same = p1.filter(function(r){ return axis === "x" ? Math.abs(r.y - q.y) < 40 : Math.abs(r.x - q.x) < 40; }), v = axis === "x" ? q.x : q.y, lo = -Infinity, hi = Infinity;
+          same.forEach(function(r){ var w = axis === "x" ? r.x : r.y; if (w < v) lo = Math.max(lo, w); if (w > v) hi = Math.min(hi, w); }); return isFinite(lo) && isFinite(hi) ? hi - lo : Infinity; };
+        var wall = onWall1(q), L = wall ? Math.min(span("x"), span("y")) : Math.min(wallSpan(q, "x"), wallSpan(q, "y"));
+        if (wall && L <= 910 + 1) return;   /* 1階の壁の上で、両側の柱が910以内：胴差・桁で受けられる（普通の納まり） */
+        if (!isFinite(L)){ miss.push({q: q, L: null, h: null, wall: wall}); return; }
+        var need = Math.max(+S.dosa || 240, L / 11), k = STD.findIndex(function(v){ return v >= need - 0.5; }); if (k < 0) k = STD.length - 1;
+        miss.push({q: q, L: L, h: STD[k], wall: wall});
+      });
+      miss.sort(function(a, c){ return (c.L || 1e9) - (a.L || 1e9); });
+      miss.slice(0, 6).forEach(function(m){
+        out.push({lv: (m.L === null || m.L > 3640) ? 2 : 1, t: m.L === null ? "2階の柱の下に、受ける1階の柱も壁もありません：1階に柱を足すか、梁を架けてください" : "2階の柱の下に1階の柱がありません：床梁 105×" + m.h + " で受ける（" + (m.wall ? "1階の柱の間 " : "1階の壁から壁まで ") + fmt(Math.round(m.L)) + "mm・梁せいは長さの1/11）" + (m.L > 3640 ? "。長いので1階に柱を足すのがおすすめ" : ""), p: [m.q.x, m.q.y]});
+      });
+      if (miss.length > 6) out.push({lv: 1, t: "2階の柱の下に1階の柱が無い所が、ほかに " + (miss.length - 6) + " か所あります", p: [miss[6].q.x, miss[6].q.y]});
+    }
+    /* ② 柱の小径 */
+    try {
+      var heavy = S.roofW === "kawara" || !!S.solar || S.gaiheki === "nuri", mid = S.roofW === "slate";
+      var col = +S.colSec || 105;
+      var l1 = (+S.ch || 2400) + (+S.fuko || 300);
+      var r1 = two || +S.floors === 2 ? (heavy ? 24 : mid ? 25.5 : 27) : 31;
+      var need1 = l1 / r1;
+      if (need1 > col + 0.5) out.push({lv: 2, t: "1階の柱の太さ：" + col + "角では足りません（必要 約" + Math.ceil(need1) + "mm＝横架材の間 " + fmt(l1) + "mm÷" + r1 + "）。120角にするか、屋根・外壁を軽くする", p: null});
+      if (two){ var l2 = (+S.ch2 || 2400) + 300, need2 = l2 / 31; if (need2 > col + 0.5) out.push({lv: 2, t: "2階の柱の太さ：" + col + "角では足りません（必要 約" + Math.ceil(need2) + "mm）", p: null}); }
+    } catch(e){}
+    /* ③ 床倍率（2階の床）と耐力壁線の間 */
+    if (two){
+      try {
+        var WS = wallSegs406(1); if (!WS || !WS.segs || !WS.segs.length) return out;
+        var b = withFloor416(1, function(){ return bbox(); });
+        var coef = 0; try { coef = withFloor416(1, function(){ return wallCoef406(1); }); } catch(e){}
+        var gr = (S.extras || []).some(function(e){ return e.k === "shinchiku" && e.tq3 > 0; }) ? 1.5 : 1.25;   /* 等級2＝基準法の約1.25倍、等級3＝約1.5倍（目安） */
+        var reqM = coef / 100 * gr;   /* m/㎡ */
+        var fb = S.floorKoho === "neda" ? 1.0 : 3.0;   /* 24mm以上 根太なし N75@150 四周打ち＝3.0（川の字打ちなら1.2）、根太工法は約1.0 */
+        ["x", "y"].forEach(function(d){
+          var dirX = d === "x", segs = WS.segs.filter(function(g){ return g.dirX === dirX; }), lines = [];
+          segs.forEach(function(g){ var w = g.L / 1000 * (WALLF406[g.kind] || 0), ln = lines.find(function(o){ return Math.abs(o.c - g.c) < 60; }); if (!ln){ ln = {c: g.c, w: 0}; lines.push(ln); } ln.w += w; });
+          if (lines.length < 2) return;
+          lines.sort(function(a, c){ return a.c - c.c; });
+          var span = dirX ? b.w / 1000 : b.h / 1000;
+          lines.forEach(function(o, i){ o.st = o.w >= Math.max(0.6 * span, 4.0) ? 2 : (i === 0 || i === lines.length - 1) ? 1 : 0; });
+          var keep = lines.filter(function(o){ return o.st > 0; });
+          for (var i = 0; i + 1 < keep.length; i++){
+            var l = (keep[i + 1].c - keep[i].c) / 1000, al = (keep[i].st === 2 && keep[i + 1].st === 2) ? 1.0 : 2.0, req = al * l * reqM / 2;
+            var mp = dirX ? [b.x0 + b.w / 2, (keep[i].c + keep[i + 1].c) / 2] : [(keep[i].c + keep[i + 1].c) / 2, b.y0 + b.h / 2];
+            if (l > 8.0) out.push({lv: 2, t: "耐力壁線の間が " + l.toFixed(2) + "m（8mまで）：" + (dirX ? "横" : "縦") + "の壁の線を1本足す", p: mp});
+            else if (req > fb + 0.001) out.push({lv: 1, t: "床倍率（耐震等級2・3を取る時だけ）：2階の床に要る強さ " + req.toFixed(2) + " ＞ 今の床 " + fb.toFixed(1) + "（壁の線の間 " + l.toFixed(2) + "m）。中の壁の通りに耐力壁を集めて「耐力壁線」を1本作ると、要る強さが下がります", p: mp});
+          }
+        });
+      } catch(e){}
+    }
+    return out;
+  }
+  HB.__kozoChk480 = chk;
 })();
 </script>
