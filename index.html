@@ -7775,7 +7775,14 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     grp("2階のはね出し（1階より外に出た所）");
     const Am = O.A / 1e6, Lb = O.beams.reduce((t, q) => t + q.L, 0);
     O.beams.forEach(q => { const len = Math.ceil((q.L + 210) / 100) * 100;
+      if (q.side) return;
+      if (q.cant){   /* CAD-485：柱なし。床梁を外へ跳ね出して先端の桁を受ける。跳ね出し梁は910ごと、中への引き込みは出幅の2倍以上 */
+        const n = Math.ceil(q.L / 910) + 1, cl = Math.ceil((q.d * 3) / 100) * 100;
+        lum("yukabari", "跳ね出し梁（床梁を外へ出す）", 105, Math.max(+S.dosa || 240, 240), Array(n).fill(cl), `${n}本・910ごと・出幅${fmt(q.d)}＋中へ引き込み${fmt(q.d * 2)}以上（出幅の2倍）`);
+        lum("yukabari", "はね出しの先端の桁", 105, q.h, [len], `105×${q.h}・長さ${fmt(q.L)}・跳ね出し梁の先で2階の外壁を受ける`);
+        return; }
       lum("yukabari", "はね出しの受け梁", 105, q.h, [len], `105×${q.h}・飛ぶ長さ${fmt(q.L)}（梁せいの目安は長さの1/10〜1/12）・2階の外壁を受ける${len > 4000 ? "。途中で継げない梁なので6m材（運べなければ真ん中に柱）" : ""}`); });
+    if (S.ohCant477 === "cant" && O.beams.some(q => !q.cant && q.d !== null && q.d > 910)) rows.push({name: "※出幅が910を超える所は、柱なしにできないので柱で受けています", spec: "", qty: "", cost: 0, note: true});
     if (O.posts.length){ lum("hashira", "はね出しを受ける柱（ポーチ柱など）", 105, 105, Array(O.posts.length).fill(3000), `${O.posts.length}本・梁の端の下（2階の重さが集まる）`);
       work("kanaTo", "はね出しの柱 ホールダウン（柱頭・柱脚）", O.posts.length * 2, "個"); }
     sheet("構造用合板", banT264, `はね出し 2階床合板 ${banT264}mm`, 910, 1820, Math.ceil(Am / 1.6562 * 1.05), `床 ${fmt(Am, 2)}㎡`);
@@ -37268,12 +37275,13 @@ try { HB.__habaki478 = habakiUke478; HB.__habakiFloor478 = habakiFloor478; } cat
       seg("op", [["add", "外に出す"], ["cut", "引っ込める"]]) +
       seg("side", [["U", "上の辺"], ["R", "右の辺"], ["D", "下の辺"], ["L", "左の辺"]]) +
       '<div class="sub2" style="margin-top:8px">出幅（何mm出す・引っ込めるか）</div>' + seg("d", [[455, "455"], [910, "910"], [1365, "1365"], [1820, "1820"]]) +
+      '<div class="sub2" style="margin-top:8px">出た所の持たせ方</div>' + seg("cant", [["post", "柱で受ける"], ["cant", "柱なし（跳ね出し梁・910まで）"]]) +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">' +
       '<label class="hint">' + ((st.side === "U" || st.side === "D") ? "左の端から" : "上の端から") + '（mm）<input id="oh477pos" type="number" inputmode="numeric" step="455" value="' + st.pos + '" style="width:100%;font-size:16px;min-height:40px"></label>' +
       '<label class="hint">長さ（mm）<input id="oh477len" type="number" inputmode="numeric" step="455" value="' + st.len + '" style="width:100%;font-size:16px;min-height:40px"></label></div>' +
       '<p class="hint" style="margin-top:6px">例：玄関ポーチの上に2階がかぶる家 → 1階で「引っ込める」、下の辺、455。2階が外に出る家 → 2階で「外に出す」。見積には、出た所の軒天・水切り・床の断熱と、受ける梁・柱が自動で入ります。</p>' +
       '<div class="row" style="margin-top:8px"><button class="btn sub" id="oh477no" type="button">やめる</button><button class="btn pri" id="oh477ok" type="button">この形にする</button></div>';
-    mb.querySelectorAll("[data-k477]").forEach(function(b){ b.onclick = function(){ var k = b.dataset.k477, v = b.dataset.v; st[k] = k === "d" ? +v : v; if (k === "side"){ st.pos = 0; st.len = sideLen(); } paint(); }; });
+    mb.querySelectorAll("[data-k477]").forEach(function(b){ b.onclick = function(){ var k = b.dataset.k477, v = b.dataset.v; st[k] = k === "d" ? +v : v; if (k === "side"){ st.pos = 0; st.len = sideLen(); } if (k === "cant"){ S.ohCant477 = v; save(); try { calc(); } catch(e){} } paint(); }; });
     var ip = $("oh477pos"), il = $("oh477len"), upd = function(){ st.pos = +ip.value || 0; st.len = +il.value || 0; $("oh477pv").innerHTML = preview(); };
     ip.oninput = upd; il.oninput = upd;
     $("oh477no").onclick = function(){ $("modal").hidden = true; };
@@ -37286,7 +37294,7 @@ try { HB.__habaki478 = habakiUke478; HB.__habakiFloor478 = habakiFloor478; } cat
     };
   }
   HB.__oh477ui = function(){
-    st = {op: (S.fi || 0) === 0 ? "cut" : "add", side: "D", d: (S.fi || 0) === 0 ? 455 : 910, pos: 0, len: 0};
+    st = {op: (S.fi || 0) === 0 ? "cut" : "add", side: "D", d: (S.fi || 0) === 0 ? 455 : 910, pos: 0, len: 0, cant: S.ohCant477 === "cant" ? "cant" : "post"};
     st.len = sideLen(); paint(); $("modal").hidden = false;
   };
 })();
@@ -37323,9 +37331,19 @@ function ohInfo477(a, b){
       if (run) beams.push(run);
     });
     const STD = [180, 210, 240, 270, 300, 330, 360, 390, 420, 450];
-    beams.forEach(q => { q.L = Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]); const need = Math.max(+S.dosa || 240, q.L > 1820 ? q.L / 11 : 0); q.h = STD.find(v => v >= need - 0.5) || 450; });
+    beams.forEach(q => { q.L = Math.hypot(q.b[0] - q.a[0], q.b[1] - q.a[1]); const need = Math.max(+S.dosa || 240, q.L > 1820 ? q.L / 11 : 0); q.h = STD.find(v => v >= need - 0.5) || 450;
+      /* CAD-485：出幅（梁の線から1階の外形まで、直角の向きに測る） */
+      const hz = Math.abs(q.a[1] - q.b[1]) < 1, m = [(q.a[0] + q.b[0]) / 2, (q.a[1] + q.b[1]) / 2]; let d = Infinity;
+      segs(P1).forEach(([s0, s1]) => { const ph = Math.abs(s0[1] - s1[1]) < 1; if (ph !== hz) return; if (hz){ if (m[0] < Math.min(s0[0], s1[0]) - 1 || m[0] > Math.max(s0[0], s1[0]) + 1) return; d = Math.min(d, Math.abs(s0[1] - m[1])); } else { if (m[1] < Math.min(s0[1], s1[1]) - 1 || m[1] > Math.max(s0[1], s1[1]) + 1) return; d = Math.min(d, Math.abs(s0[0] - m[0])); } });
+      q.d = isFinite(d) ? d : null;
+      /* 柱なし（跳ね出し梁）を選んでいて、出幅910まで：先端の桁は胴差の大きさ、柱は立てない */
+      q.cant = S.ohCant477 === "cant" && q.d !== null && q.d > 0 && q.d <= 910 + 1;
+      if (q.cant) q.h = Math.max(+S.dosa || 240, 180); });
+    /* はね出しの横の短い壁（910まで）は、端の跳ね出し梁の上に乗るので、梁も柱も要らない */
+    const eqP = (u, v) => Math.abs(u[0] - v[0]) < 1 && Math.abs(u[1] - v[1]) < 1, cantEnd = pt => beams.some(o => o.cant && (eqP(o.a, pt) || eqP(o.b, pt)));
+    beams.forEach(q => { if (q.cant || S.ohCant477 !== "cant" || q.L > 910 + 1) return; if ([q.a, q.b].every(pt => sup(pt) || cantEnd(pt)) && [q.a, q.b].some(cantEnd)){ q.cant = true; q.side = true; } });
     const pk = [];
-    beams.forEach(q => [q.a, q.b].forEach(pt => { if (!sup(pt) && !pk.some(o => Math.abs(o[0] - pt[0]) < 1 && Math.abs(o[1] - pt[1]) < 1)) pk.push(pt); }));
+    beams.forEach(q => { if (q.cant) return; [q.a, q.b].forEach(pt => { if (!sup(pt) && !beams.some(o => o.cant && ((Math.abs(o.a[0] - pt[0]) < 1 && Math.abs(o.a[1] - pt[1]) < 1) || (Math.abs(o.b[0] - pt[0]) < 1 && Math.abs(o.b[1] - pt[1]) < 1))) && !pk.some(o => Math.abs(o[0] - pt[0]) < 1 && Math.abs(o[1] - pt[1]) < 1)) pk.push(pt); }); });
     const per = P => segs(P).reduce((t, s) => t + Math.hypot(s[1][0] - s[0][0], s[1][1] - s[0][1]), 0);
     const bb = P => { const xs = P.map(q => q[0]), ys = P.map(q => q[1]); return (Math.max(...xs) - Math.min(...xs)) * (Math.max(...ys) - Math.min(...ys)); };
     return {A, beams: beams.filter(q => q.L >= 1), posts: pk, per1: per(P1), per2: per(P2), roofA: Math.max(0, bb(P2) - bb(P1)), P1, P2};
