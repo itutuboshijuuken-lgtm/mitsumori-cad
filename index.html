@@ -36576,3 +36576,58 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   } catch(e){}
 })();
 </script>
+
+<style id="seccard463css">
+/* ===== CAD-463：④屋根の断面図カードを絵の高さに合わせる（空いた分は設定欄へ） ===== */
+#st3 .fs420scroll{flex:1 1 0}
+</style>
+<script id="seccard463js">
+/* CAD-463（2026-11-21・本人の実機指摘「GLから下の空白いらないやん。そこ消したら広くとれるじゃん。
+   必要なことがあるの？基礎を描く予定？」）：GL の下に基礎を描く予定は無い（本人に確認済み）。
+   空白の正体は、断面図カード（.fs420stage）が CAD-420 のレイアウトで flex:1＝画面の残り全部の
+   高さを取り、中の SVG が meet フィットで上下に余っていた事。実測（土台 CAD-462・390px幅）：
+   カード高さは常に549px、絵の実高は形によって169〜318px、GL の下の空白は139〜214px、
+   設定欄は187pxしかなかった。直しは当て方だけ：カードの高さを「カードの内容幅 × viewBox の
+   縦横比 ＋ カードの余白」に合わせ、下の設定欄（.fs420scroll）を flex:1 に変えて空いた分を
+   全部そちらへ回す。設定欄が従来の25%を下回らない所までを上限とし、その時は従来どおり
+   meet フィットで収まる。断面図の中身・寸法・計算・設定の並びは一切変えていない。
+   CAD-460 の設定欄拡大（roofset460css）はそのまま活きる。 */
+(function(){
+  var sec = document.getElementById("sec");
+  var st3 = document.getElementById("st3");
+  if (!sec || !st3) return;
+  var card = sec.closest(".card");
+  var scroll = st3.querySelector(".fs420scroll");
+  if (!card || !scroll) return;
+  function fit(){
+    try {
+      if (st3.hidden) return;
+      var vb = (sec.getAttribute("viewBox") || "").split(/\s+/).map(Number);
+      if (vb.length < 4 || !(vb[2] > 0) || !(vb[3] > 0)) return;
+      var cs = getComputedStyle(card);
+      var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      var bdX = parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth);
+      var bdY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+      var w = card.clientWidth - padX - bdX;
+      if (w < 50) return;
+      var h = Math.round(w * vb[3] / vb[2]) + padY + bdY;
+      var sib = 0;
+      Array.prototype.forEach.call(st3.children, function(ch){ if (ch !== card && ch !== scroll) sib += ch.offsetHeight || 0; });
+      var maxH = st3.clientHeight - Math.round(st3.clientHeight * 0.25) - sib - 18;
+      if (maxH < 200) maxH = 200;
+      if (h > maxH) h = maxH;
+      card.style.flex = "0 0 " + h + "px";
+    } catch(e){}
+  }
+  var orig = window.drawSec;
+  if (typeof orig === "function" && !orig.__fit463){
+    var wrapped = function(){ var r = orig.apply(this, arguments); fit(); return r; };
+    wrapped.__fit463 = true;
+    window.drawSec = wrapped;
+  }
+  window.addEventListener("resize", fit);
+  new MutationObserver(function(){ setTimeout(fit, 30); }).observe(st3, { attributes: true, attributeFilter: ["hidden"] });
+  setTimeout(fit, 300);
+})();
+</script>
