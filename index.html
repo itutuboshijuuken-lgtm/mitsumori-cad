@@ -38121,3 +38121,128 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
 #roomBar176 #rmFlHost367{margin:0!important}
 #roomBar176 #rmFlHost367 #floorPanel{margin:0!important;padding:0 0 2px!important}
 </style>
+<script id="same507js">
+/* ===== CAD-508：③室内図も「置いたら構えを外す＋同じ物を置く」に統一（本人の決定 2026-11-21 22:26「室内図も統一させよう」）
+   CAD-505（②間取り・same502js）と同じ動きを、③室内図の fx にもそろえる。
+   (1) ③で物を1つ置いたら、置く構え（fxPending）を外す。コントローラー（#fxBar）は残り、
+       調整だけができる。別の場所をタップしても新しい物は置かれず、既にある物をタップすれば
+       通常の選択になる。置けなかったタップ（アクセントの二重など、個数が増えていない）では外さない。
+       判定は fxPlace／fxPlaceArea の包みで「置く前後の個数」を見る。本体関数は無変更。
+       なぞって置く面積物（fxPlaceArea）も、置いたら同じく外す。
+   (2) コントローラー（#fxBar）に「同じ物を置く」ボタンを足す。押すと、その物（同じ種類・
+       大きさ len／hgt／z・柄 pat を複写。向き v・ニッチの下面 nb は置けた後に写す）が
+       1回置ける状態になり、置いたらまた外れる。構え中にもう一度押すとやめる。
+       構え中の表示（「置く所をタップ（やめる）」・地色）は CAD-505 と同じ。
+   対象外：チュートリアル（nbtut）の中は CAD-505 と同じく従来の動きのまま（このブロックは無力）。 */
+(function(){ "use strict";
+  if (window.__same507) return; window.__same507 = true;
+  function tut(){ try { return (typeof HB !== "undefined" && HB.__nbtut === 1) || document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+  function cntFx(){ try { return (S.fx || []).length; } catch(e){ return 0; } }
+  function pend(){ try { return (typeof fxPending !== "undefined") ? fxPending : null; } catch(e){ return null; } }
+  function disarmFx(){
+    try { fxPending = null; } catch(e){}
+    try { fxPendSz = null; } catch(e){}
+    try { HB.__same507Arm = null; } catch(e){}
+    try { fxUI(); } catch(e){}
+  }
+  function copyArm507(arm, p0){
+    /* 「同じ物を置く」で構えた時だけ、向き v・ニッチの下面 nb を新しい物へ写す */
+    if (!arm || arm.k !== p0) return;
+    try {
+      var nw = (S.fx || [])[(S.fx || []).length - 1]; if (!nw) return;
+      var ch = false;
+      if (arm.v !== undefined && nw.v !== arm.v){ nw.v = arm.v; ch = true; }
+      if (arm.nb !== undefined && nw.nb !== arm.nb){ nw.nb = arm.nb; ch = true; }
+      if (ch){ try { save(); } catch(e){} try { drawRoom(); } catch(e){} }
+    } catch(e){}
+  }
+
+  /* ---------- (1) 置いたら構えを外す：fxPlace／fxPlaceArea の包み ---------- */
+  var origPlace = window.fxPlace;
+  if (typeof origPlace === "function" && !origPlace.__same507){
+    var wPlace = function(){
+      var p0 = pend(), n0 = cntFx();
+      var arm = null; try { arm = HB.__same507Arm || null; } catch(e){}
+      var r = origPlace.apply(this, arguments);
+      try { if (!tut() && p0 && cntFx() > n0){ copyArm507(arm, p0); disarmFx(); } } catch(e){}
+      return r;
+    };
+    wPlace.__same507 = true;
+    window.fxPlace = wPlace;
+  }
+  var origArea = window.fxPlaceArea;
+  if (typeof origArea === "function" && !origArea.__same507){
+    var wArea = function(){
+      var p0 = pend(), n0 = cntFx();
+      var r = origArea.apply(this, arguments);
+      try { if (!tut() && p0 && cntFx() > n0) disarmFx(); } catch(e){}
+      return r;
+    };
+    wArea.__same507 = true;
+    window.fxPlaceArea = wArea;
+  }
+
+  /* ---------- (2)「同じ物を置く」ボタン ---------- */
+  function curFxSel(){ try { return (typeof sel !== "undefined" && sel && sel.t === "fx") ? sel : null; } catch(e){ return null; } }
+  function armSame507(){
+    if (tut()) return;
+    var s = curFxSel(); if (!s) return;
+    var f = (S.fx || [])[s.i]; if (!f) return;
+    var key = "fx" + s.i;
+    var armedNow = false;
+    try { armedNow = !!(HB.__same507Arm && HB.__same507Arm.key === key && pend() === f.k); } catch(e){}
+    if (armedNow){
+      disarmFx();
+      try { toast("やめました"); } catch(e){}
+      try { drawFxBar(); } catch(e){}
+      return;
+    }
+    var sz = {k: f.k};
+    ["len", "hgt", "z", "pat"].forEach(function(k2){ if (f[k2] !== undefined) sz[k2] = f[k2]; });
+    try { fxPendSz = sz; } catch(e){}
+    try { fxPending = f.k; } catch(e){}
+    HB.__same507Arm = {key: key, k: f.k, v: f.v, nb: f.nb};
+    try { toast(((typeof FK !== "undefined" && FK[f.k]) ? FK[f.k][0] : f.k) + "：置く所をタップ（同じ物）"); } catch(e){}
+    try { fxUI(); } catch(e){}
+    try { drawFxBar(); } catch(e){}
+  }
+  function addSameBtn507(){
+    if (tut()) return;
+    var bar = document.getElementById("fxBar");
+    if (!bar || bar.hidden) return;
+    var s = curFxSel(); if (!s) return;
+    var f = (S.fx || [])[s.i]; if (!f) return;
+    var armed = false;
+    try { armed = !!(HB.__same507Arm && HB.__same507Arm.key === "fx" + s.i && pend() === f.k); } catch(e){}
+    var old = document.getElementById("fxSame507");
+    if (old){
+      var tx = armed ? "置く所をタップ（やめる）" : "同じ物を置く";
+      if (old.textContent !== tx) old.textContent = tx;
+      old.style.background = armed ? "#FFF3D6" : "#EAF1FA";
+      return;
+    }
+    var row = document.createElement("div");
+    row.style.cssText = "margin:0 0 4px";
+    var b = document.createElement("button");
+    b.id = "fxSame507"; b.type = "button";
+    b.style.cssText = "width:100%;min-height:40px;border:1.5px solid #2563B0;border-radius:8px;background:" + (armed ? "#FFF3D6" : "#EAF1FA") + ";color:#2563B0;font-size:14px;font-weight:800";
+    b.textContent = armed ? "置く所をタップ（やめる）" : "同じ物を置く";
+    b.onclick = function(){ armSame507(); };
+    row.appendChild(b);
+    var sbw = bar.querySelector(".sbw");
+    if (sbw) bar.insertBefore(row, sbw); else bar.appendChild(row);
+    try { if (HB.__bindBar157) HB.__bindBar157(bar); } catch(e){}
+  }
+  var origFxBar = window.drawFxBar;
+  if (typeof origFxBar === "function" && !origFxBar.__same507){
+    var wFxBar = function(){
+      var r = origFxBar.apply(this, arguments);
+      try { addSameBtn507(); } catch(e){}
+      return r;
+    };
+    wFxBar.__same507 = true;
+    window.drawFxBar = wFxBar;
+  }
+  HB.__armSame507 = armSame507;
+})();
+</script>
