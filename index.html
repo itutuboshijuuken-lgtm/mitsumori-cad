@@ -30262,10 +30262,13 @@ window.__len309txt = function(){ return null; };
     ["#geyaAdd", C("geya")],
     ["#pvSeg [data-pv='iso']", C("iso")],
     ["#pvSeg [data-pv='plan']", C("plan")],
-    /* CAD-497（見た目の直しC・本人の決定 2026-11-21）：#rotL／#rotR には絵を付けない。
-       絵（mawasu）は左右どちらのボタンも同じ絵で両向きの矢印が1枚に入っており、回す方向が分からない。
-       文字の矢印（↺＝左回り／↻＝右回り）は方向が一目で分かるので文字を残し、絵を外して二重を解く。
-       文字だけ表示（gosei-btnstyle-v1="text"）では絵が消えるため、絵を残すと左右が区別できなくなる事も理由。 */
+    /* CAD-499（見た目の直しCのやり直し・本人の指示 2026-11-21 21:19「回すボタン、残すなら大きい方がよかった」）：
+       CAD-497 で文字の矢印だけにしたが、本人の指示で大きい方＝絵（mawasu）を残す形に戻す。
+       絵は両向きの矢印が1枚に入った絵（実物を確認済み）なので、片方だけ反転しても同じに見え、反転はしない。
+       左右の区別はボタンの位置。通常表示は「絵＋回す」だけにするため、swap325 側で
+       #rotL／#rotR のラベルから矢印字（↺／↻）だけを落とす。
+       文字だけ表示（gosei-btnstyle-v1="text"）では絵が出ず、元の「↺ 回す／回す ↻」に戻るので左右が分かる。 */
+    ["#rotL", C("mawasu")], ["#rotR", C("mawasu")],
     ["#sbOk", C("ok")],
     ["#sbLen", C("nagasa")],
     ["#sbRot", C("mawasu")],
@@ -30324,6 +30327,7 @@ window.__len309txt = function(){ return null; };
     el.classList.add("btn325i");
     var tmp = document.createElement("div"); tmp.innerHTML = el.__o325;
     var plain = (tmp.textContent || "").replace(/\s+/g, " ").trim().replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    if (el.id === "rotL" || el.id === "rotR") plain = plain.replace(/[↺↻]/g, "").replace(/\s+/g, " ").trim(); /* CAD-499：回すボタンは絵＋「回す」だけにする（矢印字は落とす） */
     el.innerHTML = '<span class="tx325">' + el.__o325 + '</span><span class="row325"><img class="ic325" alt="" src="' + ICONS[key] + '"><span class="lb325" data-lb="' + plain + '"></span></span>';
     var im326 = el.querySelector("img.ic325");
     if (im326 && SCALE376[key]) { im326.style.transform = "scale(" + SCALE376[key] + ")"; if (ORIGIN376[key]) im326.style.transformOrigin = ORIGIN376[key]; el.classList.add("big376"); }
