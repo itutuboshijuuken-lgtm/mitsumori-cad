@@ -6488,6 +6488,8 @@ function framePos(){
        理由：法律は柱の間隔を決めていないが、外周は ①筋交い・面材の耐力壁が全部910の柱の間で組める ②サッシ・外壁の下地・胴縁の受けがそろう
        ③2階の柱や床梁を受けやすい、ので現場では910が普通（S.colPe で1820に戻せる＝本数を減らして安くする時）。 */
     const colPe = +S.colPe || (S.modul === "1000" ? 1000 : 910);
+    /* CAD-458：内側の間仕切りも910ごと（実物の柱壁伏図でも、内側の壁は910ごとの所が多い。筋交いを910の柱の間に入れられ、2階の柱・床梁も受けやすい）。S.colPi で1820に戻せる */
+    const colPi = +S.colPi || (S.modul === "1000" ? 1000 : 910);
     const addRun = (a, c, kind, isNew) => {
       const L = Math.hypot(c[0] - a[0], c[1] - a[1]); if (!(L > 1)) return null;
       const r = {ax: a[0], ay: a[1], bx: c[0], by: c[1], L, ux: (c[0] - a[0]) / L, uy: (c[1] - a[1]) / L, kind, isNew: !!isNew, ops: [], opsD: [], junc: new Set(), postT: new Set(), jambs: []};
@@ -6543,7 +6545,7 @@ function framePos(){
       const arr = [...new Set([...ts, ...r.jambs])].sort((a, b) => a - b);   // CAD-199: 埋め処理は jamb の位置も区切りにする（長い間仕切りで開口の遠端に柱が戻らないように）
       for (let i = 0; i + 1 < arr.length; i++){
         let a = arr[i]; const b = arr[i + 1]; let guard = 0;
-        const cp = r.kind === "e" ? colPe : colP;
+        const cp = r.kind === "e" ? colPe : (S.mode === "zo" ? colPi : colP);
         while (b - a > cp + 0.5 && guard++ < 60){
           let cand = Math.floor((a + cp) / M4 + 1e-9) * M4;
           if (cand <= a + 0.5) cand = a + cp;
@@ -7514,7 +7516,9 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (two){
     lum("hashira", "通し柱", 105, 105, Array(corners).fill(Lc + S.dosa + Lc2 + 120), `105角・長さ${fmt(Lc + S.dosa + Lc2)}`, true);
     lum("hashira", "1階 管柱", 105, 105, Array(colsEach - corners).fill(Lc + 120), `105角・長さ${fmt(Lc)}`, true);
-    lum("hashira", "2階 管柱", 105, 105, Array(colsEach - corners).fill(Lc2 + 120), `105角・長さ${fmt(Lc2)}`, true);
+    /* CAD-458：2階の間取りがある時は、2階の柱は2階の配置から数える（今までは1階と同じ本数） */
+    const F62 = (Array.isArray(S.fl) && S.fl.length > 1) ? (() => { try { return withFloor416(2, () => framePos()); } catch(e){ return F6; } })() : F6;
+    lum("hashira", "2階 管柱", 105, 105, Array(Math.max(0, (F62.frameN || colsEach) - corners)).fill(Lc2 + 120), `105角・長さ${fmt(Lc2)}`, true);
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length + op2161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(Array(studThick).fill(Lc2), op1161.th, op2161.th), `${ta}×${tb}・910の位置（継目）・1〜2階${op1161.th.length + op2161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(Array(studThin).fill(Lc2), op1161.tn, op2161.tn), `${na}×${nb}・455の位置・1〜2階${op1161.tn.length + op2161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(Array(studsPer).fill(Lc2), op1161.th, op1161.tn, op2161.th, op2161.tn), `${ta}×${tb}・455間隔・1〜2階${opNote161}`, false); }
   } else {
@@ -11533,14 +11537,19 @@ function colPEff183(){ return S.modul === "1000" ? 2000 : 1820; }
       let b = document.getElementById("colBox");
       if (!b){ b = document.createElement("div"); b.id = "colBox"; anchor.after(b); }
       const rw = S.roofW === "light" ? "light" : S.roofW === "slate" ? "slate" : "kawara", md = S.modul === "1000" ? "1000" : "910";
-      const ce = +S.colPe === 1820 || +S.colPe === 2000 ? "wide" : "std", sig = rw + "|" + md + "|" + ce;
+      const ce = +S.colPe === 1820 || +S.colPe === 2000 ? "wide" : "std", ci = +S.colPi === 1820 || +S.colPi === 2000 ? "wide" : "std", se = S.shoene458 === false ? "off" : "on", sig = rw + "|" + md + "|" + ce + "|" + ci + "|" + se;
       if (b.dataset.sig === sig) return; b.dataset.sig = sig;
       b.innerHTML = `<h2>屋根の重さ</h2><div class="seg"><button type="button" data-rw="kawara" aria-pressed="${rw === "kawara"}">瓦（重い）</button><button type="button" data-rw="light" aria-pressed="${rw === "light"}">金属など（軽い）</button><button type="button" data-rw="slate" aria-pressed="${rw === "slate"}">スレート（中）</button></div>
       <p class="hint">屋根の仕上げの金額、小屋梁が飛ばせる長さの目安、壁量の計算に使います。</p>
       <h2>モジュール（柱・間柱の基準）</h2><div class="seg"><button type="button" data-md="910" aria-pressed="${md === "910"}">910ピッチ</button><button type="button" data-md="1000" aria-pressed="${md === "1000"}">1000モジュール</button></div>
       <p class="hint">内側の柱と柱の間は、最大で ${md === "1000" ? "2,000" : "1,820"}mm まで。図面の寸法は変わりません。</p>
       <h2>外周の柱の間隔</h2><div class="seg"><button type="button" data-ce="std" aria-pressed="${ce === "std"}">${md === "1000" ? "1,000" : "910"}ごと（ふつう）</button><button type="button" data-ce="wide" aria-pressed="${ce === "wide"}">${md === "1000" ? "2,000" : "1,820"}ごと（本数を減らす）</button></div>
-      <p class="hint">外周は${md === "1000" ? "1,000" : "910"}ごとが現場のふつう。筋交いが全部の柱の間に入れられ、サッシ・外壁の下地も受けやすい。窓・ドアの所は、その両脇に立てます。</p>`;
+      <p class="hint">外周は${md === "1000" ? "1,000" : "910"}ごとが現場のふつう。筋交いが全部の柱の間に入れられ、サッシ・外壁の下地も受けやすい。窓・ドアの所は、その両脇に立てます。</p>
+      <h2>内側の柱の間隔</h2><div class="seg"><button type="button" data-ci="std" aria-pressed="${ci === "std"}">${md === "1000" ? "1,000" : "910"}ごと（ふつう）</button><button type="button" data-ci="wide" aria-pressed="${ci === "wide"}">${md === "1000" ? "2,000" : "1,820"}ごと（本数を減らす）</button></div>
+      <h2>断熱（省エネ基準）</h2><div class="seg"><button type="button" data-se="on" aria-pressed="${se === "on"}">あり（新築はこちら）</button><button type="button" data-se="off" aria-pressed="${se === "off"}">なし</button></div>
+      <p class="hint">2025年から、断熱材の重さも壁量の計算に入ります（天井・外壁の断熱材）。あり＝必要な壁が少し増えます。</p>`;
+      b.querySelectorAll("[data-ci]").forEach(x => x.onclick = () => { if (x.dataset.ci === "wide") S.colPi = md === "1000" ? 2000 : 1820; else delete S.colPi; S.sujiN = null; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
+      b.querySelectorAll("[data-se]").forEach(x => x.onclick = () => { if (x.dataset.se === "off") S.shoene458 = false; else delete S.shoene458; S.sujiN = null; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
       b.querySelectorAll("[data-ce]").forEach(x => x.onclick = () => { if (x.dataset.ce === "wide") S.colPe = md === "1000" ? 2000 : 1820; else delete S.colPe; S.sujiN = null; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
       b.querySelectorAll("[data-rw]").forEach(x => x.onclick = () => { S.roofW = x.dataset.rw; save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
       b.querySelectorAll("[data-md]").forEach(x => x.onclick = () => { S.modul = x.dataset.md; S.colP = colPEff183(); save(); b.dataset.sig = ""; try { drawEst(); } catch(e){} box(); });
@@ -11772,7 +11781,11 @@ function intGirderH(){
    筋交い 45×105 の壁倍率は2（たすき掛けは4）、1本が受け持つ長さは910mm。余裕1.2倍。
    面材（構造用合板9mm・N50@150）の壁倍率は2.5。開口の無い所で、幅910以上の所だけ数える。足りない分は筋交いを足す。 ---------- */
 function wallCoef406(fl){
-  const R406 = roof(), two = R406.two, X = (S.roofW === "light" ? 0.81 : S.roofW === "slate" ? 1.20 : 1.50) + (S.solar ? 0.20 : 0),   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
+  const R406 = roof(), two = R406.two; let X = (S.roofW === "light" ? 0.81 : S.roofW === "slate" ? 1.20 : 1.50) + (S.solar ? 0.20 : 0);   /* 太陽光パネルあり（S.solar）は屋根に0.20を足す */ let Y = S.gaiheki === "nuri" ? 1.53 : 1.08, F = 1.20;
+  /* CAD-458（Opus）：省エネ基準の断熱材の重さ（2025年改正の算定式の D1 天井断熱材・D3 外壁断熱材）。2025年4月から新築は省エネ基準が義務なので、新築・増築は「あり」が初期値。
+     値は表計算ツールの初期値の考え方（大阪府内建築行政連絡協議会の手計算支援ツール：屋根断熱 GW24K 400mm＝100N/㎡、外壁断熱 GW24K 170mm＋胴縁＝外壁1㎡あたり70N）。
+     外壁は床1㎡あたりに直して 0.095kN/㎡（外壁の面積÷床面積 約1.35）。田村ビルズの実物（1階39・2階19cm/㎡）と合う */
+  if (S.shoene458 !== false){ X += 0.10; Y += 0.095; }
   /* CAD-409.1：2階建の2階は Ai を掛ける（Ai＝1＋(1/√α−α)×2T/(1＋3T)、α＝2階の重さ÷全体、T＝0.03h）。早見表の2階（瓦26・金属18）と一致 */
   if (two && fl === 2){ const a = (X + 0.5 * Y) / (X + 1.5 * Y + F), h = Math.max(5, ((R406.Hk || 6000) + (R406.W || 0) / 2 * (+S.k || 4) / 10) / 1000), T = 0.03 * h, A2 = 1 + (1 / Math.sqrt(a) - a) * 2 * T / (1 + 3 * T);
     return Math.round(10.204 * A2 * (X + 0.5 * Y) * (S.softGround ? 1.5 : 1)); }
@@ -11800,8 +11813,13 @@ function windReq406(fl){
   try {
     const R = roof(), t = (+S.k || 4) / 10, W = R.W, D = R.D, cw = +S.windC || 50;
     const hw = Math.max(0, (R.Hk || 0) - (R.two && fl === 2 ? (R.Hd || 0) : (+S.dfl || 0)) - 1350), rise = (S.roof === "kata" ? W : W / 2) * t;
-    const eave = (D * hw + (R.iri ? (D - 2 * R.ia) + R.ia * R.ia / (W / 2) : S.roof === "yose" ? (D + Math.max(0, D - W)) / 2 : D) * rise) / 1e6;   /* CAD-446：入母屋は妻の所で棟まで立つ */   // 平側の面（幅D）
-    const gable = (W * hw + W * rise / 2) / 1e6;                                                     // 妻側の面（幅W）
+    /* CAD-458：見付面積に屋根の出（ケラバ・軒の出）と屋根の厚み（垂木・野地・屋根材 約150）を入れる。軒先は桁より 軒の出×勾配 だけ下がる所まで見える。
+       田村ビルズの実物の見付面積と比べて、2階は実物よりやや大きく（安全側）、1階の差は階高の読みの差 */
+    const kA = R.kerA || 0, kB = R.kerB || 0, nk = +S.noki || 0, TH = 150, drop = nk * t;
+    const rW = (R.iri ? (D - 2 * R.ia) + R.ia * R.ia / (W / 2) : S.roof === "yose" ? (D + Math.max(0, D - W)) / 2 : D) + (S.roof === "yose" ? 0 : kA + kB);
+    const eave = (D * hw + rW * (rise + drop + TH)) / 1e6;   // 平側の面（幅D＋ケラバ）
+    const gW = W + 2 * nk;
+    const gable = (W * hw + (S.roof === "yose" ? gW * (drop + TH) + W * rise / 2 : gW * (rise + drop) / 2 + gW * TH)) / 1e6;   // 妻側の面（幅W＋軒の出）
     if (R.spanY){ out.y = eave * cw; out.x = gable * cw; } else { out.x = eave * cw; out.y = gable * cw; }
   } catch(e){}
   return out;
@@ -11940,13 +11958,16 @@ function wallSegs406core(fl){
       const rank = arr => arr.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (c.L - a.L));
       const put = sg => { sg.kind = autoKind; sg.auto = true; };
       // 1) 両端の1/4の帯：充足率1を超えるまで
-      [0, 1].forEach(si => { let guard = 0; while (sideHave(si) < Q.sideReq && guard++ < 60){ const c2 = rank(free().filter(sg => sideOf(sg, Q) === si)); if (!c2.length) break; put(c2[0]); } });
+      [0, 1].forEach(si => { let guard = 0; while (sideHave(si) < Q.sideReq && guard++ < 60){ const c2 = rank(free().filter(sg => sideOf(sg, Q) === si)); if (!c2.length){ const t2 = !tas && rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) === si)); if (t2 && t2.length){ t2[0].kind = "tasuki"; t2[0].auto = true; continue; } break; } put(c2[0]); } });
       // 2) 全体の必要量まで：充足率の低い側の帯→真ん中の順、角に近い所から
       let guard = 0;
       while (have() < need[d] && guard++ < 200){
         const r0 = sideHave(0) / Math.max(1, Q.sideReq), r1 = sideHave(1) / Math.max(1, Q.sideReq), pref = r0 <= r1 ? 0 : 1;
         let c2 = rank(free().filter(sg => sideOf(sg, Q) === pref)); if (!c2.length) c2 = rank(free());
         if (!c2.length){
+          /* CAD-458：空いている壁が無い時は、片筋交いをたすき（倍率4.0）にする。足りない側の帯から（実物の柱壁伏図も、たすきで帯のバランスを取っている） */
+          const t2 = !tas && rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) === pref).concat(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) !== pref)));
+          if (t2 && t2.length){ t2[0].kind = "tasuki"; t2[0].auto = true; continue; }
           // 面材の上に筋交いを重ねる（倍率4.5）
           const m2 = rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "menzai"));
           if (!m2.length) break; m2[0].kind = "menzaiKata"; m2[0].auto = true; continue;
