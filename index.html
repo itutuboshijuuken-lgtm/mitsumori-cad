@@ -36645,3 +36645,49 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   setTimeout(fit, 300);
 })();
 </script>
+<script id="pat466js">
+/* CAD-466（Opus）：床の柄が拡大の後などに一瞬（1秒ほど）消えて無地になる件（本人の動画 2026-11-21）。
+   原因：図面を描き直すたびに、柄（pattern の中の写真）が作り直され、iPhone が写真を読み直す間、下地の無地が見えていた。
+   直し：柄を、図面の外の「消えない置き場」（body の先頭の見えない svg）に1回だけ写して持ち続ける。
+   url(#id) は文書の中で先に出てくる同じ id を使うので、図面の中で作り直されても、写真は読み直さない。
+   大きさ（width/height など）が変わった時だけ、置き場の側の数字を書き換える（写真の要素はそのまま） */
+(function(){
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg", store = null;
+  function ensure(){
+    if (store && store.isConnected) return store;
+    var sv = document.createElementNS(NS, "svg"); sv.setAttribute("id", "patStore466"); sv.setAttribute("width", "0"); sv.setAttribute("height", "0"); sv.setAttribute("aria-hidden", "true");
+    sv.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;left:-9999px;top:0;pointer-events:none";
+    var d = document.createElementNS(NS, "defs"); sv.appendChild(d); document.body.insertBefore(sv, document.body.firstChild); store = sv; return sv;
+  }
+  function syncAttrs(dst, src){
+    for (var i = 0; i < src.attributes.length; i++){ var a = src.attributes[i]; if (dst.getAttribute(a.name) !== a.value){ if (a.name === "href" || a.name === "xlink:href"){ if (dst.getAttribute(a.name) !== a.value) dst.setAttribute(a.name, a.value); } else dst.setAttribute(a.name, a.value); } }
+  }
+  function syncEl(dst, src){
+    syncAttrs(dst, src);
+    var sc = src.children, dc = dst.children;
+    if (sc.length !== dc.length){ while (dst.firstChild) dst.removeChild(dst.firstChild); for (var k = 0; k < sc.length; k++) dst.appendChild(sc[k].cloneNode(true)); return; }
+    for (var j = 0; j < sc.length; j++){ if (sc[j].tagName !== dc[j].tagName){ dst.replaceChild(sc[j].cloneNode(true), dc[j]); continue; } syncEl(dc[j], sc[j]); }
+  }
+  function run(){
+    try {
+      var plan = document.getElementById("plan"); if (!plan) return;
+      var pats = plan.querySelectorAll("pattern[id]"); if (!pats.length) return;
+      var d = ensure().firstChild;
+      for (var i = 0; i < pats.length; i++){
+        var p = pats[i]; if (!p.querySelector("image")) continue;   /* 写真を使う柄だけ（線だけの柄は軽いので図面のまま） */
+        var mine = d.querySelector('pattern[id="' + p.id + '"]');
+        /* 完成図など、図面の外にも同じ名前の柄がある時は置き場に持たない（向こうの大きさを奪わないため） */
+        var other = [].some.call(document.querySelectorAll('pattern[id="' + p.id + '"]'), function(x){ return !plan.contains(x) && !(store && store.contains(x)); });
+        if (other){ if (mine) mine.remove(); continue; }
+        if (!mine){ d.appendChild(p.cloneNode(true)); continue; }
+        syncEl(mine, p);
+      }
+    } catch(e){}
+  }
+  HB.__pat466 = run;
+  try { var od = window.drawPlan; if (od && !od.__p466){ window.drawPlan = function(){ var r = od.apply(this, arguments); run(); return r; }; window.drawPlan.__p466 = true; } } catch(e){}
+  try { var mo = new MutationObserver(function(){ run(); }); var hook = function(){ var pl = document.getElementById("plan"); if (pl) mo.observe(pl, {childList: true}); }; hook(); } catch(e){}
+  setTimeout(run, 500);
+})();
+</script>
