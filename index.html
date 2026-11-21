@@ -18338,7 +18338,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var pz = G.pz;
     if (pz.kind === "plan"){
       try {
-        PV.z = Math.max(1, Math.min(8, pz.z0 * tp.d / pz.d0));
+        PV.z = Math.max(1, Math.min(4, pz.z0 * tp.d / pz.d0));   /* CAD-463：上限は確定時と同じ4（前は8まで広がってから指を離すと4へ跳ね戻り、ガクッと見えた） */
         pz320Move(pz, tp);
       } catch(err){}
     } else if (pz.kind === "vb"){
@@ -34872,8 +34872,20 @@ nav.steps{padding:1px 6px 3px}
         }
         if (!cand) return;
         if (inExcept(el)) return;
+        /* CAD-463：親がもう隠されていれば、子に付けない（1枚ずつの clip は描画がとても重い：1軒で660個あった） */
+        var pa = el.parentElement; if (pa && pa !== svg && pa.closest && pa.closest('[clip-path="url(#clipF423)"]')){ if (el.getAttribute("clip-path") === "url(#clipF423)") el.removeAttribute("clip-path"); return; }
         if (el.getAttribute("clip-path") !== "url(#clipF423)") el.setAttribute("clip-path", "url(#clipF423)");
       });
+      /* CAD-463：まとめる。①子が全部隠す物のグループは、グループに1つだけ付ける ②一番上に並んだ床の rect の続きは、1つのグループに入れて1つだけ付ける。
+         拡大した時のカクつきの主な原因（1枚ずつ clip を計算し直していた） */
+      try {
+        var CP = "url(#clipF423)", parents = new Set();
+        svg.querySelectorAll('[clip-path="url(#clipF423)"]').forEach(function(e){ var P0 = e.parentElement; if (P0 && P0 !== svg && P0.tagName === "g" && P0 !== g) parents.add(P0); });
+        parents.forEach(function(P0){ var ch = [].slice.call(P0.children); if (ch.length > 1 && ch.every(function(c){ return c.getAttribute("clip-path") === CP; })){ P0.setAttribute("clip-path", CP); ch.forEach(function(c){ c.removeAttribute("clip-path"); }); } });
+        var kids = [].slice.call(svg.children), run = [];
+        var flush463 = function(){ if (run.length >= 4){ var w = document.createElementNS(NS, "g"); w.setAttribute("clip-path", CP); w.setAttribute("data-w463", "1"); svg.insertBefore(w, run[0]); run.forEach(function(c){ c.removeAttribute("clip-path"); w.appendChild(c); }); } run = []; };
+        kids.forEach(function(c){ if (c.tagName === "rect" && c.getAttribute("clip-path") === CP && !c.id) run.push(c); else flush463(); }); flush463();
+      } catch(e463){}
     } catch(e){}
   }
   /* CAD-430（Opus）：チカチカ止め。0.5秒ごとの見回りだけだと、床の絵が一瞬見えてから消えていた。
@@ -36240,7 +36252,9 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
     try {
       if (touchesNow > 0 && !pinchBusy() && Date.now() - lastActAt > 3000) touchesNow = 0;   /* 張り付き保険 */
       window.__gz451Hold = holdNow();
-      if (zNow() > 1.01){
+      /* CAD-463（Opus）：平色にするのは「指で拡大・移動している最中」だけ。前は拡大している間ずっと平色で、
+         床を置いても柄が出ず「反映されない」ように見えていた（本人の動画 2026-11-21）。指を離して300ms静まったら柄に戻す */
+      if (pinchBusy() || touchesNow > 1){
         zLowSince = 0;
         if (!isOn){ isOn = true; document.body.classList.add("gz451z"); }
       } else {
