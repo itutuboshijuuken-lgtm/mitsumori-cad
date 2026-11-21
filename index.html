@@ -566,7 +566,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1階</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="hideFxBtn369" type="button" aria-pressed="false" title="物を隠す：置いた物を隠して、間仕切りと床を確かめます">物を隠す</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1F</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="hideFxBtn369" type="button" aria-pressed="false" title="物を隠す：置いた物を隠して、間仕切りと床を確かめます">物を隠す</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -4866,7 +4866,7 @@ function flLoad(o){
 function flTitle(){
   const h = document.querySelector("header.top h1"); if (!h) return; if (!flTitle.base) flTitle.base = h.textContent;
   flEnsure(); h.textContent = S.fl.length > 1 ? flTitle.base + "（" + S.fl[S.fi].name + "）" : flTitle.base;
-  const b = $("flBtn"); if (b) b.textContent = S.fl[S.fi].name;
+  const b = $("flBtn"); if (b) b.textContent = String(S.fl[S.fi].name || "").replace(/^(\d+)階$/, "$1F");   /* CAD-472：絵ではなく「1F」の文字 */
 }
 function flSwitch(i){
   flEnsure(); if (i === S.fi || !S.fl[i]) return;
@@ -36695,3 +36695,13 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   try { var mo = new MutationObserver(function(){ if (q) return; q = true; requestAnimationFrame(function(){ q = false; run(); }); }); var hk = function(){ var pl = document.getElementById("plan"); if (pl) mo.observe(pl, {childList: true}); else setTimeout(hk, 500); }; hk(); } catch(e){}
 })();
 </script>
+<style id="tidy472css">
+/* CAD-472（Opus）：まとまりのため、要らない物を出さない（本人 2026-11-21「無駄な情報が多い」）
+   ・お客さん用のボタン ・新築・増築で「新設」の切り替え（新築なら全部新設で当たり前） ・上の列のゴミ箱（消すは選んだ物の横の1か所だけ） */
+#chips434 [data-w="cust"]{display:none!important}
+body.zo472 #sbSt,body.zo472 #gkN208{display:none!important}
+#delToolBtn{display:none!important}
+#flBtn{background-image:none!important}
+#flBtn img,#flBtn .bi325,#flBtn .ico325{display:none!important}
+</style>
+<script id="tidy472js">(function(){ setInterval(function(){ try { var z = typeof S !== "undefined" && S && S.mode === "zo" && !(S.gk && (((S.gk.parts2D || []).length) || ((S.gk.sashes || []).length)));   /* 新築（既存の家の図が無い）の時だけ。増築で既存の図がある時は新設・既存の切り替えを残す */ if (document.body.classList.contains("zo472") !== z) document.body.classList.toggle("zo472", z); } catch(e){} }, 300); })();</script>
