@@ -36449,3 +36449,28 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   } catch(e){}
 })();
 </script>
+
+<style id="roofset460css">
+/* ===== CAD-460（2026-11-21・本人の訂正「下のスクロールして見る数字とか仕様を決めるところが
+   ちっちゃすぎる」）：④屋根の設定欄（断面図の下のスクロール領域 .fs420scroll の中）だけを大きくする。
+   実測（CAD-458・390px幅、土台は CAD-459）：見出し16px、チップ15px/高さ40px、詳細設定の行 ラベル15px・補足12px・
+   数字18px、入母屋/陸屋根ボタン12px、下屋の削除ボタン高さ36px、説明文14px・小見出し13px。
+   直しは表示だけ：文字は16px以上を目安に、タップ範囲は40px以上に。並び・項目・操作・初期値は不変。
+   セレクタは #st3 .fs420scroll に閉じたので、仕様画面など他の画面の共通部品には広がらない。 ===== */
+#st3 .fs420scroll h2{font-size:18px;margin:18px 2px 8px}
+#st3 .fs420scroll .seg button{font-size:17px;min-height:46px}
+#st3 .fs420scroll #roofSeg [data-iri446],#st3 .fs420scroll #roofSeg [data-rk412]{font-size:16px}
+#st3 .fs420scroll .chips button{font-size:17px;min-height:46px;min-width:60px;padding:0 12px}
+#st3 .fs420scroll .hint{font-size:15px}
+#st3 .fs420scroll .sub2{font-size:15px}
+#st3 .fs420scroll #det summary{font-size:17px;padding:12px 2px}
+#st3 .fs420scroll .set{padding:11px 2px}
+#st3 .fs420scroll .set span{font-size:17px}
+#st3 .fs420scroll .set span small{font-size:13px}
+#st3 .fs420scroll .set b{font-size:20px;padding:6px 12px}
+#st3 .fs420scroll .ex .fs button{font-size:17px;min-height:48px}
+#st3 .fs420scroll .ex .fs button small{font-size:12px}
+#st3 .fs420scroll .ex .hd button{min-height:40px;min-width:44px}
+#st3 .fs420scroll #dirBox>div:not([class]){font-size:15px!important}
+#st3 .fs420scroll .res .grid div span{font-size:14px}
+</style>
