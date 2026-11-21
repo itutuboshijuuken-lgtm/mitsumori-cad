@@ -38333,3 +38333,8 @@ body:not(.x509) #roomBar176 .rmFlT176{display:none!important}
   try { var od = window.drawPlan; if (typeof od === "function" && !od.__a511){ var w = function(){ var r = od.apply(this, arguments); try { tick(); } catch(e){} return r; }; w.__a511 = true; window.drawPlan = w; } } catch(e){}
 })();
 </script>
+<style id="nostep512css">
+/* CAD-512（Opus）：上の手順の段（①間仕切り〜⑤見直し）と黄色い案内の行・「次へ」を出さない（本人の決定「C＋B」の3回目）。
+   手順は右下の丸ボタン（CAD-510）と、押した物での自動切り替え（CAD-511）で選ぶ。チュートリアル中は今まで通り出す。中身・計算は変えない */
+body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body:not(.nbtutRun) #next443{display:none!important}
+</style>
