@@ -13659,9 +13659,9 @@ HB.__dskSeg32 = true;
   HB.__dtPost36 = function(){
     try {
       if (prevOpen !== undefined && toolOpen !== prevOpen && !HB.__put && !ltTool && !enclMode){
-        if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK"), autoArm: true};   /* CAD-247：自動構えの印 */ toast("腰窓：置く所をタップ（続けて置けます）"); drawToolsUICore(); }
+        if (toolOpen === "win"){ HB.__put = {g: "win", label: "腰窓", fn: () => addStdOpening("winK"), autoArm: true};   /* CAD-247：自動構えの印 */ toast("腰窓：置く所をタップ"); drawToolsUICore(); }
         else if (toolOpen === "gen"){ HB.__put = {g: "gen", label: "玄関シングル", fn: () => addStdOpening("genS"), autoArm: true}; toast("玄関シングル：置く所をタップ"); drawToolsUICore(); }
-        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "片開き", fn: () => addStdOpening("door"), autoArm: true}; toast("片開き：置く所をタップ（続けて置けます）"); drawToolsUICore(); }   /* CAD-253：自動構えのラベルをボタンの新しい文字「片開き」に合わせた */
+        else if (toolOpen === "door"){ HB.__put = {g: "door", label: "片開き", fn: () => addStdOpening("door"), autoArm: true}; toast("片開き：置く所をタップ"); drawToolsUICore(); }   /* CAD-253：自動構えのラベルをボタンの新しい文字「片開き」に合わせた */
       }
       prevOpen = toolOpen;
       const box = document.getElementById("toolCh2");
@@ -14132,7 +14132,7 @@ HB.__dskSeg32 = true;
       const chip = b.textContent.trim();
       b.onclick = () => {
         if (entries.length === 1){ arm(key, entries[0], chip + " " + entries[0].name); return; }
-        $("mbox").innerHTML = `<h3>${chip}：大きさを選んでください</h3><p class="hint" style="margin-top:0">選んだ大きさで、続けて置けます。あとから1つずつ直す手間がありません。</p><div class="seg v">${entries.map((e, i) => `<button type="button" data-wsz="${i}" style="min-height:50px;text-align:left;padding:6px 12px"><b>${e.name}</b>　<small style="color:var(--sub)">${fmt(e.w)} × ${fmt(e.h)}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="wszNo" type="button">×</button></div>`;
+        $("mbox").innerHTML = `<h3>${chip}：大きさを選んでください</h3><p class="hint" style="margin-top:0">選んだ大きさで置けます。</p><div class="seg v">${entries.map((e, i) => `<button type="button" data-wsz="${i}" style="min-height:50px;text-align:left;padding:6px 12px"><b>${e.name}</b>　<small style="color:var(--sub)">${fmt(e.w)} × ${fmt(e.h)}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="wszNo" type="button">×</button></div>`;
         $("modal").hidden = false;
         $("mbox").querySelectorAll("[data-wsz]").forEach(x => x.onclick = () => { const e = entries[+x.dataset.wsz]; $("modal").hidden = true; arm(key, e, chip + " " + e.name); });
         $("wszNo").onclick = () => { $("modal").hidden = true; };
@@ -14146,16 +14146,16 @@ HB.__dskSeg32 = true;
       const hasRoom = ((S.roomRecs || []).length || (S.parts2D || []).length || (S.zones || []).length) > 0;
       return hasRoom ? "部屋を直す時は、できた部屋をタップ。もう一部屋は、またぐるっとなぞります。次に進む時は「終了」を押して、建具や窓を置きます。" : "部屋を、指でぐるっと囲んでください。囲んだ所が部屋になります。";
     }
-    if (HB.__put) return HB.__put.label + "：置きたい壁をタップ。続けて置けます。置き終わったら、光っている「" + HB.__put.label + "」をもう一度押して、次に進みます。";
+    if (HB.__put) return HB.__put.label + "：置きたい壁をタップ。1つ置いたら終わりです。やめる時は、光っている「" + HB.__put.label + "」をもう一度押します。";
     if (typeof ltTool !== "undefined" && ltTool){
       const a = HB.__ltAct;
-      return a ? LTN[ltTool] + "（" + LTA[a.act] + "）：置く所をタップ。置き終わったら「照明」のボタンをもう一度押して、次に進みます。"
+      return a ? LTN[ltTool] + "（" + LTA[a.act] + "）：置く所をタップ。1つ置いたら終わりです。"
                : S.mode === "zo" ? LTN[ltTool] + "：置く所をタップ" : LTN[ltTool] + "：置く所をタップすると、新設・撤去・交換を選べます。";
     }
     if (toolOpen === "part") return "間仕切り：長さのボタンを押すと、その長さで入ります。図をタップすると、壁から壁まで入ります。";
-    if (toolOpen === "door") return "建具：付けたい物を選んで、置きたい壁をタップ。選んだ物は、続けて置けます。";
-    if (toolOpen === "win") return "窓：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。続けて置けます。";
-    if (toolOpen === "gen") return "玄関：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。続けて置けます。";
+    if (toolOpen === "door") return "建具：付けたい物を選んで、置きたい壁をタップ。1つ置いたら終わりです。";
+    if (toolOpen === "win") return "窓：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。1つ置いたら終わりです。";
+    if (toolOpen === "gen") return "玄関：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。1つ置いたら終わりです。";
     if (toolOpen === "etc") return "その他：置きたい物を選んで、置く所をタップ。便器は、置くと自動でトイレになります。";
     if (toolOpen === "light") return "照明：種類を選んで、置く所をタップ。新設か、今ある物を使うかを聞かれます。";
     return "上のボタンで、付けたい物を選びます。置いた物を直す時は、図の上の物をタップしてください。";
@@ -37871,3 +37871,184 @@ function kozo478(C){
    タブの中身・順番・動きは無変更（見た目だけ）。 ===== */
 #st4 .tabs254 button{font-size:13px;padding:1px 2px}
 </style>
+<script id="same502js">
+/* ===== CAD-502：物を置いたら構えを外す＋「同じ物を置く」ボタン（本人の指示 2026-11-21 21:48・実機スクショ付き）
+   「同じ物を置くボタンを置いて、他の全ての物連続して置ける仕様をやめる」
+   (1) ②間取りで物を1つ置いたら、置く構え（建具・窓・置く物の HB.__put／照明の ltTool）を外す。
+       コントローラーは残り、調整だけができる。図面をタップしても新しい物は置かれず、
+       既にある物をタップすれば通常の選択になる（構えが無い時の従来の動き）。
+       置けなかったタップ（壁から遠い等で個数が増えていない）では外さない（押し直せる）。
+       判定は ltPlanClick の包みで「置く前後の個数」を見る。本体・統合関数は無変更。
+       リフォームで照明の状態を聞く場合は非同期に置かれるため、短時間だけ見張って置けた時点で外す。
+   (2) コントローラー（#selBar）に「同じ物を置く」ボタンを足す（建具・窓／置く物／照明が対象。
+       間仕切りはなぞって描く物なので対象外）。押すと、その物（同じ種類・大きさ）だけが
+       1回置ける状態になり、置いたらまた外れる。構え中にもう一度押すとやめる。
+   対象外（今回は触らない）：
+   ・チュートリアル（nbtut）の中：ステップ10（窓）が「同じ窓を続けて置く」前提で組まれているため、
+     チュートリアル中は従来の動きのまま（このブロックは無力）。
+   ・床の指定（HB.__floorArm）：部屋タップで仕様を決める流れで、やめる操作が別にある。
+   ・③室内図の fxPending：同じ「置いた後も構えが残る」仕組みがあるが、今回は②だけ（本人の判断待ち）。
+   ・部屋の見本（CAD-365）：置いた後に「同じ大きさを続けて置く」を選ぶ専用パネルが既にある。
+   あわせて、案内文（guideText・自動構えのトースト・大きさ選びの注記）から「続けて置けます」を外した。 */
+(function(){ "use strict";
+  if (window.__same502) return; window.__same502 = true;
+  function tut(){ try { return (typeof HB !== "undefined" && HB.__nbtut === 1) || document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+  function cntPut(){ var n = 0; try { n += (S.sashes || []).length; } catch(e){} try { n += (S.tenken || []).length; } catch(e){} return n; }
+  function cntLt(){ try { return (S.lights || []).length; } catch(e){ return 0; } }
+  function refresh(){ setTimeout(function(){ try { drawToolsUI(); } catch(e){} }, 0); }
+  function disarmPut(){ try { if (HB.__put) HB.__put = null; HB.__same502Arm = null; } catch(e){} refresh(); }
+  function disarmLt(){ try { ltTool = null; } catch(e){} try { HB.__ltAct = null; HB.__same502Arm = null; } catch(e){} refresh(); }
+
+  /* ---------- (1) 置いたら構えを外す：ltPlanClick の包み ---------- */
+  var ltWatch = null;
+  function watchLt(n0){
+    if (ltWatch) clearInterval(ltWatch);
+    var t0 = Date.now();
+    ltWatch = setInterval(function(){
+      try {
+        if (Date.now() - t0 > 20000 || tut() || typeof ltTool === "undefined" || !ltTool){ clearInterval(ltWatch); ltWatch = null; return; }
+        if (cntLt() > n0){ clearInterval(ltWatch); ltWatch = null; disarmLt(); }
+      } catch(e){ clearInterval(ltWatch); ltWatch = null; }
+    }, 150);
+  }
+  var origLt = window.ltPlanClick;
+  if (typeof origLt === "function" && !origLt.__same502){
+    var wLt = function(mm){
+      var put0 = null; try { put0 = HB.__put || null; } catch(e){}
+      var lt0 = null; try { lt0 = (typeof ltTool !== "undefined") ? ltTool : null; } catch(e){}
+      var n0 = cntPut(), l0 = cntLt();
+      var r = origLt.apply(this, arguments);
+      try {
+        if (!tut()){
+          if (put0 && cntPut() > n0) disarmPut();
+          else if (!put0 && lt0){
+            if (cntLt() > l0) disarmLt();
+            else if (r === true) watchLt(l0);
+          }
+        }
+      } catch(e){}
+      return r;
+    };
+    wLt.__same502 = true;
+    window.ltPlanClick = wLt;
+  }
+
+  /* ---------- (2)「同じ物を置く」ボタン ---------- */
+  var MIZU502 = {wc: 1, tearai: 1, bath: 1, senmen: 1, senpan: 1, kitchen: 1};
+  function curSel(){ try { return (typeof sel !== "undefined" && sel) ? sel : null; } catch(e){ return null; } }
+  function sashTy502(sa){
+    if (sa.cat === "玄関"){ if (/親子/.test(sa.name)) return "genO"; if (/片引き/.test(sa.name)) return "genK"; if (/2枚建/.test(sa.name)) return "genH"; return "genS"; }
+    if (sa.cat === "勝手口") return "genD";
+    if (sa.cat === "クローゼット") return "closet";
+    if (sa.cat === "室内ドア"){ if (sa.name === "片引き戸") return "hiki"; if (sa.name === "引違い戸") return "chigai"; if (/上吊り/.test(sa.name)) return "tsuri"; return "door"; }
+    if (sa.cat === "小窓") return "winS";
+    if (sa.cat === "掃き出し") return "winH";
+    if (sa.cat === "FIX") return "winF";
+    return "winK";
+  }
+  function sashGrp502(sa){ if (/玄関|勝手口/.test(sa.cat)) return "gen"; if (sa.cat === "室内ドア" || sa.cat === "クローゼット") return "door"; return "win"; }
+  function armSame502(){
+    if (tut()) return;
+    var s = curSel(); if (!s) return;
+    var key = s.t + s.i;
+    var armedNow = false; try { armedNow = !!(HB.__same502Arm && HB.__same502Arm.key === key && (HB.__put || (typeof ltTool !== "undefined" && ltTool))); } catch(e){}
+    if (armedNow){
+      try { if (HB.__put) HB.__put = null; } catch(e){}
+      try { ltTool = null; } catch(e){}
+      try { HB.__ltAct = null; HB.__same502Arm = null; } catch(e){}
+      try { toast("やめました"); } catch(e){}
+      try { drawToolsUI(); } catch(e){}
+      try { drawSelBar(); } catch(e){}
+      return;
+    }
+    if (s.t === "o"){
+      var sa = S.sashes[s.i]; if (!sa) return;
+      var pick = {cat: sa.cat, name: sa.name, w: sa.w, h: sa.h};
+      var ty = sashTy502(sa), g = sashGrp502(sa);
+      var snap = {frame: sa.frame, elock: sa.elock, glass: sa.glass, flip: (typeof sa.flip === "number") ? sa.flip : null};
+      var lbl = sa.cat === "室内ドア" ? sa.name : (g === "gen" ? sa.cat + (sa.name || "") : sa.cat);
+      try { toolOpen = g; } catch(e){}
+      HB.__put = {g: g, label: lbl, same502: true, fn: function(){
+        var n0 = (S.sashes || []).length;
+        HB.__pickSash = pick;
+        addStdOpening(ty);
+        if ((S.sashes || []).length > n0){
+          var ns = S.sashes[S.sashes.length - 1];
+          if (snap.frame) ns.frame = snap.frame;
+          if (snap.elock) ns.elock = snap.elock;
+          if (snap.glass) ns.glass = snap.glass;
+          if (snap.flip != null) ns.flip = snap.flip;
+          try { save(); } catch(e){}
+        }
+      }};
+      HB.__same502Arm = {key: key};
+      try { toast(lbl + "：置く所をタップ（同じ物）"); } catch(e){}
+    } else if (s.t === "k"){
+      var o = (S.tenken || [])[s.i]; if (!o) return;
+      var k = o.k, g2 = (k === "acout") ? "light" : (MIZU502[k] ? "mizu" : "etc");
+      var sz = {};
+      ["w", "d", "h", "st", "kh", "sh", "use", "l2", "e"].forEach(function(f){ if (o[f] !== undefined) sz[f] = o[f]; });
+      var lbl2 = (typeof TKN !== "undefined" && TKN[k]) || k;
+      try { toolOpen = g2; } catch(e){}
+      HB.__put = {g: g2, label: lbl2, same502: true, fn: function(){
+        var n0 = (S.tenken || []).length;
+        addTenken(k);
+        if ((S.tenken || []).length > n0){
+          var no = S.tenken[S.tenken.length - 1];
+          Object.keys(sz).forEach(function(f){ no[f] = sz[f]; });
+          try { moveTenken(no, 0, 0); save(); } catch(e){}
+        }
+      }};
+      HB.__same502Arm = {key: key};
+      try { toast(lbl2 + "：置く所をタップ（同じ物）"); } catch(e){}
+    } else if (s.t === "lt"){
+      var l = (S.lights || [])[s.i]; if (!l) return;
+      try { toolOpen = "light"; } catch(e){}
+      try { ltTool = l.k; } catch(e){}
+      HB.__ltAct = {k: l.k, act: l.act || "new"};
+      HB.__same502Arm = {key: key};
+      try { toast(((typeof LTN !== "undefined" && LTN[l.k]) || l.k) + "：置く所をタップ（同じ物）"); } catch(e){}
+    } else return;
+    try { drawToolsUI(); } catch(e){}
+    try { drawSelBar(); } catch(e){}
+  }
+  function addSameBtn502(){
+    if (tut()) return;
+    var bar = document.getElementById("selBar");
+    if (!bar || bar.hidden) return;
+    try { if (!HB.__pageM) return; } catch(e){ return; }
+    var s = curSel(); if (!s || (s.t !== "o" && s.t !== "k" && s.t !== "lt")) return;
+    var armed = false;
+    try { armed = !!(HB.__same502Arm && HB.__same502Arm.key === s.t + s.i && (HB.__put || (typeof ltTool !== "undefined" && ltTool))); } catch(e){}
+    var old = document.getElementById("sbSame502");
+    if (old){
+      var tx = armed ? "置く所をタップ（やめる）" : "同じ物を置く";
+      if (old.textContent !== tx) old.textContent = tx;
+      old.style.background = armed ? "#FFF3D6" : "#EAF1FA";
+      return;
+    }
+    var row = document.createElement("div");
+    row.style.cssText = "margin:0 0 4px";
+    var b = document.createElement("button");
+    b.id = "sbSame502"; b.type = "button";
+    b.style.cssText = "width:100%;min-height:40px;border:1.5px solid #2563B0;border-radius:8px;background:" + (armed ? "#FFF3D6" : "#EAF1FA") + ";color:#2563B0;font-size:14px;font-weight:800";
+    b.textContent = armed ? "置く所をタップ（やめる）" : "同じ物を置く";
+    b.onclick = function(){ armSame502(); };
+    row.appendChild(b);
+    var sbw = bar.querySelector(".sbw");
+    if (sbw) bar.insertBefore(row, sbw); else bar.appendChild(row);
+    try { if (HB.__bindBar157) HB.__bindBar157(bar); } catch(e){}
+  }
+  var origBar = window.drawSelBar;
+  if (typeof origBar === "function" && !origBar.__same502){
+    var wBar = function(){
+      var r = origBar.apply(this, arguments);
+      try { addSameBtn502(); } catch(e){}
+      return r;
+    };
+    wBar.__same502 = true;
+    window.drawSelBar = wBar;
+  }
+  HB.__armSame502 = armSame502;
+})();
+</script>
