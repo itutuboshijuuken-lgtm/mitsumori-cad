@@ -2107,17 +2107,20 @@ $("plan").addEventListener("pointermove", e => {
     e.stopImmediatePropagation(); return;
   }
   if (dragging && touches.size === 1){
-    if (!dragging.armed){ if (Math.abs(e.clientX - dragging.start[0]) + Math.abs(e.clientY - dragging.start[1]) > 12) dragging.cancel = true; e.stopImmediatePropagation(); return; }
+    if (!dragging.armed){ const mv474 = Math.abs(e.clientX - dragging.start[0]) + Math.abs(e.clientY - dragging.start[1]);
+      /* CAD-474：置いた物（戸・窓・水まわり・造作）は、家具と同じく指を動かしたらすぐ動く（長押し不要）。間仕切りは今まで通り */
+      if (!dragging.isP && !dragging.cancel && mv474 > 6){ dragging.armed = true; clearTimeout(dragging.timer); try { $("planWrap").classList.add("dragArmed"); } catch(er){} }
+      else { if (mv474 > 12) dragging.cancel = true; e.stopImmediatePropagation(); return; } }
     const r = $("plan").getBoundingClientRect(), k = (HB.__pageM ? PV.W : PV.W / PV.z) / r.width / HB.__planT.s;
     const dx = (e.clientX - dragging.start[0]) * k, dy = (e.clientY - dragging.start[1]) * k;
-    if (Math.abs(dx) + Math.abs(dy) > 20) dragging.moved = true;
+    if (Math.abs(dx) + Math.abs(dy) > 20 || dragging.armed) dragging.moved = true;
     if (dragging.moved){
       dragging.dx = dx; dragging.dy = dy;
       if (!dragging.raf) dragging.raf = requestAnimationFrame(() => {
         if (!dragging) return; dragging.raf = 0;
         Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig)));
         const r5 = v => Math.round(v / 5) * 5;
-        if (dragging.kind === "k") moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); else if (dragging.isP){ /* CAD-137: 間仕切りのドラッグ移動は廃止 (位置直しはコントローラーだけ) */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
+        if (dragging.kind === "k"){ moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); snapTenken474(dragging.obj); } else if (dragging.isP){ /* CAD-137: 間仕切りのドラッグ移動は廃止 (位置直しはコントローラーだけ) */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
         drawPlan();
       });
     }
@@ -2564,6 +2567,29 @@ const isShelf = o => o.k === "makura" || o.k === "chudan", isKS = o => o.k === "
 function moveTenken(o, dx, dy){ const b = bbox(), [hx, hy] = tkExt(o), sn = (v, h) => Math.round((v - h) / 2.5) * 2.5 + h; const ox = o.x, oy = o.y; o.x = Math.max(b.x0 + hx, Math.min(b.x1 - hx, sn(o.x + dx, hx))); o.y = Math.max(b.y0 + hy, Math.min(b.y1 - hy, sn(o.y + dy, hy)));
   // CAD-148: 外形ポリゴンの外（L字の凹みを含む）へは動かさない
   try { if (HB.__g148 && !HB.__g148.rect(o)){ o.x = ox; o.y = oy; } } catch(e){} }
+/* CAD-474（Opus）：置く物を壁に吸い付ける。箱（中心 cx,cy・半分の幅 hx,hy）の辺が、壁の面から SNAP 以内なら面にぴったり付ける。
+   壁は外周と間仕切り（縦横の線）。面＝壁の芯から半分の厚み（外周75・間仕切り60）。他の物（skip 以外）の辺にも吸い付く。 */
+function snapBox474(cx, cy, hx, hy, others){
+  const SNAP = 150, walls = [];
+  try { const p = pts(); for (let k = 0; k < p.length; k++){ const a = p[k], c = p[(k + 1) % p.length]; walls.push([a[0], a[1], c[0], c[1], 75]); } } catch(e){}
+  (S.parts2D || []).forEach(q => { try { if (pState(q) === "remove") return; } catch(e){} walls.push([q.x1, q.y1, q.x2, q.y2, 60]); });
+  let bx = null, by = null, dbx = SNAP + 1, dby = SNAP + 1;
+  walls.forEach(w => {
+    const hz = Math.abs(w[1] - w[3]) < 1, vt = Math.abs(w[0] - w[2]) < 1, t = w[4];
+    if (hz){ const x0 = Math.min(w[0], w[2]), x1 = Math.max(w[0], w[2]); if (cx + hx <= x0 + 1 || cx - hx >= x1 - 1) return;
+      [[w[1] + t + hy, Math.abs((cy - hy) - (w[1] + t))], [w[1] - t - hy, Math.abs((cy + hy) - (w[1] - t))]].forEach(c => { if (c[1] < dby){ dby = c[1]; by = c[0]; } }); }
+    if (vt){ const y0 = Math.min(w[1], w[3]), y1 = Math.max(w[1], w[3]); if (cy + hy <= y0 + 1 || cy - hy >= y1 - 1) return;
+      [[w[0] + t + hx, Math.abs((cx - hx) - (w[0] + t))], [w[0] - t - hx, Math.abs((cx + hx) - (w[0] - t))]].forEach(c => { if (c[1] < dbx){ dbx = c[1]; bx = c[0]; } }); }
+  });
+  (others || []).forEach(o => {   /* 他の物の辺：[cx,cy,hx,hy] */
+    const ovy = cy + hy > o[1] - o[3] && cy - hy < o[1] + o[3], ovx = cx + hx > o[0] - o[2] && cx - hx < o[0] + o[2];
+    if (ovy){ [[o[0] + o[2] + hx, Math.abs((cx - hx) - (o[0] + o[2]))], [o[0] - o[2] - hx, Math.abs((cx + hx) - (o[0] - o[2]))]].forEach(c => { if (c[1] < Math.min(dbx, 100)){ dbx = c[1]; bx = c[0]; } }); }
+    if (ovx){ [[o[1] + o[3] + hy, Math.abs((cy - hy) - (o[1] + o[3]))], [o[1] - o[3] - hy, Math.abs((cy + hy) - (o[1] - o[3]))]].forEach(c => { if (c[1] < Math.min(dby, 100)){ dby = c[1]; by = c[0]; } }); }
+  });
+  return [dbx <= SNAP && bx !== null ? bx : cx, dby <= SNAP && by !== null ? by : cy];
+}
+HB.__snapBox474 = snapBox474;
+function snapTenken474(o){ try { const [hx, hy] = tkExt(o), ox = o.x, oy = o.y, oth = (S.tenken || []).filter(x => x !== o).map(x => { const e = tkExt(x); return [x.x, x.y, e[0], e[1]]; }); const r = snapBox474(o.x, o.y, hx, hy, oth); o.x = r[0]; o.y = r[1]; if (HB.__g148 && !HB.__g148.rect(o)){ o.x = ox; o.y = oy; } } catch(e){} }
 // キッチン・洗面化粧台：いちばん近い壁にくっつけて置く（壁側が背中）。幅は選ぶ
 function addEquip(k){
   /* ===== 段階2・画面4前半：addEquip（旧連鎖 blk26 → 本体 を畳み込み） =====
@@ -35532,7 +35558,7 @@ nav.steps{padding:1px 6px 3px}
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
         var it = arm.it, kind = arm.kind; arm = null;
         if (kind === "part") placePart(it, m);
-        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; save(); drawPlan(); toast("指で動かせます。↻で回す"); }
+        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; try { var fz = S.furn434[fsel], sz = HB.__snapBox474(fz.x, fz.y, fz.w / 2, fz.h / 2, []); fz.x = sz[0]; fz.y = sz[1]; } catch(er){} save(); drawPlan(); toast("指で動かせます。↻で回す"); }
         chips(); return;
       }
       var i = (step() === "put" || step() === "all") ? fAt(m) : -1;   /* CAD-443：家具は ④置く物 と ⑤見直し だけ */
@@ -35547,7 +35573,9 @@ nav.steps{padding:1px 6px 3px}
       if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); e.stopImmediatePropagation();
       var m; try { m = toMM(planPt(e)); } catch(er){ return; } var f = S.furn434[fsel]; if (!f) return;
       if (!drag.moved){ pushUndo(); drag.moved = true; }
-      f.x = Math.round((m[0] + drag.dx) / 50) * 50; f.y = Math.round((m[1] + drag.dy) / 50) * 50; paint();
+      f.x = Math.round((m[0] + drag.dx) / 50) * 50; f.y = Math.round((m[1] + drag.dy) / 50) * 50;
+      try { var hw = (f.r ? f.h : f.w) / 2, hh = (f.r ? f.w : f.h) / 2, oth = (S.furn434 || []).filter(function(x){ return x !== f; }).map(function(x){ return [x.x, x.y, (x.r ? x.h : x.w) / 2, (x.r ? x.w : x.h) / 2]; }).concat((S.tenken || []).map(function(x){ var e2 = tkExt(x); return [x.x, x.y, e2[0], e2[1]]; })); var sn = HB.__snapBox474(f.x, f.y, hw, hh, oth); f.x = sn[0]; f.y = sn[1]; } catch(er){}   /* CAD-474：壁・他の物に吸い付く */
+      paint();
     }, true);
     var up = function(e){ if (!drag || e.pointerId !== drag.id) return; e.stopImmediatePropagation(); var mv = drag.moved; drag = null; if (mv){ save(); drawPlan(); } };
     sl.addEventListener("pointerup", up, true); sl.addEventListener("pointercancel", up, true);
@@ -36789,3 +36817,10 @@ body.zo472 #sbSt,body.zo472 #gkN208{display:none!important}
   setInterval(sync, 700); sync();
 })();
 </script>
+<style id="pad474css">
+/* CAD-474：置いた物は指で動かすので、コントローラーの矢印と刻み（10mm）は隠す（消してはいない。body.pad474 を付けると戻る）。
+   間仕切りは指で動かさないので、間仕切りを選んでいる時だけは矢印を出す */
+body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .ar,body:not(.pad474) #selBar:not([data-k^="p"]) #sbStep{display:none!important}
+body:not(.pad474) #selBar:not([data-k^="p"]) .dpad{grid-template-rows:32px!important;grid-template-columns:36px!important}
+body:not(.pad474) #selBar:not([data-k^="p"]) .dpad .rot{grid-area:1/1!important}
+</style>
