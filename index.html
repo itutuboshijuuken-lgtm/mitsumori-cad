@@ -21928,6 +21928,14 @@ setInterval(gkSync208, 600);
 #miniPlan219 .mfHit{cursor:pointer}
 #miniPlan219 .mfRoom{cursor:pointer}
 #elevBox .card.mfCard219{outline:3px solid #FF00C8;outline-offset:-3px}
+/* CAD-503：選んだ面のカードだけを平面図のすぐ下に出す・押せる線はゆっくり光らせる */
+#elevBox.mf503sel .card:not(.mfCard219){display:none!important}
+#miniPlan219.mf503sm svg{max-height:30vh;width:auto!important;margin:0 auto}
+#miniPlan219{scroll-margin-top:8px}
+#elevBox.mf503sel .card.mfCard219{animation:none!important}
+#miniPlan219 .mpCap{font-size:14px!important;color:#1F4E8C!important}
+#miniPlan219 .mfLn503{animation:mfGlow503 1.4s ease-in-out infinite}
+@keyframes mfGlow503{0%,100%{opacity:.95}50%{opacity:.35}}
 #fxBranch219{margin-top:8px}
 #fxBranch219 .fbRow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 #fxBranch219 .fbRow button{min-height:38px;padding:0 12px;border-radius:8px;border:1.5px solid var(--line);background:#fff;color:var(--ai);font-weight:800;font-size:13.5px}
@@ -22036,6 +22044,12 @@ setInterval(gkSync208, 600);
       var wmm = (a1 - a0 + 1) * R.st, hmm = (b1 - b0 + 1) * R.st, n = Math.max(1, [...lb].length);
       var fs = Math.max(120, Math.min(300, wmm * 0.85 / n, hmm * 0.6));
       lx = R.b.x0 + (a0 + a1 + 1) / 2 * R.st;
+      /* CAD-503：狭くて横に入らない部屋（トイレなど）は縦書き（本人の決定） */
+      var fsV = Math.min(300, wmm * 0.8, hmm * 0.85 / n);
+      if (wmm * 0.85 / n < 220 && fsV > fs * 1.2){
+        ly = R.b.y0 + (b0 + b1 + 1) / 2 * R.st;
+        h += "<text x=\"" + X(lx) + "\" y=\"" + Y(ly) + "\" text-anchor=\"middle\" dominant-baseline=\"central\" writing-mode=\"tb\" pointer-events=\"none\" style=\"writing-mode:vertical-rl;text-orientation:upright;font-size:" + Math.round(fsV) + "px;font-weight:900;fill:" + (on ? "#C2571A" : "#5B7BA6") + "\">" + esc(lb) + "</text>";
+      } else
       h += "<text x=\"" + X(lx) + "\" y=\"" + (Y(ly) + fs * 0.35) + "\" text-anchor=\"middle\" pointer-events=\"none\" style=\"font-size:" + Math.round(fs) + "px;font-weight:900;fill:" + (on ? "#C2571A" : "#5B7BA6") + "\">" + esc(lb) + "</text>";
     });
     var F = faces219();
@@ -22054,7 +22068,7 @@ setInterval(gkSync208, 600);
         if (rn[1] - rn[0] < R.st) return;
         var t0 = Math.max(0, rn[0] - step), t1 = Math.min(f.len, rn[1] + step);
         var ax = X(f.o[0] + f.r[0] * t0), ay = Y(f.o[1] + f.r[1] * t0), bx = X(f.o[0] + f.r[0] * t1), by = Y(f.o[1] + f.r[1] * t1);
-        h += "<line x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"95\" stroke-linecap=\"round\" opacity=\".85\" pointer-events=\"none\"/>";
+        h += "<line" + (state.selFi < 0 ? " class=\"mfLn503\"" : "") + " x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"" + (selF ? "#FF00C8" : "#2563B0") + "\" stroke-width=\"" + (selF ? 130 : 95) + "\" stroke-linecap=\"round\" opacity=\"" + (selF || state.selFi < 0 ? ".9" : ".35") + "\" pointer-events=\"none\"/>";
         h += "<line class=\"mfHit\" data-mfi=\"" + fi + "\" x1=\"" + ax + "\" y1=\"" + ay + "\" x2=\"" + bx + "\" y2=\"" + by + "\" stroke=\"rgba(0,0,0,0)\" stroke-width=\"520\" stroke-linecap=\"round\"/>";
       });
     });
@@ -22065,10 +22079,14 @@ setInterval(gkSync208, 600);
     var box = $219("elevBox"); if (!box) return;
     var cards = box.querySelectorAll(".card");
     for (var i = 0; i < cards.length; i++) cards[i].classList.toggle("mfCard219", i === state.selFi);
-    if (scroll && state.selFi >= 0 && cards[state.selFi]){ try { cards[state.selFi].scrollIntoView({block: "nearest", behavior: "smooth"}); } catch(e){} }
+    /* CAD-503：選んだ面のカードだけを平面図のすぐ下に出す（ほかの面のカードは隠す。同じ線をもう一度押すと全部に戻る） */
+    box.classList.toggle("mf503sel", state.selFi >= 0 && !!cards[state.selFi]);
+    try { var cap = document.querySelector("#miniPlan219 .mpCap"); if (cap) cap.textContent = state.selFi >= 0 ? "ピンクの壁を直しています。ほかの青い線を押すと切り替え、同じ線をもう一度押すと全部の壁に戻ります" : "青い線（壁）を押すと、その壁を直せます。部屋を押すと部屋が変わります"; } catch(e){}
+    try { var mpl = $219("miniPlan219"); if (mpl) mpl.classList.toggle("mf503sm", state.selFi >= 0); } catch(e){}
+    if (scroll && state.selFi >= 0 && cards[state.selFi]){ try { var mp503 = $219("miniPlan219"); (mp503 || cards[state.selFi]).scrollIntoView({block: "start", behavior: "smooth"}); } catch(e){} }   /* CAD-503：図面を小さくして、図面と選んだ壁のカードが一緒に見えるようにする */
   }
   function selectFace219(fi){
-    state.selFi = fi;
+    state.selFi = (fi === state.selFi) ? -1 : fi;   /* CAD-503：同じ線をもう一度押すと選ぶのをやめる */
     renderMini219();
     markCard219(true);
   }
