@@ -4061,6 +4061,10 @@ function restoreFloorVacated212(oldR, newR){
 }
 function enclApply(type){
   if (!encl || !encl.r) return;
+  /* CAD-519：先に床を選んで囲んだ囲み（flPre519）で、先に選んだ内容の保留が
+     消えている時は、間仕切りを作らず止める（保留が生きていれば CAD-138 の
+     横取りが先に床を適用するため、ここには来ない）。 */
+  if (type === "room" && encl.flPre519 && !(typeof HB !== "undefined" && HB.__pendOk173 && HB.__pendOk173())){ toast("床を選んでください"); return; }
   const r = encl.r, rr = {x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1}, w = rr.x1 - rr.x0, h = rr.y1 - rr.y0, ed = encl.edit, sz = `${f5(w)}×${f5(h)}`;
 if (encl.edit && encl.edit.kind === "room"){ enclRoomApply(type); return; }
   if (ed){
@@ -14700,9 +14704,12 @@ document.addEventListener("click", function(e){
        CAD-138 側のフックが保留（pendEncl173）へ引き継ぐ。幅・奥行などの数字は
        囲みバーの寸法ボタンで直し、「決定」で初めて適用される（173 の形）。
        フックが無い・失敗した時だけ、従来の即適用に倒す。 */
-    const r174 = eraFromStroke(mm);
+    /* CAD-519：範囲はなぞった形そのまま（raw）に一本化する。従来は表示・寸法用に
+       壁へ吸着した四角（eraFromStroke）を使い、無編集の決定だけ raw を使うため、
+       バーの表示と実際に付く範囲が食い違っていた（CAD-507 の形にそろえる）。
+       あわせて「先に床を選んで囲んだ」印 flPre519 を付ける（enclApply の門番用）。 */
     enclMode = true; enclNew = S.mode === "zo"; tatMode = false; eraMode = false;
-    encl = {r: r174 || {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, ax0: false, ax1: false, ay0: false, ay1: false}, pick: "room", raw: rect};
+    encl = {r: {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, ax0: false, ax1: false, ay0: false, ay1: false}, pick: "room", raw: rect, flPre519: true};
     document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
     let pendOk174 = false;
     try { pendOk174 = !!(HB.__enclArmPend174 && HB.__enclArmPend174()); } catch(er){}
@@ -17600,6 +17607,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      落とす。何か落としたら true。道具の持ち替えで床の構えを落とす時
      （HB.__floorOff384）から呼ばれる。 */
   HB.__floorPendOff384 = function(){ var had = !!pend138 || !!br138; pend138 = null; if (br138) closeBar138(); return had; };
+  HB.__pendOk173 = pendEnclOk173;   /* CAD-519：enclApply の門番（先に選んだ床の保留が生きているか）から使う */
   HB.__enclArmPend174 = function(){
     var fk = HB.__floorArm; if (!fk) return false;
     var kind, det, chipFk;
@@ -36531,17 +36539,14 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
   var last = 0, pt0 = null;
   window.addEventListener("pointerdown", function(e){ var b = e.target && e.target.closest ? e.target.closest("#roomBar176 [data-flk]") : null; if (!b) return; try { pt0 = HB.__roomPt433 && HB.__roomPt433(); pt0 = pt0 ? [pt0[0], pt0[1]] : null; } catch(er){ pt0 = null; } }, true);
   var h = function(e){
-    var b = e.target && e.target.closest ? e.target.closest("#roomBar176 [data-flk]") : null; if (!b) return;
-    if (Date.now() - last < 400) return; last = Date.now();
-    var pt = pt0 || (HB.__roomPt433 && HB.__roomPt433()); pt0 = null;
-    setTimeout(function(){
-      try {
-        var arm = HB.__floorArm; if (!arm || !pt) return;
-        if (typeof ltPlanClick === "function"){ ltPlanClick([pt[0], pt[1]]); }
-        HB.__floorArm = null; try { document.querySelectorAll("#floorPanel [data-flk]").forEach(function(x){ x.classList.remove("armBlink"); }); } catch(er){}
-        try { drawPlan(); } catch(er){}
-      } catch(er){}
-    }, 60);
+    /* CAD-519：即適用はやめた。部屋バーのチップは「構え」までにし、部屋全体は
+       部屋をタップ、一部だけは指で囲んで決める（部屋バーの案内文どおりの形）。
+       CAD-443/469 の即適用があると構えがその場で消費され、先に選んでから
+       囲む経路（flInkEnd158）に辿り着けなかった（残作業・翔伍の指示
+       2026-11-21 23:43）。適用後に構えが残る事故（469の指摘）は、部屋タップ
+       適用では CAD-397/384 がバーを閉じて構えを落とし、囲み適用では保留
+       （pendEncl173）へ移す時に構えを落とすため、起きない。 */
+    return;
   };
   window.addEventListener("pointerup", h, true); window.addEventListener("click", h, true);   /* window で先に受ける（document では他の仕組みに止められていた） */
 })();
