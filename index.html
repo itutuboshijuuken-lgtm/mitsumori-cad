@@ -25510,7 +25510,7 @@ body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
   try{
     orig=tidyPlanLabels;
     tidyPlanLabels=function(){
-      try{ if(typeof dragging!=="undefined"&&dragging&&dragging.moved){ skipped=true; fontsOnly(); return; } }catch(e){}
+      try{ if((typeof dragging!=="undefined"&&dragging&&dragging.moved)||window.__lite498){ skipped=true; fontsOnly(); return; } }catch(e){}
       skipped=false; return orig.apply(this,arguments);
     };
   }catch(e){}
@@ -25908,7 +25908,7 @@ function badges(svg){
 function apply(){
   try{
     var svg=document.getElementById("plan"); if(!svg||svg.getAttribute("data-r267"))return;
-    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
+    if((typeof dragging!=="undefined"&&dragging&&dragging.moved)||window.__lite498)return;
     if(document.body.classList.contains("pz262"))return;
     rooms(svg); badges(svg);
   }catch(e){ try{console.warn("CAD-267",e)}catch(_){} }
@@ -25964,7 +25964,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   function fix271(){
     var svg = document.getElementById("plan");
     if (!svg || !svg.getScreenCTM) return;
-    if (typeof dragging !== "undefined" && dragging && dragging.moved) return;
+    if ((typeof dragging !== "undefined" && dragging && dragging.moved) || window.__lite498) return;
     if (document.body.classList.contains("pz262")) return;
     var root = svg.getScreenCTM(); if (!root) return;
     var inv = root.inverse();
@@ -37758,5 +37758,34 @@ function kozo478(C){
   setInterval(upd491, 400);
   document.addEventListener("click", function(){ setTimeout(upd491, 30); }, true);
   upd491();
+})();
+</script>
+<script id="drag498js">
+/* ===== CAD-498：物を指で動かしている間も、床（フローリング・畳・タイル）・ドア・窓の見た目を消さない =====
+   本人の動画「物を動かす時にフローリングがきえる」。前は動かしている間、速さのために床の素材の貼り付けを全部止めていて、
+   平らな色や線だけの床になっていた。重いのは文字の重なり直し（CAD-262/267/271）だけなので、それだけを止め、
+   床・畳・タイル・ドア・窓の見た目は動かしている間もそのまま貼る。指を離した後の描き直しも同じ見た目なので、ちらつかない。 */
+(function(){ "use strict";
+  var prev = window.tidyPlanLabels; if (typeof prev !== "function") return;
+  window.tidyPlanLabels = function(){
+    var dg = (typeof dragging !== "undefined") ? dragging : null;
+    if (!(dg && dg.moved)) return prev.apply(this, arguments);
+    window.__lite498 = true; dg.moved = false;
+    try { return prev.apply(this, arguments); }
+    finally { dg.moved = true; window.__lite498 = false; }
+  };
+  /* CAD-498 その2：コントローラーの矢印を押すたびに図面がチカチカする（本人の動画）。
+     描き直しの直後の装飾の連鎖は、前の装飾が作る模様（畳の写真など）を後ろの装飾が待つ順番になっていて、
+     1回目では畳・文字の縮小が付かず、200〜400ms後の見回りで付いていた（その間が「チカチカ」）。
+     描き直しと同じ流れの中でもう1回だけ連鎖をかけ、画面に出る前にそろえる（2回目は付いている物は飛ばすので軽い）。 */
+  var od = window.drawPlan;
+  if (typeof od === "function" && !od.__f498){
+    var w = function(){
+      var r = od.apply(this, arguments);
+      try { if (typeof HB !== "undefined" && HB.__pageM && typeof window.tidyPlanLabels === "function" && !(typeof dragging !== "undefined" && dragging && dragging.moved)) window.tidyPlanLabels(); } catch(e){}
+      return r;
+    };
+    w.__f498 = true; window.drawPlan = w;
+  }
 })();
 </script>
