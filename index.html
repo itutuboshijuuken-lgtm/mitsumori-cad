@@ -35735,7 +35735,7 @@ nav.steps{padding:1px 6px 3px}
       /* ② 部屋の金額 */
       var rp = HB.__roomPt433 && HB.__roomPt433();
       if (rp){ try { var R = roomsCalc(), i = Math.floor((rp[0] - R.b.x0) / R.st), j = Math.floor((rp[1] - R.b.y0) / R.st), cid = R.comp[j * R.NX + i], rm = R.rooms.find(function(r){ return r.cid === cid; }), u = unitCost();
-        if (rm && u){ var cp = P(rm.p[0], rm.p[1]), man = Math.round(u * rm.area / 1000) * 1000; chip(cp[0], cp[1] - 30 * k, "この部屋 約" + (man >= 10000 ? (man / 10000).toFixed(1) + "万円" : fmt(man) + "円") + "（目安）", "#2e7d32"); }
+        if (false && rm && u){ /* CAD-469：「この部屋 約○万円」は出さない（本人「いらない。ごちゃごちゃ」） */ var cp = P(rm.p[0], rm.p[1]), man = Math.round(u * rm.area / 1000) * 1000; chip(cp[0], cp[1] - 30 * k, "この部屋 約" + (man >= 10000 ? (man / 10000).toFixed(1) + "万円" : fmt(man) + "円") + "（目安）", "#2e7d32"); }
       } catch(e){} }
       /* ③ ドア・窓：角からの寸法 */
       if (typeof sel !== "undefined" && sel && sel.t === "o" && S.sashes[sel.i] && S.sashes[sel.i].host){
@@ -36064,24 +36064,27 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
 })();
 </script>
 <script id="flapply443js">
-/* ===== CAD-443（Opus）：部屋を選んでから床の種類を押したら、その場でその部屋の床にする（翔伍「押しても床が変わらない」）。
-   前は種類を押すと「構え」になるだけで、もう一度部屋をタップしないと変わらなかった。部屋を選んでいる時だけ、すぐ同じ処理（ltPlanClick）を呼ぶ。 */
+/* ===== CAD-443／CAD-469（Opus）：部屋を選んで床の種類を押したら、その部屋だけをその床にする。
+   CAD-469：①押した瞬間（pointerdown）に、開いている部屋の点を覚える（ボタンの処理で部屋の選択が消えた後に読んでいて、空振りしていた）
+   ②付けたら「構え」を外す。外さないと、次に別の部屋をタップした時に前の床で塗られて「思った通りにならない」ことになっていた（本人の動画 2026-11-21） ===== */
 (function(){
   "use strict";
-  var last = 0;
+  var last = 0, pt0 = null;
+  window.addEventListener("pointerdown", function(e){ var b = e.target && e.target.closest ? e.target.closest("#roomBar176 [data-flk]") : null; if (!b) return; try { pt0 = HB.__roomPt433 && HB.__roomPt433(); pt0 = pt0 ? [pt0[0], pt0[1]] : null; } catch(er){ pt0 = null; } }, true);
   var h = function(e){
-    var b = e.target && e.target.closest ? e.target.closest("#roomBar176 button") : null; if (!b) return;
+    var b = e.target && e.target.closest ? e.target.closest("#roomBar176 [data-flk]") : null; if (!b) return;
     if (Date.now() - last < 400) return; last = Date.now();
+    var pt = pt0 || (HB.__roomPt433 && HB.__roomPt433()); pt0 = null;
     setTimeout(function(){
       try {
-        var arm = HB.__floorArm, pt = HB.__roomPt433 && HB.__roomPt433();
-        if (!arm || !pt) return;
-        if (typeof sel !== "undefined" && sel) return;
-        if (typeof ltPlanClick === "function"){ ltPlanClick([pt[0], pt[1]]); try { drawPlan(); } catch(er){} }
+        var arm = HB.__floorArm; if (!arm || !pt) return;
+        if (typeof ltPlanClick === "function"){ ltPlanClick([pt[0], pt[1]]); }
+        HB.__floorArm = null; try { document.querySelectorAll("#floorPanel [data-flk]").forEach(function(x){ x.classList.remove("armBlink"); }); } catch(er){}
+        try { drawPlan(); } catch(er){}
       } catch(er){}
-    }, 80);
+    }, 60);
   };
-  document.addEventListener("pointerup", h, true); document.addEventListener("click", h, true);
+  window.addEventListener("pointerup", h, true); window.addEventListener("click", h, true);   /* window で先に受ける（document では他の仕組みに止められていた） */
 })();
 </script>
 
@@ -36128,7 +36131,7 @@ body.gz448 #plan *,body.gz448 #iso *,body.gz448 #pvSvg *,body.gz448 #sec *{shape
   function surf(t){ try { return !!(t && t.closest && t.closest("#planWrap, #iso, #pvSvg, #sec, #draw")); } catch(e){ return false; } }
   function pinchBusy(){ try { var s = (typeof HB !== "undefined" && HB.__pinch153State) ? HB.__pinch153State() : null; return !!(s && (s.mode === "pinch" || s.mode === "dead")); } catch(e){ return false; } }
   function gesturing(){ return touchesNow > 0 || pinchBusy() || (Date.now() - lastScrollAt < 300) || (Date.now() - lastTouchEndAt < 300); }
-  function sync(){ try { document.body.classList.toggle("gz448", gesturing()); } catch(e){} }
+  function sync(){ try { document.body.classList.remove("gz448"); } catch(e){} }   /* CAD-469：床の柄はいつも出す（平色に切り替える時にチカチカしていた） */
   ["touchstart", "touchmove"].forEach(function(tn){ document.addEventListener(tn, function(e){ try { if (surf(e.target)){ touchesNow = e.touches ? e.touches.length : touchesNow; lastActAt = Date.now(); sync(); } } catch(err){} }, { capture: true, passive: true }); });
   ["touchend", "touchcancel"].forEach(function(tn){ document.addEventListener(tn, function(e){ try { touchesNow = e.touches ? e.touches.length : 0; lastActAt = Date.now(); if (!touchesNow) lastTouchEndAt = Date.now(); sync(); } catch(err){} }, { capture: true, passive: true }); });
   document.addEventListener("scroll", function(e){ try { var t = e.target; if (t && t.nodeType === 1 && ((t.closest && t.closest("#planWrap")) || (t.querySelector && t.querySelector("#plan")))){ lastScrollAt = Date.now(); lastActAt = Date.now(); sync(); } } catch(err){} }, true);
@@ -36648,3 +36651,8 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
   setTimeout(fit, 300);
 })();
 </script>
+<style id="seam469css">
+/* CAD-469（Opus）：床の範囲の四角どうしの継ぎ目に、白い細い線（間仕切りの延長のような線）が出ていた。
+   にじみ（アンチエイリアス）で隙間が透けるため。床の四角だけ、ふちをにじませない */
+#plan rect[fill^="url(#p"],#plan polygon[fill^="url(#p"],#plan rect[fill="#F2B84B"],#plan g[data-w463] rect{shape-rendering:crispEdges}
+</style>
