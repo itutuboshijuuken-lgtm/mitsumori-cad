@@ -37655,3 +37655,45 @@ function kozo478(C){
   HB.__kozoChk480 = chk;
 })();
 </script>
+<style id="tab491css">
+/* ===== CAD-491（決定3：室内図の二重をなくす） =====
+   ③室内図と⑤完成図は同じ画面（#st6）で、上のタブ列（#pvSeg）に
+   立体図・室内図・材料・プレカット図面が並び、どちらから入っても
+   全部の入口が見えていた（室内図が③と⑤の両方にある二重）。
+   入口を1つに寄せる（ボタンの表示だけ。ビュー・計算・保存は無変更）：
+   ・③室内図から入った時（#st6.ctx491room）は、タブを「室内図」だけに
+     する（立体図・材料・プレカット図面のタブを出さない）。
+   ・⑤完成図から入った時（#st6.ctx491iso）は、「室内図」のタブを
+     出さない（⑤は立体図・材料・プレカット図面だけ）。
+   内装リフォームでは #st6 の入口が③室内図の1つだけ（手順に完成図が
+   無い）ため、今まで通り全部のタブを出す（機能の入口を消さない）。
+   図面集ボタン（#dzBtn411）はタブではないので対象外（今まで通り）。 */
+#st6.ctx491room #pvSeg [data-pv="iso"],
+#st6.ctx491room #pvSeg [data-pv="cut"],
+#st6.ctx491room #pvSeg [data-pv="precut"]{display:none!important}
+#st6.ctx491iso #pvSeg [data-pv="room"]{display:none!important}
+</style>
+<script id="tab491js">
+/* CAD-491（決定3）：上の style のための文脈付け。③室内図から入ったか
+   ⑤完成図から入ったかを #st6 のクラスで示すだけ（描画・計算・保存には
+   触らない）。文脈の決め方は CAD-188 と同じ（S.roomView と elevOn()）。
+   新築・増築（zo）だけに効かせる：リフォームは入口が1つで二重が無い。 */
+(function(){
+  "use strict";
+  function upd491(){
+    var st = document.getElementById("st6"); if (!st) return;
+    var room = false, zo = false;
+    try {
+      if (typeof S !== "undefined" && S){
+        zo = (S.mode === "zo");
+        if (zo && (S.roomView === "elev" || (typeof elevOn === "function" && elevOn()))) room = true;
+      }
+    } catch(e){}
+    st.classList.toggle("ctx491room", zo && room);
+    st.classList.toggle("ctx491iso", zo && !room);
+  }
+  setInterval(upd491, 400);
+  document.addEventListener("click", function(){ setTimeout(upd491, 30); }, true);
+  upd491();
+})();
+</script>
