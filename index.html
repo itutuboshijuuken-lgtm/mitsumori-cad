@@ -38945,3 +38945,35 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   setInterval(chk, 5 * 60000);
 })();
 </script>
+<style id="joy532css">
+/* ===== CAD-532：完成図の室内に、向きを変えるだけの 🕹️ をもう1つ（右）。反応はゆっくり目 ===== */
+#joyR532{position:relative;width:104px;height:104px;border-radius:50%;background:rgba(20,23,28,.32);border:2px solid rgba(255,255,255,.85);touch-action:none;box-shadow:0 2px 8px rgba(0,0,0,.25);flex:0 0 auto}
+#joyR532 i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:#9DB7E0;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);font-style:normal;display:flex;align-items:center;justify-content:center;font-size:20px;pointer-events:none}
+#joyR532 b,#joy525 b{position:absolute;left:0;right:0;bottom:-18px;text-align:center;font-size:11px;font-weight:800;color:#5F5E5A;pointer-events:none}
+#ctl530{padding-bottom:20px}
+</style>
+<script id="joy532js">
+(function(){
+  "use strict";
+  var row = document.getElementById("ctl530"), put = document.getElementById("put529"), joyL = document.getElementById("joy525");
+  if (!row || !put || !joyL) return;
+  var j = document.createElement("div"); j.id = "joyR532"; j.innerHTML = "<i>🔄</i><b>向き</b>";
+  row.appendChild(j);   /* 並び：歩く🕹️（左）・置く物（真ん中）・向き🕹️（右） */
+  try { var lb = document.createElement("b"); lb.textContent = "歩く"; joyL.appendChild(lb); } catch(e){}
+  var knob = j.querySelector("i"), v = null, raf = 0, last = 0;
+  function h(){ var x = window.__h3d254; return (x && typeof x.look === "function" && x.fp) ? x : null; }
+  function loop(ts){
+    if (!v){ raf = 0; return; }
+    var dt = last ? Math.min(.05, (ts - last) / 1000) : 0; last = ts;
+    var hh = h();
+    if (hh){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y;
+      if (ax || ay) hh.look(ax * Math.abs(ax) * .6 * dt, -ay * Math.abs(ay) * .35 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横0.6・縦0.35 rad/秒 */
+    raf = requestAnimationFrame(loop);
+  }
+  function setK(e){ var R = 34, dx = e.clientX - v.cx, dy = e.clientY - v.cy, d = Math.hypot(dx, dy); if (d > R){ dx *= R / d; dy *= R / d; } knob.style.transform = "translate(" + dx + "px," + dy + "px)"; v.x = dx / R; v.y = dy / R; }
+  j.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); try { j.setPointerCapture(e.pointerId); } catch(er){} var rc = j.getBoundingClientRect(); v = {id: e.pointerId, cx: rc.left + rc.width / 2, cy: rc.top + rc.height / 2, x: 0, y: 0}; setK(e); last = 0; if (!raf) raf = requestAnimationFrame(loop); });
+  j.addEventListener("pointermove", function(e){ if (!v || e.pointerId !== v.id) return; e.preventDefault(); setK(e); });
+  function end(e){ if (!v || e.pointerId !== v.id) return; v = null; knob.style.transform = ""; }
+  j.addEventListener("pointerup", end); j.addEventListener("pointercancel", end);
+})();
+</script>
