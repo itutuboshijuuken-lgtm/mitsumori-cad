@@ -38591,3 +38591,39 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   } catch (e) {}
 })();
 </script>
+<style id="fab523css">
+/* ===== CAD-523：③室内図の下の帯「置く物・器具を選ぶ」をやめ、他の画面と同じ丸いボタンにそろえる（本人の指示 2026-11-22）。
+   丸ボタンの置き場所は図面の画面と共通（localStorage fab515pos）。押すと今までの帯と同じ引き出し（置く物・器具）が開く。中身・計算は変えない ===== */
+#st6.fsRoom .fs419bar{display:none!important}
+#fab523{position:fixed;z-index:60;width:60px;height:60px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid #fff;background:#534AB7;color:#fff;font-weight:900;font-size:13px;line-height:1.1;box-shadow:0 2px 8px rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;text-align:center;padding:0;touch-action:none}
+</style>
+<script id="fab523js">
+(function(){
+  "use strict";
+  var b = document.createElement("button"); b.type = "button"; b.id = "fab523"; b.innerHTML = "置く物<br>器具";
+  document.body.appendChild(b);
+  var KEY = "fab515pos", drag = null;
+  function getPos(){ var p = null; try { p = JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){} return clamp(p || {x: innerWidth - 14, y: innerHeight - 150}); }
+  function clamp(p){ return {x: Math.max(70, Math.min(innerWidth - 10, p.x)), y: Math.max(130, Math.min(innerHeight - 10, p.y))}; }
+  function place(p){ b.style.left = p.x + "px"; b.style.top = p.y + "px"; }
+  function show(){
+    try {
+      var st6 = document.getElementById("st6");
+      var on = !!(st6 && !st6.hidden && st6.classList.contains("fsRoom") && st6.classList.contains("fsRm"));
+      b.style.display = on ? "flex" : "none";
+      if (on && !drag) place(getPos());
+    } catch(e){}
+  }
+  b.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); var p = getPos(); drag = {id: e.pointerId, x0: e.clientX, y0: e.clientY, px: p.x, py: p.y, moved: false}; try { b.setPointerCapture(e.pointerId); } catch(er){} });
+  b.addEventListener("pointermove", function(e){ if (!drag || e.pointerId !== drag.id) return; e.preventDefault(); var dx = e.clientX - drag.x0, dy = e.clientY - drag.y0; if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 10) return; drag.moved = true; place(clamp({x: drag.px + dx, y: drag.py + dy})); });
+  function up(e){
+    if (!drag || e.pointerId !== drag.id) return; var mv = drag.moved; drag = null;
+    if (mv){ try { localStorage.setItem(KEY, JSON.stringify({x: parseFloat(b.style.left), y: parseFloat(b.style.top)})); } catch(er){} return; }
+    var t = document.querySelector("#st6 .fs419bar button"); if (t) t.click();
+  }
+  b.addEventListener("pointerup", up);
+  b.addEventListener("pointercancel", function(){ drag = null; });
+  b.addEventListener("click", function(e){ e.stopPropagation(); e.preventDefault(); });
+  setInterval(show, 250); show();
+})();
+</script>
