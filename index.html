@@ -38918,3 +38918,30 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   setInterval(function(){ var on = joy.style.display === "block"; if (row.classList.contains("on530") !== on) row.classList.toggle("on530", on); }, 300);
 })();
 </script>
+<style id="upd531css">
+/* ===== CAD-531：新しい版が公開されたら、上に「新しい版があります」を出し、押すとすぐ新しい版で開き直す（公開ページの10分の使い回しを待たない） ===== */
+#upd531{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 6px);transform:translateX(-50%);z-index:9999;display:none;align-items:center;gap:10px;padding:8px 10px 8px 16px;border-radius:999px;background:#14171C;color:#F4EEDD;border:2px solid #E3C777;font-weight:900;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.35);white-space:nowrap}
+#upd531 button{min-height:34px;padding:0 14px;border-radius:999px;border:0;background:#E3C777;color:#14171C;font:inherit;font-weight:900}
+</style>
+<script id="upd531js">
+(function(){
+  "use strict";
+  if (!/^https?:/.test(location.protocol)) return;
+  var mine = Date.parse(document.lastModified) || 0, lastChk = 0, shown = false;
+  var bar = document.createElement("div"); bar.id = "upd531"; bar.innerHTML = '新しい版があります<button type="button">更新</button>';
+  bar.querySelector("button").onclick = function(){ location.replace(location.pathname + "?v=" + Date.now()); };
+  document.body.appendChild(bar);
+  function chk(){
+    var now = Date.now(); if (shown || now - lastChk < 60000) return; lastChk = now;
+    try {
+      fetch(location.pathname + "?chk=" + now, {method: "HEAD", cache: "no-store"}).then(function(r){
+        var lm = Date.parse(r.headers.get("last-modified") || "") || 0;
+        if (mine && lm && lm - mine > 5000){ shown = true; bar.style.display = "flex"; }
+      }).catch(function(){});
+    } catch(e){}
+  }
+  setTimeout(chk, 3000);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) chk(); });
+  setInterval(chk, 5 * 60000);
+})();
+</script>
