@@ -24946,7 +24946,7 @@ function build(S,T,opt){
       var cnv = $("h3d"), iso = $("iso");
       if (!cnv || !iso) return;
       var sig = dataSig();
-      if (h3 && (sig !== sig254 || (size254 && Math.abs((cnv.clientWidth || 0) - (+size254)) > 8))){
+      if (h3 && (sig !== sig254 || (size254 && (Math.abs((cnv.clientWidth || 0) - (+size254)) > 8 || Math.abs((cnv.clientHeight || 0) - (+(window.__sizeH534 || 0))) > 8)))){
         try { window.__fpKeep529 = (view254 === "in" && h3.fp) ? Object.assign({}, h3.fp) : null; } catch(e){}
         try { h3.dispose(); } catch(e){} h3 = null; window.__h3d254 = null;   /* 家のデータか大きさが変わったら描き直す */
       }
@@ -24964,7 +24964,7 @@ function build(S,T,opt){
         }
         h3 = nh; window.__h3d254 = h3;
         iso.style.display = "none";
-        sig254 = sig; size254 = String(wNow);
+        sig254 = sig; size254 = String(wNow); window.__sizeH534 = cnv.clientHeight || 0;
         maybeAsk();
       }
       syncBar();
@@ -38967,7 +38967,7 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
     var dt = last ? Math.min(.05, (ts - last) / 1000) : 0; last = ts;
     var hh = h();
     if (hh){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y;
-      if (ax || ay) hh.look(ax * Math.abs(ax) * .6 * dt, -ay * Math.abs(ay) * .35 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横0.6・縦0.35 rad/秒 */
+      if (ax || ay) hh.look(ax * Math.abs(ax) * 1.26 * dt, -ay * Math.abs(ay) * .35 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横1.26（一周5秒、CAD-534）・縦0.35 rad/秒 */
     raf = requestAnimationFrame(loop);
   }
   function setK(e){ var R = 34, dx = e.clientX - v.cx, dy = e.clientY - v.cy, d = Math.hypot(dx, dy); if (d > R){ dx *= R / d; dy *= R / d; } knob.style.transform = "translate(" + dx + "px," + dy + "px)"; v.x = dx / R; v.y = dy / R; }
@@ -39029,3 +39029,33 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   setInterval(function(){ if (on && downs === 0 && !mainDrag()) set(false); }, 700);
 })();
 </script>
+<script id="big534js">
+/* ===== CAD-534：完成図（きれい）の室内の3Dを、下の「回す」の手前まで大きくする（🕹️の段はその下に入れる） ===== */
+(function(){
+  "use strict";
+  var cnv = document.getElementById("h3d"); if (!cnv) return;
+  var on = false;
+  function tick(){
+    try {
+      var row = document.getElementById("ctl530"), inV = !!(row && row.classList.contains("on530") && cnv.style.display !== "none");
+      document.body.classList.toggle("in534", inV);
+      if (inV){ var rr = document.getElementById("h3dRooms255"), sb = rr && rr.querySelector('[aria-pressed="true"]'); if (sb && sb !== window.__selChip534){ window.__selChip534 = sb; rr.scrollLeft = Math.max(0, sb.offsetLeft - rr.offsetLeft - 12); } }
+      if (!inV){ if (on){ on = false; cnv.style.height = ""; cnv.style.aspectRatio = ""; } return; }
+      var rl = document.getElementById("rotL"), bottom = innerHeight - 8;
+      if (rl){ var r = rl.getBoundingClientRect(); if (r.height && r.top > 200 && r.top < innerHeight + 1) bottom = Math.min(bottom, r.top - 10); }
+      var top = cnv.getBoundingClientRect().top, rowH = row.offsetHeight || 140;
+      var want = Math.max(260, Math.round(bottom - top - rowH - 14)), cur = cnv.clientHeight;
+      if (!on || Math.abs(cur - want) > 12){ on = true; cnv.style.aspectRatio = "auto"; cnv.style.height = want + "px"; }
+    } catch(e){}
+  }
+  setInterval(tick, 400);
+})();
+</script>
+<style id="big534css">
+/* CAD-534：室内3Dの間は、回すボタンの段を隠し（向きの🕹️で回せる）、部屋の札は横1列（横にすべらせる）、🕹️は少し小さく → その分3Dを大きく */
+body.in534 #rotL,body.in534 #rotR{display:none!important}
+body.in534 #h3dRooms255{flex-wrap:nowrap!important;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.in534 #h3dRooms255 button{flex:0 0 auto}
+body.in534 #joy525,body.in534 #joyR532{width:92px!important;height:92px!important}
+body.in534 #ctl530{padding-top:4px}
+</style>
