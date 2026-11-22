@@ -24871,8 +24871,9 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
   /* CAD-526：始めの立ち位置は、部屋の角から部屋の反対の角を向く（いちばん広く見える向き）。狭い部屋は真ん中から、長い方を向いて広角 */
   function startFp525(){
    if(S!==__gS307()||typeof roomsCalc!=='function'||typeof bbox!=='function')return null;const nm=(st.obj.rooms||[])[st.room];if(!nm)return null;
-   const RC=roomsCalc(),B=bbox(),rm=(RC.rooms||[]).find(q=>{let n='';try{n=roomNm(q)||''}catch(e){}return n===nm||q.label===nm});if(!rm||!rm.cells.length)return null;
-   const xs=rm.cells.map(k=>k%RC.NX),ys=rm.cells.map(k=>(k-k%RC.NX)/RC.NX),cs=new Set(rm.cells);
+   const RC=roomsCalc(),B=bbox(),rm=(RC.rooms||[]).find(q=>{let n='';try{n=roomNm(q)||''}catch(e){}const n2=String(nm).replace(/（[^）]*）\s*$/,'').trim();return n===nm||q.label===nm||n===n2||q.label===n2});if(!rm||!rm.cells.length)return null;/* CAD-549：「LDK（15帖）」のように帖数が付いた名前でも部屋を見つける */
+   const sts=(st.stUp||[]).concat(st.stDn||[]),onSt=k=>{if(!sts.length)return false;const i=k%RC.NX,j=(k-i)/RC.NX,X=RC.b.x0+(i+.5)*RC.st,Y=RC.b.y0+(j+.5)*RC.st;return sts.some(g=>[[0,0],[-450,0],[450,0],[0,-450],[0,450]].some(d=>g.heightAt(X+d[0],Y+d[1])!=null))};/* CAD-549：始めの立ち位置は階段の上・すぐ横を避ける */
+   const ok548=rm.cells.filter(k=>{try{return !onSt(k)}catch(e){return true}}),xs=ok548.map(k=>k%RC.NX),ys=ok548.map(k=>(k-k%RC.NX)/RC.NX),cs=new Set(ok548);if(!cs.size)return null;
    const X0=Math.min(...xs),X1=Math.max(...xs),Y0=Math.min(...ys),Y1=Math.max(...ys),toM=(i,j)=>[(RC.b.x0+(i+.5)*RC.st-B.x0)/1000,(RC.b.y0+(j+.5)*RC.st-B.y0)/1000];
    const cx=(RC.b.x0+(X0+X1+1)/2*RC.st-B.x0)/1000,cz=(RC.b.y0+(Y0+Y1+1)/2*RC.st-B.y0)/1000,wM=(X1-X0+1)*RC.st/1000,dM=(Y1-Y0+1)*RC.st/1000,y=st.obj.camera.position.y;
    if(Math.min(wM,dM)<1.8){const yaw=wM>=dM?Math.PI/2:0;return{x:cx-(wM>=dM?wM*.3:0),y,z:cz+(wM>=dM?0:dM*.3),yaw,p:-.12,fov:100,own:1}}
@@ -24919,12 +24920,16 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
    const up=hitOf(st.stUp),dn=up?null:hitOf(st.stDn),e0=st.eye0||f.y,th=(S.ch||2400)-1500-120;   /* 目が下の階の天井に届く段の高さ（mm）で階を切り替える */
    const go=(k2)=>{st.fl=k2;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true};
    const has=(k2)=>Array.isArray(S.fl)&&S.fl[k2]&&(S.fl[k2].snap||k2===(S.fi||0));
-   if(up){if(!noSw&&up.h>th&&has(vf+1))return go(vf+1);f.y=e0+up.h/1000}
+   if(up){if(!noSw&&up.h>th&&has(vf+1))return go(vf+1);f.y=Math.min(e0+up.h/1000,e0+(th+60)/1000)}/* CAD-549：天井より上（屋根の上）には出さない */
    else if(dn){if(!noSw&&dn.h<th-dn.g.rise&&has(vf-1))return go(vf-1);f.y=e0+(dn.h-dn.g.kh)/1000}
    else f.y=e0;
    save541();return false}
   function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=buildFl();
-   if(st.view==='in'){try{const c=st.obj.camera;st.eye0=c.position.y;if(st.fpNext){const n=st.fpNext;st.fpNext=null;st.fp={x:(n.X-st.org[0])/1000,y:st.eye0,z:(n.Y-st.org[1])/1000,yaw:n.yaw,p:n.p,fov:n.fov,own:1}}if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=(st.swapped?st.start525:startFp525())||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];follow538(true);camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
+   if(st.view==='in'){try{const c=st.obj.camera;st.eye0=c.position.y;if(st.fpNext){const n=st.fpNext;st.fpNext=null;st.fpFromSw548=true;st.fp={x:(n.X-st.org[0])/1000,y:st.eye0,z:(n.Y-st.org[1])/1000,yaw:n.yaw,p:n.p,fov:n.fov,own:1}}if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=(st.swapped?st.start525:startFp525())||st.fp}catch(e){}}
+    /* CAD-549：始めの立ち位置が階段の上なら、階段の外へ出してから始める（屋根の上・段の途中から始まらない） */
+    if(st.fp&&!st.fpFromSw548){try{const f=st.fp,O=st.org,sts=(st.stUp||[]).concat(st.stDn||[]);const on=(x,z)=>sts.find(g=>g.heightAt(x*1000+O[0],z*1000+O[1])!=null);let g0=on(f.x,f.z);
+     if(g0){const cx=(g0.corners[0][0]+g0.corners[2][0])/2,cy=(g0.corners[0][1]+g0.corners[2][1])/2;let dx=f.x*1000+O[0]-cx,dy=f.z*1000+O[1]-cy,L=Math.hypot(dx,dy);if(L<1){dx=1;dy=0;L=1}dx/=L;dy/=L;
+      for(let n=1;n<=30&&on(f.x,f.z);n++){f.x+=dx*.15;f.z+=dy*.15}f.yaw=Math.atan2(-dx,dy);}}catch(e){}}st.fpFromSw548=false;}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];follow538(true);camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
    else r.render(st.obj.scene,st.obj.camera);st.ms=performance.now()-t0}
   window.__h3dRedraw525=()=>{try{draw()}catch(e){}};
   function disposeScene(sc){sc.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material){[].concat(x.material).forEach(m=>{m.map&&m.map.dispose();m.dispose()})}})}
