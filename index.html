@@ -24638,6 +24638,7 @@ function build(S,T,opt){
     const mir=rrb(w*.92,.78,.012,.01,mat.mirror);PP(mir,0,1.6-.0,-d/2+.012,g);mir.position.y=1.0;
     const fr=rrb(w*.92+.03,.81,.01,.01,mat.alu);PP(fr,0,.985,-d/2+.004,g);
     const lt=rrb(w*.5,.04,.05,.01,M({color:0xffffff,emissive:0xfff3d6,emissiveIntensity:1.2}));PP(lt,0,1.82,-d/2+.04,g);
+    g.rotation.y=({n:0,e:-Math.PI/2,s:Math.PI,w:Math.PI/2})[t.dir||"n"]||0;   /* CAD-543：平面図の向き（dir）と鏡・水栓の側をそろえる。洗面はローカル -z が背面（鏡・水栓）で、2Dの水栓位置は n=奥（-y）・e=右（+x）・s=手前（+y）・w=左（-x）。浴槽（CAD-285）とはローカルの基準が違うため対応表も別 */
     g.position.set(cx,FL,cz);add(g)}
   else if(t.k==='kitchen'){cz=Math.min(cz,D-TH_O-d/2);const g=new T.Group();
     const n=Math.max(3,Math.round(w/.5));
