@@ -24406,7 +24406,7 @@ function makeTex(T){
 }
 function skyEnv(T,r){const sc=new T.Scene();const g=new T.SphereGeometry(50,32,16);const col=[];const p=g.attributes.position;for(let i=0;i<p.count;i++){const y=p.getY(i)/50;const c=new T.Color().setRGB(.55+.45*Math.max(y,0)*0,.7,1);const top=new T.Color(0x9ec7ef),mid=new T.Color(0xf6f4ee),bot=new T.Color(0x9a9a90);const k=y>0?top.clone().lerp(mid,1-Math.pow(y,.6)):mid.clone().lerp(bot,Math.min(1,-y*2));col.push(k.r*1.6,k.g*1.6,k.b*1.6)}g.setAttribute('color',new T.Float32BufferAttribute(col,3));sc.add(new T.Mesh(g,new T.MeshBasicMaterial({vertexColors:true,side:T.BackSide})));const sun=new T.Mesh(new T.SphereGeometry(4,16,8),new T.MeshBasicMaterial({color:0xfff3d6}));sun.position.set(-30,35,25);sun.material.color.multiplyScalar(30);sc.add(sun);const pm=new T.PMREMGenerator(r);const t=pm.fromScene(sc,.02).texture;return t}
 
-function build(S,T,opt){
+function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の一覧（開き戸は蝶番の軸、引戸は横にすべる） */
  opt=opt||{};const mode=opt.mode||'out';const X=makeTex(T);const renderer=opt.renderer;
  const sc=new T.Scene();sc.background=new T.Color(mode==='in'?0xd6e6f5:0xe7eaee);
  if(renderer)sc.environment=skyEnv(T,renderer);
@@ -24516,13 +24516,13 @@ function build(S,T,opt){
   const FR=.04;
   const frame=(w_,h_,m)=>{[[0,h_/2-FR/2,w_,FR],[0,-h_/2+FR/2,w_,FR],[-w_/2+FR/2,0,FR,h_],[w_/2-FR/2,0,FR,h_]].forEach(([x,y,ww,hh])=>{const q=mk(ww,hh,th+.02,m);q.position.set(x,y+h_/2,zc);g.add(q)})};
   const cat=s.cat;
-  if(cat==='玄関'||cat==='勝手口'){frame(w,h,mat.frame);const leafW=/親子/.test(s.name)?w*.72:w-2*FR;const lh=h-2*FR;const q=mk(leafW,lh,.05,mat.door);q.position.set(-w/2+FR+leafW/2,FR+lh/2-0.0,zc+(outer?(outer.nz||outer.nx?0.06:-0.06):0.06));g.add(q);
-   if(/親子/.test(s.name)){const q2=mk(w-2*FR-leafW-.02,lh,.05,mat.door);q2.position.set(w/2-FR-(w-2*FR-leafW-.02)/2,FR+lh/2,q.position.z);g.add(q2);const gl=mk(.18,.9,.055,mat.glass);gl.position.set(q.position.x+leafW*.0,FR+lh*.62,q.position.z+.004);g.add(gl)}
-   const hd=mk(.03,.26,.05,mat.gold);hd.position.set(-w/2+FR+leafW-.1,FR+lh*.48,q.position.z+(outer&&(outer.nz||outer.nx)?.05:-.05));g.add(hd)}
+  if(cat==='玄関'||cat==='勝手口'){frame(w,h,mat.frame);const leafW=/親子/.test(s.name)?w*.72:w-2*FR;const lh=h-2*FR;const q=mk(leafW,lh,.05,mat.door);q.position.set(-w/2+FR+leafW/2,FR+lh/2-0.0,zc+(outer?(outer.nz||outer.nx?0.06:-0.06):0.06));const pv5=new T.Group();pv5.position.set(-w/2+FR,0,q.position.z);g.add(pv5);q.position.set(leafW/2,FR+lh/2,0);pv5.add(q);doors546.push({k:'sw',o:pv5,g,a:0,sg:0});
+   if(/親子/.test(s.name)){const q2=mk(w-2*FR-leafW-.02,lh,.05,mat.door);q2.position.set(w/2-FR-(w-2*FR-leafW-.02)/2,FR+lh/2,pv5.position.z);g.add(q2);const gl=mk(.18,.9,.055,mat.glass);gl.position.set(leafW/2,FR+lh*.62,.004);pv5.add(gl)}
+   const hd=mk(.03,.26,.05,mat.gold);hd.position.set(leafW-.1,FR+lh*.48,(outer&&(outer.nz||outer.nx)?.05:-.05));pv5.add(hd)}
   else if(cat==='室内ドア'||cat==='クローゼット'){frame(w,h,mat.frame);const lw=w-2*FR,lh=h-FR;
-   if(/引/.test(s.name)){const q=mk(lw*.55,lh,.035,mat.doorIn);q.position.set(-w/2+FR+lw*.3,lh/2,zc+.03);g.add(q);const hd=mk(.02,.12,.02,mat.alu);hd.position.set(-w/2+FR+lw*.52,lh*.48,zc+.055);g.add(hd)}
+   if(/引/.test(s.name)){const q=mk(lw*.55,lh,.035,mat.doorIn);q.position.set(-w/2+FR+lw*.3,lh/2,zc+.03);g.add(q);const hd=mk(.02,.12,.02,mat.alu);hd.position.set(-w/2+FR+lw*.52,lh*.48,zc+.055);g.add(hd);doors546.push({k:'sl',o:q,o2:hd,g,a:0,x0:q.position.x,x2:hd.position.x,dx:lw*.42})}
    else if(/折れ/.test(s.name)){for(let i=0;i<2;i++){const q=mk(lw/2-.01,lh,.03,mat.doorIn);q.position.set(-w/2+FR+lw*(i?.75:.25),lh/2,zc);g.add(q)}}
-   else{const q=mk(lw,lh,.035,mat.doorIn);q.position.set(0,lh/2,zc);q.rotation.y=0;g.add(q);const hd=mk(.12,.02,.04,mat.alu);hd.position.set(lw/2-.1,lh*.48,zc+.03);g.add(hd)}}
+   else{const pv=new T.Group();pv.position.set(-lw/2,0,zc);const q=mk(lw,lh,.035,mat.doorIn);q.position.set(lw/2,lh/2,0);pv.add(q);const hd=mk(.12,.02,.04,mat.alu);hd.position.set(lw-.1,lh*.48,.03);pv.add(hd);g.add(pv);doors546.push({k:'sw',o:pv,g,a:0,sg:0})}}
   else{/* 窓 */
    frame(w,h,mat.alu);const gl=mk(w-2*FR,h-2*FR,.012,mat.glass);gl.castShadow=false;gl.position.set(0,h/2,zc);g.add(gl);const mu=mk(.04,h-2*FR,.04,mat.alu);mu.position.set(0,h/2,zc);g.add(mu);
    const sl=mk(w+.1,.03,th+.08,mat.frame);sl.position.set(0,-.015,zc);g.add(sl)}
@@ -24806,7 +24806,7 @@ function build(S,T,opt){
  /* CAD-303（同・取り込み2）：外壁の外面（+8cm）で全ての物を切る。屋根（ceilG）と地面（sc直下）は除く */
  try{const pl303=[new T.Plane(new T.Vector3(1,0,0),.08),new T.Plane(new T.Vector3(-1,0,0),W+.08),new T.Plane(new T.Vector3(0,0,1),.08),new T.Plane(new T.Vector3(0,0,-1),D+.08)];
   root.traverse(o=>{if(!o.isMesh)return;let p=o,ex=false;while(p){if(p===ceilG){ex=true;break}p=p.parent}if(ex)return;[].concat(o.material).forEach(m=>{if(m){m.clippingPlanes=pl303;m.clipShadows=true}})})}catch(e){}
- return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name)};
+ return {scene:sc,camera:cam,ceilG,root,rooms:roomList().map(r=>r.name),doors:doors546};
 }
  function supported(S){try{const E=S.edges||[];return E.length>=4&&E.every(e=>/^[RLUD]$/.test(e.d)&&e.v>0)&&((S.floors||1)===1||((S.floors||1)===2&&Array.isArray(S.fl)&&S.fl.length>1))&&S.mode!=='rf'&&E[0].v>0&&E[1].v>0}catch(e){return false}}
  /* render: canvasに描く。ハンドル {rotate(n), view(v), dispose(), ms} を返す。静止画（動かす時だけ再描画）なので軽い。 */
@@ -24830,7 +24830,17 @@ function build(S,T,opt){
   function sig541(){try{return (S.edges||[]).map(e=>e.d+e.v).join(',')+'|'+((S.fl||[]).length)}catch(e){return ''}}
   let sv541=0;function save541(){const f=st.fp;if(!f||st.view!=='in'||!st.org)return;const now=Date.now();if(now-sv541<400)return;sv541=now;try{localStorage.setItem('h3dpos541',JSON.stringify({sig:sig541(),view:'in',fl:st.vf||0,room:st.room,X:f.x*1000+st.org[0],Y:f.z*1000+st.org[1],yaw:f.yaw,p:f.p,fov:f.fov}))}catch(e){}}
   function restore541(){try{const v=JSON.parse(localStorage.getItem('h3dpos541')||'null');if(!v||v.sig!==sig541()||!isFinite(v.X))return false;const multi=Array.isArray(S.fl)&&S.fl.length>1;st.fl=multi?(v.fl||0):null;st.room=v.room||0;st.fp=null;st.fpNext={X:v.X,Y:v.Y,yaw:v.yaw||0,p:v.p||0,fov:v.fov||90};return true}catch(e){return false}}
-  function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c);save541()}
+  function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c);save541();kick546()}
+  /* CAD-546（Opus）：扉は近づくと自然に開き、離れると閉まる（開き戸は向こう側へ押して開く、引戸は横にすべる）。動いている間だけ描き直す */
+  let raf546=0,dead546=false;
+  function anim546(){raf546=0;if(dead546||st.view!=='in'||!st.obj||!st.fp)return;const ds=st.obj.doors||[];if(!ds.length)return;
+   const cp=new T.Vector3(st.fp.x,st.fp.y,st.fp.z),wp=new T.Vector3();let ch=false,mv=false;
+   ds.forEach(d=>{try{d.g.getWorldPosition(wp);const tgt=Math.hypot(wp.x-cp.x,wp.z-cp.z)<1.4?1:0;
+    if(d.k==='sw'&&tgt&&d.a<.01){const lc=d.g.worldToLocal(cp.clone());d.sg=lc.z>=0?1:-1}
+    let na=d.a+(tgt-d.a)*.12;if(Math.abs(tgt-na)<.006)na=tgt;if(na!==d.a){d.a=na;ch=true;if(na!==tgt)mv=true}
+    if(d.k==='sw')d.o.rotation.y=(d.sg||1)*d.a*1.45;else{d.o.position.x=d.x0+d.dx*d.a;if(d.o2)d.o2.position.x=d.x2+d.dx*d.a}}catch(e){}});
+   if(ch)r.render(st.obj.scene,st.obj.camera);if(mv)raf546=requestAnimationFrame(anim546)}
+  function kick546(){if(!raf546&&!dead546)raf546=requestAnimationFrame(anim546)}
   /* CAD-535（Opus）：室内で今開いていない階（2階など）を見る時は、その階のデータを一時的に今の場所へ入れ、平屋として組み立ててすぐ戻す（保存・画面は触らない） */
   function org538(){try{const b=bbox();return[b.x0,b.y0]}catch(e){return[0,0]}}
   /* CAD-541（Opus）：室内は、2階建てなら今開いている階も含めて必ず「その階だけ」を平屋として組み立てる（1階を見ているのに2階の高さ＝屋根の上から始まる不具合の修正）。
@@ -24872,8 +24882,8 @@ function build(S,T,opt){
    hit(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster(),hm=[];st.obj.root.traverse(o=>{if(o.isMesh)hm.push(o)});rc.setFromCamera(new T.Vector2(nx,ny),c);const h=rc.intersectObjects(hm,false)[0];return h?{p:[h.point.x,h.point.y,h.point.z],fy:st.fp.y-1.5}:null},
    pick(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster();rc.setFromCamera(new T.Vector2(nx,ny),c);const o=rc.ray.origin,d=rc.ray.direction;if(d.y>-.03)return null;const t=(st.fp.y-1.5-o.y)/d.y;return[o.x+d.x*t,o.z+d.z*t]},
    setPos(x,z){const q=st.fp;if(!q)return;q.x=x;q.z=z;if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}if(follow538())return;camFp()},
-   floor(k){st.fl=k;st.room=0;st.fp=null;st.view='in';draw()},get floorIdx(){return st.fl!=null?st.fl:(S.fi||0)},get org(){return st.org},floors(){return Array.isArray(S.fl)?S.fl.map(f=>f.name):[]},
-   get fp(){return st.fp},dispose(){if(window.__h3dRedraw525)window.__h3dRedraw525=null;if(st.obj)disposeScene(st.obj.scene);r.dispose()}};}
+   floor(k){st.fl=k;st.room=0;st.fp=null;st.view='in';draw()},get floorIdx(){return st.fl!=null?st.fl:(S.fi||0)},get org(){return st.org},doors(){const v=new T.Vector3();return(st.obj&&st.obj.doors||[]).map(d=>{d.g.getWorldPosition(v);const n=d.g.localToWorld(new T.Vector3(0,0,1)).sub(v);return[d.k,+v.x.toFixed(2),+v.z.toFixed(2),+d.a.toFixed(2),+n.x.toFixed(2),+n.z.toFixed(2)]})},floors(){return Array.isArray(S.fl)?S.fl.map(f=>f.name):[]},
+   get fp(){return st.fp},dispose(){dead546=true;if(window.__h3dRedraw525)window.__h3dRedraw525=null;if(st.obj)disposeScene(st.obj.scene);r.dispose()}};}
  window.House3D={build,render,supported};
 })();
 
