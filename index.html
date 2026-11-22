@@ -17890,6 +17890,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     } catch(e){ return 0; }
   }
   /* CAD-275: フローリングの色（家全体で1色・S.flColor）。CAD-304: 標準は明るい（ホワイトオーク）。旧データに無い場合は標準（明るい）扱い */
+  function flcExp(){ try { return localStorage.getItem("exp259") === "1"; } catch(e){ return false; } }   /* 「本職こだわり」の時だけ床の色味を出す（Claudeパッチ 2026-11-18・CAD-536で実施） */
   function flc275(){ var c = S.flColor; return (c === "dark" || c === "natural") ? c : "light"; }
   function flcChips275(){
     return [["light", "ホワイトオーク"], ["natural", "グレージュ"], ["dark", "ウォールナット"]].map(function(x){
@@ -18026,7 +18027,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         rows += "<div class='sprow'><div>" + recTitle138(r) + (sm2 ? "<small>" + sm2 + "</small>" : "") + "<small>" + fmt(r.x1 - r.x0) + "×" + fmt(r.y1 - r.y0) + "・" + fmt(area138(r), 1) + "㎡</small></div><div><button class='btn' data-specfl='" + i + "' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
       }
     });
-    box.innerHTML = "<h2>床の範囲</h2>" + rows;
+    box.innerHTML = "<h2>床の範囲</h2>" + rows + "<div class='flcW' style='display:" + (flcExp() ? "block" : "none") + "'><div class='sub2' style='margin-top:8px'>床の色味（家全体で1色）</div><div class='seg' style='flex-wrap:wrap'>" + flcChips275() + "</div></div>";
+    if (!HB.__flcL){ HB.__flcL = 1; document.addEventListener("click", function(e){ if (e.target.closest && e.target.closest("#exp259")) setTimeout(function(){ [].forEach.call(document.querySelectorAll(".flcW"), function(w){ w.style.display = flcExp() ? "block" : "none"; }); }, 0); }); }
     box.querySelectorAll("[data-specfl]").forEach(function(b){
       b.onclick = function(){ tatSheet(+b.dataset.specfl); };
     });
