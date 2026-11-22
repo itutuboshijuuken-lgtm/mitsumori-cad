@@ -24743,6 +24743,8 @@ function build(S,T,opt){
  if(mode!=='out'){[[W*.3,D*.72],[W*.7,D*.3],[W*.9,D*.2]].forEach(([x,z],k)=>{const l=new T.PointLight(0xfff0d8,k?2.2:5,12,1.8);l.position.set(x,FL+H-.3,z);add(l,sc)})}
  /* カメラ */
  const cam=new T.PerspectiveCamera(32,(opt.w||840)/(opt.h||450),.05,200);
+ /* CAD-537：階段を段の形で描く（図面の階段と同じ形・段数。1段の高さ＝階高÷段数） */
+ try{if(mode!=='out'&&S===__gS307()&&HB.__stairs537){const sm=M({color:0xb58a5c,roughness:.55});HB.__stairs537().forEach(sg=>{sg.boxes().forEach(q=>{const x0=mm(q.x0-OX477),x1=mm(q.x1-OX477),z0=mm(q.y0-OY477),z1=mm(q.y1-OY477);if(x1-x0<.005||z1-z0<.005)return;const o=box(x0,FL,z0,x1,FL+mm(q.top),z1,six(sm));add(o)})})}}catch(e){}
  /* CAD-529：③室内図・3Dで置いた物（コンセント・スイッチ・手すり・カウンターなど）を、壁の面に形で出す */
  try{if(mode!=='out'&&S===__gS307()&&(S.fx||[]).length&&typeof fxProj==='function'&&typeof FK!=='undefined'){const g5=fxProj(),rcs=new T.Raycaster(),hm=[];root.traverse(o=>{if(o.isMesh)hm.push(o)});
   const LT=/sconce|indirect|spot|pendant/;
@@ -39067,3 +39069,47 @@ body.in534 #h3dRooms255 button{flex:0 0 auto}
 body.in534 #joy525,body.in534 #joyR532{width:92px!important;height:92px!important}
 body.in534 #ctl530{padding-top:4px}
 </style>
+<script id="stair537js">
+/* ===== CAD-537（Opus）：階段を3Dにする下準備 =====
+   図面の階段（S.tenken の k:"stair"、中心 x,y・向き dir・並び parts）から、
+   ・階段の外形（図面の mm）・上りの道すじ（walk、1段目→最上段）・段数・1段の高さ
+   ・図面の点 (x,y) の床からの高さ heightAt（階段の外なら null）
+   ・3D用の段の箱（step ごとの四角の集まり）
+   を出す。形は CAD-395 の layoutGen（図面の階段の絵と同じ幾何）をそのまま使う。
+   次の段（歩いて登る）は heightAt を目の高さに使う。見積・保存は触らない。 */
+(function(){
+  "use strict";
+  function geo(o){
+    var A = window.__st306; if (!A || !o) return null;
+    var pa = A.partsOf(o); if (!pa || !pa.length) return null;
+    var L = A.layoutGen(pa), fw = L.fw, fd = L.fd, N = Math.max(1, A.totalOf(pa) || 14);
+    var kh = (o.kh) || ((S.ch || 2400) + (S.dosa || 240)), rise = kh / N;
+    var th = ({n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0) * Math.PI / 180, c = Math.cos(th), sn = Math.sin(th);
+    var toP = function(u, v){ var x = u - fw / 2, y = v - fd / 2; return [o.x + x * c - y * sn, o.y + x * sn + y * c]; };
+    var toL = function(X, Y){ var x = X - o.x, y = Y - o.y; return [x * c + y * sn + fw / 2, -x * sn + y * c + fd / 2]; };
+    var W = (L.walk || []).slice(); if (W.length < 2) W = [[fw / 2, fd], [fw / 2, 0]];
+    var seg = [], tot = 0; for (var i = 1; i < W.length; i++){ var l = Math.hypot(W[i][0] - W[i - 1][0], W[i][1] - W[i - 1][1]); seg.push(l); tot += l; }
+    function stepAtL(u, v){
+      var best = 1e18, bs = 0, acc = 0;
+      for (var i = 1; i < W.length; i++){
+        var a = W[i - 1], b = W[i], vx = b[0] - a[0], vy = b[1] - a[1], L2 = vx * vx + vy * vy || 1, t = ((u - a[0]) * vx + (v - a[1]) * vy) / L2; t = Math.max(0, Math.min(1, t));
+        var d = Math.hypot(u - a[0] - t * vx, v - a[1] - t * vy); if (d < best){ best = d; bs = acc + t * seg[i - 1]; } acc += seg[i - 1];
+      }
+      return Math.max(0, Math.min(N - 1, Math.floor(bs / tot * N)));
+    }
+    function heightAt(X, Y){ var q = toL(X, Y); if (q[0] < -1 || q[1] < -1 || q[0] > fw + 1 || q[1] > fd + 1) return null; return (stepAtL(q[0], q[1]) + 1) * rise; }
+    /* 3D用：40mm角で段番号を塗り、横の連続×同じ幅の縦を四角にまとめる（向きは90°刻みなので図面でも四角のまま） */
+    function boxes(){
+      var g = 40, nx = Math.ceil(fw / g), ny = Math.ceil(fd / g), runs = [], out = [];
+      for (var j = 0; j < ny; j++){ var s0 = 0, cur = null;
+        for (var i2 = 0; i2 <= nx; i2++){ var k = i2 < nx ? stepAtL((i2 + .5) * g, (j + .5) * g) : -1; if (k !== cur){ if (cur !== null) runs.push([j, s0, i2 - 1, cur]); cur = k; s0 = i2; } } }
+      var open = {}; runs.forEach(function(r){ var key = r[1] + "," + r[2] + "," + r[3], q = open[key]; if (q && q.j1 === r[0] - 1) q.j1 = r[0]; else { q = open[key] = {i0: r[1], i1: r[2], j0: r[0], j1: r[0], k: r[3]}; out.push(q); } });
+      return out.map(function(q){ var a = toP(q.i0 * g, q.j0 * g), b = toP(Math.min(fw, (q.i1 + 1) * g), Math.min(fd, (q.j1 + 1) * g)); return {x0: Math.min(a[0], b[0]), y0: Math.min(a[1], b[1]), x1: Math.max(a[0], b[0]), y1: Math.max(a[1], b[1]), top: (q.k + 1) * rise, k: q.k}; });
+    }
+    var cs = [toP(0, 0), toP(fw, 0), toP(fw, fd), toP(0, fd)];
+    return {o: o, N: N, rise: rise, kh: kh, fw: fw, fd: fd, corners: cs, walk: W.map(function(p){ return toP(p[0], p[1]); }), heightAt: heightAt, boxes: boxes, bottom: toP(W[0][0], W[0][1]), top: toP(W[W.length - 1][0], W[W.length - 1][1])};
+  }
+  HB.__stairs537 = function(){ try { return (S.tenken || []).filter(function(o){ return o && o.k === "stair"; }).map(geo).filter(Boolean); } catch(e){ return []; } };
+  HB.__stairGeo537 = geo;
+})();
+</script>
