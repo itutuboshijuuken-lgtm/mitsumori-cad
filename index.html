@@ -2787,10 +2787,14 @@ function tenkenSvg(o, i, P){
   if (o.k === "kitchen" || o.k === "senmen"){
     const [hx, hy] = tkExt(o), a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]), x0 = Math.min(a[0], b[0]), y0 = Math.min(a[1], b[1]), W2 = Math.abs(b[0] - a[0]), H2 = Math.abs(b[1] - a[1]), isSel = sel && sel.t === "k" && sel.i === i, cx = x0 + W2 / 2, cy = y0 + H2 / 2, nm = o.k === "kitchen" ? "キッチン" : "洗面";
     let g = `<g data-tk2="${i}"><rect x="${x0}" y="${y0}" width="${W2}" height="${H2}" fill="#fff" stroke="${isSel ? "#FF00C8" : "#5B6B7A"}" stroke-width="1.6"/>`;
-    const sk = Math.min(W2, H2) * 0.28, sx = o.k === "kitchen" ? (o.dir === "e" || o.dir === "w" ? cx : x0 + W2 * 0.3) : cx, sy = o.k === "kitchen" ? (o.dir === "e" || o.dir === "w" ? y0 + H2 * 0.3 : cy) : cy;
-    g += `<ellipse cx="${sx}" cy="${sy}" rx="${sk * 1.2}" ry="${sk * 0.8}" fill="#CFE6F7" stroke="#5B6B7A" stroke-width="1"/>`;
+    const sk = Math.min(W2, H2) * 0.28, ew542 = o.dir === "e" || o.dir === "w", rev542 = o.dir === "s" || o.dir === "w", fS542 = rev542 ? 0.7 : 0.3, fB542 = rev542 ? 0.28 : 0.72;
+    /* CAD-542：キッチンのシンク・コンロは本体の回転（dir）に付いて回す。基準（n＝上側が壁）は長さ方向にシンク0.30・コンロ0.72の並び。
+       回転は階段・便器と同じ {n:0, e:90, s:180, w:270} の時計回り：s（180°）と w（270°）では並びが反対の端へ寄る（fS/fB）。
+       コンロの2つの円の並びとシンク楕円の長軸も、長さ方向にそろえる（縦向きでは縦に並ぶ）。洗面の楕円も長さ方向に合わせる。 */
+    const sx = o.k === "kitchen" ? (ew542 ? cx : x0 + W2 * fS542) : cx, sy = o.k === "kitchen" ? (ew542 ? y0 + H2 * fS542 : cy) : cy;
+    g += `<ellipse cx="${sx}" cy="${sy}" rx="${ew542 ? sk * 0.8 : sk * 1.2}" ry="${ew542 ? sk * 1.2 : sk * 0.8}" fill="#CFE6F7" stroke="#5B6B7A" stroke-width="1"/>`;
     if (o.k === "senmen"){ const fd = {n: [cx, y0 + H2 * 0.13], s: [cx, y0 + H2 * 0.87], e: [x0 + W2 * 0.87, cy], w: [x0 + W2 * 0.13, cy]}[o.dir || "n"] || [cx, y0 + H2 * 0.13]; g += `<circle cx="${fd[0]}" cy="${fd[1]}" r="${Math.max(2, sk * 0.2)}" fill="#fff" stroke="#5B6B7A" stroke-width="1"/>`; if (Math.min(W2, H2) >= 22) g += `<text x="${sx}" y="${sy + Math.max(7, Math.min(11, sk * 0.9)) * 0.36}" text-anchor="middle" style="font-size:${Math.max(7, Math.min(11, sk * 0.9))}px;font-weight:800;fill:#3E5A75">洗</text>`; }
-    if (o.k === "kitchen"){ const bx = (o.dir === "e" || o.dir === "w") ? cx : x0 + W2 * 0.72, by = (o.dir === "e" || o.dir === "w") ? y0 + H2 * 0.72 : cy; g += `<circle cx="${bx - sk * 0.5}" cy="${by}" r="${sk * 0.38}" fill="none" stroke="#5B6B7A" stroke-width="1"/><circle cx="${bx + sk * 0.5}" cy="${by}" r="${sk * 0.38}" fill="none" stroke="#5B6B7A" stroke-width="1"/>`; }
+    if (o.k === "kitchen"){ const bx = ew542 ? cx : x0 + W2 * fB542, by = ew542 ? y0 + H2 * fB542 : cy, ox542 = ew542 ? 0 : sk * 0.5, oy542 = ew542 ? sk * 0.5 : 0; g += `<circle cx="${bx - ox542}" cy="${by - oy542}" r="${sk * 0.38}" fill="none" stroke="#5B6B7A" stroke-width="1"/><circle cx="${bx + ox542}" cy="${by + oy542}" r="${sk * 0.38}" fill="none" stroke="#5B6B7A" stroke-width="1"/>`; }
     g += `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">${nm}</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
