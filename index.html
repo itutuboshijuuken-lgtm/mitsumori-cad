@@ -29366,11 +29366,18 @@ function render395(){
   var warn = "";
   if (B.draft.length){
     try {
-      var dm = A306.dimsOf(B.draft), ow = o.w, od = o.d;
-      o.w = dm[0]; o.d = dm[1];
-      var pk = (window.__guard298 && window.__guard298.poke) ? window.__guard298.poke(o) : 0;
-      o.w = ow; o.d = od;
-      if (pk > 0) warn = "この形は壁に当たって収まりません（決定すると、はみ出したまま図面に表示されます）";
+      var dm = A306.dimsOf(B.draft), ow = o.w, od = o.d, ox4 = o.x, oy4 = o.y;
+      var pk = 0, fit4 = true;
+      try {
+        o.w = dm[0]; o.d = dm[1];
+        pk = (window.__guard298 && window.__guard298.poke) ? window.__guard298.poke(o) : 0;
+        fit4 = pk <= 0;
+        if (pk > 0 && window.__guard298 && window.__guard298.slide){ /* CAD-525：決定の時に寄せて収まる形は「収まらない」と言わない */
+          try { fit4 = !!window.__guard298.slide(o); } catch(e){}
+        }
+      } finally { o.w = ow; o.d = od; o.x = ox4; o.y = oy4; }
+      if (pk > 0 && !fit4) warn = "この形は壁に当たって収まりません（決定すると、はみ出したまま図面に表示されます）";
+      else if (pk > 0) warn = "今の位置では壁に当たります（決定すると、収まる位置へずらして置きます）";
     } catch(e){}
     if (tot > T) warn = (warn ? warn + "／" : "") + "段数が目標（" + T + "段）を超えています";
   }
@@ -29452,7 +29459,8 @@ function actF395(v){
   if (v === "done"){ if (complete395()) applyBuild395(); return; }
 }
 
-/* ---- 決定：並びを階段へ反映する。収まらなくても取り消さず、警告だけ出す ---- */
+/* ---- 決定：並びを階段へ反映する。CAD-525：大きさが変わったら配置・移動と同じ
+   物差し（slideIn298）で収まる位置へ寄せる。本当に収まらない時だけ、取り消さず警告を出す ---- */
 function applyBuild395(){
   var o = B.o;
   var parts = B.draft.map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; });
@@ -29466,12 +29474,21 @@ function applyBuild395(){
   o.st = sf === "s" ? "s" : sf === "k" ? (o.tn === 1 ? "L" : o.tn === 2 ? "N" : "M") : "M";
   var dm = A306.dimsOf(parts); o.w = dm[0]; o.d = dm[1];
   moveTenken(o, 0, 0);
-  var pk = 0;
-  try { if (window.__guard298 && window.__guard298.poke) pk = window.__guard298.poke(o); } catch(e){}
+  var pk = 0, moved4 = false;
+  try {
+    var G4 = window.__guard298;
+    if (G4 && G4.poke){
+      pk = G4.poke(o);
+      if (pk > 0 && G4.slide){ /* CAD-525：中心を固定したまま伸びて壁を横切る形は、収まる位置へ寄せて置く */
+        var bx4 = o.x, by4 = o.y;
+        if (G4.slide(o)){ moved4 = (o.x !== bx4 || o.y !== by4); pk = G4.poke(o); }
+      }
+    }
+  } catch(e){}
   if (B.bar) B.bar.dataset.k = "";
   save(); drawPlan();
   closeBuilder395();
-  toast(pk > 0 ? "収まりません：壁に当たっています（形はそのまま表示しています）" : "階段を作りました");
+  toast(pk > 0 ? "収まりません：壁に当たっています（形はそのまま表示しています）" : (moved4 ? "階段を作りました（壁に当たらない位置へずらしました）" : "階段を作りました"));
 }
 
 /* ---- 入口1：選択バーの「階段の形」ボタンを組み立て画面へ付け替える ---- */
