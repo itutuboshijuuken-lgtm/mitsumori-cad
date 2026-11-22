@@ -38627,3 +38627,44 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   setInterval(show, 250); show();
 })();
 </script>
+<style id="face524css">
+/* ===== CAD-524：③室内図の壁の一覧から「何も置いていない、端の足し壁」を隠す（本人の選択 2026-11-22「境目の壁は一覧に出さない」）。
+   上・右・下・左の4面は必ず出す。5枚目以降（部屋の出っ張りで増えた壁）は、物・窓ドア・アクセントが何も無い間は隠す。
+   青い線を押して選んだ時は、その壁を出す。カードの番号(data-fi)・面の並び・保存内容は変えない ===== */
+#elevBox .card.fHide524:not(.mfCard219){display:none!important}
+</style>
+<script id="face524js">
+(function(){
+  "use strict";
+  function stuff(F){
+    try {
+      var g = fxProj(), pr = function(q){ return q[0] * F.r[0] + q[1] * F.r[1]; }, po = pr(F.o);
+      for (var i = 0; i < F.pieces.length; i++){
+        var pc = F.pieces[i];
+        if (accOf189(pc.k, pc.side)) return true;
+        if ((S.sashes || []).some(function(sa){ return sa.host ? ((pc.k < 100 && sa.host.t === "e" && sa.host.i === pc.k) || (pc.k >= 100 && sa.host.t === "p" && sa.host.i === pc.k - 100)) : (pc.k < 100 && sa.wall === pc.k); })) return true;
+      }
+      return (S.fx || []).some(function(f){
+        if (f.k === "accent") return false;
+        var pcs = F.pieces.filter(function(pc){ return pc.k === f.w; }); if (!pcs.length) return false;
+        var w = fxWall(g, f.w), X = function(u){ return pr([w.a[0] + w.ux * u, w.a[1] + w.uy * u]) - po; };
+        var a = X(f.u), b = X(f.u + (f.len || 0)), lo = Math.min(a, b), hi = Math.max(a, b);
+        return pcs.some(function(pc){ return hi >= pc.x0 - 60 && lo <= pc.x1 + 60; });
+      });
+    } catch(e){ return true; }
+  }
+  function apply(){
+    try {
+      var box = document.getElementById("elevBox"); if (!box || typeof elevFaces === "undefined") return;
+      var cards = box.children;
+      for (var i = 0; i < cards.length; i++){
+        var hide = i >= 4 && elevFaces[i] && !stuff(elevFaces[i]);
+        if (cards[i].classList.contains("fHide524") !== hide) cards[i].classList.toggle("fHide524", hide);
+      }
+    } catch(e){}
+  }
+  var box = document.getElementById("elevBox");
+  if (box) new MutationObserver(apply).observe(box, {childList: true});
+  setInterval(apply, 500);
+})();
+</script>
