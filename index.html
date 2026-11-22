@@ -34423,7 +34423,7 @@ function daikuBaseRows391(nobeT){
     var sr = slot.getBoundingClientRect();
     var naturalBottom = sr.bottom + applied400;   /* 余白が無い時の slotM の下端 */
     var top = Infinity;
-    ["grpSub", "toolCh", "toolCh2", "toolCh3"].forEach(function(id){   /* CAD-508：部屋を押した時の床のパネル（roomBar176）では図面を縮めない（選ぶ間だけ図面に重ねる。本人「図面の大きさが変わる」） */
+    [].forEach(function(id){   /* CAD-521（作り直しT2）：一覧（grpSub・toolCh・toolCh2・toolCh3）が開いても図面を縮めない。一覧は図面の上に重ねて出す（CAD-508 の roomBar と同じ考え方）。元の4つは対象から外した */
       var el = document.getElementById(id);
       if (!el || el.hidden) return;
       if (!el.getClientRects().length) return;   /* display:none（ux-sheet-off 含む）は数えない */
@@ -35919,7 +35919,7 @@ nav.steps{padding:1px 6px 3px}
       var lab = {parts: "🚽 定番の部屋", furn: "🛏 家具", check: "✔ チェック", cust: "👤 お客さん用", rot: "↻ 回す", rotp: "↻ 向き", del: "消す", done: "OK"}; try { if (HB.__lab437) Object.assign(lab, HB.__lab437); } catch(e){}
       want.forEach(function(w){ var b = document.createElement("button"); b.type = "button"; b.textContent = lab[w]; b.dataset.w = w; if (arm && ((w === "parts" && arm.kind === "part") || (w === "furn" && arm.kind === "furn"))) b.className = "on"; if (w === "del") b.className = "red"; b.onclick = function(e){ e.stopPropagation(); act(w); }; box.appendChild(b); });
     }
-    var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "toolCh", "toolCh2", "toolCh3", "roomBar176", "selBar"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
+    var sl = document.getElementById("slotM"); if (sl){ var bot = sl.getBoundingClientRect().bottom; ["toolTabs", "grpSub", "toolCh", "toolCh2", "toolCh3", "roomBar176", "selBar"].forEach(function(id){ var e2 = document.getElementById(id); if (e2 && !e2.hidden && e2.getClientRects().length){ var r2 = e2.getBoundingClientRect(); if (r2.height > 0 && r2.top < bot && r2.top > sl.getBoundingClientRect().top + 120) bot = r2.top; } }); var t = bot - m.getBoundingClientRect().top - 46; m.style.setProperty("--cb434", Math.round(t) + "px"); }
   }
   function act(w){
     try { if (HB.__act437 && HB.__act437(w)) { chips(); return; } } catch(e){}
@@ -38527,5 +38527,38 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   var st = document.createElement("style"); st.id = "notabs520css";
   st.textContent = "body:not(.nbtutRun) #toolTabs{height:0!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;border-top:0!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}";
   document.head.appendChild(st);
+})();
+</script>
+
+<style id="fabtop521css">
+/* CAD-521（作り直しT2）：一覧が開いている間も丸ボタンは一覧より上に出る（動かない） */
+#fab510{z-index:60!important}
+</style>
+<script id="reopen521js">
+/* CAD-521（作り直しT2）：物を選ぶと一覧は閉じる（従来通り）。もう一度置く時は
+   丸ボタンで今の手順を押すと一覧が開き直す。手順を切り替えた時は従来通り
+   （setStep399 本体）に任せ、今の手順と同じ手順が押された時だけ、
+   閉じた印（body.ux-sheet-off）を外して一覧を出し直す。
+   チュートリアル中は触らない。 */
+(function () {
+  "use strict";
+  try {
+    var orig = window.HB && HB.__setStep399;
+    if (typeof orig !== "function" || orig.__wrap521) return;
+    var w = function (ns) {
+      var cur = null;
+      try { cur = (typeof HB.__step399 === "function") ? HB.__step399() : null; } catch (e) {}
+      var r = orig.apply(this, arguments);
+      try {
+        if (ns && ns === cur && (ns === "ds" || ns === "put")
+            && !document.body.classList.contains("nbtutRun")) {
+          document.body.classList.remove("ux-sheet-off");
+        }
+      } catch (e) {}
+      return r;
+    };
+    w.__wrap521 = 1;
+    HB.__setStep399 = w;
+  } catch (e) {}
 })();
 </script>
