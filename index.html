@@ -24909,10 +24909,22 @@ function build(S,T,opt){
       var names = [];
       try { names = h3.rooms() || []; } catch(e){ names = []; }
       if (!names.length){ row.style.display = "none"; roomSig254 = null; return; }
-      var sg = JSON.stringify(names) + "|" + room254;
+      var sg = JSON.stringify(names) + "|" + room254 + "|" + (h3.floorIdx || 0);
       if (sg !== roomSig254){
         roomSig254 = sg;
         row.innerHTML = "";
+        try {
+          var fls = (typeof h3.floors === "function") ? h3.floors() : [];
+          if (fls.length > 1){
+            fls.forEach(function(fn, k){
+              var fb = document.createElement("button"); fb.type = "button";
+              fb.setAttribute("data-h3df", String(k));
+              fb.setAttribute("aria-pressed", String(k === h3.floorIdx));
+              fb.textContent = fn; fb.style.fontWeight = "900"; fb.style.borderColor = "#B7791F";
+              row.appendChild(fb);
+            });
+          }
+        } catch(e){}
         names.forEach(function(nm, i){
           var b = document.createElement("button");
           b.type = "button";
@@ -25018,6 +25030,8 @@ function build(S,T,opt){
         maybeAsk(); syncBar();
         return;
       }
+      var fb2 = t.closest("[data-h3df]");
+      if (fb2 && h3 && typeof h3.floor === "function"){ var k2 = +fb2.getAttribute("data-h3df"); room254 = 0; try { h3.floor(k2); } catch(err){} roomSig254 = null; syncBar(); return; }
       var rb = t.closest("[data-h3dr]");
       if (rb && h3){
         var ri = +rb.getAttribute("data-h3dr");
