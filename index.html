@@ -38901,3 +38901,20 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   };
 })();
 </script>
+<style id="ctl530css">
+/* ===== CAD-530：完成図（きれい）の室内の 🕹️ と「置く物」を、3Dの下の空いている所へ（3Dに被らない） ===== */
+#ctl530{display:none;align-items:center;justify-content:space-between;padding:8px 14px 2px}
+#ctl530.on530{display:flex}
+#ctl530 #joy525,#ctl530 #put529{position:relative!important;left:auto!important;top:auto!important}
+</style>
+<script id="ctl530js">
+(function(){
+  "use strict";
+  var cnv = document.getElementById("h3d"), joy = document.getElementById("joy525"), put = document.getElementById("put529");
+  if (!cnv || !joy || !put) return;
+  var row = document.createElement("div"); row.id = "ctl530";
+  cnv.parentNode.insertBefore(row, cnv.nextSibling);
+  row.appendChild(joy); row.appendChild(put);
+  setInterval(function(){ var on = joy.style.display === "block"; if (row.classList.contains("on530") !== on) row.classList.toggle("on530", on); }, 300);
+})();
+</script>
