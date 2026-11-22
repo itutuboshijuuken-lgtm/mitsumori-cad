@@ -38977,3 +38977,55 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   j.addEventListener("pointerup", end); j.addEventListener("pointercancel", end);
 })();
 </script>
+<script id="dragHide533js">
+/* ===== CAD-533：物をドラッグで動かしている間は UI を全部消して図面だけ見せる
+   （翔伍の指示 2026-11-22「物を動かしてる時はコントローラーとか全部閉じて。邪魔」）。
+   指を離したら元通りに戻す。消し方は visibility:hidden（場所は取ったままにするので
+   図面の大きさ・位置は一切変わらない＝ドラッグの座標・吸着・判定に影響しない）。
+   消す物：#stM .mtools（モード切替・手順・道具の列と案内）／#planBar（戻す・進める・階など）／
+   #selBar（コントローラー）／#roomBar176（部屋のバー）／#enclBar／#selHelp／#drawnList／
+   #chips434（下の小さいボタンの列）／#fab510（丸ボタン）。
+   残す物：図面その物と選択のピンク表示、つかんだ合図の枠（#planWrap.dragArmed）、
+   トースト（「壁に当たっています」等の知らせは情報なので残す）。
+   検知：本体の dragging（建具・窓・間仕切り・部屋パーツ・照明・設備・階段）が
+   armed＋moved の間。家具と定番の部屋は ux434 の内部ドラッグで外から状態が見えないため、
+   「指を置いた時点の家具の位置・新しく置かれた物の形」が動きの中で変わった事で検知する
+   （既存の物の座標は見ないので、間仕切り描き等の別の操作では消えない）。 */
+(function(){
+  "use strict";
+  var css = document.createElement("style");
+  css.textContent = "body.dragHide533 #stM .mtools,body.dragHide533 #planBar,body.dragHide533 #selBar,body.dragHide533 #roomBar176,body.dragHide533 #enclBar,body.dragHide533 #selHelp,body.dragHide533 #drawnList,body.dragHide533 #chips434,body.dragHide533 #fab510{visibility:hidden!important}";
+  document.head.appendChild(css);
+  var on = false, downs = 0, ptr = null;
+  function set(v){ if (v === on) return; on = v; try { document.body.classList.toggle("dragHide533", v); } catch(e){} }
+  function stMVisible(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length); }
+  function mainDrag(){ try { return (typeof dragging !== "undefined") && !!dragging && !!dragging.armed && !!dragging.moved; } catch(e){ return false; } }
+  function furnSig(){ try { return (S.furn434 || []).map(function(f){ return f.x + "," + f.y; }).join("|"); } catch(e){ return ""; } }
+  function tailSig(from){ try { var P = S.parts2D || [], s = 0; for (var i = from; i < P.length; i++){ var z = P[i]; s += (z.x1 | 0) + (z.y1 | 0) + (z.x2 | 0) + (z.y2 | 0); } return P.length + ":" + s; } catch(e){ return ""; } }
+  /* 受け取りは全部 capture 側：本体の pointer ハンドラは伝播を止めるため、
+     document のバブル側には届かない。capture では本体より先に呼ばれるので、
+     状態は「1つ前の動き」まで進んだ物を見る（実用上の遅れは1フレーム）。 */
+  document.addEventListener("pointerdown", function(e){
+    downs++;
+    if (!stMVisible()){ ptr = null; return; }
+    var plen = 0; try { plen = (S.parts2D || []).length; } catch(er){}
+    ptr = { id: e.pointerId, furn: furnSig(), plen: plen, tail: tailSig(plen), base: false };
+  }, true);
+  document.addEventListener("pointermove", function(e){
+    if (on && !stMVisible()){ set(false); return; }
+    if (mainDrag()){ set(true); return; }
+    if (ptr && e.pointerId === ptr.id && e.buttons){
+      if (!ptr.base){ /* 最初の動きの時点で置き終わった形を基準にする（置くタップ自体では消さない） */
+        ptr.furn = furnSig(); ptr.tail = tailSig(ptr.plen); ptr.base = true; return;
+      }
+      if (furnSig() !== ptr.furn || tailSig(ptr.plen) !== ptr.tail) set(true);
+    }
+  }, true);
+  function end(e){ downs = Math.max(0, downs - 1); if (ptr && e.pointerId === ptr.id) ptr = null; if (downs === 0) set(false); }
+  document.addEventListener("pointerup", end, true);
+  document.addEventListener("pointercancel", end, true);
+  window.addEventListener("blur", function(){ downs = 0; ptr = null; set(false); });
+  /* 復帰だけの保険：指が全部離れているのに消えたままにしない（これで消す事はしない） */
+  setInterval(function(){ if (on && downs === 0 && !mainDrag()) set(false); }, 700);
+})();
+</script>
