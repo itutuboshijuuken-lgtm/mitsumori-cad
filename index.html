@@ -24431,7 +24431,7 @@ function build(S,T,opt){
  const add=(o,g)=>((g||root).add(o),o);
  const six=(def,over)=>{const a=[def,def,def,def,def,def];Object.keys(over||{}).forEach(k=>a[{px:0,nx:1,py:2,ny:3,pz:4,nz:5}[k]]=over[k]);return a};
  /* 床・地面 */
- const gnd=new T.Mesh(new T.PlaneGeometry(40,40),M({map:X.ground,roughness:1}));X.ground.repeat.set(10,10);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;gnd.position.set(W/2,0,D/2);add(gnd,sc);
+ const gnd=new T.Mesh(new T.PlaneGeometry(40,40),M({map:X.ground,roughness:1}));X.ground.repeat.set(10,10);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;gnd.position.set(W/2,0,D/2);gnd.userData.gnd538=1;add(gnd,sc);
  X.floor.repeat.set(1,1);
  const flat=(x0,z0,x1,z1,y,m,per)=>{const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);g.translate((x0+x1)/2,y,(z0+z1)/2);const uv=g.attributes.uv,p=g.attributes.position;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)/per,p.getZ(i)/per);const o=new T.Mesh(g,m);o.receiveShadow=true;return o};
  /* 基礎 */
@@ -24798,23 +24798,40 @@ function build(S,T,opt){
   /* CAD-526：室内は「その場に立って見回す・歩く」カメラ（st.fp）。見回す・歩くは作り直さず、カメラだけ動かして描き直す */
   function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c)}
   /* CAD-535（Opus）：室内で今開いていない階（2階など）を見る時は、その階のデータを一時的に今の場所へ入れ、平屋として組み立ててすぐ戻す（保存・画面は触らない） */
-  function buildFl(){const k=st.fl,multi=Array.isArray(S.fl)&&S.fl.length>1;if(st.view!=='in'||k==null||!multi||k===(S.fi||0)||!S.fl[k]||!S.fl[k].snap||typeof flSnap!=='function'||typeof flLoad!=='function')return build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow});
+  function org538(){try{const b=bbox();return[b.x0,b.y0]}catch(e){return[0,0]}}
+  function buildFl(){const k=st.fl,multi=Array.isArray(S.fl)&&S.fl.length>1;st.base=S.fi||0;try{st.stairs=(HB.__stairs537&&st.view==='in')?HB.__stairs537():[]}catch(e){st.stairs=[]}
+   if(st.view!=='in'||k==null||!multi||k===(S.fi||0)||!S.fl[k]||!S.fl[k].snap||typeof flSnap!=='function'||typeof flLoad!=='function'){st.org=org538();return build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}
    const cur=flSnap(),kfi=S.fi,kfl=S.fl,kfs=S.floors,tg=JSON.parse(JSON.stringify(S.fl[k].snap));let ob=null;
-   try{flLoad(tg);S.fl=[{name:'',snap:null}];S.fi=0;S.floors=1;ob=build(S,T,{mode:'in',renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}finally{flLoad(cur);S.fl=kfl;S.fi=kfi;S.floors=kfs}return ob}
+   try{flLoad(tg);S.fl=[{name:'',snap:null}];S.fi=0;S.floors=1;st.org=org538();ob=build(S,T,{mode:'in',renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}finally{flLoad(cur);S.fl=kfl;S.fi=kfi;S.floors=kfs}
+   /* CAD-539：上の階は、下の階の階段の所に吹き抜け（暗い四角）を描き、地面を階の高さぶん下げる（窓の外が2階の高さに見える） */
+   try{const up=k-(S.fi||0);if(up>0&&ob){const dh=up*((S.ch||2400)+(S.dosa||240))/1000;ob.scene.traverse(x=>{if(x.userData&&x.userData.gnd538)x.position.y=-dh});
+     (st.stairs||[]).forEach(g=>{const xs=g.corners.map(p=>(p[0]-st.org[0])/1000),zs=g.corners.map(p=>(p[1]-st.org[1])/1000),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);
+      const pl=new T.Mesh(new T.PlaneGeometry(x1-x0,z1-z0),new T.MeshBasicMaterial({color:0x2a2620}));pl.rotation.x=-Math.PI/2;pl.position.set((x0+x1)/2,.45+.025,(z0+z1)/2);ob.root.add(pl);
+      try{const sm=new T.MeshStandardMaterial({color:0xb58a5c,roughness:.55});g.boxes().forEach(q=>{const bx0=(q.x0-st.org[0])/1000,bx1=(q.x1-st.org[0])/1000,bz0=(q.y0-st.org[1])/1000,bz1=(q.y1-st.org[1])/1000,y0=.45-g.kh/1000,y1=y0+q.top/1000;if(bx1-bx0<.005||bz1-bz0<.005)return;const bg=new T.BoxGeometry(bx1-bx0,y1-y0,bz1-bz0);const mb=new T.Mesh(bg,sm);mb.position.set((bx0+bx1)/2,(y0+y1)/2,(bz0+bz1)/2);ob.root.add(mb)})}catch(e){}
+      const rm=new T.MeshStandardMaterial({color:0x8a6a48,roughness:.5});[[x0,z0,x1,z0],[x1,z0,x1,z1],[x0,z1,x1,z1],[x0,z0,x0,z1]].forEach(e=>{const L=Math.hypot(e[2]-e[0],e[3]-e[1]);if(L<.05)return;const bar=new T.Mesh(new T.BoxGeometry(e[0]===e[2]?.04:L,.04,e[0]===e[2]?L:.04),rm);bar.position.set((e[0]+e[2])/2,.45+.85,(e[1]+e[3])/2);ob.root.add(bar)})})}}catch(e){}
+   return ob}
+  /* CAD-539（Opus）：階段の上では目の高さを段に合わせる。上りきったら上の階へ、上の階で階段を2段下りたら下の階へ切り替える */
+  function follow538(noSw){const f=st.fp;if(!f||st.view!=='in'||!st.org)return false;const base=st.base||0,vf=st.fl!=null?st.fl:base,X=f.x*1000+st.org[0],Y=f.z*1000+st.org[1];let hit=null;
+   (st.stairs||[]).some(g=>{const hh=g.heightAt(X,Y);if(hh!=null){hit={g,h:hh};return true}return false});
+   const e0=st.eye0||f.y,ceil=e0-1.5+(S.ch||2400)/1000-.12;
+   const th=(S.ch||2400)-1500-120;   /* 目が1階の天井に届く段の高さ（mm）。ここを境に階を切り替える */
+   if(vf===base){if(hit){if(!noSw&&hit.h>th&&Array.isArray(S.fl)&&S.fl[base+1]&&S.fl[base+1].snap){st.fl=base+1;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true}f.y=e0+hit.h/1000}else f.y=e0}
+   else{if(hit){if(!noSw&&hit.h<th-hit.g.rise){st.fl=base;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true}f.y=e0+(hit.h-hit.g.kh)/1000}else f.y=e0}
+   return false}
   function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=buildFl();
-   if(st.view==='in'){try{const c=st.obj.camera;if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=startFp525()||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
+   if(st.view==='in'){try{const c=st.obj.camera;st.eye0=c.position.y;if(st.fpNext){const n=st.fpNext;st.fpNext=null;st.fp={x:(n.X-st.org[0])/1000,y:st.eye0,z:(n.Y-st.org[1])/1000,yaw:n.yaw,p:n.p,fov:n.fov,own:1}}if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=startFp525()||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];follow538(true);camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
    else r.render(st.obj.scene,st.obj.camera);st.ms=performance.now()-t0}
   window.__h3dRedraw525=()=>{try{draw()}catch(e){}};
   function disposeScene(sc){sc.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material){[].concat(x.material).forEach(m=>{m.map&&m.map.dispose();m.dispose()})}})}
   draw();
   return {get ms(){return st.ms},rotate(n){if(st.view==='in'&&st.fp){st.fp.yaw+=(n||1)*Math.PI/2;camFp();return}st.rot=((st.rot+(n||1))%4+4)%4;draw()},view(v){st.view=v;st.fp=null;draw()},rooms(){return st.obj?st.obj.rooms:[]},room(i){st.room=i;st.view='in';st.fp=null;draw()},
    look(dy,dp){if(!st.fp)return;st.fp.yaw+=dy;st.fp.p=Math.max(-1.2,Math.min(1.2,st.fp.p+dp));camFp()},
-   move(f,sd){const q=st.fp;if(!q)return;q.x+=f*Math.sin(q.yaw)+sd*Math.cos(q.yaw);q.z+=-f*Math.cos(q.yaw)+sd*Math.sin(q.yaw);if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}camFp()},
+   move(f,sd){const q=st.fp;if(!q)return;q.x+=f*Math.sin(q.yaw)+sd*Math.cos(q.yaw);q.z+=-f*Math.cos(q.yaw)+sd*Math.sin(q.yaw);if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}if(follow538())return;camFp()},
    zoom(k){if(!st.fp)return;st.fp.fov=Math.max(40,Math.min(110,st.fp.fov*k));camFp()},
    hit(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster(),hm=[];st.obj.root.traverse(o=>{if(o.isMesh)hm.push(o)});rc.setFromCamera(new T.Vector2(nx,ny),c);const h=rc.intersectObjects(hm,false)[0];return h?{p:[h.point.x,h.point.y,h.point.z],fy:st.fp.y-1.5}:null},
    pick(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster();rc.setFromCamera(new T.Vector2(nx,ny),c);const o=rc.ray.origin,d=rc.ray.direction;if(d.y>-.03)return null;const t=(st.fp.y-1.5-o.y)/d.y;return[o.x+d.x*t,o.z+d.z*t]},
-   setPos(x,z){const q=st.fp;if(!q)return;q.x=x;q.z=z;if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}camFp()},
-   floor(k){st.fl=k;st.room=0;st.fp=null;st.view='in';draw()},get floorIdx(){return st.fl!=null?st.fl:(S.fi||0)},floors(){return Array.isArray(S.fl)?S.fl.map(f=>f.name):[]},
+   setPos(x,z){const q=st.fp;if(!q)return;q.x=x;q.z=z;if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}if(follow538())return;camFp()},
+   floor(k){st.fl=k;st.room=0;st.fp=null;st.view='in';draw()},get floorIdx(){return st.fl!=null?st.fl:(S.fi||0)},get org(){return st.org},floors(){return Array.isArray(S.fl)?S.fl.map(f=>f.name):[]},
    get fp(){return st.fp},dispose(){if(window.__h3dRedraw525)window.__h3dRedraw525=null;if(st.obj)disposeScene(st.obj.scene);r.dispose()}};}
  window.House3D={build,render,supported};
 })();
@@ -38828,6 +38845,7 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   });
   /* CAD-528：床をタップ（ほとんど動かさず短く）→ そこへ歩いて行く */
   var tap = null, walkA = 0;
+  window.__h3dFloorChanged538 = function(){ walkA++; };   /* CAD-539：階が切り替わったら、タップ歩きは止める（座標の基準が変わるため） */
   cnv.addEventListener("pointerdown", function(e){ if (!h()) return; tap = (Object.keys(pts).length <= 1) ? {id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), mv: 0} : null; }, true);
   cnv.addEventListener("pointermove", function(e){ if (tap && e.pointerId === tap.id) tap.mv = Math.max(tap.mv, Math.abs(e.clientX - tap.x) + Math.abs(e.clientY - tap.y)); }, true);
   function walkTo(e){
