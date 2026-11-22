@@ -29386,6 +29386,20 @@ function btn395(attr, val, label, on, dis){
     " style='min-height:48px;font-size:15px;font-weight:700;border-radius:10px;border:2px solid " + (on ? "#2563B0" : "#C9D2DC") +
     ";background:" + (dis ? "#EDF1F5" : on ? "#E8F1FB" : "#fff") + ";color:" + (dis ? "#8A97A5" : "#1B2430") + "'>" + label + "</button>";
 }
+/* CAD-527：階段の質問の選択肢に、形が一目で分かる簡単な線画（SVG模式図）を付ける。文字はそのまま残す */
+function ico395(n){
+  var P = {
+    st: "<path d='M6 34h9v-7h9v-7h9v-7h9'/><path d='M9 27L39 9'/><path d='M32 8l7 1-1 7'/>",
+    turn: "<path d='M12 37V15q0-4 4-4h20v8H21v18z'/><path d='M12 29h9'/><path d='M12 22h9'/>",
+    mt: "<rect x='15' y='4' width='18' height='14'/><path d='M15 18L33 10'/><path d='M15 25h18'/><path d='M15 31h18'/><path d='M15 37h18'/>",
+    odo: "<rect x='12' y='8' width='24' height='24'/><path d='M19 27V17q0-4 4-4h7'/><path d='M26 9l4 4-4 4'/>",
+    fan2: "<rect x='10' y='6' width='28' height='28'/><path d='M10 34L38 20'/>",
+    fan3: "<rect x='10' y='6' width='28' height='28'/><path d='M10 34L38 13'/><path d='M10 34L38 24'/>",
+    tl: "<path d='M17 30h14'/><path d='M17 24h14'/><path d='M24 36V17q0-7-7-7H7'/><path d='M11 6l-4 4 4 4'/>",
+    tr: "<path d='M17 30h14'/><path d='M17 24h14'/><path d='M24 36V17q0-7 7-7h10'/><path d='M37 6l4 4-4 4'/>"
+  };
+  return "<svg width='40' height='30' viewBox='0 0 48 40' style='display:block;margin:0 auto 3px' fill='none' stroke='currentColor' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'>" + (P[n] || "") + "</svg>";
+}
 function render395(){
   if (!B) return;
   var o = B.o, T = T395(), tot = tot395(), R = T - tot, H = H395();
@@ -29443,15 +29457,15 @@ function renderQ395(T, tot, R){
   } else if (B.q === "m" || B.q === "mt"){
     var top = B.q === "mt", mid = R - B.pk.kind;
     h += "<div style='" + lbl + "'>" + (top ? "上で回ります。何段で回りますか" : "何段で回りますか") + "</div>";
-    h += "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px'>" + [1, 2, 3].map(function(k){ return btn395("k395", k, k === 1 ? "踊り場" : k + "段", B.pk.kind === k); }).join("") + "</div>";
+    h += "<div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px'>" + [1, 2, 3].map(function(k){ return btn395("k395", k, k === 1 ? ico395("odo") + "踊り場" : ico395("fan" + k) + k + "段", B.pk.kind === k); }).join("") + "</div>";
     h += "<div style='font-size:12px;color:#5B6B7A;margin:10px 2px 4px'>向き（上がる人から見た向き）</div>";
-    h += "<div style='" + grid2 + "'>" + btn395("d395", "L", "左廻り", B.pk.dir === "L") + btn395("d395", "R", "右廻り", B.pk.dir === "R") + "</div>";
+    h += "<div style='" + grid2 + "'>" + btn395("d395", "L", ico395("tl") + "左廻り", B.pk.dir === "L") + btn395("d395", "R", ico395("tr") + "右廻り", B.pk.dir === "R") + "</div>";
     if (top) h += "<div style='font-size:13px;color:#3E4A57;margin:10px 2px 0'>" + (mid > 0 ? "間は自動でまっすぐ（" + mid + "段）になります" : mid === 0 ? "間はありません（今の段数のまま上で回ります）" : "残りの段数が足りません（「1つ戻す」で減らしてください）") + "</div>";
     h += "<div style='" + grid2 + ";margin-top:10px'>" + btn395("q395", "menu", "もどる", false) + btn395("q395", top ? "mtok" : "mok", top ? "上で回って終わる" : "この内容で回る", true, top && mid < 0) + "</div>";
   } else {
     h += "<div style='" + lbl + "'>" + (B.draft.length ? "次はどう上がりますか（あと " + R + " 段で上に届きます）" : "最初はどう上がりますか") + "</div>";
-    h += "<div style='" + grid2 + "'>" + btn395("q395", "s", "まっすぐ上がる", false) + btn395("q395", "m", B.draft.length ? "回る" : "最初から回る", false);
-    if (B.draft.length) h += btn395("q395", "mt", "上で回って終わる", false) + btn395("q395", "fin", "まっすぐで終わる（残りは自動）", false);
+    h += "<div style='" + grid2 + "'>" + btn395("q395", "s", ico395("st") + "まっすぐ上がる", false) + btn395("q395", "m", ico395("turn") + (B.draft.length ? "回る" : "最初から回る"), false);
+    if (B.draft.length) h += btn395("q395", "mt", ico395("mt") + "上で回って終わる", false) + btn395("q395", "fin", ico395("st") + "まっすぐで終わる（残りは自動）", false);
     h += "</div>";
   }
   /* 下段：戻す・最初から・決定 */
