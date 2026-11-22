@@ -24621,6 +24621,7 @@ function build(S,T,opt){
     const lidT=rrb(.21,.025,.41,.04,mat.porc);PP(lidT,-Lx/2+.14,.76,0,g);
     const bt=cyl(.022,.014,mat.steel,20);PP(bt,-Lx/2+.14,.785,0,g);
     const hinge=cyl(.015,.2,M({color:0xe6e6e6,roughness:.5}),12);hinge.rotation.x=Math.PI/2;PP(hinge,-Lx/2+.1,.40,0,g);
+    g.rotation.y=({n:-Math.PI/2,e:Math.PI,s:Math.PI/2,w:0})[t.dir||"n"]||0;   /* CAD-544：平面図の向き（dir）とタンクの側をそろえる。便器はローカル -x が背面（タンク・ヒンジ）、+x が正面（便座・ボウルの先）で、2Dのタンク位置は n=奥（-y）・e=右（+x）・s=手前（+y）・w=左（-x）。洗面（CAD-543）・浴槽（CAD-285）とはローカルの基準が違うため対応表も別 */
     g.position.set(cx+0.0,FL,cz);add(g)}
   else if(t.k==='tearai'){const g=new T.Group();
     const bs=rrb(w,.12,d,.06,mat.porc,.008);PP(bs,0,0,0,g);
