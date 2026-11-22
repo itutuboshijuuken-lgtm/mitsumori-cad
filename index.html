@@ -34368,7 +34368,7 @@ function daikuBaseRows391(nobeT){
 (function(){
   "use strict";
   var STEPS399 = ["part", "floor", "ds", "put", "all"];
-  var LABEL399 = {part: "①間仕切り", floor: "②床", ds: "③ドア窓", put: "④置く物", all: "⑤見直し"};   /* CAD-443：⑤見直し＝全部さわれる最後の確認。幅に入るよう短い名前 */
+  var LABEL399 = {part: "①間仕切り", floor: "②床", ds: "③ドア窓", put: "④置く物", all: "⑤全部"};   /* CAD-443：⑤＝全部さわれる最後の確認。CAD-540で「見直し」から「全部」へ改名。幅に入るよう短い名前 */
   var step399 = "part";
   var barEl399 = null;
 
@@ -36633,7 +36633,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
    選ぶ候補（pickCands）を手順でしぼり、部屋の床バー・床の範囲は②⑤だけ開く。表示と入口だけ（データ・見積には触らない）。 */
 (function(){
   "use strict";
-  var NEXT = {part: ["floor", "②床へ"], floor: ["ds", "③ドア窓へ"], ds: ["put", "④置く物へ"], put: ["all", "⑤見直しへ"], all: ["@7", "③室内図へ"]};
+  var NEXT = {part: ["floor", "②床へ"], floor: ["ds", "③ドア窓へ"], ds: ["put", "④置く物へ"], put: ["all", "⑤全部へ"], all: ["@7", "③室内図へ"]};
   function onM(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM); }
   function st(){ try { return HB.__step399 ? HB.__step399() : "all"; } catch(e){ return "all"; } }
   function tut(){ try { return document.body.classList.contains("nbtutRun") || !!HB.__nbtut; } catch(e){ return false; } }
@@ -38380,7 +38380,7 @@ function kozo478(C){
 <script id="fab510js">
 (function(){
   "use strict";
-  var ITEMS = [["part", "間仕<br>切り", "#0F6E56"], ["floor", "床", "#B7791F"], ["ds", "ドア<br>窓", "#185FA5"], ["put", "置く", "#534AB7"], ["all", "見直し", "#5F5E5A"]];
+  var ITEMS = [["part", "間仕<br>切り", "#0F6E56"], ["floor", "床", "#B7791F"], ["ds", "ドア<br>窓", "#185FA5"], ["put", "置く", "#534AB7"], ["all", "全部", "#5F5E5A"]];
   var POS = [0, 22.5, 45, 67.5, 90].map(function(d){ var t = d * Math.PI / 180, R = 135; return [-Math.round(R * Math.sin(t)), -Math.round(R * Math.cos(t))]; });   /* 丸ボタンの中心からの位置（真上から真左へ、四分の一の扇） */
   var root = document.createElement("div"); root.id = "fab510";
   var h = '<div class="fbBg"></div>';
@@ -39143,5 +39143,98 @@ body.in534 #ctl530{padding-top:4px}
   }
   HB.__stairs537 = function(){ try { return (S.tenken || []).filter(function(o){ return o && o.k === "stair"; }).map(geo).filter(Boolean); } catch(e){ return []; } };
   HB.__stairGeo537 = geo;
+})();
+</script>
+<script id="lockstep540js">
+/* ===== CAD-540：手順ごとに、その手順の物だけさわれる（翔伍の指示 2026-11-22 17:08・理解確認済み）。
+   CAD-443 の「その手順の物だけ」を締め直す。CAD-511（押した物で手順が自動で切り替わる）を止め、
+   CAD-443 の絞り（pickCands の ALLOW・部屋のロック __lockRoom443）を効かせる。
+   あわせて ⑤「見直し」を「全部」へ改名（表示名だけ。内部の手順キーは "all" のまま）。
+   対応表：①間仕切り＝間仕切り(p)・垂れ壁(r)／②床＝部屋（床）だけ／③ドア窓＝ドア・窓(o)／
+   ④置く物＝設備・階段(k)・照明(lt)・家具／⑤全部＝全部。
+   残っていた抜け道を3つ塞ぐ：
+   (1) 照明だけ pickCands の対象外で、どの手順でもタップで選べてしまった
+       → 間仕切り・床・ドア窓の手順では、照明のタップを本体の選択処理へ渡さない。
+   (2) CAD-511 の自動切り替えが、選択の変化を見て手順を動かしてしまう
+       → __noArm511 を立ててからの手順変更（自動切り替え由来）は受け付けない。
+   (3) 手順を切り替えた時に、前の手順の選択（sel・部屋バー・家具の選択）が残る
+       → 見張りが、新しい手順で触れない選択をその場で外す。
+   チュートリアル中は従来どおり（締め付けをしない）。見積・保存キーには触らない。
+   CAD-533（ドラッグ中UI全消し）とは別の仕組みで、干渉しない。 */
+(function(){
+  "use strict";
+  /* CAD-511 の印を落とすと、CAD-443 の絞り（pickCands・部屋ロック）が効くようになる */
+  HB.__auto511 = false;
+  var OWNER = {p: "part", r: "part", o: "ds", k: "put", lt: "put"};
+  function onM(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM); }
+  function tut(){ try { return document.body.classList.contains("nbtutRun") || !!HB.__nbtut; } catch(e){ return false; } }
+  function step(){ try { return HB.__step399 ? HB.__step399() : "all"; } catch(e){ return "all"; } }
+  function busy(){ /* 作業の最中は触らない（置く構え・間仕切り描き・照明の構え・囲み・消しゴム・畳・ドラッグ中） */
+    try {
+      if (typeof dragging !== "undefined" && dragging) return true;
+      if (HB.__put || HB.__partDraw) return true;
+      if (typeof ltTool !== "undefined" && ltTool) return true;
+      if (typeof enclMode !== "undefined" && enclMode) return true;
+      if (typeof eraMode !== "undefined" && eraMode) return true;
+      if (typeof tatMode !== "undefined" && tatMode) return true;
+      if (HB.__delMode) return true;
+    } catch(e){}
+    return false;
+  }
+  /* (2) 自動切り替え由来の手順変更を受け付けない（利用者が丸ボタン・手順バーで選んだ変更はそのまま通す） */
+  if (typeof HB.__setStep399 === "function" && !HB.__setStep399.__l540){
+    var ss0 = HB.__setStep399;
+    var w540 = function(ns){
+      try {
+        if (HB.__noArm511 && HB.__noArm511 === ns && typeof sel !== "undefined" && sel && OWNER[sel.t] === ns && step() !== "all" && OWNER[sel.t] !== step()) return;
+      } catch(e){}
+      return ss0.apply(this, arguments);
+    };
+    w540.__l540 = true;
+    HB.__setStep399 = w540;
+  }
+  /* (1) 照明のタップ止め：本体（#plan の pointerdown）より先に planWrap の capture で受ける。
+     本体が照明を選ぶのは「その手順で選べる候補が近くに無い・道具の構えが無い・辺や建具の
+     要素の上でない」時だけなので、同じ条件の時だけ止める（ドア等が近くにある時は邪魔しない）。 */
+  var wrap = document.getElementById("planWrap");
+  if (wrap && !wrap.__l540){
+    wrap.__l540 = true;
+    wrap.addEventListener("pointerdown", function(e){
+      try {
+        if (e.isPrimary === false) return;
+        if (!onM() || tut() || busy()) return;
+        var s = step(); if (s === "put" || s === "all") return;
+        if (!e.target || !e.target.closest || !e.target.closest("#plan")) return;
+        if (e.target.closest("[data-edge],[data-pt],[data-op]")) return;
+        if (typeof ltTool !== "undefined" && ltTool) return;
+        if (HB.__put) return;
+        var mm = toMM(planPt(e));
+        var cs = (typeof pickCands === "function") ? (pickCands(mm) || []) : [];
+        if (cs.length) return;
+        if (typeof ltNear === "function" && typeof S !== "undefined" && S.lights && S.lights.length && ltNear(mm) >= 0) e.stopPropagation();
+      } catch(er){}
+    }, true);
+  }
+  /* (3) 見張り：手順に合わない選択を外す */
+  function clearSel540(){
+    try { sel = null; } catch(e){}
+    try { drawSelBar(); } catch(e){}
+    try { drawPlan(); } catch(e){}
+  }
+  setInterval(function(){
+    try {
+      if (!onM() || tut() || busy()) return;
+      var s = step(); if (s === "all") return;
+      if (typeof sel !== "undefined" && sel && OWNER[sel.t] && OWNER[sel.t] !== s) clearSel540();
+      if (s !== "floor"){
+        var rb = document.getElementById("roomBar176");
+        if (rb && !rb.hidden && rb.innerHTML && HB.__closeRoom176) HB.__closeRoom176();
+      }
+      if (s !== "put"){
+        var done = document.querySelector('#chips434 [data-w="done"]');
+        if (done) done.click();   /* 家具の選択は ux434 の中だけにあるので、「OK」チップで外す */
+      }
+    } catch(e){}
+  }, 150);
 })();
 </script>
