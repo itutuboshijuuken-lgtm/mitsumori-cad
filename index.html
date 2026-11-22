@@ -24783,7 +24783,7 @@ function build(S,T,opt){
  function render(canvas,S,o){o=o||{};const T=o.THREE||window.THREE;if(!T||!supported(S))return null;
   const w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height;
   const r=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});r.localClippingEnabled=true;/* CAD-303：取り込み2の clippingPlanes を効かせる */r.setPixelRatio(Math.min(window.devicePixelRatio||1,o.maxDpr||2));r.setSize(w,h,false);r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.outputColorSpace=T.SRGBColorSpace;
-  const st={view:o.view||'out',rot:o.rot||0,room:o.room||0,obj:null,ms:0,fp:o.fp||null,fl:(o.fl!=null?o.fl:null)};/* CAD-529：置いた物で描き直す時も、立っている所と向きを引き継ぐ */
+  const st={view:o.view||'out',rot:o.rot||0,room:o.room||0,obj:null,ms:0,fp:o.fp||null,fl:(o.fl!=null?o.fl:null)};if(st.view==='in'&&!st.fp)restore541();/* CAD-529：置いた物で描き直す時も、立っている所と向きを引き継ぐ */
   /* CAD-526：始めの立ち位置は、部屋の角から部屋の反対の角を向く（いちばん広く見える向き）。狭い部屋は真ん中から、長い方を向いて広角 */
   function startFp525(){
    if(S!==__gS307()||typeof roomsCalc!=='function'||typeof bbox!=='function')return null;const nm=(st.obj.rooms||[])[st.room];if(!nm)return null;
@@ -24796,35 +24796,46 @@ function build(S,T,opt){
    [[X0,Y0,1,1],[X1,Y0,-1,1],[X0,Y1,1,-1],[X1,Y1,-1,-1]].forEach(c=>{let i=c[0]+c[2]*ins,j=c[1]+c[3]*ins;for(let n=0;n<60&&!cs.has(j*RC.NX+i);n++){i+=c[2];j+=c[3]}if(!cs.has(j*RC.NX+i))return;const p=toM(i,j),dd=Math.hypot(p[0]-cx,p[1]-cz);if(!best||dd>best.d)best={p,d:dd}});
    if(!best)return null;const dx=cx-best.p[0],dz=cz-best.p[1];return{x:best.p[0],y,z:best.p[1],yaw:Math.atan2(dx,-dz),p:-.08,fov:90,own:1}}
   /* CAD-526：室内は「その場に立って見回す・歩く」カメラ（st.fp）。見回す・歩くは作り直さず、カメラだけ動かして描き直す */
-  function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c)}
+  /* CAD-541：室内の最後にいた所（階・部屋・図面の位置・向き）を覚えて、画面を変えても・開き直してもそこから始める */
+  function sig541(){try{return (S.edges||[]).map(e=>e.d+e.v).join(',')+'|'+((S.fl||[]).length)}catch(e){return ''}}
+  let sv541=0;function save541(){const f=st.fp;if(!f||st.view!=='in'||!st.org)return;const now=Date.now();if(now-sv541<400)return;sv541=now;try{localStorage.setItem('h3dpos541',JSON.stringify({sig:sig541(),view:'in',fl:st.vf||0,room:st.room,X:f.x*1000+st.org[0],Y:f.z*1000+st.org[1],yaw:f.yaw,p:f.p,fov:f.fov}))}catch(e){}}
+  function restore541(){try{const v=JSON.parse(localStorage.getItem('h3dpos541')||'null');if(!v||v.sig!==sig541()||!isFinite(v.X))return false;const multi=Array.isArray(S.fl)&&S.fl.length>1;st.fl=multi?(v.fl||0):null;st.room=v.room||0;st.fp=null;st.fpNext={X:v.X,Y:v.Y,yaw:v.yaw||0,p:v.p||0,fov:v.fov||90};return true}catch(e){return false}}
+  function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c);save541()}
   /* CAD-535（Opus）：室内で今開いていない階（2階など）を見る時は、その階のデータを一時的に今の場所へ入れ、平屋として組み立ててすぐ戻す（保存・画面は触らない） */
   function org538(){try{const b=bbox();return[b.x0,b.y0]}catch(e){return[0,0]}}
-  function buildFl(){const k=st.fl,multi=Array.isArray(S.fl)&&S.fl.length>1;st.base=S.fi||0;try{st.stairs=(HB.__stairs537&&st.view==='in')?HB.__stairs537():[]}catch(e){st.stairs=[]}
-   if(st.view!=='in'||k==null||!multi||k===(S.fi||0)||!S.fl[k]||!S.fl[k].snap||typeof flSnap!=='function'||typeof flLoad!=='function'){st.org=org538();return build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}
-   const cur=flSnap(),kfi=S.fi,kfl=S.fl,kfs=S.floors,tg=JSON.parse(JSON.stringify(S.fl[k].snap));let ob=null;
-   try{flLoad(tg);S.fl=[{name:'',snap:null}];S.fi=0;S.floors=1;st.org=org538();ob=build(S,T,{mode:'in',renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}finally{flLoad(cur);S.fl=kfl;S.fi=kfi;S.floors=kfs}
+  /* CAD-541（Opus）：室内は、2階建てなら今開いている階も含めて必ず「その階だけ」を平屋として組み立てる（1階を見ているのに2階の高さ＝屋根の上から始まる不具合の修正）。
+     階段は「その階から上がる階段」（stUp）と「下の階から上がってくる階段」（stDn）を、どの階を開いていても各階のデータから取る */
+  function stairsOf541(i){try{const ts=i===(S.fi||0)?(S.tenken||[]):((S.fl[i]&&S.fl[i].snap&&S.fl[i].snap.tenken)||[]);return ts.filter(o=>o&&o.k==='stair').map(o=>HB.__stairGeo537(o)).filter(Boolean)}catch(e){return[]}}
+  function buildFl(){const multi=Array.isArray(S.fl)&&S.fl.length>1,fi=S.fi||0,k=(st.fl!=null&&multi)?st.fl:fi;st.vf=k;st.start525=null;st.swapped=false;
+   st.stUp=st.view==='in'?stairsOf541(k):[];st.stDn=(st.view==='in'&&k>0)?stairsOf541(k-1):[];
+   if(st.view!=='in'||!multi||(k!==fi&&!(S.fl[k]&&S.fl[k].snap))||typeof flSnap!=='function'||typeof flLoad!=='function'){st.org=org538();return build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}
+   const cur=flSnap(),kfi=S.fi,kfl=S.fl,kfs=S.floors,tg=JSON.parse(JSON.stringify(k===fi?cur:S.fl[k].snap));let ob=null;
+   try{flLoad(tg);S.fl=[{name:'',snap:null}];S.fi=0;S.floors=1;st.org=org538();ob=build(S,T,{mode:'in',renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow});st.swapped=true;
+    const keep=st.obj;st.obj=ob;try{st.start525=startFp525()}catch(e){}st.obj=keep}finally{flLoad(cur);S.fl=kfl;S.fi=kfi;S.floors=kfs}
    /* CAD-539：上の階は、下の階の階段の所に吹き抜け（暗い四角）を描き、地面を階の高さぶん下げる（窓の外が2階の高さに見える） */
-   try{const up=k-(S.fi||0);if(up>0&&ob){const dh=up*((S.ch||2400)+(S.dosa||240))/1000;ob.scene.traverse(x=>{if(x.userData&&x.userData.gnd538)x.position.y=-dh});
-     (st.stairs||[]).forEach(g=>{const xs=g.corners.map(p=>(p[0]-st.org[0])/1000),zs=g.corners.map(p=>(p[1]-st.org[1])/1000),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);
+   try{const up=k;if(up>0&&ob){const dh=up*((S.ch||2400)+(S.dosa||240))/1000;ob.scene.traverse(x=>{if(x.userData&&x.userData.gnd538)x.position.y=-dh});
+     (st.stDn||[]).forEach(g=>{const xs=g.corners.map(p=>(p[0]-st.org[0])/1000),zs=g.corners.map(p=>(p[1]-st.org[1])/1000),x0=Math.min(...xs),x1=Math.max(...xs),z0=Math.min(...zs),z1=Math.max(...zs);
       const pl=new T.Mesh(new T.PlaneGeometry(x1-x0,z1-z0),new T.MeshBasicMaterial({color:0x2a2620}));pl.rotation.x=-Math.PI/2;pl.position.set((x0+x1)/2,.45+.025,(z0+z1)/2);ob.root.add(pl);
       try{const sm=new T.MeshStandardMaterial({color:0xb58a5c,roughness:.55});g.boxes().forEach(q=>{const bx0=(q.x0-st.org[0])/1000,bx1=(q.x1-st.org[0])/1000,bz0=(q.y0-st.org[1])/1000,bz1=(q.y1-st.org[1])/1000,y0=.45-g.kh/1000,y1=y0+q.top/1000;if(bx1-bx0<.005||bz1-bz0<.005)return;const bg=new T.BoxGeometry(bx1-bx0,y1-y0,bz1-bz0);const mb=new T.Mesh(bg,sm);mb.position.set((bx0+bx1)/2,(y0+y1)/2,(bz0+bz1)/2);ob.root.add(mb)})}catch(e){}
       const rm=new T.MeshStandardMaterial({color:0x8a6a48,roughness:.5});[[x0,z0,x1,z0],[x1,z0,x1,z1],[x0,z1,x1,z1],[x0,z0,x0,z1]].forEach(e=>{const L=Math.hypot(e[2]-e[0],e[3]-e[1]);if(L<.05)return;const bar=new T.Mesh(new T.BoxGeometry(e[0]===e[2]?.04:L,.04,e[0]===e[2]?L:.04),rm);bar.position.set((e[0]+e[2])/2,.45+.85,(e[1]+e[3])/2);ob.root.add(bar)})})}}catch(e){}
    return ob}
   /* CAD-539（Opus）：階段の上では目の高さを段に合わせる。上りきったら上の階へ、上の階で階段を2段下りたら下の階へ切り替える */
-  function follow538(noSw){const f=st.fp;if(!f||st.view!=='in'||!st.org)return false;const base=st.base||0,vf=st.fl!=null?st.fl:base,X=f.x*1000+st.org[0],Y=f.z*1000+st.org[1];let hit=null;
-   (st.stairs||[]).some(g=>{const hh=g.heightAt(X,Y);if(hh!=null){hit={g,h:hh};return true}return false});
-   const e0=st.eye0||f.y,ceil=e0-1.5+(S.ch||2400)/1000-.12;
-   const th=(S.ch||2400)-1500-120;   /* 目が1階の天井に届く段の高さ（mm）。ここを境に階を切り替える */
-   if(vf===base){if(hit){if(!noSw&&hit.h>th&&Array.isArray(S.fl)&&S.fl[base+1]&&S.fl[base+1].snap){st.fl=base+1;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true}f.y=e0+hit.h/1000}else f.y=e0}
-   else{if(hit){if(!noSw&&hit.h<th-hit.g.rise){st.fl=base;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true}f.y=e0+(hit.h-hit.g.kh)/1000}else f.y=e0}
-   return false}
+  function follow538(noSw){const f=st.fp;if(!f||st.view!=='in'||!st.org)return false;const vf=st.vf||0,X=f.x*1000+st.org[0],Y=f.z*1000+st.org[1];
+   const hitOf=a=>{let r0=null;(a||[]).some(g=>{const hh=g.heightAt(X,Y);if(hh!=null){r0={g,h:hh};return true}return false});return r0};
+   const up=hitOf(st.stUp),dn=up?null:hitOf(st.stDn),e0=st.eye0||f.y,th=(S.ch||2400)-1500-120;   /* 目が下の階の天井に届く段の高さ（mm）で階を切り替える */
+   const go=(k2)=>{st.fl=k2;st.fpNext={X,Y,yaw:f.yaw,p:f.p,fov:f.fov};draw();try{window.__h3dFloorChanged538&&window.__h3dFloorChanged538()}catch(e){}return true};
+   const has=(k2)=>Array.isArray(S.fl)&&S.fl[k2]&&(S.fl[k2].snap||k2===(S.fi||0));
+   if(up){if(!noSw&&up.h>th&&has(vf+1))return go(vf+1);f.y=e0+up.h/1000}
+   else if(dn){if(!noSw&&dn.h<th-dn.g.rise&&has(vf-1))return go(vf-1);f.y=e0+(dn.h-dn.g.kh)/1000}
+   else f.y=e0;
+   save541();return false}
   function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=buildFl();
-   if(st.view==='in'){try{const c=st.obj.camera;st.eye0=c.position.y;if(st.fpNext){const n=st.fpNext;st.fpNext=null;st.fp={x:(n.X-st.org[0])/1000,y:st.eye0,z:(n.Y-st.org[1])/1000,yaw:n.yaw,p:n.p,fov:n.fov,own:1}}if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=startFp525()||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];follow538(true);camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
+   if(st.view==='in'){try{const c=st.obj.camera;st.eye0=c.position.y;if(st.fpNext){const n=st.fpNext;st.fpNext=null;st.fp={x:(n.X-st.org[0])/1000,y:st.eye0,z:(n.Y-st.org[1])/1000,yaw:n.yaw,p:n.p,fov:n.fov,own:1}}if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=(st.swapped?st.start525:startFp525())||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];follow538(true);camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
    else r.render(st.obj.scene,st.obj.camera);st.ms=performance.now()-t0}
   window.__h3dRedraw525=()=>{try{draw()}catch(e){}};
   function disposeScene(sc){sc.traverse(x=>{if(x.geometry)x.geometry.dispose();if(x.material){[].concat(x.material).forEach(m=>{m.map&&m.map.dispose();m.dispose()})}})}
   draw();
-  return {get ms(){return st.ms},rotate(n){if(st.view==='in'&&st.fp){st.fp.yaw+=(n||1)*Math.PI/2;camFp();return}st.rot=((st.rot+(n||1))%4+4)%4;draw()},view(v){st.view=v;st.fp=null;draw()},rooms(){return st.obj?st.obj.rooms:[]},room(i){st.room=i;st.view='in';st.fp=null;draw()},
+  return {get ms(){return st.ms},rotate(n){if(st.view==='in'&&st.fp){st.fp.yaw+=(n||1)*Math.PI/2;camFp();return}st.rot=((st.rot+(n||1))%4+4)%4;draw()},view(v){st.view=v;st.fp=null;if(v==='in')restore541();draw()},rooms(){return st.obj?st.obj.rooms:[]},room(i){st.room=i;st.view='in';st.fp=null;draw()},
    look(dy,dp){if(!st.fp)return;st.fp.yaw+=dy;st.fp.p=Math.max(-1.2,Math.min(1.2,st.fp.p+dp));camFp()},
    move(f,sd){const q=st.fp;if(!q)return;q.x+=f*Math.sin(q.yaw)+sd*Math.cos(q.yaw);q.z+=-f*Math.cos(q.yaw)+sd*Math.sin(q.yaw);if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}if(follow538())return;camFp()},
    zoom(k){if(!st.fp)return;st.fp.fov=Math.max(40,Math.min(110,st.fp.fov*k));camFp()},
@@ -24850,6 +24861,7 @@ function build(S,T,opt){
   var h3 = null;              /* House3D のハンドル（3D表示中だけ生きる） */
   var view254 = "out";        /* 'out'=外観 / 'doll'=断面 / 'in'=室内 */
   var room254 = 0;            /* 室内で見ている部屋の番号（h.room(i) の i） */
+  try { var sv541 = JSON.parse(localStorage.getItem("h3dpos541") || "null"); if (sv541 && sv541.view === "in"){ view254 = "in"; room254 = sv541.room || 0; } } catch(e){}   /* CAD-541：最後に室内を見ていたら室内から */
   var threeSt = 0;            /* 0=未読込 1=読込中 2=準備OK 3=失敗（この回は諦める） */
   var threeP = null;
   var asked254 = false;       /* 「軽くしますか？」は1回だけ */
