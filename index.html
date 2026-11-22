@@ -2980,7 +2980,7 @@ function fxPlaceArea(wi, u, z, len, hgt){
 let flashAt = 0;
 // 知らせの輪は終わったら図から消す（拡大中のスクロールを軽く保つ）
 let flashT = 0; const flashClear = () => { clearTimeout(flashT); flashT = setTimeout(() => { if (HB.__pageM && !HOLD.dir) drawPlan(); }, 2600); };
-const pulseAt = c => `<g pointer-events="none">${[0, 0.45].map(d => `<circle cx="${c[0]}" cy="${c[1]}" r="10" fill="none" stroke="#E8742C" stroke-width="3" opacity="0"><animate attributeName="r" values="8;34" dur="0.9s" begin="${d}s" repeatCount="2"/><animate attributeName="opacity" values="1;0" dur="0.9s" begin="${d}s" repeatCount="2"/></circle>`).join("")}</g>`;
+const pulseAt = c => `<g pointer-events="none">${[0, 0.45].map(d => `<circle cx="${c[0]}" cy="${c[1]}" r="10" fill="none" stroke="#00B0F0" stroke-width="3" opacity="0"><animate attributeName="r" values="8;34" dur="0.9s" begin="${d}s" repeatCount="2"/><animate attributeName="opacity" values="1;0" dur="0.9s" begin="${d}s" repeatCount="2"/></circle>`).join("")}</g>`;   /* CAD-551：選択直後のパルスの色をオレンジ（#E8742C）から水色へ。オレンジはフローリングと同化して見にくい（本人の決定 2026-11-22・選択表示の統一） */
 // サッシの番号の印：図と「仕様」の欄を、同じ番号でつなぐ
 function sashBadge(P, A, B, n, i){
   if (!HB.__pageM) return "";
@@ -39385,3 +39385,22 @@ function getaSheet(i){
   $("modal").hidden = false; render();
 }
 </script>
+<style>
+/* ===== CAD-551：②間取りの選択表示を「水色と白の交互点滅」に統一（本人の決定 2026-11-22 22:18、3案から本人が選択。間取りの見た目キュー2の2件目） =====
+   理由：従来のピンク点滅と、選択直後のオレンジのパルスは、オレンジのフローリングと同化して見にくい。
+   守る形（CAD-373 の確定形は不変）：選んだ「物その物」が色づく。線の外にも内にもはみ出さない、その物の太さのまま。画面全体の枠は光らせない。
+   変えたのは色と点滅の仕方だけ：線の色が水色（#00B0F0）と白の交互に切り替わる。速さは従来の選択点滅と同じ 0.8 秒周期。
+   描画側の stroke 属性（#FF00C8）は従来のまま残し、この上書きは #plan（②間取り＋①の辺）の中だけに効かせる。
+   ③室内図（#iso）・展開図（#elevBox）・ミニ平面（#miniPlan219）のピンクは今回の対象外なので触らない。
+   ・#plan [stroke="#FF00C8"] … 間仕切り・建具（ドア窓）・置く物・照明・部屋の輪郭（roomOut176）・玄関ドア設定中のマークなど、選択でピンクになる物全部
+   ・#zoneSel383 … 囲み（ゾーン）編集中の選択枠。塗りも水色の薄い色へ
+   ・#edgeBlink316 … ①描くで辺を選んだ時の印。従来の .selBlink（不透明度の波形）から、色の交互点滅へ統一
+   ・#selBar .cands [data-on="1"] … 重なりの候補チップ（図面の点滅に合わせる CAD-382 の役割は維持）。白い文字が白の瞬間に消えない様に、チップは色だけ水色にし、点滅の波形（不透明度）は従来のまま
+   ・#v432 の太い実線 … CAD-432/462 が「選んでいる間仕切り」の上に重ねて描くオレンジの太線（画面の5px・先端は四角）。選択した間仕切りの真ん中を覆ってピンクの帯より目立っていたため、選択表示として同じ水色↔白の点滅に統一した。同じ #v432 の細い破線（両側の壁までの寸法ガイド）とオレンジの寸法チップは「寸法の注記」なので従来のまま残す */
+@keyframes selBlue551{0%,100%{stroke:#00B0F0}50%{stroke:#FFFFFF}}
+#plan [stroke="#FF00C8"]:not(#edgeBlink316){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+#plan #v432 line[stroke="#E8742C"]:not([stroke-dasharray]){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+#plan #zoneSel383{stroke:#00B0F0;fill:rgba(0,176,240,.10);animation:selBlue551 .8s ease-in-out infinite}
+#plan #edgeBlink316{stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+#selBar .cands [data-on="1"]{background:#00B0F0!important;border-color:#00B0F0!important}
+</style>
