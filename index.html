@@ -24779,7 +24779,7 @@ function build(S,T,opt){
  function render(canvas,S,o){o=o||{};const T=o.THREE||window.THREE;if(!T||!supported(S))return null;
   const w=canvas.clientWidth||canvas.width,h=canvas.clientHeight||canvas.height;
   const r=new T.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:true});r.localClippingEnabled=true;/* CAD-303：取り込み2の clippingPlanes を効かせる */r.setPixelRatio(Math.min(window.devicePixelRatio||1,o.maxDpr||2));r.setSize(w,h,false);r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=.95;r.outputColorSpace=T.SRGBColorSpace;
-  const st={view:o.view||'out',rot:o.rot||0,room:o.room||0,obj:null,ms:0,fp:o.fp||null};/* CAD-529：置いた物で描き直す時も、立っている所と向きを引き継ぐ */
+  const st={view:o.view||'out',rot:o.rot||0,room:o.room||0,obj:null,ms:0,fp:o.fp||null,fl:(o.fl!=null?o.fl:null)};/* CAD-529：置いた物で描き直す時も、立っている所と向きを引き継ぐ */
   /* CAD-526：始めの立ち位置は、部屋の角から部屋の反対の角を向く（いちばん広く見える向き）。狭い部屋は真ん中から、長い方を向いて広角 */
   function startFp525(){
    if(S!==__gS307()||typeof roomsCalc!=='function'||typeof bbox!=='function')return null;const nm=(st.obj.rooms||[])[st.room];if(!nm)return null;
@@ -24793,7 +24793,11 @@ function build(S,T,opt){
    if(!best)return null;const dx=cx-best.p[0],dz=cz-best.p[1];return{x:best.p[0],y,z:best.p[1],yaw:Math.atan2(dx,-dz),p:-.08,fov:90,own:1}}
   /* CAD-526：室内は「その場に立って見回す・歩く」カメラ（st.fp）。見回す・歩くは作り直さず、カメラだけ動かして描き直す */
   function camFp(){const c=st.obj&&st.obj.camera,f=st.fp;if(!c||!f)return;c.position.set(f.x,f.y,f.z);const cp=Math.cos(f.p);c.lookAt(f.x+Math.sin(f.yaw)*cp,f.y+Math.sin(f.p),f.z-Math.cos(f.yaw)*cp);c.fov=f.fov;c.updateProjectionMatrix();r.render(st.obj.scene,c)}
-  function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow});
+  /* CAD-535（Opus）：室内で今開いていない階（2階など）を見る時は、その階のデータを一時的に今の場所へ入れ、平屋として組み立ててすぐ戻す（保存・画面は触らない） */
+  function buildFl(){const k=st.fl,multi=Array.isArray(S.fl)&&S.fl.length>1;if(st.view!=='in'||k==null||!multi||k===(S.fi||0)||!S.fl[k]||!S.fl[k].snap||typeof flSnap!=='function'||typeof flLoad!=='function')return build(S,T,{mode:st.view,renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow});
+   const cur=flSnap(),kfi=S.fi,kfl=S.fl,kfs=S.floors,tg=JSON.parse(JSON.stringify(S.fl[k].snap));let ob=null;
+   try{flLoad(tg);S.fl=[{name:'',snap:null}];S.fi=0;S.floors=1;ob=build(S,T,{mode:'in',renderer:r,w,h,rot:st.rot,room:st.room,shadow:o.shadow})}finally{flLoad(cur);S.fl=kfl;S.fi=kfi;S.floors=kfs}return ob}
+  function draw(){const t0=performance.now();if(st.obj)disposeScene(st.obj.scene);st.obj=buildFl();
    if(st.view==='in'){try{const c=st.obj.camera;if(!st.fp){const d=new T.Vector3();c.getWorldDirection(d);st.fp={x:c.position.x,y:c.position.y,z:c.position.z,yaw:Math.atan2(d.x,-d.z),p:Math.asin(Math.max(-1,Math.min(1,d.y))),fov:Math.max(c.fov,90)};if(!st.fp.own){try{st.fp=startFp525()||st.fp}catch(e){}}}const bb=new T.Box3().setFromObject(st.obj.root);st.bb=[bb.min.x+.25,bb.max.x-.25,bb.min.z+.25,bb.max.z-.25];camFp()}catch(e){r.render(st.obj.scene,st.obj.camera)}}
    else r.render(st.obj.scene,st.obj.camera);st.ms=performance.now()-t0}
   window.__h3dRedraw525=()=>{try{draw()}catch(e){}};
@@ -24806,6 +24810,7 @@ function build(S,T,opt){
    hit(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster(),hm=[];st.obj.root.traverse(o=>{if(o.isMesh)hm.push(o)});rc.setFromCamera(new T.Vector2(nx,ny),c);const h=rc.intersectObjects(hm,false)[0];return h?{p:[h.point.x,h.point.y,h.point.z],fy:st.fp.y-1.5}:null},
    pick(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster();rc.setFromCamera(new T.Vector2(nx,ny),c);const o=rc.ray.origin,d=rc.ray.direction;if(d.y>-.03)return null;const t=(st.fp.y-1.5-o.y)/d.y;return[o.x+d.x*t,o.z+d.z*t]},
    setPos(x,z){const q=st.fp;if(!q)return;q.x=x;q.z=z;if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}camFp()},
+   floor(k){st.fl=k;st.room=0;st.fp=null;st.view='in';draw()},get floorIdx(){return st.fl!=null?st.fl:(S.fi||0)},floors(){return Array.isArray(S.fl)?S.fl.map(f=>f.name):[]},
    get fp(){return st.fp},dispose(){if(window.__h3dRedraw525)window.__h3dRedraw525=null;if(st.obj)disposeScene(st.obj.scene);r.dispose()}};}
  window.House3D={build,render,supported};
 })();
@@ -24948,6 +24953,7 @@ function build(S,T,opt){
       var sig = dataSig();
       if (h3 && (sig !== sig254 || (size254 && (Math.abs((cnv.clientWidth || 0) - (+size254)) > 8 || Math.abs((cnv.clientHeight || 0) - (+(window.__sizeH534 || 0))) > 8)))){
         try { window.__fpKeep529 = (view254 === "in" && h3.fp) ? Object.assign({}, h3.fp) : null; } catch(e){}
+        try { window.__flKeep535 = (view254 === "in" && h3.floorIdx != null) ? h3.floorIdx : null; } catch(e){}
         try { h3.dispose(); } catch(e){} h3 = null; window.__h3d254 = null;   /* 家のデータか大きさが変わったら描き直す */
       }
       if (!h3){
@@ -24956,7 +24962,7 @@ function build(S,T,opt){
         if (!wNow){ cnv.style.display = "none"; return; }
         var rot0 = ((ROT_SIGN * ((S.rot || 0) % 4)) % 4 + 4) % 4;
         var nh = null;
-        try { nh = House3D.render(cnv, S, { view: view254, rot: rot0, room: room254, fp: window.__fpKeep529 || null }); } catch(e){ nh = null; } window.__fpKeep529 = null;
+        try { nh = House3D.render(cnv, S, { view: view254, rot: rot0, room: room254, fp: window.__fpKeep529 || null, fl: window.__flKeep535 }); } catch(e){ nh = null; } window.__fpKeep529 = null;
         if (!nh){   /* WebGL不可など：何も言わず軽いのまま */
           cnv.style.display = "none"; iso.style.display = "";
           threeSt = 3;
