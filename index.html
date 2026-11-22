@@ -9216,6 +9216,10 @@ function faceSvg(F, fi){
       if (isD547) step547 = Math.max(0, +(S.dfl ?? 40));
     }
   } catch (e) {}
+  /* CAD-548：土間の部屋では、段の上端に框、壁の足元に巾木を描く（表示のみ・見積は変えない）。
+     框の帯の高さ＝アプリ内の定価データにある付け框（ノダ FHS-10/11：長さ×120/150×厚さ30）の30mm。
+     巾木の帯の高さ＝アプリが土間・和室用に使う巾木受け 30×105 の105mm（仕上げ巾木その物の高さ設定はアプリ内に無いため、土間で使う受けの寸法に合わせた）。 */
+  const KAM548 = 30, HAB548 = 105;
   const backs = [];
   F.pieces.forEach(pc => { backs[pc.k] = true; if (pc.k >= 100) gF.sides[pc.k] = pc.side; });
   let h = `<rect x="0" y="0" width="${L}" height="${Hc}" fill="#EEF0F3" stroke="#B9C0C9" stroke-width="${U * 1.2}" stroke-dasharray="${U * 6} ${U * 4}"/>`;
@@ -9233,12 +9237,28 @@ function faceSvg(F, fi){
     const list = on.map(sa => ({sa, u0: Math.max(0, Math.min(sa.pos || 0, w.L - sa.w))}));
     { const uR = [(pc.x0 + po - pr(w.a)) * pc.sgn, (pc.x1 + po - pr(w.a)) * pc.sgn], uLo = Math.min(uR[0], uR[1]), uHi = Math.max(uR[0], uR[1]); for (let li = list.length - 1; li >= 0; li--){ const it9 = list[li]; if (it9.u0 + it9.sa.w < uLo - 1 || it9.u0 > uHi + 1) list.splice(li, 1); } }   // CAD-189: この面の区間に無い窓・ドアは出さない
     if (even.length){ const tw = even.reduce((x, sa) => x + sa.w, 0), gap = Math.max(0, (w.L - tw) / (even.length + 1)); let u = gap; even.forEach(sa => { list.push({sa, u0: Math.min(u, w.L - sa.w)}); u += sa.w + gap; }); }
+    /* CAD-548：巾木（土間の部屋だけ）。壁の足元に帯を描く。土間の面・床の面まで届く建具（玄関ドア・室内ドア・掃き出し等）の所は空ける */
+    if (step547 > 0 && pc.H > 0 && !pc.tp){
+      const cuts548 = [];
+      list.forEach(({sa, u0}) => {
+        const dr548 = /玄関|勝手口|室内ドア|クローゼット/.test(sa.cat), sl548 = dr548 || /掃き出し/.test(sa.cat) ? 0 : 2030 - sa.h, st548 = /室内ドア|クローゼット/.test(sa.cat) ? step547 : 0;
+        if (sl548 + st548 <= step547){ const a = at(u0), b = at(u0 + sa.w); cuts548.push([Math.min(a, b), Math.max(a, b)]); }
+      });
+      let segs548 = [[pc.x0, pc.x1]];
+      cuts548.forEach(([c0, c1]) => { const nx = []; segs548.forEach(([s0, s1]) => { if (c1 <= s0 || c0 >= s1){ nx.push([s0, s1]); return; } if (c0 > s0) nx.push([s0, c0]); if (c1 < s1) nx.push([c1, s1]); }); segs548 = nx; });
+      segs548.forEach(([s0, s1]) => { if (s1 - s0 > 1) h += `<rect x="${s0}" y="${Hc - HAB548}" width="${s1 - s0}" height="${HAB548}" fill="#D9C7A7" stroke="#7C7266" stroke-width="${U * 1.5}"/>`; });
+    }
     list.forEach(({sa, u0}) => {
       const door = /玄関|勝手口|室内ドア|クローゼット/.test(sa.cat), sill = door || /掃き出し/.test(sa.cat) ? 0 : 2030 - sa.h;
       const xa = at(u0), xb = at(u0 + sa.w);
       /* CAD-547：土間の部屋では、室内ドア・クローゼットは床（FL）の高さにあり、下に段差の面が出る */
       const st547 = (step547 > 0 && /室内ドア|クローゼット/.test(sa.cat)) ? step547 : 0;
-      if (st547) h += `<rect x="${Math.min(xa, xb)}" y="${Hc - st547}" width="${Math.abs(xb - xa)}" height="${st547}" fill="#8A6D4A" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+      if (st547){
+        /* CAD-548：段の上端は框（ドアと同じ木の色の帯）。段が框より高い時は、框の下に段の面が残る */
+        const kh548 = Math.min(st547, KAM548);
+        if (st547 > kh548) h += `<rect x="${Math.min(xa, xb)}" y="${Hc - st547 + kh548}" width="${Math.abs(xb - xa)}" height="${st547 - kh548}" fill="#8A6D4A" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+        h += `<rect x="${Math.min(xa, xb)}" y="${Hc - st547}" width="${Math.abs(xb - xa)}" height="${kh548}" fill="#C9A36B" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+      }
       h += `<rect x="${Math.min(xa, xb)}" y="${Hc - sill - st547 - sa.h}" width="${Math.abs(xb - xa)}" height="${sa.h}" fill="${door ? "#C9A36B" : "#A9C8E6"}" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
     });
   });
