@@ -2772,7 +2772,10 @@ function tenkenSvg(o, i, P){
     g += `<line x1="${c1[0] - F[0] * ins}" y1="${c1[1] - F[1] * ins}" x2="${c2[0] - F[0] * ins}" y2="${c2[1] - F[1] * ins}" stroke="${C}" stroke-width="0.9"/>`;
     for (let j = 0; j < nd; j++){ const pa = [c1[0] + u[0] * rl * j, c1[1] + u[1] * rl * j], pb = [c1[0] + u[0] * rl * (j + 1), c1[1] + u[1] * rl * (j + 1)]; g += j % 2 === 0 ? door(pa, 1, rl) : door(pb, -1, rl); }
     /* ラベル：前面が下（dir=n）の時は開き弧が下へ出るので、重ならない様に箱の中へ出す */
-    g += (o.dir || "n") === "n" ? `<text x="${cx}" y="${cy + 3}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">下駄箱</text></g>` : `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">下駄箱</text></g>`;
+    /* CAD-545：形（二の字・コの字）をラベルに出す。コの字は背の高い部分（見る人の左端・幅455まで）の境に線を引く */
+    const gnm545 = "下駄箱" + (o.gs === "2" ? "（二の字）" : o.gs === "K" ? "（コの字）" : "");
+    if (o.gs === "K"){ const tw545 = Math.min(455, o.w / 2), tp545 = L * tw545 / o.w, LF545 = [-F[1], F[0]], fx545 = (c1[0] + c2[0]) / 2 + LF545[0] * (L / 2 - tp545), fy545 = (c1[1] + c2[1]) / 2 + LF545[1] * (L / 2 - tp545); g += `<line x1="${fx545}" y1="${fy545}" x2="${fx545 - F[0] * dep}" y2="${fy545 - F[1] * dep}" stroke="${C}" stroke-width="1.3"/>`; }
+    g += (o.dir || "n") === "n" ? `<text x="${cx}" y="${cy + 3}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">${gnm545}</text></g>` : `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">${gnm545}</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
   }
@@ -2845,13 +2848,13 @@ function drawSelBarK(bar){
     r = drawSelBarC(bar, o);
   } else {
     r = (function(bar){
-  const o = S.tenken[sel.i], title = o.k === "dansa" ? `段差解消 ${fmtD319(o.w)}（${o.dir === "v" ? "縦" : "横"}）` : isShelf(o) ? `${TKN[o.k]} ${fmtD319(o.w)}×${fmtD319(o.d)}（高さ ${fmtD319(o.h || 0)}）` : o.k === "stair" ? `階段（${STN[o.st || "s"]}）${fmtD319(o.w)}×${fmtD319(o.d)}　向きは下のボタン` : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? `${TKN[o.k]} 幅${fmtD319(o.w)}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : (o.k === "acout" || o.k === "yukaten") ? TKN[o.k] : `${TKN[o.k]}（${o.w}角）`;
+  const o = S.tenken[sel.i], title = o.k === "dansa" ? `段差解消 ${fmtD319(o.w)}（${o.dir === "v" ? "縦" : "横"}）` : isShelf(o) ? `${TKN[o.k]} ${fmtD319(o.w)}×${fmtD319(o.d)}（高さ ${fmtD319(o.h || 0)}）` : o.k === "stair" ? `階段（${STN[o.st || "s"]}）${fmtD319(o.w)}×${fmtD319(o.d)}　向きは下のボタン` : o.k === "geta" ? `下駄箱 幅${fmtD319(o.w)}・${o.gs === "2" ? "二の字" : o.gs === "K" ? "コの字" : "まっすぐ"}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "senpan") ? `${TKN[o.k]} 幅${fmtD319(o.w)}（${({n: "上", e: "右", s: "下", w: "左"})[o.dir] || ""}側が壁）` : (o.k === "acout" || o.k === "yukaten") ? TKN[o.k] : `${TKN[o.k]}（${o.w}角）`;
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
     <div class="sbw${o.k === "stair" ? " stw272" : ""}">${o.k === "dansa"
       ? `<div class="sbL"><button id="sbStep" class="stp" type="button" style="grid-column:1/-1">${selStep}mm</button><button id="sbLen" type="button">長さ</button><button id="sbFit" type="button">壁まで</button></div>`
-      : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : o.k === "stair" ? STN[o.st || "s"] + " ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmtD319(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "yukaten" ? "開口410×560" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" || o.k === "yukaten" ? "<span></span>" : o.k === "stair" ? `<button id="sbKH" type="button">階高 ${fmtD319(o.kh || ((S.ch || 2400) + (S.dosa || 240)))}${o.kh ? "" : "（自動）"} ▸</button>` : isKS(o) ? "<span></span>" : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
+      : `<div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbKS" type="button">${isShelf(o) ? "寸法 ▸" : o.k === "stair" ? STN[o.st || "s"] + " ▸" : (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "geta" || o.k === "senpan") ? "幅 " + fmtD319(o.w) + " ▸" : o.k === "acout" ? "天井付け" : o.k === "yukaten" ? "開口410×560" : o.k === "pillar" ? o.w + "角 ▸" : o.w === 600 ? "600角 ▸" : "450角 ▸"}</button>${o.k === "pillar" || o.k === "acout" || o.k === "yukashu" || o.k === "yukaten" ? "<span></span>" : o.k === "stair" ? `<button id="sbKH" type="button">階高 ${fmtD319(o.kh || ((S.ch || 2400) + (S.dosa || 240)))}${o.kh ? "" : "（自動）"} ▸</button>` : isKS(o) ? (o.k === "geta" ? `<button id="sbGF" type="button">形 ${o.gs === "2" ? "二の字" : o.gs === "K" ? "コの字" : "まっすぐ"} ▸</button>` : "<span></span>") : `<button id="sbKK" type="button">${o.k === "floor" ? "天井に変える" : "床下に変える"}</button>`}</div>`}
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button>${o.k === "dansa" ? `<button id="sbRotK" class="rot" type="button">⟳<small>90°</small></button>` : (isKS(o) || o.k === "yukaten") ? `<button id="sbKK" class="rot" type="button">⟳<small>向き</small></button>` : ""}</div>
     <div class="sbR"><span></span><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
   $("sbClose").onclick = () => { sel = null; drawPlan(); }; if ($("sbOk")) $("sbOk").onclick = () => { sel = null; HB.__put = null; HB.__sashAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
@@ -2867,6 +2870,7 @@ function drawSelBarK(bar){
     $("sbRotK").onclick = () => { pushUndo(); o.dir = o.dir === "v" ? "h" : "v"; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
   }
   if ($("sbKS")) $("sbKS").onclick = () => { if (o.k === "yukaten"){ toast("床下点検口は開口410×560で固定です"); return; } if (o.k === "geta"){ openPad({title: "下駄箱の幅", value: Math.round(o.w), extra: [455, 910, 1365, 1820].map(v => ({label: fmt(v), fn: () => { closePad(); pushUndo(); o.w = v; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); }})), done: v => { if (v){ pushUndo(); o.w = Math.max(100, Math.round(v)); moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); } }}); return; } if (o.k === "stair"){ pushUndo(); const T = ["s", "L", "M", "N"]; o.st = T[(T.indexOf(o.st || "s") + 1) % 4]; if (o.st === "s"){ o.w = 910; o.d = 2730; } else if (o.st === "L"){ o.w = 1820; o.d = 2730; } else { o.w = 1820; o.d = 1820; } moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); return; } if (isShelf(o)){ shelfSheet(sel.i); return; } pushUndo(); if (o.k === "dansa"){ const ws = [780, 910, 1820]; o.w = ws[(ws.indexOf(o.w) + 1) % ws.length] || 910; } else if (o.k === "kitchen" || o.k === "senmen" || o.k === "tearai" || o.k === "senpan"){ const A = o.k === "kitchen" ? [1800, 2100, 2400, 2550, 2700, 3000] : o.k === "tearai" ? [350, 450, 600] : o.k === "senpan" ? [640, 750] : [600, 750, 900, 1200]; o.w = A[(A.indexOf(o.w) + 1) % A.length]; } else if (o.k === "acout"){ toast("天井付けです（位置は矢印で動かせます）"); return; } else if (o.k === "pillar"){ o.w = o.w === 105 ? 120 : o.w === 120 ? 150 : 105; } else o.w = o.w === 600 ? 450 : 600; moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
+  if ($("sbGF")) $("sbGF").onclick = () => { getaSheet(sel.i); };
   if ($("sbKH")) $("sbKH").onclick = () => { const aH = (S.ch || 2400) + (S.dosa || 240); openPad({title: "階段の階高", sub: "段数の計算に使います（自動は天井高＋胴差 ＝ " + fmt(aH) + "）", value: Math.round(o.kh || aH), extra: [{label: "自動に戻す", fn: () => { closePad(); if (o.kh){ pushUndo(); delete o.kh; save(); bar.dataset.k = ""; drawPlan(); } }}], done: v => { if (v){ pushUndo(); if (Math.round(v) === aH) delete o.kh; else o.kh = Math.round(v); save(); bar.dataset.k = ""; drawPlan(); } }}); };
   if ($("sbKK")) $("sbKK").onclick = () => { pushUndo(); if (o.k === "dansa") o.dir = o.dir === "v" ? "h" : "v"; else if (isKS(o) || o.k === "yukaten") o.dir = ({n: "e", e: "s", s: "w", w: "n"})[o.dir] || "n"; else { o.k = o.k === "floor" ? "ceil" : "floor"; o.w = o.k === "floor" ? 600 : 450; } /* CAD-296：種類を変えたら大きさもその種類の標準（床下600角／天井450角）に合わせる */ moveTenken(o, 0, 0); save(); bar.dataset.k = ""; drawPlan(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); moveTenken(o, ...alignStopT(o, ax * selStep, ay * selStep)); save(); drawPlan(); };
@@ -9721,7 +9725,15 @@ function fxRows(work, sheet){
   });
   /* CAD-202: 下駄箱（平面図に置いた物。幅で拾う） */
   (S.tenken || []).filter(o => o.k === "geta").forEach(o => {
-    work("getabako", "下駄箱", o.w / 1000, "m", `幅${fmt(o.w)}×奥行${fmt(o.d)}・${fmt(workP("getabako").p)}円/m`);
+    /* CAD-545：形も拾う。単価（円/m）は今まで通り「高さ900の箱1m分」の値で、形の分は正面の箱の面積÷0.9m の換算mで数量に反映する（まっすぐは今までと完全に同じ） */
+    if (o.gs === "2" || o.gs === "K"){
+      const tw545 = o.gs === "K" ? Math.min(455, o.w / 2) : 0;
+      const area545 = o.gs === "2" ? o.w * (900 + 640) : tw545 * 2140 + (o.w - tw545) * (900 + 640);
+      const q545 = area545 / 900 / 1000;
+      work("getabako", "下駄箱", q545, "m", `幅${fmt(o.w)}×奥行${fmt(o.d)}・${o.gs === "2" ? "二の字（下900＋上640）" : "コの字（片側2140＋下900＋上640）"} 換算${fmt(q545, 2)}m・${fmt(workP("getabako").p)}円/m`);
+    } else {
+      work("getabako", "下駄箱", o.w / 1000, "m", `幅${fmt(o.w)}×奥行${fmt(o.d)}・${fmt(workP("getabako").p)}円/m`);
+    }
   });
   /* --- 後段2（旧 blk14）：解体（深さ別）の行。window.hgAreaD 等は全局のため直接取り込み --- */
   if (HB.__fxSeg14){
@@ -24656,6 +24668,18 @@ function build(S,T,opt){
     const up=rrb(w*.5,.7,.35,.01,mat.cab,.003);PP(up,-w*.22,1.62,-d/2+.185,g);
     for(let i=0;i<2;i++){const dr=rrb(w*.25-.014,.66,.014,.004,M({color:0xf1eee6,roughness:.38}));PP(dr,-w*.22+(i?1:-1)*w*.125,1.64,-d/2+.36,g)}
     g.position.set(cx,FL,cz);add(g)}
+  else if(t.k==='geta'){/* CAD-545：下駄箱は形と標準の高さで描く。下の箱900（LIXILラシッサS ローカウンター型H08=898が根拠）・背の高い部分2140（Panasonicコンポリア据置の全プラン共通2140が根拠）・上の箱は下端1500〜2140。ローカルは前面=+z、洗面（CAD-543）と同じ向き対応表 */
+    const g=new T.Group();const sh545=t.gs==="2"?"2":t.gs==="K"?"K":"I";
+    const tw545=sh545==="K"?Math.min(.455,w/2):0;
+    const drM545=M({color:0xf1eee6,roughness:.38});
+    const doors545=(x0,x1,y0,y1)=>{const wd=x1-x0;if(wd<.06)return;const nd=Math.max(1,Math.ceil(wd*1000/600)),dw=wd/nd,hy=Math.max(y0+.12,Math.min(y1-.09,1.02));for(let i2=0;i2<nd;i2++){const dr=rrb(dw-.014,y1-y0-.04,.016,.004,drM545);PP(dr,x0+dw*(i2+.5),y0+.02,d/2+.004,g);const hd=rrb(.1,.014,.018,.004,mat.steel);PP(hd,x0+dw*(i2+.5),hy-.007,d/2+.016,g)}};
+    const box545=(x0,x1,y0,y1)=>{const b=rrb(x1-x0,y1-y0,d,.01,mat.cab,.003);PP(b,(x0+x1)/2,y0,0,g);doors545(x0,x1,y0,y1)};
+    if(sh545==="I")box545(-w/2,w/2,0,.9);
+    else if(sh545==="2"){box545(-w/2,w/2,0,.9);box545(-w/2,w/2,1.5,2.14)}
+    else{box545(-w/2,-w/2+tw545,0,2.14);box545(-w/2+tw545,w/2,0,.9);box545(-w/2+tw545,w/2,1.5,2.14)}
+    const tp545=rrb((sh545==="K"?w-tw545:w)+.02,.03,d+.02,.01,mat.cab,.003);PP(tp545,(sh545==="K"?(-w/2+tw545+w/2):0),.9,0,g);
+    g.rotation.y=({n:0,e:-Math.PI/2,s:Math.PI,w:Math.PI/2})[t.dir||"n"]||0;
+    g.position.set(cx,FL,cz);add(g)}
   else{const b=rbox(w,.5,d,mat.cab);at(b,cx,FL+.25,cz)}
  });
 
@@ -39255,4 +39279,40 @@ body.in534 #ctl530{padding-top:4px}
     } catch(e){}
   }, 150);
 })();
+</script>
+<script>
+/* ===== CAD-545：下駄箱の形（まっすぐ／二の字／コの字）と標準の高さ =====
+   翔伍の指示（2026-11-22）：「下駄箱が高さが小さい。一般的な高さに合わせて。二の字・コの字の形のバリエーション増やして。見積もりもね」
+   高さの根拠：下の箱 900mm＝LIXIL ラシッサS 玄関収納 ローカウンター型の規格 H08（898mm）。
+   背の高い部分 2,140mm＝Panasonic ベリティス 玄関収納コンポリア 据置タイプの全プラン（トール／セパレート／コの字／ロの字）共通高さ。
+   上の箱の下端 1,500mm はアプリの設計値（根拠のある規格値ではない）。
+   形は o.gs に持つ（無し＝まっすぐ。保存済みの家の下駄箱は今まで通り読める）。
+   描画は本体側：2D（ラベル＋コの字の境の線）・3D（geta専用分岐）・見積（正面面積÷0.9mの換算m）。 */
+function getaSheet(i){
+  const o = S.tenken[i]; if (!o) return;
+  const IC = {
+    I: '<svg viewBox="0 0 60 44" style="width:52px;height:38px;display:block;margin:0 auto"><rect x="6" y="19" width="48" height="21" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/></svg>',
+    2: '<svg viewBox="0 0 60 44" style="width:52px;height:38px;display:block;margin:0 auto"><rect x="6" y="25" width="48" height="15" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/><rect x="6" y="4" width="48" height="11" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/></svg>',
+    K: '<svg viewBox="0 0 60 44" style="width:52px;height:38px;display:block;margin:0 auto"><rect x="6" y="4" width="13" height="36" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/><rect x="19" y="25" width="35" height="15" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/><rect x="19" y="4" width="35" height="11" fill="#DCE6F0" stroke="#5B6B7A" stroke-width="1.6"/></svg>'
+  };
+  const NM = {I: "まっすぐ", 2: "二の字", K: "コの字"};
+  const DS = {I: "高さ900の箱ひとつ", 2: "下の箱＋上の箱（間は開ける）", K: "片側が背の高い箱＋下と上"};
+  const render = () => {
+    const cur = o.gs === "2" ? "2" : o.gs === "K" ? "K" : "I";
+    $("mbox").innerHTML = `<h3>下駄箱の形</h3>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">${["I", "2", "K"].map(k => `<button type="button" class="btn sub" data-gs="${k}" style="min-height:88px;padding:6px 2px;${cur === k ? "background:var(--ai);color:#fff" : ""}">${IC[k]}<div style="font-size:14px;font-weight:800">${NM[k]}</div><div style="font-size:10px;line-height:1.3">${DS[k]}</div></button>`).join("")}</div>
+    <p style="font-size:12px;color:#555;margin:10px 0 0">高さは標準寸法です。下の箱 900mm、背の高い部分 2,140mm。見積には形の分も入ります。</p>
+    <div class="row" style="margin-top:12px"><button class="btn pri" id="gsOk" type="button">閉じる</button></div>`;
+    $("gsOk").onclick = () => { $("modal").hidden = true; };
+    $("mbox").querySelectorAll("[data-gs]").forEach(b => b.onclick = () => {
+      pushUndo();
+      if (b.dataset.gs === "I") delete o.gs; else o.gs = b.dataset.gs;
+      save(); drawPlan();
+      const bar = document.getElementById("selBar"); if (bar) bar.dataset.k = "";
+      if (typeof drawSelBar === "function") drawSelBar();
+      render();
+    });
+  };
+  $("modal").hidden = false; render();
+}
 </script>
