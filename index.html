@@ -39404,3 +39404,16 @@ function getaSheet(i){
 #plan #edgeBlink316{stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
 #selBar .cands [data-on="1"]{background:#00B0F0!important;border-color:#00B0F0!important}
 </style>
+<style>
+/* ===== CAD-552：②間取りでドアを選んだ時は、扉の形と開きの点線まで含めて選択表示にする（翔伍の指摘 2026-11-22・間取りの見た目キュー2の3件目） =====
+   実測（probe552・土台 CAD-551）：ドアを選んでも点滅するのは開口の線（太さ6）だけで、ドアの本体は静止したままだった。
+   開き戸の見えている本体は CAD-265 が重ねた絵（扉板の木色2重線 #4A3320／#D9A66B・開き弧 #4F6683 の破線・吊元の丸 #3E4A57。
+   元の扉線と弧 #3E4A57 は display:none で隠れている）。引き戸・引違い・折れ戸の本体は planExtras が描く #3E4A57 の線その物。
+   ガラス入りの水色線 #7FB8DC も扉の形の一部として含める。
+   直し：開口の線が選択色（#FF00C8）になっている建具グループ（＝その建具が選択中）の中では、上記の色の線・弧・丸も
+   CAD-551 と同じ水色（#00B0F0）↔白の交互点滅（selBlue551・0.8秒）にする。色づくのは「ドア全体の絵」までで、形・太さ・破線は不変。
+   開く範囲の薄い塗り（stroke="none"）は対象外で従来通り残る。窓の本体（#0F766E／#1F5560／#3A8FA3）・建具の無い開口の端線（#1E293B）・
+   内窓の追加線（#0F766E）は色が違うため対象に入らず、従来通り開口の線だけが点滅する。
+   引き戸の記号その物は作り替えない（次の件⑩の範囲）。描画コード・見積・保存データは無変更。 */
+#plan g[data-op]:has(> line[stroke="#FF00C8"]) :is([stroke="#3E4A57"],[stroke="#7FB8DC"],[stroke="#4F6683"],[stroke="#4A3320"],[stroke="#D9A66B"]){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+</style>
