@@ -24788,6 +24788,8 @@ function build(S,T,opt){
    look(dy,dp){if(!st.fp)return;st.fp.yaw+=dy;st.fp.p=Math.max(-1.2,Math.min(1.2,st.fp.p+dp));camFp()},
    move(f,sd){const q=st.fp;if(!q)return;q.x+=f*Math.sin(q.yaw)+sd*Math.cos(q.yaw);q.z+=-f*Math.cos(q.yaw)+sd*Math.sin(q.yaw);if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}camFp()},
    zoom(k){if(!st.fp)return;st.fp.fov=Math.max(40,Math.min(110,st.fp.fov*k));camFp()},
+   pick(nx,ny){if(!st.fp||!st.obj)return null;const c=st.obj.camera,rc=new T.Raycaster();rc.setFromCamera(new T.Vector2(nx,ny),c);const o=rc.ray.origin,d=rc.ray.direction;if(d.y>-.03)return null;const t=(st.fp.y-1.5-o.y)/d.y;return[o.x+d.x*t,o.z+d.z*t]},
+   setPos(x,z){const q=st.fp;if(!q)return;q.x=x;q.z=z;if(st.bb){q.x=Math.max(st.bb[0],Math.min(st.bb[1],q.x));q.z=Math.max(st.bb[2],Math.min(st.bb[3],q.z))}camFp()},
    get fp(){return st.fp},dispose(){if(window.__h3dRedraw525)window.__h3dRedraw525=null;if(st.obj)disposeScene(st.obj.scene);r.dispose()}};}
  window.House3D={build,render,supported};
 })();
@@ -38748,7 +38750,7 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   var cnv = document.getElementById("h3d"); if (!cnv) return;
   var card = cnv.parentNode; if (getComputedStyle(card).position === "static") card.style.position = "relative";
   var joy = document.createElement("div"); joy.id = "joy525"; joy.innerHTML = "<i>🕹️</i>"; card.appendChild(joy);
-  var hint = document.createElement("div"); hint.id = "joyHint525"; hint.textContent = "指でなぞって見回す・🕹️で歩く・2本指で広さ"; card.appendChild(hint);
+  var hint = document.createElement("div"); hint.id = "joyHint525"; hint.textContent = "床をタップでそこへ歩く・なぞって見回す・回す長押しでゆっくり回る"; card.appendChild(hint);
   var knob = joy.querySelector("i");
   function h(){ var x = window.__h3d254; return (x && typeof x.look === "function" && x.fp) ? x : null; }
   var on = false;
@@ -38782,6 +38784,32 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
     var s = (hh.fp.fov || 80) * Math.PI / 180 / (cnv.clientHeight || 300);
     hh.look(-dx * s, dy * s);
   });
+  /* CAD-528：床をタップ（ほとんど動かさず短く）→ そこへ歩いて行く */
+  var tap = null, walkA = 0;
+  cnv.addEventListener("pointerdown", function(e){ if (!h()) return; tap = (Object.keys(pts).length <= 1) ? {id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), mv: 0} : null; }, true);
+  cnv.addEventListener("pointermove", function(e){ if (tap && e.pointerId === tap.id) tap.mv = Math.max(tap.mv, Math.abs(e.clientX - tap.x) + Math.abs(e.clientY - tap.y)); }, true);
+  function walkTo(e){
+    var hh = h(); if (!hh || !tap || e.pointerId !== tap.id) return; var ok = tap.mv < 10 && Date.now() - tap.t < 350; tap = null; if (!ok) return;
+    var rc = cnv.getBoundingClientRect(), nx = (e.clientX - rc.left) / rc.width * 2 - 1, ny = -((e.clientY - rc.top) / rc.height * 2 - 1);
+    var g = hh.pick(nx, ny); if (!g) return;
+    var f = hh.fp, x0 = f.x, z0 = f.z, dx = g[0] - x0, dz = g[1] - z0, L = Math.hypot(dx, dz); if (L < .2) return;
+    var go = Math.max(0, Math.min(L - .6, 8)) / L, x1 = x0 + dx * go, z1 = z0 + dz * go, dur = Math.min(1400, 300 + L * 220), t0 = performance.now(), my = ++walkA;
+    (function step(ts){ if (my !== walkA || !h()) return; var k = Math.min(1, (ts - t0) / dur), e2 = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; hh.setPos(x0 + (x1 - x0) * e2, z0 + (z1 - z0) * e2); if (k < 1) requestAnimationFrame(step); })(t0);
+  }
+  cnv.addEventListener("pointerup", walkTo, true);
+  joy.addEventListener("pointerdown", function(){ walkA++; }, true);
+  /* CAD-528：回すボタンの長押し → 押している間ゆっくり回る（短く押した時は今まで通り90度） */
+  var rot = null, rotLong = false;
+  function rotLoop(ts){ if (!rot) return; var hh = h(); var dt = rot.last ? Math.min(.05, (ts - rot.last) / 1000) : 0; rot.last = ts; if (hh && ts - rot.t0 > 350){ rotLong = true; hh.look(rot.dir * .7 * dt, 0); } requestAnimationFrame(rotLoop); }
+  ["rotL", "rotR"].forEach(function(id){
+    var b = document.getElementById(id); if (!b) return;
+    b.addEventListener("pointerdown", function(){ if (!h()) return; walkA++; rotLong = false; rot = {dir: id === "rotL" ? 1 : -1, t0: performance.now(), last: 0}; requestAnimationFrame(rotLoop); });
+    b.addEventListener("contextmenu", function(e){ if (h()) e.preventDefault(); });
+    b.style.webkitTouchCallout = "none"; b.style.userSelect = "none"; b.style.webkitUserSelect = "none";
+  });
+  function rotEnd(){ rot = null; }
+  document.addEventListener("pointerup", rotEnd, true); document.addEventListener("pointercancel", rotEnd, true);
+  window.addEventListener("click", function(e){ if (!rotLong) return; var t = e.target; if (t && t.closest && t.closest("#rotL,#rotR")){ e.stopPropagation(); e.preventDefault(); rotLong = false; } }, true);
   function cend(e){ delete pts[e.pointerId]; if (Object.keys(pts).length < 2) pinch = 0; }
   cnv.addEventListener("pointerup", cend); cnv.addEventListener("pointercancel", cend);
 })();
