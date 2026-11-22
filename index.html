@@ -38511,3 +38511,21 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
 #zRow #planCmp svg{display:block;width:30px;height:30px;margin:0 auto}
 #zRow #planCmp::after{content:"方位";position:absolute;left:0;right:0;bottom:0;text-align:center;font-size:10px;font-weight:800;line-height:1.1;white-space:nowrap;color:var(--ink)}
 </style>
+<script id="notabs520js">
+/* ===== CAD-520：下の帯と一覧の作り直し T1（Claude指示「下の帯と一覧の作り直し指示-1121」・翔伍さんのOK済み）
+   下の帯 #toolTabs（描く・選ぶ／置く）を、チュートリアル中（body.nbtutRun）以外は出さない。
+   要素は消さない（チュートリアルが [data-tt] を使う）。消し方は display:none ではなく
+   「高さ0＋透明＋触れない」に畳む：帯の高さ（offsetHeight）を読む既存の処理
+   （sheet260 のシート位置、CAD-236 の --ux-bot、bar261・tc254 の表示条件）が
+   帯の高さ＝0 としてそのまま正しく動き、一覧は画面の一番下に付く。
+   入口の確認：帯の2つのボタンの行き先は、手順に入った時の構え（ux430 の arm：
+   ①間仕切りは指描きを自動で持つ、③ドア窓・④置く物は一覧を開く）と、
+   右下の丸ボタン（#fab510）の手順切り替えで全部たどれる。帯にしかない入口は無かった。
+   見積の計算・保存データ・保存キーは触らない。 */
+(function(){ "use strict";
+  if (window.__notabs520) return; window.__notabs520 = true;
+  var st = document.createElement("style"); st.id = "notabs520css";
+  st.textContent = "body:not(.nbtutRun) #toolTabs{height:0!important;min-height:0!important;padding-top:0!important;padding-bottom:0!important;border-top:0!important;overflow:hidden!important;opacity:0!important;pointer-events:none!important}";
+  document.head.appendChild(st);
+})();
+</script>
