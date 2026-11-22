@@ -38562,3 +38562,32 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   } catch (e) {}
 })();
 </script>
+
+<script id="chips522js">
+/* CAD-522（作り直しT3）：チップ（#chips434）の出し分けを手順ごとにそろえる。
+   消しゴム（erase460）・下絵（trace・tadj）・定番の部屋（parts）は
+   ①間仕切りの時だけ、家具（furn）は④置く物の時だけ出す。
+   今まで ⑤見直し（all）でも erase460・parts・furn が出ていたのが唯一のずれ。
+   chips() が呼ぶ HB.__extra437 の一番外側を包み、all の時だけこの5つを除く。
+   ①④の中身・チェック/お客さん用・選択中のチップ（回す/消す/OK）には触らない。
+   チュートリアル中も従来通り（包むのは返り値の絞り込みだけ）。 */
+(function () {
+  "use strict";
+  try {
+    var orig = window.HB && HB.__extra437;
+    if (typeof orig !== "function" || orig.__wrap522) return;
+    var DROP = { erase460: 1, trace: 1, tadj: 1, parts: 1, furn: 1 };
+    var w = function (s) {
+      var r = orig.apply(this, arguments);
+      try {
+        if (s === "all" && Array.isArray(r)) {
+          r = r.filter(function (k) { return !DROP[k]; });
+        }
+      } catch (e) {}
+      return r;
+    };
+    w.__wrap522 = 1;
+    HB.__extra437 = w;
+  } catch (e) {}
+})();
+</script>
