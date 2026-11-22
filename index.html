@@ -9201,6 +9201,21 @@ function fxSvgFace189(gF, backs, F){
 function faceSvg(F, fi){
   const Hc = chEff(), L = F.len, U = Math.max(1, L / 230), pr = q => q[0] * F.r[0] + q[1] * F.r[1], po = pr(F.o);
   const gF = {p: pts(), H: Hc, U, PJ: (x, y, z) => [pr([x, y]) - po, Hc - z], sides: {}, noAccLabel: true};
+  /* CAD-547：この部屋が土間（玄関）の時は、室内ドアの下に段差を描く。段差の高さは仕様の既存の設定「土台の上から床（FL）まで」S.dfl（既定40mm）＝3Dの土間段差と同じ値 */
+  let step547 = 0;
+  try {
+    const sr547 = selRoom();
+    if (sr547){
+      let isD547 = false;
+      try { isD547 = !!(HB.__effFk282 && HB.__effFk282(sr547) === "flDoma"); } catch (e) {}
+      if (!isD547 && (S.zones || []).some(z => z.k === "doma")){
+        const RC547 = roomsCalc(), area547 = sr547.cells.length * RC547.st * RC547.st; let ov547 = 0;
+        (S.zones || []).filter(z => z.k === "doma").forEach(z => { const zx0 = Math.min(z.x0, z.x1), zx1 = Math.max(z.x0, z.x1), zy0 = Math.min(z.y0, z.y1), zy1 = Math.max(z.y0, z.y1); sr547.cells.forEach(k => { const i = k % RC547.NX, j = (k - i) / RC547.NX, cx0 = RC547.b.x0 + i * RC547.st, cy0 = RC547.b.y0 + j * RC547.st; ov547 += Math.max(0, Math.min(cx0 + RC547.st, zx1) - Math.max(cx0, zx0)) * Math.max(0, Math.min(cy0 + RC547.st, zy1) - Math.max(cy0, zy0)); }); });
+        isD547 = area547 > 0 && ov547 >= area547 * .5;
+      }
+      if (isD547) step547 = Math.max(0, +(S.dfl ?? 40));
+    }
+  } catch (e) {}
   const backs = [];
   F.pieces.forEach(pc => { backs[pc.k] = true; if (pc.k >= 100) gF.sides[pc.k] = pc.side; });
   let h = `<rect x="0" y="0" width="${L}" height="${Hc}" fill="#EEF0F3" stroke="#B9C0C9" stroke-width="${U * 1.2}" stroke-dasharray="${U * 6} ${U * 4}"/>`;
@@ -9221,7 +9236,10 @@ function faceSvg(F, fi){
     list.forEach(({sa, u0}) => {
       const door = /玄関|勝手口|室内ドア|クローゼット/.test(sa.cat), sill = door || /掃き出し/.test(sa.cat) ? 0 : 2030 - sa.h;
       const xa = at(u0), xb = at(u0 + sa.w);
-      h += `<rect x="${Math.min(xa, xb)}" y="${Hc - sill - sa.h}" width="${Math.abs(xb - xa)}" height="${sa.h}" fill="${door ? "#C9A36B" : "#A9C8E6"}" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+      /* CAD-547：土間の部屋では、室内ドア・クローゼットは床（FL）の高さにあり、下に段差の面が出る */
+      const st547 = (step547 > 0 && /室内ドア|クローゼット/.test(sa.cat)) ? step547 : 0;
+      if (st547) h += `<rect x="${Math.min(xa, xb)}" y="${Hc - st547}" width="${Math.abs(xb - xa)}" height="${st547}" fill="#8A6D4A" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
+      h += `<rect x="${Math.min(xa, xb)}" y="${Hc - sill - st547 - sa.h}" width="${Math.abs(xb - xa)}" height="${sa.h}" fill="${door ? "#C9A36B" : "#A9C8E6"}" stroke="#3E4A57" stroke-width="${U * 1.5}"/>`;
     });
   });
   h += fxSvgFace189(gF, backs, F);
@@ -24460,7 +24478,21 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
  const P1_477=(fi477===1&&sn477(0))?polyE477(sn477(0).edges,sn477(0).po):polyE477(S.edges,S.po);
  const P2_477=((S.floors||1)===2&&S.fl&&S.fl.length>1)?(fi477===1?polyE477(S.edges,S.po):(sn477(1)&&sn477(1).edges&&sn477(1).edges.length?polyE477(sn477(1).edges,sn477(1).po):P1_477)):null;
  const R1_477=rects477(P1_477);
- R1_477.forEach(r=>add(box(r[0]-.02,0,r[1]-.02,r[2]+.02,FLH,r[3]+.02,six(mat.conc),true)));
+ /* CAD-547：土間の段差。土間面は土台の天端（＝FL − dfl）までとし、室内の床（FL）との段差を見せる。
+    段差の値は仕様の既存の設定「土台の上から床（FL）まで」S.dfl（既定40mm）で、矩計図の FL＝土台天端＋dfl と同じ関係。
+    土間の範囲（ゾーン・床の決め直しが土間の範囲・名前や決め直しで土間になる部屋）は、基礎・下地の床・部屋の床から切り抜く。
+    切り抜いた境目では、高い方の基礎の側面が段の面（立ち上がり）として見える */
+ const STEP547=mm(Math.max(0,+(S.dfl ?? 40)));
+ const DR547=[];
+ (S.zones||[]).forEach(z=>{if(z.k!=='doma')return;const q={x0:Math.max(0,mm(Math.min(z.x0,z.x1))),x1:Math.min(W,mm(Math.max(z.x0,z.x1))),z0:Math.max(0,mm(Math.min(z.y0,z.y1))),z1:Math.min(D,mm(Math.max(z.y0,z.y1)))};if(q.x1-q.x0>1e-4&&q.z1-q.z0>1e-4)DR547.push([q.x0,q.z0,q.x1,q.z1])});
+ (S.tatami||[]).forEach(t=>{if(t.fk!=='flDoma')return;const q={x0:Math.max(0,mm(Math.min(t.x0,t.x1))),x1:Math.min(W,mm(Math.max(t.x0,t.x1))),z0:Math.max(0,mm(Math.min(t.y0,t.y1))),z1:Math.min(D,mm(Math.max(t.y0,t.y1)))};if(q.x1-q.x0>1e-4&&q.z1-q.z0>1e-4)DR547.push([q.x0,q.z0,q.x1,q.z1])});
+ try{if(S===__gS307()&&typeof roomsCalc==='function'&&HB.__effFk282&&((S.floors||1)===1||(S.fi||0)===0)){const RC=roomsCalc();
+  (RC.rooms||[]).forEach(rm=>{let nm5='';try{nm5=roomNm(rm)||''}catch(e){}if(/UB|ユニットバス|バス|浴/i.test(nm5))return;if(HB.__effFk282(rm)!=='flDoma')return;
+   rm.cells.forEach(k=>{const i=k%RC.NX,j=(k-i)/RC.NX;DR547.push([mm(RC.b.x0+i*RC.st-OX477),mm(RC.b.y0+j*RC.st-OY477),mm(RC.b.x0+(i+1)*RC.st-OX477),mm(RC.b.y0+(j+1)*RC.st-OY477)])})})}}catch(e){}
+ const sub547=(r0,dr)=>{let out=[r0];dr.forEach(d=>{const nx=[];out.forEach(r=>{const ix0=Math.max(r[0],d[0]),iz0=Math.max(r[1],d[1]),ix1=Math.min(r[2],d[2]),iz1=Math.min(r[3],d[3]);if(ix1<=ix0||iz1<=iz0){nx.push(r);return}if(ix0>r[0])nx.push([r[0],r[1],ix0,r[3]]);if(ix1<r[2])nx.push([ix1,r[1],r[2],r[3]]);if(iz0>r[1])nx.push([ix0,r[1],ix1,iz0]);if(iz1<r[3])nx.push([ix0,iz1,ix1,r[3]])});out=nx});return out};
+ const inDoma547=(x,z)=>DR547.some(d=>x>=d[0]&&x<=d[2]&&z>=d[1]&&z<=d[3]);
+ R1_477.forEach(r=>{const rr=[r[0]-.02,r[1]-.02,r[2]+.02,r[3]+.02];sub547(rr,DR547).forEach(q=>add(box(q[0],0,q[1],q[2],FLH,q[3],six(mat.conc),true)));
+  DR547.forEach(d=>{const ix0=Math.max(rr[0],d[0]),iz0=Math.max(rr[1],d[1]),ix1=Math.min(rr[2],d[2]),iz1=Math.min(rr[3],d[3]);if(ix1-ix0>1e-4&&iz1-iz0>1e-4)add(box(ix0,0,iz0,ix1,FLH-STEP547,iz1,six(mat.conc),true))})});
  const FL=FLH;/* 床高さ */
  const base525=[];R1_477.forEach(r=>base525.push(r));/* CAD-526：下地の床は、全体の床の絵で後から描く（部屋の境目のすき間も同じ床になる） */
  /* 外形の辺ごとの外壁：時計回り（画面の下が+y）なので、右へ行く辺の外は北(-z) */
@@ -24478,18 +24510,20 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
  const flatT525=(x0,z0,x1,z1,y,tx)=>{const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);g.translate((x0+x1)/2,y,(z0+z1)/2);const uv=g.attributes.uv,p=g.attributes.position;for(let i=0;i<p.count;i++){const X=p.getX(i),Z=p.getZ(i);if(tx.v)uv.setXY(i,Z/tx.px,X/tx.pz);else uv.setXY(i,X/tx.px,Z/tx.pz)}const o=new T.Mesh(g,tx.m);o.receiveShadow=true;return o};
  /* CAD-297（同・取り込み1）：床の範囲は fk に応じた材料で描く（全部を畳にしない）。座上げは上の仕上げ（fin）で描く */
  const flMat297=t=>{const f=t.fk||'tatami';if(f==='tatami')return mat.tatami;if(f==='flCF')return mat.cf;if(f==='flDoma')return mat.conc;if(f==='floorFin')return mat.tileF;if(f==='flAge'){const g=t.fin||'tatami';return g==='flCF'?mat.cf:(g==='tatami'?mat.tatami:mat.floor)}return mat.floor};
- (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileB:z.k==='toilet'?mat.wcF:z.k==='doma'?mat.conc:mat.floor; /* CAD-312：浴室の床はタイル調、トイレの床は便器の白と区別できる色に */if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-.0:.004),m,z.k==='ub'?.6:1))});
- (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;{const tx=flTex525(t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami'),(r.z1-r.z0)>(r.x1-r.x0)*1.05);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,FL+.012,tx));add(box(r.x0,FL,r.z0,r.x1,FL+.012,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,FL+.012,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,FL,r.z0,r.x1,FL+.012,r.z1,six(m)),0)});
+ (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileB:z.k==='toilet'?mat.wcF:z.k==='doma'?mat.conc:mat.floor; /* CAD-312：浴室の床はタイル調、トイレの床は便器の白と区別できる色に */if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-STEP547+.004:.004),m,z.k==='ub'?.6:1))});
+ (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const d547=t.fk==='flDoma',yT547=d547?FL-STEP547+.012:FL+.012,yB547=d547?FL-STEP547:FL;/* CAD-547：土間の仕上げの範囲は一段低く */{const tx=flTex525(t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami'),(r.z1-r.z0)>(r.x1-r.x0)*1.05);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,yT547,tx));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,yT547,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(m)),0)});
  /* 洗面所(2枚目のroomRecs)はCF */
  (S.roomRecs||[]).forEach(r0=>{const nm=(S.roomNames||[]).find(n=>n.p[0]>=Math.min(r0.x0,r0.x1)&&n.p[0]<=Math.max(r0.x0,r0.x1)&&n.p[1]>=Math.min(r0.y0,r0.y1)&&n.p[1]<=Math.max(r0.y0,r0.y1));if(nm&&(nm.name==='洗面所'||nm.name==='浴室'||nm.name==='トイレ')){const r=clipR297(R(r0));if(r)add(flat(r.x0,r.z0,r.x1,r.z1,FL+.004,nm.name==='浴室'?mat.tileB:(nm.name==='トイレ'?mat.wcF:mat.cf),nm.name==='浴室'?.6:1))} /* CAD-312：浴室・トイレの床も（従来は洗面所のCFだけ描いていた） */});
- {const ft=S.flType==='flSheet'?'flComp':(S.flType||'floorFin');base525.forEach(r=>{const tx=flTex525(ft,false);add(tx?flatT525(r[0],r[1],r[2],r[3],FL+.002,tx):flat(r[0],r[1],r[2],r[3],FL+.002,mat.floor,1.0))})}
+ {const ft=S.flType==='flSheet'?'flComp':(S.flType||'floorFin');base525.forEach(r=>{const tx=flTex525(ft,false);sub547(r,DR547).forEach(q=>add(tx?flatT525(q[0],q[1],q[2],q[3],FL+.002,tx):flat(q[0],q[1],q[2],q[3],FL+.002,mat.floor,1.0)))})}
  try{if(S===__gS307()&&typeof roomsCalc==='function'&&HB.__effFk282&&((S.floors||1)===1||(S.fi||0)===0)){const RC=roomsCalc();
   (RC.rooms||[]).forEach(rm=>{let nm5='';try{nm5=roomNm(rm)||''}catch(e){}if(/UB|ユニットバス|バス|浴/i.test(nm5))return;const fk=HB.__effFk282(rm);if(!fk)return;const xs=rm.cells.map(k=>k%RC.NX),ys=rm.cells.map(k=>(k-k%RC.NX)/RC.NX);
    const vert=(Math.max(...ys)-Math.min(...ys))>(Math.max(...xs)-Math.min(...xs))*1.05;const tx=flTex525(fk,vert);if(!tx)return;
    const rows={};rm.cells.forEach(k=>{const i=k%RC.NX,j=(k-i)/RC.NX;(rows[j]=rows[j]||[]).push(i)});
    const runs=[];Object.keys(rows).map(Number).sort((a,b)=>a-b).forEach(j=>{const a=rows[j].sort((p,q)=>p-q);let s0=a[0],pv=a[0];for(let n=1;n<=a.length;n++){if(n<a.length&&a[n]===pv+1){pv=a[n];continue}runs.push([j,s0,pv]);if(n<a.length){s0=pv=a[n]}}});
    const open={};runs.forEach(r=>{const key=r[1]+','+r[2],o=open[key];if(o&&o.j1===r[0]-1)o.j1=r[0];else{open[key]={i0:r[1],i1:r[2],j0:r[0],j1:r[0]};(open.__l=open.__l||[]).push(open[key])}});
-   (open.__l||[]).forEach(q=>add(flatT525(mm(RC.b.x0+q.i0*RC.st-OX477),mm(RC.b.y0+q.j0*RC.st-OY477),mm(RC.b.x0+(q.i1+1)*RC.st-OX477),mm(RC.b.y0+(q.j1+1)*RC.st-OY477),FL+.005,tx)));
+   (open.__l||[]).forEach(q=>{const qx0=mm(RC.b.x0+q.i0*RC.st-OX477),qz0=mm(RC.b.y0+q.j0*RC.st-OY477),qx1=mm(RC.b.x0+(q.i1+1)*RC.st-OX477),qz1=mm(RC.b.y0+(q.j1+1)*RC.st-OY477);
+    if(fk==='flDoma')add(flatT525(qx0,qz0,qx1,qz1,FL+.005-STEP547,tx));   /* CAD-547：土間の部屋は一段低く描く */
+    else sub547([qx0,qz0,qx1,qz1],DR547).forEach(p=>add(flatT525(p[0],p[1],p[2],p[3],FL+.005,tx)))});
   })}}catch(e){}
  /* 壁（開口つき） */
  const wallsOpenings=[];
@@ -24679,7 +24713,7 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
     else{box545(-w/2,-w/2+tw545,0,2.14);box545(-w/2+tw545,w/2,0,.9);box545(-w/2+tw545,w/2,1.5,2.14)}
     const tp545=rrb((sh545==="K"?w-tw545:w)+.02,.03,d+.02,.01,mat.cab,.003);PP(tp545,(sh545==="K"?(-w/2+tw545+w/2):0),.9,0,g);
     g.rotation.y=({n:0,e:-Math.PI/2,s:Math.PI,w:Math.PI/2})[t.dir||"n"]||0;
-    g.position.set(cx,FL,cz);add(g)}
+    g.position.set(cx,inDoma547(cx,cz)?FL-STEP547:FL,cz);add(g)}   /* CAD-547：下駄箱は土間の面に置く */
   else{const b=rbox(w,.5,d,mat.cab);at(b,cx,FL+.25,cz)}
  });
 
