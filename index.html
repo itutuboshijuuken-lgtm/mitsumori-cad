@@ -14782,7 +14782,7 @@ HB.__dskSeg32 = true;
   function arm(key, entry, label){
     HB.__pickSash = entry || null;
     HB.__sashAct = null; sel = null;
-    HB.__put = {g: key.indexOf("gen") === 0 ? "gen" : "win", label, fn: () => addStdOpening(key)}; // CAD-164: 玄関のキーは g="gen"（toolOpen="gen" と合わせる。"win" 固定だと構えが即解除され置けなかった）
+    HB.__put = {g: key.indexOf("gen") === 0 ? "gen" : "win", label, meetingQuick:true, fn: () => addStdOpening(key)}; // CAD-164: 玄関のキーは g="gen"（toolOpen="gen" と合わせる。"win" 固定だと構えが即解除され置けなかった）
     const tt252 = label + "：置きたい壁をタップ", tt252b = label.indexOf(" ") >= 0 ? label.split(" ").slice(1).join(" ") + "：置きたい壁をタップ" : tt252; toast(tt252.length <= 20 ? tt252 : tt252b.length <= 20 ? tt252b : "置きたい壁をタップ");   /* CAD-252：名前が長い時（例：玄関シングル シングル（片開き））は大きさの名前だけにして20文字に収める */
     drawToolsUI();
   }
@@ -14792,13 +14792,7 @@ HB.__dskSeg32 = true;
       const key = b.dataset.tool; if (WINKEYS.indexOf(key) < 0) return;
       const entries = SASH.filter(q => TYPE_CATS[key](q)); if (!entries.length) return;
       const chip = b.textContent.trim();
-      b.onclick = () => {
-        if (entries.length === 1){ arm(key, entries[0], chip + " " + entries[0].name); return; }
-        $("mbox").innerHTML = `<h3>${chip}：大きさを選んでください</h3><p class="hint" style="margin-top:0">選んだ大きさで置けます。</p><div class="seg v">${entries.map((e, i) => `<button type="button" data-wsz="${i}" style="min-height:50px;text-align:left;padding:6px 12px"><b>${e.name}</b>　<small style="color:var(--sub)">${fmt(e.w)} × ${fmt(e.h)}</small></button>`).join("")}</div><div class="row" style="margin-top:8px"><button class="btn sub" id="wszNo" type="button">×</button></div>`;
-        $("modal").hidden = false;
-        $("mbox").querySelectorAll("[data-wsz]").forEach(x => x.onclick = () => { const e = entries[+x.dataset.wsz]; $("modal").hidden = true; arm(key, e, chip + " " + e.name); });
-        $("wszNo").onclick = () => { $("modal").hidden = true; };
-      };
+      b.onclick = () => arm(key, entries[0], chip);
     });
   }
   let lastG = "__init__", lastH = "__init__";
@@ -14816,8 +14810,8 @@ HB.__dskSeg32 = true;
     }
     if (toolOpen === "part") return "間仕切り：長さのボタンを押すと、その長さで入ります。図をタップすると、壁から壁まで入ります。";
     if (toolOpen === "door") return "建具：付けたい物を選んで、置きたい壁をタップ。1つ置いたら終わりです。";
-    if (toolOpen === "win") return "窓：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。1つ置いたら終わりです。";
-    if (toolOpen === "gen") return "玄関：付けたい物を選ぶと、先に大きさを選びます。決めたら、置きたい壁をタップ。1つ置いたら終わりです。";
+    if (toolOpen === "win") return "窓：種類を選んで壁をタップ。大きさは置いた後に変更できます。1つ置いたら終わりです。";
+    if (toolOpen === "gen") return "玄関：種類を選んで壁をタップ。大きさは置いた後に変更できます。1つ置いたら終わりです。";
     if (toolOpen === "etc") return "その他：置きたい物を選んで、置く所をタップ。便器は、置くと自動でトイレになります。";
     if (toolOpen === "light") return "照明：種類を選んで、置く所をタップ。新設か、今ある物を使うかを聞かれます。";
     return "上のボタンで、付けたい物を選びます。置いた物を直す時は、図の上の物をタップしてください。";
