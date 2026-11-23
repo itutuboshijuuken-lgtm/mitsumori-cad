@@ -7240,8 +7240,16 @@ function calc00(){
     const isFk385 = sa => { if (!sa.host || sa.host.t !== "p") return false; const q = P2[sa.host.i]; return !!q && partForm292(q) === "fuka" && pState(q) !== "remove"; };   /* CAD-385: ふかし面の開口は片面分だけ引く */
     const opFuka = S.sashes.filter(sa => isFk385(sa)).reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;
     const opFukaN = S.sashes.filter(sa => isFk385(sa) && pState(P2[sa.host.i]) === "new").reduce((a, sa) => a + opW308(sa) * sa.h * (sa.n || 1), 0) / 1e6;
-    const fukaArea = Math.max(0, fA / 1e6 - opFuka), fukaNewArea = Math.max(0, nfA / 1e6 - opFukaN);
-    return {len, newLen, remLen, lenEff, newLenEff, lenFloor, lenFuka, fukaLens, fukaArea, area: Math.max(0, hA / 1e6 * 2 - opP * 2) + fukaArea, newArea: nA / 1e6 * 2 + fukaNewArea};
+    /* CAD-592：階段が間仕切りをまたぐ時、重なった長さ×壁の高さを開口（建具）と同じ物差しで壁面積から引く（二重取り防止）。
+       長さ系（下地・手間）は開口でも引かない現行の物差しに合わせ、面積だけを引く */
+    const stR585 = (S.tenken || []).filter(o => o && o.k === "stair" && o.x != null).map(o => { const e = tkExt(o); return {x0: o.x - e[0], x1: o.x + e[0], y0: o.y - e[1], y1: o.y + e[1]}; });
+    let stOp585 = 0, stOpFuka585 = 0;
+    if (stR585.length) P2.forEach(q => { if (pState(q) === "remove") return; const hq = partHq292(q, ch); let ov = 0;
+      stR585.forEach(r => { if (Math.abs(q.x1 - q.x2) < 1){ const c = q.x1; if (c > r.x0 && c < r.x1) ov += Math.max(0, Math.min(Math.max(q.y1, q.y2), r.y1) - Math.max(Math.min(q.y1, q.y2), r.y0)); }
+        else if (Math.abs(q.y1 - q.y2) < 1){ const c2 = q.y1; if (c2 > r.y0 && c2 < r.y1) ov += Math.max(0, Math.min(Math.max(q.x1, q.x2), r.x1) - Math.max(Math.min(q.x1, q.x2), r.x0)); } });
+      if (ov > 0){ stOp585 += ov * hq; if (partForm292(q) === "fuka") stOpFuka585 += ov * hq; } });
+    const fukaArea = Math.max(0, fA / 1e6 - opFuka - stOpFuka585 / 1e6), fukaNewArea = Math.max(0, nfA / 1e6 - opFukaN);
+    return {len, newLen, remLen, lenEff, newLenEff, lenFloor, lenFuka, fukaLens, fukaArea, stOp: stOp585 / 1e6, area: Math.max(0, hA / 1e6 * 2 - opP * 2 - stOp585 / 1e6 * 2) + fukaArea, newArea: nA / 1e6 * 2 + fukaNewArea};
   }
   function partNewRows(ch){
     const pi = partInfo(ch);
@@ -28973,8 +28981,14 @@ var e = (typeof tkExt === "function")? tkExt(o): [(o.w || 0) / 2, (o.w || 0) / 2
 return { x0: o.x - e[0], x1: o.x + e[0], y0: o.y - e[1], y1: o.y + e[1]};
 } catch(err){ return null;}
 }
-/* 壁（家の輪郭・間仕切り）を突き抜けている量。0 なら収まっている */
-function poke298(o){
+/* 壁（家の輪郭・間仕切り）を突き抜けている量。0 なら収まっている。
+   CAD-592：contourOnly の時は間仕切りを見ず、家の輪郭の外への突き抜けだけを測る */
+function poke298(o){ return pokeWall298(o, false); }
+function pokeContour298(o){ return pokeWall298(o, true); }
+/* CAD-592：階段だけは間仕切りをまたいで置ける（本人の指示 2026-11-23「階段、壁を超えれない…不便」）。
+   判定は輪郭のみ（家の外へは出さない）。他の物は従来どおり間仕切りも見る */
+function pokeFit298(o){ return (o && o.k === "stair") ? pokeContour298(o) : poke298(o); }
+function pokeWall298(o, contourOnly){
 try {
 if (typeof S === "undefined" ||!S ||!o) return 0;
 var r = rectOf298(o); if (!r) return 0;
@@ -28990,7 +29004,7 @@ worst = Math.max(worst, dmin === 1e9? 1: dmin);
 }
 });
 }
-(S.parts2D || []).forEach(function(q){
+if (!contourOnly) (S.parts2D || []).forEach(function(q){
 if (typeof pState === "function" && pState(q) === "remove") return;
 if (Math.abs(q.x1 - q.x2) < 1){
 var c = q.x1, lo = Math.min(q.y1, q.y2), hi = Math.max(q.y1, q.y2);
@@ -29003,11 +29017,11 @@ if (c2 > r.y0 + 1 && c2 < r.y1 - 1 && Math.min(hi2, r.x1) - Math.max(lo2, r.x0) 
 return worst;
 } catch(err){ return 0;}
 }
-function fits298(o, x, y){ var ox = o.x, oy = o.y; o.x = x; o.y = y; var p = poke298(o); o.x = ox; o.y = oy; return p <= 0;}
+function fits298(o, x, y){ var ox = o.x, oy = o.y; o.x = x; o.y = y; var p = pokeFit298(o); o.x = ox; o.y = oy; return p <= 0;}
 /* 収まる位置を探す：外周に寄せる→部屋の壁に寄せる→周りを少しずつ探す。見つからなければ false */
 function slideIn298(o){
 try {
-if (poke298(o) <= 0) return true;
+if (pokeFit298(o) <= 0) return true;
 var r = rectOf298(o); if (!r) return false;
 var hx = (r.x1 - r.x0) / 2, hy = (r.y1 - r.y0) / 2, x0 = o.x, y0 = o.y, cand = [];
 var push = function(x, y){ cand.push([Math.round(x / 2.5) * 2.5, Math.round(y / 2.5) * 2.5]);};
@@ -29033,13 +29047,13 @@ var wrappedMove298 = function(o, dx, dy){
 if (!o || EXEMPT[o.k]) return origMove298(o, dx, dy);
 var ox = o.x, oy = o.y, r = origMove298(o, dx, dy);
 try {
-if (poke298(o) > 0){
+if (pokeFit298(o) > 0){
 var tries = Math.abs(dx) >= Math.abs(dy)? [[dx, 0], [0, dy]]: [[0, dy], [dx, 0]];
 var done = false;
 for (var i = 0; i < tries.length; i++){
 if (!tries[i][0] &&!tries[i][1]) continue;
 o.x = ox; o.y = oy; origMove298(o, tries[i][0], tries[i][1]);
-if (poke298(o) <= 0){ done = true; break;}
+if (pokeFit298(o) <= 0){ done = true; break;}
 }
 if (!done){ o.x = ox; o.y = oy;}
 }
@@ -29059,7 +29073,7 @@ var r = origAdd298.apply(this, arguments);
 try {
 if (!EXEMPT[k] && typeof S!== "undefined" && S && S.tenken && S.tenken.length > n0){
 var o = S.tenken[S.tenken.length - 1];
-if (o && o.k === k && poke298(o) > 0){
+if (o && o.k === k && pokeFit298(o) > 0){
 if (slideIn298(o)){ try { save();} catch(e){} try { drawPlan();} catch(e){}}
 else {
 S.tenken.splice(S.tenken.length - 1, 1);
@@ -29088,7 +29102,7 @@ b.onclick = function(){
 var s = snapOf298(o);
 var r = orig.apply(this, arguments);
 try {
-if (changed298(o, s) && poke298(o) > 0){
+if (changed298(o, s) && pokeFit298(o) > 0){
 if (slideIn298(o)){ try { save();} catch(e){}}
 else { Object.assign(o, s); try { save();} catch(e){} try { toast("壁に当たるため変えられませんでした");} catch(e){}}
 try { drawPlan();} catch(e){}
@@ -29175,7 +29189,7 @@ wrappedBar298.__g298 = true;
 drawEnclBar = wrappedBar298;
 }
 
-window.__guard298 = { poke: poke298, slide: slideIn298, rectOf: rectOf298, anchorKey: anchorKey298}; /* 検証用 */
+window.__guard298 = { poke: poke298, slide: slideIn298, rectOf: rectOf298, anchorKey: anchorKey298, pokeFit: pokeFit298}; /* 検証用 */
 })();
 </script>
 
@@ -29369,7 +29383,7 @@ function layoutGen395(parts){
   });
   var head = null;
   if (walk.length){ var wp = walk[walk.length - 1], hv = HV[hi]; head = [wp[0], wp[1], hv[0], hv[1]]; }
-  return { fw: fw, fd: fd, lines: lines, walk: walk, head: head, turns: turns };
+  return { fw: fw, fd: fd, lines: lines, walk: walk, head: head, turns: turns, rects: rectsT };   /* CAD-592：占有形（部分 rect の和）も返す。3Dの段の箱と heightAt はこの内側だけにする */
 }
 
 function layout306(parts){
@@ -29529,7 +29543,7 @@ function applyStair306(o, bar, parts){
   var dm = dimsOf306(parts); o.w = dm[0]; o.d = dm[1];
   moveTenken(o, 0, 0);
   try {
-    if (window.__guard298 && window.__guard298.poke(o) > 0){
+    if (window.__guard298 && (window.__guard298.pokeFit || window.__guard298.poke)(o) > 0){
       if (!window.__guard298.slide(o)){
         Object.keys(snap).forEach(function(k){ if (snap[k] === undefined) delete o[k]; else o[k] = snap[k]; });
         toast("壁に当たるため変えられませんでした");
@@ -29874,7 +29888,7 @@ function render395(){
       var pk = 0, fit4 = true;
       try {
         o.w = dm[0]; o.d = dm[1];
-        pk = (window.__guard298 && window.__guard298.poke) ? window.__guard298.poke(o) : 0;
+        pk = (window.__guard298 && (window.__guard298.pokeFit || window.__guard298.poke)) ? (window.__guard298.pokeFit || window.__guard298.poke)(o) : 0;
         fit4 = pk <= 0;
         if (pk > 0 && window.__guard298 && window.__guard298.slide){ /* CAD-526：決定の時に寄せて収まる形は「収まらない」と言わない */
           try { fit4 = !!window.__guard298.slide(o); } catch(e){}
@@ -29982,7 +29996,7 @@ function applyBuild395(){
   try {
     var G4 = window.__guard298;
     if (G4 && G4.poke){
-      pk = G4.poke(o);
+      pk = (G4.pokeFit || G4.poke)(o);
       if (pk > 0 && G4.slide){ /* CAD-526：中心を固定したまま伸びて壁を横切る形は、収まる位置へ寄せて置く */
         var bx4 = o.x, by4 = o.y;
         if (G4.slide(o)){ moved4 = (o.x !== bx4 || o.y !== by4); pk = G4.poke(o); }
@@ -39346,6 +39360,9 @@ body.in534 #ctl530{padding-top:4px}
     var th = ({n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0) * Math.PI / 180, c = Math.cos(th), sn = Math.sin(th);
     var toP = function(u, v){ var x = u - fw / 2, y = v - fd / 2; return [o.x + x * c - y * sn, o.y + x * sn + y * c]; };
     var toL = function(X, Y){ var x = X - o.x, y = Y - o.y; return [x * c + y * sn + fw / 2, -x * sn + y * c + fd / 2]; };
+    var RC585 = L.rects || null;   /* CAD-592：階段が実際に占有する rect の和。外形の四角（fw×fd）には、かね折れ等の空き角が含まれる */
+    function inR585(u, v){ if (!RC585) return true; for (var ri = 0; ri < RC585.length; ri++){ var r = RC585[ri]; if (u >= r.x - .5 && u <= r.x + r.w + .5 && v >= r.y - .5 && v <= r.y + r.h + .5) return true; } return false; }
+    function inB585(u0, v0, g){ if (!RC585) return true; for (var ri = 0; ri < RC585.length; ri++){ var r = RC585[ri]; if (u0 < r.x + r.w + .5 && u0 + g > r.x - .5 && v0 < r.y + r.h + .5 && v0 + g > r.y - .5) return true; } return false; }   /* CAD-592：箱用はセルと rect の重なりで判定（端の部分セルを落とさない） */
     var W = (L.walk || []).slice(); if (W.length < 2) W = [[fw / 2, fd], [fw / 2, 0]];
     var seg = [], tot = 0; for (var i = 1; i < W.length; i++){ var l = Math.hypot(W[i][0] - W[i - 1][0], W[i][1] - W[i - 1][1]); seg.push(l); tot += l; }
     function stepAtL(u, v){
@@ -39356,12 +39373,12 @@ body.in534 #ctl530{padding-top:4px}
       }
       return Math.max(0, Math.min(N - 1, Math.floor(bs / tot * N)));
     }
-    function heightAt(X, Y){ var q = toL(X, Y); if (q[0] < -1 || q[1] < -1 || q[0] > fw + 1 || q[1] > fd + 1) return null; return (stepAtL(q[0], q[1]) + 1) * rise; }
+    function heightAt(X, Y){ var q = toL(X, Y); if (q[0] < -1 || q[1] < -1 || q[0] > fw + 1 || q[1] > fd + 1) return null; if (!inR585(q[0], q[1])) return null; return (stepAtL(q[0], q[1]) + 1) * rise; }
     /* 3D用：40mm角で段番号を塗り、横の連続×同じ幅の縦を四角にまとめる（向きは90°刻みなので図面でも四角のまま） */
     function boxes(){
       var g = 40, nx = Math.ceil(fw / g), ny = Math.ceil(fd / g), runs = [], out = [];
       for (var j = 0; j < ny; j++){ var s0 = 0, cur = null;
-        for (var i2 = 0; i2 <= nx; i2++){ var k = i2 < nx ? stepAtL((i2 + .5) * g, (j + .5) * g) : -1; if (k !== cur){ if (cur !== null) runs.push([j, s0, i2 - 1, cur]); cur = k; s0 = i2; } } }
+        for (var i2 = 0; i2 <= nx; i2++){ var k = (i2 < nx && inB585(i2 * g, j * g, g)) ? stepAtL((i2 + .5) * g, (j + .5) * g) : -1;   /* CAD-592：占有外（空き角）は箱にしない */ if (k !== cur){ if (cur !== null && cur >= 0) runs.push([j, s0, i2 - 1, cur]); cur = k; s0 = i2; }   /* CAD-592：k=-1（占有外）のランは箱にしない */ } }
       var open = {}; runs.forEach(function(r){ var key = r[1] + "," + r[2] + "," + r[3], q = open[key]; if (q && q.j1 === r[0] - 1) q.j1 = r[0]; else { q = open[key] = {i0: r[1], i1: r[2], j0: r[0], j1: r[0], k: r[3]}; out.push(q); } });
       return out.map(function(q){ var a = toP(q.i0 * g, q.j0 * g), b = toP(Math.min(fw, (q.i1 + 1) * g), Math.min(fd, (q.j1 + 1) * g)); return {x0: Math.min(a[0], b[0]), y0: Math.min(a[1], b[1]), x1: Math.max(a[0], b[0]), y1: Math.max(a[1], b[1]), top: (q.k + 1) * rise, k: q.k}; });
     }
