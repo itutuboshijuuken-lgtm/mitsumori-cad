@@ -11019,14 +11019,14 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     const o = document.createElement("div"); o.id = "kindBox";
     o.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px";
     const bt = (id, ic, nm, sub, main) => `<button type="button" id="${id}" style="display:block;width:100%;text-align:left;min-height:76px;margin-top:10px;padding:10px 14px;border-radius:12px;border:${main ? "3px solid #FFC400" : "1px solid #C9D2DC"};background:${main ? "#FFF8DC" : "#fff"};color:#1b2430;font-family:inherit"><span style="font-size:26px;vertical-align:middle">${ic}</span> <b style="font-size:19px;vertical-align:middle">${nm}</b>${""}<br><small style="color:#5B6775;font-size:13px">${sub}</small></button>`;
-    o.innerHTML = `<div style="background:#fff;color:#1b2430;border-radius:16px;max-width:360px;width:100%;padding:18px 16px"><div style="font-size:18px;font-weight:800;text-align:center">${td ? "何をつくりますか？" : "最初は、新築で操作を覚えます"}</div>${bt("kdRf", "🛠", "リフォーム", td ? "内装・部分工事・増築。まず操作を覚えられます" : "最初は新築で覚えます（終えると選べます）", td)}${bt("kdNew", "🏠", "新築", td ? "家を1軒つくる見積です" : "チュートリアルは新築で説明します。新築をタップしてください", !td)}</div>`;
+    o.innerHTML = `<div style="background:#fff;color:#1b2430;border-radius:16px;max-width:360px;width:100%;padding:18px 16px"><div style="font-size:18px;font-weight:800;text-align:center">${td ? "何をつくりますか？" : "最初は、新築で操作を覚えます"}</div>${bt("kdRf", "🛠", "内装リフォーム", td ? "今ある部屋の内装を直す工事です。手順は5つ（描く・間取り・室内図・仕様・見積）" : "最初は新築で覚えます（終えると選べます）", false)}${bt("kdNew", "🏠", "新築・増築", td ? "家を建てる・増やす工事です。手順は7つ（描く・間取り・室内図・屋根・完成図・仕様・見積）" : "チュートリアルは新築で説明します。新築をタップしてください", !td)}</div>`;
     document.body.appendChild(o);
     if (!td){ const rf0 = document.getElementById("kdRf"); if (rf0) rf0.style.opacity = ".55"; }
     document.getElementById("kdRf").onclick = () => { if (!td){ toast("最初は、新築で操作を覚えます。終わると、リフォームも選べます"); return; } o.remove(); if (first) sampleHouse(true, true); else { const made195 = startFresh195(); S.mode = "rf"; save(); go(1); if (made195) toast("新しい現場で始めます"); } };
     document.getElementById("kdNew").onclick = () => { o.remove(); startNew(); if (!td) setTimeout(() => { if (window.startNbTut) window.startNbTut(); }, 400); }; /* CAD-251：開始の条件も td に合わせる */
   }
   window.chooseKind = chooseKind;
-  if (!S.edges){ try { localStorage.setItem(KEY, "1"); } catch(e){} if (tutCompleted()) setTimeout(chooseKind, 150); }
+  if (!S.edges){ try { localStorage.setItem(KEY, "1"); } catch(e){} setTimeout(chooseKind, 150); } /* CAD-561：家のデータが無い時は、練習が終わっていなくても最初に「何をつくりますか？」を出す（従来は練習完了の時だけで、初めての人は内装リフォームが選ばれた状態に見えた）。保存済みの家（edges あり）は従来通り聞かずに開く。チュートリアルの自動開始（CAD-33）は kindBox を消してから始めるため、この画面で止まる事はない */
   { const _np = newProject; newProject = function(n){ _np.apply(this, arguments); if (!window.__noKind) setTimeout(() => { const m = document.getElementById("modal"); if (m) m.hidden = true; chooseKind(); }, 250); }; }
 })();
 </script>
