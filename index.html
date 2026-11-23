@@ -2808,7 +2808,8 @@ function addEquip(k){
   }
   if (HB.__snap207 && !best){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：壁が無い所では床置きと同じ吸着 */
   if (k === "makura") o.h = 1800; if (k === "chudan") o.h = 800;
-  pushUndo(); S.tenken = S.tenken || []; S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
+  pushUndo(); S.tenken = S.tenken || []; if (HB.__putAt && HB.__put?.meetingQuick) o.meetingPending = true;
+  S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
   toast(`${TKN[k]}：壁にくっつけました`);
   })(k);
   if (HB.__aeSeg26){
@@ -2835,7 +2836,8 @@ function addTenken(k){
   // 他の点検口と重ならないように少しずらす
   for (let n = 0; n < 8 && k !== "dansa" && (S.tenken || []).some(q => q.k === k && Math.abs(q.x - o.x) < (q.w + w) / 2 && Math.abs(q.y - o.y) < (q.w + w) / 2); n++) o.x += w + 100;
   moveTenken(o, 0, 0);
-  S.tenken = S.tenken || []; S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
+  S.tenken = S.tenken || []; if (HB.__putAt && HB.__put?.meetingQuick) o.meetingPending = true;
+  S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
   })(k);
   if (HB.__atPost34) HB.__atPost34(k, __atR);   /* 旧 blk34 後段 */
   if (HB.__atSeg36){
@@ -3578,7 +3580,8 @@ function drawToolsUICore(){
   drawSelBar();
   /* --- 旧 blk06 後段：置く物のボタンへの結線と、構え中ボタンの点滅 --- */
   if (HB.__dtSeg06){ try {
-      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ sel = null; HB.__put = {g: gg, label: lbl, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ`); drawToolsUI(); }; });
+      const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ if (key === "tool") HB.__pickSash = null;
+        sel = null; HB.__put = {g: gg, label: lbl, meetingQuick: !HB.__nbtut, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", toolOpen === "mizu" ? "mizu" : "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
@@ -5150,8 +5153,11 @@ function addStdOpening(ty){
   if (hgRemHost(nh.h)){ undoStack.pop(); toast("撤去する壁には置けません"); return; }
   { const v = spot(nh); if (v != null) pos = v; }
   S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: (nh.h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0});
-  sel = {t: "o", i: S.sashes.length - 1}; flashAt = Date.now(); save(); drawPlan();
-  if (ipOK(S.sashes[S.sashes.length - 1])) sashAskState(S.sashes.length - 1);
+  sel = {t: "o", i: S.sashes.length - 1};
+  const placed = S.sashes[sel.i];
+  if (HB.__putAt && HB.__put?.meetingQuick) placed.meetingPending = true;
+  flashAt = Date.now(); save(); drawPlan();
+  if (!placed.meetingPending && ipOK(placed)) sashAskState(S.sashes.length - 1);
 }
 // 窓を置いた直後：新設／既存／インプラスを選ぶ（あとで決める、も選べる）
 function sashAskState(i){
@@ -5284,6 +5290,7 @@ function drawSelBar(){
      読み込み途中の呼び出し：blk02 評価中の初期 go(step) → drawPlan() → drawToolsUI() → drawToolsUICore() 末尾の drawSelBar() は、元の連鎖では本体だけが効いていた。blk14 評価末尾の drawToolsUI() 経由では blk07＋blk08 の段までが効いていた。登録がまだ無い段は「まだ無ければ呼ばない／実行しない」形にしてあるため、どちらの段階でも従来通りになる。 */
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawSelBar0(); try { candBarAdd(); ctlArbitrate(); } catch(e){}
+  if (!HB.__nbtut) renderMeetingSelection();
   /* --- 後段（内側→外側） --- */
   try { if (HB.__dsbPost07) HB.__dsbPost07(); } catch(e){}   /* 旧 blk07（dsb）後段：外のサッシに庇ボタンを足す addBtn（実体は blk07 で登録） */
   try { if (HB.__dsbPost08) HB.__dsbPost08(); } catch(e){}   /* 旧 blk08（dsb2）後段：ドア系に吊元ボタンを足す addHinge（実体は blk08 で登録。addHinge は関数宣言で巻き上げられるため登録位置で参照できる） */
@@ -8495,6 +8502,58 @@ let lastText = "", custText = "";
    保存は新しいキー gosei-meyasu-v1。既存の保存キーは触らない */
 function meyasu427Cfg(){ try { const v = JSON.parse(localStorage.getItem("gosei-meyasu-v1") || "null"); if (v && +v.per > 0) return {per: +v.per, up: Math.max(0, +v.up || 0)}; } catch(e){} return {per: 3, up: 2}; }
 function meyasu427Txt(x){ return String(Math.round(x * 100) / 100); }
+function meetingItems(state){
+  const currentFloor = state.fi || 0;
+  const floors = state.fl?.length ? state.fl : [{name:"1階"}];
+  return floors.flatMap((floor, index) => {
+    const drawing = index === currentFloor ? state : floor.snap;
+    return [["o", drawing?.sashes], ["k", drawing?.tenken]].flatMap(([type, objects]) =>
+      (objects || []).flatMap((item, position) => item.meetingPending === true
+        ? [{floor:index, floorName:floor.name, type, position, item}]
+        : []));
+  });
+}
+function renderMeetingSummary(items){
+  if (!items.length) return "";
+  return `<details class="meetingReview"><summary>次の打ち合わせで決める項目 <strong>${items.length}件</strong></summary>
+    <p>詳細未確定の項目を含む概算です。仕様を決めたら、図面で項目を開いて「詳細を確定」を押してください。</p>
+    <div>${items.map(({floor,floorName,type,position,item}) => {
+      const name = type === "o" ? item.name || item.cat : TKN[item.k] || item.k;
+      const location = type === "o" ? `　図面の${position+1}番` : "";
+      return `<button type="button" data-meeting-floor="${floor}" data-meeting-type="${type}" data-meeting-item="${position}"><b>${esc(floorName)}　${esc(name)}${location}</b><small>図面で確認 ›</small></button>`;
+    }).join("")}</div></details>`;
+}
+function bindMeetingSummary(){
+  $("estTop").querySelector(".meetingReview")?.addEventListener("click", event => {
+    const button=event.target.closest("[data-meeting-item]");
+    if (!button) return;
+    const {meetingFloor,meetingType,meetingItem}=button.dataset;
+    go("M");
+    if (+meetingFloor !== (S.fi || 0)) flSwitch(+meetingFloor);
+    sel={t:meetingType,i:+meetingItem};
+    flashAt=Date.now();
+    drawPlan();
+  });
+}
+function renderMeetingSelection(){
+  const bar=$("selBar");
+  if (!bar || bar.hidden) return;
+  const item=sel?.t === "o" ? S.sashes[sel.i] : sel?.t === "k" ? S.tenken?.[sel.i] : null;
+  const old=bar.querySelector(".meetingStatus");
+  const header=bar.querySelector(".r1");
+  if (!item || !header){ old?.remove(); return; }
+  const row=old || document.createElement("div");
+  row.className="meetingStatus";
+  const pending=item.meetingPending === true;
+  row.innerHTML=pending ? '<span>詳細未確定</span><button type="button">詳細を確定</button>' : '<button type="button">次の打ち合わせに回す</button>';
+  row.querySelector("button").onclick=()=>{
+    pushUndo();
+    if(pending) delete item.meetingPending;
+    else item.meetingPending=true;
+    save(); drawSelBar();
+  };
+  if(!old) header.after(row);
+}
 function drawEst(){
   $("estimateItems557").hidden = true;
   $("estimateNotes557").hidden = true;
@@ -8505,12 +8564,14 @@ function drawEst(){
   const C = calc(), missN = C.rows.filter(r => r.miss).length, avgN = C.rows.filter(r => r.avg && !r.note).length;
   if (HB.__frameErr154) C.frameErr154 = true;
   const tax = Math.round(C.mitsu * 0.1);
-  $("estTop").innerHTML = `<span>見積金額（税込）</span><strong>${fmt(Math.round(C.mitsu) + tax)}<small>円</small></strong>
+  const pending = meetingItems(S);
+  $("estTop").innerHTML = `<span>${pending.length ? "概算見積（税込）" : "見積金額（税込）"}</span><strong>${fmt(Math.round(C.mitsu) + tax)}<small>円</small></strong>
     <dl class="estimateBreakdown">
       <div><dt>見積（税抜）</dt><dd>${fmt(Math.round(C.mitsu))}<small>円</small></dd></div>
       <div><dt>原価</dt><dd>${fmt(Math.round(C.genkaReal))}<small>円</small></dd></div>
       <div><dt>利益</dt><dd>${fmt(Math.round(C.mitsu - C.genkaReal))}<small>円</small></dd></div>
-    </dl><p class="estimateNote">「仮」の単価は全国の目安です。</p>`;
+    </dl><p class="estimateNote">「仮」の単価は全国の目安です。</p>${renderMeetingSummary(pending)}`;
+  bindMeetingSummary();
   const SK = [0, 3, 5, 8, 10];
   $("skCh").innerHTML = SK.map(v => `<button data-v="${v}" aria-pressed="${S.shokei.mode === "pct" && S.shokei.v === v}" type="button">${v ? v + "%" : "なし"}</button>`).join("") + `<button data-v="fix" aria-pressed="${S.shokei.mode === "fix"}" type="button">${S.shokei.mode === "fix" ? fmt(S.shokei.v) + "円" : "1式で入れる"}</button>`;
   $("skCh").querySelectorAll("button").forEach(b => b.onclick = () => { if (b.dataset.v === "fix") openPad({title: "諸経費（1式）", unit: "円", value: S.shokei.mode === "fix" ? S.shokei.v : "", done: v => { S.shokei = {mode: "fix", v: v || 0}; save(); drawEst(); }}); else { S.shokei = {mode: "pct", v: +b.dataset.v}; save(); drawEst(); } });
@@ -41099,3 +41160,15 @@ body.mSel:not(.fsDraw):not(.nbtutRun):not(.enclEdit185) #stM #oak556.quickNext:n
 body #stM #oak556.quickNext .oakRow button{height:44px;min-height:44px;display:block}
 body #stM #oak556.quickNext .oakRow i{display:none}
 }</style>
+
+<style>
+.meetingReview{margin-top:12px;padding:10px;border:1px solid #b99a68;border-radius:8px;background:#faf3e5;color:#3c3022}
+.meetingReview summary{cursor:pointer;font-weight:700}
+.meetingReview summary strong{display:inline;font-size:inherit;color:inherit}
+.meetingReview p{font-size:13px;margin:8px 0}
+.meetingReview button{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:44px;padding:6px 10px;color:#3c3022;background:#fffaf1;border:1px solid #c2aa85;border-radius:5px;text-align:left}
+.meetingReview button+button{margin-top:4px}
+.meetingReview button small{white-space:nowrap}
+.meetingStatus{display:flex;align-items:center;gap:8px;margin:3px 0;color:#513b21;font-size:13px}
+.meetingStatus button{min-height:36px;padding:4px 8px}
+</style>
