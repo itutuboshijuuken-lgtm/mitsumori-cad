@@ -40723,3 +40723,118 @@ body svg#plan pattern image, body svg#pvSvg pattern image, body #elevBox svg pat
   (3) 入れなかった物：選択色の黄土色化（selBlue551 の #a36225 化）は本人の決定（2026-11-23「選択は水色の方が
       わかりやすい」）で見送り、水色↔白の点滅のまま。style#walnut-plan-surface は本番の #oak556 が既に
       order:100 で下側にあり採用済みデザインと重なるため見送り（紙色は graphite 側で #stM のカードにも効く）。 ===== -->
+
+<style id="walnut-premium-finish">
+@media screen {
+  body {
+    --finish-paper: #faf8f3;
+    --finish-ivory: #efe7d9;
+    --finish-ink: #2d2822;
+    --finish-muted: #64584a;
+    --finish-rule: #d1c6b6;
+    --finish-brass: #aa844e;
+    --finish-walnut: #463427;
+    --finish-wood: linear-gradient(rgba(36,26,19,.32),rgba(36,26,19,.32)),var(--oak556);
+    --finish-heading: "Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP",serif;
+  }
+  body header.top {
+    background:var(--finish-wood) center/auto,420px 22px!important;
+    border-bottom:1px solid #8d6b45;
+  }
+  body header.top .bar,body header.top nav.steps {background:transparent!important}
+  body header.top .bar {padding-inline:10px;gap:6px}
+  body header.top h1 {
+    box-shadow:inset 0 0 0 1px #b38d584d,0 1px 3px #21180f42;
+    border-radius:4px;
+  }
+  body header.top h1::after {filter:saturate(.72)}
+  body header.top .steps button {
+    min-width:0;min-height:44px!important;border-radius:4px;
+    border-color:#ab9479!important;background:#eee6d8!important;
+    color:#382e24!important;font-weight:700;line-height:1.16;
+  }
+  body header.top .steps button[aria-current=step] {
+    background:#fffaf0!important;box-shadow:inset 0 -2px var(--finish-brass);
+  }
+  body main :is(#st1,#st2,#stM,#st3,#st6,#st7,#st4,#st5):not([hidden]) {
+    color:var(--finish-ink);background:var(--finish-paper)!important;
+  }
+  body main :is(#st1,#st2,#stM,#st3,#st6,#st7,#st4,#st5):not([hidden]) :is(h2:not(.ux-h),.screenTitle557) {
+    color:var(--finish-ink);font-family:var(--finish-heading);font-weight:700;
+  }
+  body :is(#st4,#st5) .screenTitle557 {padding-bottom:5px;border-bottom:1px solid var(--finish-rule)}
+  body #st2 #planWrap>.card,body #stM #slotM .card,body #st3 .fs420stage,body #st6 #pvCard,body #miniPlan219 {
+    border:1px solid var(--finish-rule);border-radius:4px;box-shadow:none;
+  }
+  body #st2 > #zRow,body #stM #oak556,body #st6.fsRoom.fsRm .fs419bar,
+  body #st6 :is(#modelDock,.fs421bar),body #st3 #roofView556,body #st4 .fs422next,
+  body #st1 > .row:has(#fixInk) {
+    border:1px solid #806446;border-top-color:var(--finish-brass);border-radius:4px;
+    background:var(--finish-wood) center/auto,420px 22px!important;
+    box-shadow:inset 0 1px 2px #1c130d4d;
+  }
+  body #st3 #roofView556,body #st4 .fs422next,body #st1 > .row:has(#fixInk),body #st6 .fs421bar {padding:4px;gap:4px}
+  body #stM #oak556 button,body #st3 #roofView556 button,body #st4 .fs422next button,
+  body #st6 :is(.fs419bar,.fs421bar) button,body #st1 > .row :is(#fixInk,#clearInk) {
+    color:var(--finish-ink)!important;border:1px solid #a99175!important;
+    border-radius:4px;background:var(--finish-ivory)!important;
+    box-shadow:inset 0 1px #fff9ef;
+  }
+  body #stM #oak556 button {
+    background:var(--finish-ivory) var(--felt556) center/95px 40px!important;
+    font-family:var(--finish-heading);font-size:13px;
+  }
+  body #st3 #roofView556 button[aria-pressed=true],body #stM #oak556 button[aria-pressed=true] {
+    outline:none;box-shadow:inset 0 -2px var(--finish-brass);
+    border-color:var(--finish-brass)!important;
+  }
+  body main :is(#st1,#st2,#stM,#st3,#st6,#st7,#st4,#st5) button:focus-visible {
+    outline:2px solid #916432;outline-offset:-2px;
+  }
+  body #st5 #estTop:empty {display:none}
+  body #st5 #estTop {
+    padding:14px 7px 8px;background:transparent;
+    border:0;border-radius:0;box-shadow:none;
+  }
+  body #st5 #estTop>span {
+    font:700 15px/1.4 var(--finish-heading);color:var(--finish-ink);
+  }
+  body #st5 #estTop>strong {
+    padding:6px 0 12px;margin:0;
+    text-align:right;font-family:var(--finish-heading);font-size:clamp(28px,9vw,48px);
+    line-height:1.14;letter-spacing:0;border-bottom:1px solid var(--finish-brass);
+  }
+  body #st5 .estimateBreakdown > div {
+    padding:7px 0 6px;border-top:0;border-bottom:1px solid var(--finish-rule);
+  }
+  body #st5 .estimateBreakdown :is(dt,dd) {color:var(--finish-ink)}
+  body #st5 .estimateBreakdown dd {font-weight:600}
+  body #st5 #mat tr.grp td {background:transparent}
+  body #st5 .estimateToggle557 {
+    background:transparent;border-top:1px solid var(--finish-rule);
+    padding:9px 5px;min-height:46px;color:var(--finish-ink);font-size:14px;
+  }
+  body #st5 .estimateToggle557[aria-expanded=true] {
+    background:#eee6d7;border-top-color:var(--finish-brass);
+  }
+  body #st5 #toShorui.btn {
+    box-sizing:border-box;min-height:54px;width:auto!important;
+    border:5px solid transparent!important;border-top-color:#9f7849!important;
+    background:linear-gradient(var(--finish-ivory),var(--finish-ivory)) padding-box,var(--finish-wood) border-box!important;
+    color:var(--finish-ink)!important;box-shadow:0 1px 5px #32241833;
+    border-radius:5px;font-family:var(--finish-heading);
+  }
+}
+</style>
+
+<!-- ===== CAD-580：ChatGPT納品「全画面-採用デザイン」（2026-11-23、翔伍が採用）を CAD-579（黒鉛＋道具下配置）へ移植。
+  末尾 style#walnut-premium-finish を納品CSS（同梱 walnut-premium-finish.css＝参照HTML内の同名 style とバイト一致）から
+  そのまま追加しただけ（JS・DOM・計算・保存は無変更）。内容：①〜⑦の共通ヘッダーを落ち着いたウォールナット＋
+  真鍮の銘板にし、タブ選択は細い真鍮色の下線（aria-current の inset シャドウ）。中央の画面地は明るい無地
+  （--finish-paper #faf8f3）、見出しは明朝。①#zRow・②#oak556・③.fs419bar/#modelDock/.fs421bar・④#roofView556・
+  ⑥.fs422next は木枠＋真鍮の上線にし、中のボタンはアイボリー地（②の道具タイルはフェルト地＋明朝13pxでラベルを揃える）。
+  ⑦#estTop は無地化し、税込合計を明朝の大文字・右揃え＋真鍮の下線に。内訳 .estimateBreakdown は細い罫線区切り、
+  .estimateToggle557 は罫線＋開いた時に薄い地色。「見積書を作る」#toShorui は木枠のボタンに（納品CSSの width:auto は
+  参照HTML側も同じ inline width:100% を上書きする採用デザインのまま）。
+  入れなかった物・効かない物：選択色（selBlue551 の水色↔白）と黒鉛の色は本人の決定どおり無変更（このCSS自体にも
+  含まれない）。#st7 向けの指定は本番に同名の静的要素が無く、他の画面分で効く（参照HTMLと同じ構成）。 ===== -->
