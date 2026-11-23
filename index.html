@@ -2422,7 +2422,14 @@ function gridLines264(alongX, pitch){
   }
   return {lines, pos};
 }
-function tatCount(r){ const [nx, ny] = tatGrid(r); return nx * ny / 2; }
+/* CAD-588：帖数は割り付け（tatTile）で実際に敷く畳の面積合計から出す（1帖＝1820×910）。
+   910の倍数の大きさでは従来（nx×ny÷2）と同数。倍数でない大きさでは、切り畳の分も
+   面積なりに数える（従来は格子数の切り上げで、細い帯のレコードでも1.5帖などになっていた） */
+function tatCount(r){
+  const W = r.x1 - r.x0, H = r.y1 - r.y0; if (!(W > 0) || !(H > 0)) return 0;
+  const a = tatTile(W, H).reduce((s, m) => s + m.w * m.h, 0);
+  return Math.round(a / (1820 * 910) * 10) / 10;
+}
 const tatArea = () => (S.tatami || []).reduce((a, r) => a + (r.x1 - r.x0) * (r.y1 - r.y0), 0) / 1e6;
 // CAD-192: 土間・浴室ゾーンの足元は、ゾーン側の工事（土間打ち一式・UB一式）で数えるので、
 // 残りの床（標準の床仕上げ）からは引く。引く量は「ゾーンの足元 − 床の記録と重なっている部分」で、
@@ -2538,6 +2545,32 @@ function tatLayout(nx, ny){
   else { out = []; for (let r = 0; r < ny; r++) for (let c = 0; c < nx; ){ const sh = r % 2 && c === 0; if (!sh && c + 1 < nx){ out.push({r, c, t: "h"}); c += 2; } else { out.push({r, c, t: "s"}); c += 1; } } }
   return (tatLayout.c[key] = out);
 }
+/* CAD-588：畳の割り付け（mm・左上原点の {x,y,w,h,k} の列。k: f=一帖畳, h=半畳, c=切り畳）。
+   翔伍の実機指摘（2026-11-24）：「畳の割り付けもおかしい」。従来は部屋・レコードの外形に
+   格子を引き伸ばして合わせていたため、910の倍数でない大きさでは畳が 1767×1100 や
+   883×2200 の様な規格外サイズになり、継ぎ目がモジュールの位置に出なかった。
+   ここでは 910 の実グリッドで割り、余り（右・下）は現場の普通の形どおり切り畳にする。
+   余りが 30mm 未満の時は、端の畳へ吸収させる（見た目に出ない範囲の引き伸ばし）。
+   tatSvg（間取りのレコード）と tat286 の matsForBox（部屋・完成図）の両方が使う。 */
+function tatTile(W, H){
+  if (!(W > 0) || !(H > 0)) return [];
+  var nc = Math.floor(W / 910), nr = Math.floor(H / 910);
+  var rw = W - nc * 910, rh = H - nr * 910;
+  var out = [];
+  if (nc === 0 && nr === 0) return [{x: 0, y: 0, w: W, h: H, k: "c"}];
+  if (nc === 0){ var y = 0; while (y < H){ var hh = Math.min(1820, H - y); out.push({x: 0, y: y, w: W, h: hh, k: "c"}); y += hh; } return out; }
+  if (nr === 0){ var x = 0; while (x < W){ var ww = Math.min(1820, W - x); out.push({x: x, y: 0, w: ww, h: H, k: "c"}); x += ww; } return out; }
+  tatLayout(nc, nr).forEach(function(m){
+    out.push({x: m.c * 910, y: m.r * 910, w: (m.t === "h" ? 1820 : 910), h: (m.t === "v" ? 1820 : 910), k: m.t === "s" ? "h" : "f"});
+  });
+  var cutX = rw >= 30, cutY = rh >= 30;
+  if (!cutX && rw > 0) out.forEach(function(m){ if (m.x + m.w === nc * 910) m.w += rw; });
+  if (!cutY && rh > 0) out.forEach(function(m){ if (m.y + m.h === nr * 910) m.h += rh; });
+  if (cutX){ var y2 = 0, tot = nr * 910 + (cutY ? 0 : rh); while (y2 < tot){ var hh2 = Math.min(1820, tot - y2); out.push({x: nc * 910, y: y2, w: rw, h: hh2, k: "c"}); y2 += hh2; } }
+  if (cutY){ var x2 = 0, tot2 = nc * 910 + (cutX ? 0 : rw); while (x2 < tot2){ var ww2 = Math.min(1820, tot2 - x2); out.push({x: x2, y: nr * 910, w: ww2, h: rh, k: "c"}); x2 += ww2; } }
+  if (cutX && cutY) out.push({x: nc * 910, y: nr * 910, w: rw, h: rh, k: "c"});
+  return out;
+}
 function tatSvg(r, P){
   /* 段階1統合：分岐置き換え（blk66→blk50）と文字列後加工（blk78→blk80）を本体位置へ畳み込み済み。
      分岐は HB.__tatBranch66（座上げ／無垢）→ HB.__tatBranch50（r.fk）の順に判定し、どちらも
@@ -2547,14 +2580,12 @@ function tatSvg(r, P){
   if (HB.__tatBranch66) out = HB.__tatBranch66(r, P);
   if (out === null && HB.__tatBranch50) out = HB.__tatBranch50(r, P);
   if (out === null) out = (function(){
-  const [nx, ny] = tatGrid(r), ux = (r.x1 - r.x0) / nx, uy = (r.y1 - r.y0) / ny;
   const a = P([r.x0, r.y0]), b = P([r.x1, r.y1]);
   const st = r.st || "new";
   let h = `<g pointer-events="none"${st === "keep" ? ' opacity=".55"' : ""}><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="#E4E9C4"/>`;
-  tatLayout(nx, ny).forEach(m => {
-    const w = m.t === "h" ? 2 : 1, hh = m.t === "v" ? 2 : 1;
-    const p0 = P([r.x0 + m.c * ux, r.y0 + m.r * uy]), p1 = P([r.x0 + (m.c + w) * ux, r.y0 + (m.r + hh) * uy]);
-    h += `<rect x="${p0[0] + 1}" y="${p0[1] + 1}" width="${Math.max(0, p1[0] - p0[0] - 2)}" height="${Math.max(0, p1[1] - p0[1] - 2)}" fill="${m.t === "s" ? "#D6DDAE" : "#DCE3B5"}" stroke="#7E8752" stroke-width="1"/>`;
+  tatTile(r.x1 - r.x0, r.y1 - r.y0).forEach(m => {
+    const p0 = P([r.x0 + m.x, r.y0 + m.y]), p1 = P([r.x0 + m.x + m.w, r.y0 + m.y + m.h]);
+    h += `<rect x="${p0[0] + 1}" y="${p0[1] + 1}" width="${Math.max(0, p1[0] - p0[0] - 2)}" height="${Math.max(0, p1[1] - p0[1] - 2)}" fill="${m.k === "f" ? "#DCE3B5" : "#D6DDAE"}" stroke="#7E8752" stroke-width="1"/>`;
   });
   const cx = (a[0] + b[0]) / 2, cy = (a[1] + b[1]) / 2;
   h += (Math.abs(b[0] - a[0]) >= 34 && Math.abs(b[1] - a[1]) >= 22 ? `<text x="${cx}" y="${cy + 6}" text-anchor="middle" class="halo" style="font-size:16px;font-weight:900;fill:#5A6230">${fmt(tatCount(r), 1)}帖</text><text x="${cx}" y="${cy + 22}" text-anchor="middle" class="halo" style="font-size:11px;font-weight:800;fill:${TST[st][1]}">${TST[st][0]}</text>` : "") + "</g>";
@@ -23150,14 +23181,13 @@ setInterval(gkSync208, 600);
     return out;
   }
   /* mm の箱 → tatLayout の割付 → px の畳箱リスト */
+  /* CAD-588：割り付けは tatTile（910の実グリッド＋余りは切り畳）に一本化。
+     従来は部屋の外形に格子を引き伸ばしていたため、畳が規格外サイズになっていた */
   function matsForBox(bx0, by0, W, H, toPx){
-    var nx = Math.max(1, Math.round(W / 910)), ny = Math.max(1, Math.round(H / 910));
-    if (typeof tatLayout !== "function") return null;
-    var mats = tatLayout(nx, ny); if (!mats || !mats.length) return null;
-    var ux = W / nx, uy = H / ny;
-    return mats.map(function(m){
-      var mw = (m.t === "h" ? 2 : 1) * ux, mh = (m.t === "v" ? 2 : 1) * uy;
-      var A = toPx(bx0 + m.c * ux, by0 + m.r * uy), B = toPx(bx0 + m.c * ux + mw, by0 + m.r * uy + mh);
+    if (typeof tatTile !== "function") return null;
+    var tiles = tatTile(W, H); if (!tiles || !tiles.length) return null;
+    return tiles.map(function(m){
+      var A = toPx(bx0 + m.x, by0 + m.y), B = toPx(bx0 + m.x + m.w, by0 + m.y + m.h);
       return { x: Math.min(A[0], B[0]), y: Math.min(A[1], B[1]), w: Math.abs(B[0] - A[0]), h: Math.abs(B[1] - A[1]) };
     });
   }
