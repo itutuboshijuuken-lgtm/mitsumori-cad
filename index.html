@@ -2750,6 +2750,14 @@ const PLANIMG555 = {
 function planImg554(im, x, y, wItem){
   return `<svg x="${x}" y="${y}" width="${wItem}" height="${wItem * im.bh / im.bw}" viewBox="${im.bx * 512} ${im.by * 512} ${im.bw * 512} ${im.bh * 512}"><image href="${im.u}" x="0" y="0" width="512" height="512"/></svg>`;
 }
+/* CAD-578：2階以上の間取りに、下の階の階段を「下り」として読み取り専用で描く（見積・選択・保存には関係しない）。この階に自分の階段が無い時だけ */
+function stairBelowSvg578(P){
+  try {
+    if (!Array.isArray(S.fl) || !(S.fi > 0) || (S.tenken || []).some(o => o && o.k === "stair")) return "";
+    const sn = S.fl[S.fi - 1] && S.fl[S.fi - 1].snap; if (!sn) return "";
+    return (sn.tenken || []).filter(o => o && o.k === "stair" && o.x != null).map(o => tenkenSvg(Object.assign({}, o), -1, P).replace(/ data-tk2="-1"/g, "").replace(/階段（[^）]*）/g, "階段（下り）")).join("");
+  } catch(e){ return ""; }
+}
 function tenkenSvg(o, i, P){
   /* 段階1統合：blk32 の分岐委譲（水まわり系は自前描画）を本体位置へ畳み込み済み。
      HB.__tenkenBranch32 が文字列を返せばそれが結果、null なら下の本体を走らせる。
@@ -3230,7 +3238,7 @@ function alignSvg(P, sc){
    段の実体は各ブロックに登録として残す（blk07 は HB.__peStage07、blk14 は IIFE 局所 hgList を使うため HB.__peStage14）。登録が無い読み込み途中は本体だけが走り、元の連鎖の段階と一致する。段が例外を投げれば伝播する点も元のまま。 */
 function planExtras(P, sc){
   let h = roomLabelsSvg(P, "tint");
-  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + dimOverlay(P, sc) + (window.__hide369 ? "" : (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + ltSvg(P, sc)) + selBlinkSvg(P) + alignSvg(P, sc);   /* CAD-369：物を隠すモードでは設備と照明を描かない */
+  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + dimOverlay(P, sc) + (window.__hide369 ? "" : (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + stairBelowSvg578(P) + ltSvg(P, sc)) + selBlinkSvg(P) + alignSvg(P, sc);   /* CAD-369：物を隠すモードでは設備と照明を描かない */
   (S.parts2D || []).forEach((q, i) => {
     const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]), m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
     const isSel = sel && sel.t === "p" && sel.i === i;
