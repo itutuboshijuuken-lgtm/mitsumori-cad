@@ -780,7 +780,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="card" id="cutBox368"><div id="cutList368"></div></div>
       <div class="card" id="pcBox377"><div id="pcList377"></div></div>
     <div id="fxBar" hidden></div>
-    <div class="row"><button class="btn" id="rotL" type="button">↺ 回す</button><button class="btn" id="rotR" type="button">回す ↻</button></div>
+    <div class="row"><button class="btn" id="rotL" type="button">↺ 左へ回す</button><button class="btn" id="rotR" type="button">右へ回す ↻</button></div>
     <p class="hint">完成イメージ（概略）です。サッシは「仕様」で指定した壁に均等配置しています。</p>
     <div class="mrow" id="fxMenu" style="margin-top:8px"></div>
     <p class="hint" id="fxHint"></p>
@@ -6202,10 +6202,14 @@ function crossOf(r){ const e = roomFinOf(r) || {}, w = e.w || S.rfWall || "none"
 // 壁のこの点（見える側）の部屋が、壁クロスか
 function crossWallAtPt(x, y){ const r = roomAt(x, y); return r ? crossOf(r).wall : crossWallOn(); }
 function crossWallOn(){ const sr = selRoom(); return sr ? crossOf(sr).wall : (S.rfWall !== "none" && (S.rfWallMat || "cloth") === "cloth"); }
+/* CAD-577（翔伍の実機動画の指摘 2026-11-23）：工事種別（クロス）を選んでいると、対象の全部屋が
+   selBlink（2.4秒周期）で黄色く点滅し、間取り全体が光って見えた。本人の確定ルール「画面全体・
+   面全体を光らせるな。光るのは触る場所・対象の物だけ」に反するため、範囲の塗りと印は
+   点滅させず静かに出す形に変えた（色・濃さ・範囲の判定は従来どおり）。 */
 function tradeLayer(P, sc){
   const tr = HB.__trade; if (!tr || !HB.__pageM) return "";
-  const glow = c => `<circle class="selBlink" cx="${c[0]}" cy="${c[1]}" r="32" fill="#FFD400" fill-opacity=".22" stroke="#E0A800" stroke-width="1.8" stroke-dasharray="4 3" pointer-events="none"/>`;
-  const wallLine = (a, c, w2) => `<line class="selBlink" x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FFD400" stroke-opacity=".75" stroke-width="${w2}" stroke-dasharray="6 4" pointer-events="none"/>`;
+  const glow = c => `<circle cx="${c[0]}" cy="${c[1]}" r="32" fill="#FFD400" fill-opacity=".22" stroke="#E0A800" stroke-width="1.8" stroke-dasharray="4 3" pointer-events="none"/>`;
+  const wallLine = (a, c, w2) => `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FFD400" stroke-opacity=".75" stroke-width="${w2}" stroke-dasharray="6 4" pointer-events="none"/>`;
   let g = `<rect x="-20000" y="-20000" width="60000" height="60000" fill="#fff" fill-opacity=".55" pointer-events="none"/>`;
   if (tr === "elec"){
     (S.lights || []).forEach(l => { g += glow(P([l.x, l.y])); });
@@ -6219,7 +6223,7 @@ function tradeLayer(P, sc){
       const rows = {}; r.cells.forEach(k => { const i = k % R.NX, j = (k - i) / R.NX; (rows[j] = rows[j] || []).push(i); });
       let fills = "";
       Object.keys(rows).forEach(j => { const is = rows[j].sort((a, b) => a - b); let a0 = is[0], pv = is[0]; const fl = (i0, i1) => { const A = P([R.b.x0 + i0 * R.st, R.b.y0 + (+j) * R.st]), Z = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (+j + 1) * R.st]); fills += `<rect x="${Math.min(A[0], Z[0])}" y="${Math.min(A[1], Z[1])}" width="${Math.abs(Z[0] - A[0]) + 0.6}" height="${Math.abs(Z[1] - A[1]) + 0.6}"/>`; }; for (let q = 1; q < is.length; q++){ if (is[q] !== pv + 1){ fl(a0, pv); a0 = is[q]; } pv = is[q]; } fl(a0, pv); });
-      g += `<g class="selBlink" fill="#FFD400" fill-opacity=".3" pointer-events="none">${fills}</g>`;
+      g += `<g fill="#FFD400" fill-opacity=".3" pointer-events="none">${fills}</g>`;
     });
     const pol = pts(), segOf = k => k < 100 ? [pol[k], pol[(k + 1) % pol.length]] : (S.parts2D && S.parts2D[k - 100] ? [[S.parts2D[k - 100].x1, S.parts2D[k - 100].y1], [S.parts2D[k - 100].x2, S.parts2D[k - 100].y2]] : null);
     (S.fx || []).forEach(f => { if (f.k !== "accent") return; const sg = segOf(f.w); if (sg) g += wallLine(P(sg[0]), P(sg[1]), 10); });
@@ -40596,3 +40600,36 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
    ※③室内図の #fxBar にも同じ形のボタン（fxStep・OK・✕）があるが、15件目の指摘は②間取りの
      パネルのため今回は対象外（同じ手当てが要るかは翔伍の判断待ちとして申し送りに明記）。
    黄色ガイド・点滅は使っていない。チュートリアルには触っていない ===== -->
+
+<style id="cad577Sty">
+/* CAD-577: ⑤完成図の操作バー（#ctl530）の並び替え（翔伍の実機指示、2026-11-23 18:50）。
+   「向き」スティック（#joyR532）をバーの右端へ移し、並びを
+   歩く（#joy525）→ 置く物（#put529）→ 表示切替（#tgl568）→ 向き（#joyR532）にする。
+   flex の order だけで並びを変える（DOM・イベント・スティックの動作は無変更）。
+   #tgl568 の margin-left:auto は従来どおり効くので、表示切替と向きが右側に寄る。
+   バーの高さ・#h3d の大きさは変えない。 */
+#ctl530 #joy525{order:1}
+#ctl530 #put529{order:2}
+#ctl530 #tgl568{order:3}
+#ctl530 #joyR532{order:4}
+</style>
+
+<!-- ===== CAD-577：初めての人レビュー16件目＋翔伍の実機指示（2026-11-23 18:50）への対応。
+   (1) レビュー16件目「⑤完成図の『回す』ボタンが左右とも同じ文字で、どっち回しか分からない」：
+       実測（CAD-576・390×844・練習の家）：ボタン自体（#rotL／#rotR）は CAD-568 の操作バー化
+       後も残っている。字モードでは「↺ 回す」「回す ↻」で矢印だけが違い、絵モード（初期表示）では
+       CAD-499 の決まりで矢印字が落ち、両方とも同じ mawasu の絵＋「回す」だけになり、完全に見分けが
+       つかなかった。対応（表示の文字だけ）：#rotL を「↺ 左へ回す」、#rotR を「右へ回す ↻」に変更。
+       絵モードでは矢印字が落ちて「左へ回す」「右へ回す」が絵の横に出る。回転の動作
+       （rotL=+3／rotR=+1、長押し回転・速さ・カメラ）は無変更。
+   (2) 翔伍の実機指示「『向き』スティックをバーの右端へ（最初のほうが操作しやすかった）」：
+       上の cad577Sty で flex の order を指定し、並びを 歩く→置く物→表示切替→向き（右端）にした。
+       DOM の移動はしていないので、スティックの登録済みイベント・なぞり／長押しの動作は従来どおり。
+       バーの高さ・#h3d の大きさ・トレイ（バーの上に開く）も無変更。
+   (3) 翔伍の実機動画の指摘（2026-11-23 18:56）「②間取りでチェックを開くと間取り全体が黄色く点滅」：
+       原因はチェック自体ではなく、工事種別の範囲表示（tradeLayer）。「クロス」を選んだ状態が
+       localStorage（rcad_trade）に残っていると、②間取りの描画で対象の全部屋が #FFD400 の
+       塗り＋selBlink（2.4秒周期）で点滅し、全部屋が対象の家では間取り全体が黄色く光って見えた
+       （実データ相当の状態で再現して確認）。対応：tradeLayer の塗り・丸・線から selBlink を外し、
+       範囲は点滅させず静かに示す形にした。チェックの検出・件数・赤丸の印は無変更。
+   見積・保存キーは無変更 ===== -->
