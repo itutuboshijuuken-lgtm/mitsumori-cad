@@ -4347,6 +4347,28 @@ function tidyPlanLabels(){
     else { const b374 = t.__tidyBase374; if (b374) t.setAttribute("transform", b374); else t.removeAttribute("transform"); }
   });
   const inv = root.inverse(), items = [], grp342 = new Map();
+  /* CAD-560：寸法ピル（rect＋その中に入った白文字）は、rect ごと1つの材料にする。
+     これまではピルの文字だけが衝突判定の対象で、rect は判定の外にあり元の位置に残るため、
+     文字同士が離れても rect が部屋名の上に被り続けていた（初めての人レビュー4件目：
+     間仕切りを選ぶと両側の距離ピルが部屋の真ん中の部屋名に重なる）。
+     判定は「直前の rect の箱の中に文字の中心が入り、rect がチップの大きさの時」だけ。
+     大きな面の rect（床など）は対象にしない。値そのものは一切変えない（動くのは表示位置だけ）。 */
+  const pillOf560 = t => {
+    const r = t.previousElementSibling;
+    if (!r || r.tagName !== "rect") return null;
+    /* CAD-374 と同じ流儀：tidy が触る前の transform を控え、かけ直しでは基へ戻してから測る */
+    if (r.__tidyBase374 === undefined) r.__tidyBase374 = r.getAttribute("transform") || "";
+    else { const pb = r.__tidyBase374; if (pb) r.setAttribute("transform", pb); else r.removeAttribute("transform"); }
+    let rb, tb, rm, tm2;
+    try { rb = r.getBBox(); tb = t.getBBox(); rm = r.getScreenCTM(); tm2 = t.getScreenCTM(); } catch(e){ return null; }
+    if (!rb || !tb || !rb.width || !rb.height || !rm || !tm2) return null;
+    const mm = inv.multiply(rm), mt = inv.multiply(tm2);
+    const conv = (bb, m) => { const ps = [[bb.x, bb.y], [bb.x + bb.width, bb.y], [bb.x, bb.y + bb.height], [bb.x + bb.width, bb.y + bb.height]].map(([x, y]) => [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f]); const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]); return {x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)}; };
+    const R = conv(rb, mm), T = conv(tb, mt), cx = (T.x0 + T.x1) / 2, cy = (T.y0 + T.y1) / 2;
+    if (cx < R.x0 - 1 || cx > R.x1 + 1 || cy < R.y0 - 1 || cy > R.y1 + 1) return null;
+    if (R.x1 - R.x0 > 130 || R.y1 - R.y0 > 70) return null;
+    return {el: r, m: mm, box: R};
+  };
   texts.forEach(t => {
     let bb; try { bb = t.getBBox(); } catch(e){ return; }
     const ctm = t.getScreenCTM(); if (!bb || !bb.width || !bb.height || !ctm) return;
@@ -4355,9 +4377,12 @@ function tidyPlanLabels(){
     const xs = ps.map(q => q[0]), ys = ps.map(q => q[1]);
     /* CAD-342：部屋ラベル（名前＋㎡＋バッジ）は組で1つの材料にする（個別に動くと組が離れるため） */
     const rec = {t, m, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys)};
+    /* CAD-560：ピルは rect と文字の合わさった箱で判定する */
+    const pill560 = pillOf560(t);
+    if (pill560){ rec.pill = pill560; rec.x0 = Math.min(rec.x0, pill560.box.x0); rec.x1 = Math.max(rec.x1, pill560.box.x1); rec.y0 = Math.min(rec.y0, pill560.box.y0); rec.y1 = Math.max(rec.y1, pill560.box.y1); }
     const gEl = t.closest ? t.closest("g[data-lbl310]") : null, key = gEl || t;
-    if (grp342.has(key)){ const o = grp342.get(key); o.mem.push(rec); o.x0 = Math.min(o.x0, rec.x0); o.x1 = Math.max(o.x1, rec.x1); o.y0 = Math.min(o.y0, rec.y0); o.y1 = Math.max(o.y1, rec.y1); o.fs = Math.max(o.fs, parseFloat(t.style.fontSize) || 8); }
-    else { const o = {t, m, mem: [rec], fixed: [...(t.parentNode ? t.parentNode.children : [])].some(c => c.tagName === "rect"), x0: rec.x0, x1: rec.x1, y0: rec.y0, y1: rec.y1, fs: parseFloat(t.style.fontSize) || 8}; grp342.set(key, o); items.push(o); }
+    if (grp342.has(key)){ const o = grp342.get(key); o.mem.push(rec); o.x0 = Math.min(o.x0, rec.x0); o.x1 = Math.max(o.x1, rec.x1); o.y0 = Math.min(o.y0, rec.y0); o.y1 = Math.max(o.y1, rec.y1); o.fs = Math.max(o.fs, parseFloat(t.style.fontSize) || 8); o.pill = o.pill || !!rec.pill; }
+    else { const o = {t, m, mem: [rec], fixed: [...(t.parentNode ? t.parentNode.children : [])].some(c => c.tagName === "rect"), x0: rec.x0, x1: rec.x1, y0: rec.y0, y1: rec.y1, fs: parseFloat(t.style.fontSize) || 8, pill: !!rec.pill}; grp342.set(key, o); items.push(o); }
   });
   items.sort((a, b) => b.fs - a.fs);
   // 太い線（壁・間仕切り）も避ける：文字が線の上に乗ったり、線に貫かれたりしないように
@@ -4396,8 +4421,11 @@ function tidyPlanLabels(){
       const ox = (A.w + B.w) / 2 + PAD342 - Math.abs(dx), oy = (A.h + B.h) / 2 + PAD342 - Math.abs(dy);
       if (ox <= 0 || oy <= 0) continue;
       hitAny = true;
-      if (ox < oy){ const sg = dx >= 0 ? 1 : -1; A.cx -= sg * ox / 2; B.cx += sg * ox / 2; }
-      else { const sg = dy >= 0 ? 1 : -1; A.cy -= sg * oy / 2; B.cy += sg * oy / 2; }
+      /* CAD-560：ピル（逃がせるチップ）と他の文字が当たる時は、ピル側が全部動いて
+         相手（部屋名など）は元の位置に残す。ピル同士・通常同士は従来通り半分ずつ。 */
+      const wA560 = A.pill && !B.pill ? 1 : (B.pill && !A.pill ? 0 : 0.5), wB560 = 1 - wA560;
+      if (ox < oy){ const sg = dx >= 0 ? 1 : -1; A.cx -= sg * ox * wA560; B.cx += sg * ox * wB560; }
+      else { const sg = dy >= 0 ? 1 : -1; A.cy -= sg * oy * wA560; B.cy += sg * oy * wB560; }
     }
     return hitAny;
   };
@@ -4458,6 +4486,8 @@ function tidyPlanLabels(){
       const lx = (m.d * dx - m.c * dy) / det, ly = (-m.b * dx + m.a * dy) / det;
       if (rec.t.__tidyBase374 === undefined) rec.t.__tidyBase374 = rec.t.getAttribute("transform") || "";   /* CAD-374：tidy が触る前の transform を控える */
       rec.t.setAttribute("transform", rec.t.__tidyBase374 + ` translate(${lx} ${ly})`);
+      /* CAD-560：ピルの rect も同じずれを付ける（文字だけ動くとチップが割れて見える） */
+      if (rec.pill){ const pm = rec.pill.m, pdet = pm.a * pm.d - pm.b * pm.c; if (Math.abs(pdet) > 1e-9){ const pel = rec.pill.el, plx = (pm.d * dx - pm.c * dy) / pdet, ply = (-pm.b * dx + pm.a * dy) / pdet; if (pel.__tidyBase374 === undefined) pel.__tidyBase374 = pel.getAttribute("transform") || ""; pel.setAttribute("transform", pel.__tidyBase374 + ` translate(${plx} ${ply})`); } }
     });
     it.x0 += dx; it.x1 += dx; it.y0 += dy; it.y1 += dy;
     if (Math.hypot(dx, dy) >= 18){
