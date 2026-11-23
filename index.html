@@ -6210,7 +6210,7 @@ function tradeLayer(P, sc){
   const tr = HB.__trade; if (!tr || !HB.__pageM) return "";
   const glow = c => `<circle cx="${c[0]}" cy="${c[1]}" r="32" fill="#FFD400" fill-opacity=".22" stroke="#E0A800" stroke-width="1.8" stroke-dasharray="4 3" pointer-events="none"/>`;
   const wallLine = (a, c, w2) => `<line x1="${a[0]}" y1="${a[1]}" x2="${c[0]}" y2="${c[1]}" stroke="#FFD400" stroke-opacity=".75" stroke-width="${w2}" stroke-dasharray="6 4" pointer-events="none"/>`;
-  let g = `<rect x="-20000" y="-20000" width="60000" height="60000" fill="#fff" fill-opacity=".55" pointer-events="none"/>`;
+  let g = tr === "cross" ? "" : `<rect x="-20000" y="-20000" width="60000" height="60000" fill="#fff" fill-opacity=".55" pointer-events="none"/>`; /* CAD-578: クロスでは白いかぶせも部屋の黄色塗りも出さない */
   if (tr === "elec"){
     (S.lights || []).forEach(l => { g += glow(P([l.x, l.y])); });
     g += ltSvg(P, sc).replace(/<text[\s\S]*?<\/text>/g, "");
@@ -6223,7 +6223,7 @@ function tradeLayer(P, sc){
       const rows = {}; r.cells.forEach(k => { const i = k % R.NX, j = (k - i) / R.NX; (rows[j] = rows[j] || []).push(i); });
       let fills = "";
       Object.keys(rows).forEach(j => { const is = rows[j].sort((a, b) => a - b); let a0 = is[0], pv = is[0]; const fl = (i0, i1) => { const A = P([R.b.x0 + i0 * R.st, R.b.y0 + (+j) * R.st]), Z = P([R.b.x0 + (i1 + 1) * R.st, R.b.y0 + (+j + 1) * R.st]); fills += `<rect x="${Math.min(A[0], Z[0])}" y="${Math.min(A[1], Z[1])}" width="${Math.abs(Z[0] - A[0]) + 0.6}" height="${Math.abs(Z[1] - A[1]) + 0.6}"/>`; }; for (let q = 1; q < is.length; q++){ if (is[q] !== pv + 1){ fl(a0, pv); a0 = is[q]; } pv = is[q]; } fl(a0, pv); });
-      g += `<g fill="#FFD400" fill-opacity=".3" pointer-events="none">${fills}</g>`;
+      /* CAD-578: 部屋ぜんぶの黄色塗りは出さない（対象の部屋は下のカードの一覧で見る）。fills は計算のみ */
     });
     const pol = pts(), segOf = k => k < 100 ? [pol[k], pol[(k + 1) % pol.length]] : (S.parts2D && S.parts2D[k - 100] ? [[S.parts2D[k - 100].x1, S.parts2D[k - 100].y1], [S.parts2D[k - 100].x2, S.parts2D[k - 100].y2]] : null);
     (S.fx || []).forEach(f => { if (f.k !== "accent") return; const sg = segOf(f.w); if (sg) g += wallLine(P(sg[0]), P(sg[1]), 10); });
