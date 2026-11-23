@@ -37527,7 +37527,7 @@ body.zo472 #sbSt,body.zo472 #gkN208{display:none!important}
 #chk473.ok473{color:#1b7a3d;border-color:#9fd3b0}
 </style>
 <script id="chk473js">
-/* CAD-473：「チェック」を上の列（置いた物のボタンがあった所）へ。押すと今まで通りチェックの一覧を出す */
+/* CAD-473：「チェック」を上の列（置いた物のボタンがあった所）へ。押すと今まで通りチェックの一覧を出す。CAD-557：表示を「✔ チェック N」に変更（初めての人に何のボタンか分かる様に。変えたのは表示の文字だけで、チェック処理・件数の数え方・遷移先は不変） */
 (function(){
   "use strict";
   function sync(){
@@ -37538,7 +37538,7 @@ body.zo472 #sbSt,body.zo472 #gkN208{display:none!important}
         b.onclick = function(){ var c = document.querySelector('#chips434 [data-w="check"]'); if (c) c.click(); else toast("チェックは間取りの画面で使えます"); };
         lb.parentNode.insertBefore(b, lb); }
       var c = document.querySelector('#chips434 [data-w="check"]'), t = c ? c.textContent.replace(/\s+/g, " ").trim() : "✔ チェック";
-      var m = t.match(/(\d+)\s*$/), want = m ? "✔ " + m[1] : "✔";
+      var m = t.match(/(\d+)\s*$/), want = m ? "✔ チェック " + m[1] : "✔ チェック";
       if (b.textContent !== want) b.textContent = want;
       b.classList.toggle("ok473", !m);
       b.style.display = c ? "" : "none";
@@ -39689,4 +39689,9 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
 #oak556 { padding-bottom:max(3px,env(safe-area-inset-bottom)) !important; }
 #oak556 button { min-width:44px; min-height:64px; }
 @media print { #oak556, #roofView556, .roomTools556 {display:none !important;} }
+</style>
+<style id="chk557css">
+/* CAD-557：チェックボタンの表示を「✔ チェック N」に広げたので、幅は文字に合わせる。
+   #planBar button の固定幅（31px、min-width 44px）のままだと文字が切れるため、このボタンだけ幅を自動にする */
+#planBar #chk473{width:auto}
 </style>
