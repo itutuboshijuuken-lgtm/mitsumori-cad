@@ -39859,3 +39859,92 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
   [700, 1800, 3200].forEach(function(ms){ setTimeout(restore, ms); });
 })();
 </script>
+<style id="winblink563css">
+/* ===== CAD-563：窓を選んだ時、窓の本体（枠・ガラスの線）も CAD-551 と同じ水色↔白の交互点滅にする =====
+   実測（probe563・土台 CAD-562）：窓を置いた直後、点滅するのは開口の帯（太さ6の線）だけで、
+   窓の本体（枠 #1F5560・ガラスの線 #3A8FA3・別描き方の枠 #0F766E）は静止したままだった
+   （CAD-552 でドアの本体は点滅に含めたが、窓の本体は色が違うため対象外になっていた）。
+   置いた窓がどの壁に入ったか、図面を見ても気づきにくい一因。
+   直し：選択中の建具グループ（帯が選択色 #FF00C8 のグループ）の中では、窓の本体の線も
+   selBlue551（水色 #00B0F0 ↔ 白・0.8秒）で点滅させる。色づくのは窓の線だけ、形・太さは不変。
+   ドアの線（#3E4A57 等）は色が違うため対象に入らない。描画コード・見積・保存は無変更。 */
+#plan g[data-op]:has(> line[stroke="#FF00C8"]) :is([stroke="#0F766E"],[stroke="#1F5560"],[stroke="#3A8FA3"]){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+</style>
+<script id="winfeed563js">
+/* ===== CAD-563：窓を置いた直後に「どの壁に入ったか」を知らせる＋狙った壁が満杯の時は別の壁へ黙って移さない
+   （初めての人レビューの直しキュー8件目。レビュー実測「窓を上の壁のつもりでタップしたら、右の壁に入っていた。
+   置いた直後の画面では位置に気づきにくい」）
+   診断（probe563-diag／probe563-cases／probe563-cases2、土台 CAD-562、レビューの家で実タップ実測）：
+   1. 吸着側：addStdOpening は、狙った壁（タップに一番近い壁）に空きが無いと、距離順に別の壁を探して
+      黙ってそちらへ置く（従来の fallback）。実測：上の壁を満杯にして壁のすぐ外（上へ約15px）をタップ
+      → 左の壁（pos 3770）に入った。本人への知らせはゼロ。撤去する壁をタップした時も同じ経路で別の壁へ移る。
+   2. 角の近く：壁の選びは一番近い線分までの距離だけ（nearestHost）。実測：上の壁から100mm・右の壁から
+      63mm の角寄りのタップ → 右の壁に入った（距離では右が近いので幾何的には曖昧。だからこそ置いた直後に
+      どの壁かを知らせる必要がある）。
+   3. 表示側：置いた直後の知らせは選択バーの「N番 腰窓 … 壁の端から○○」だけで、どの壁かは書かれていない。
+      新築ではトーストも出ない。点滅は開口の帯だけで窓の本体は静止（別ブロック winblink563css で対応）。
+   直し（この末尾ブロックだけ。窓の大きさ・本数・見積・保存データは無変更）：
+   A. addStdOpening を包み、実タップ（HB.__putAt）の時だけ、置く前に狙った壁を控える。置けた建具の
+      host が狙った壁と違っていたら、その建具を取り除いて保存し直し、「○○にはもう入らないため、
+      置きませんでした」と知らせる（撤去壁の時は従来文言「撤去する壁には置けません」）。
+      狙った壁が満杯なら、別の壁へ黙って置くより、置かずに知らせる方が「そうならない」。
+      状態確認のモーダルが出ている時（リフォーム等）は取り除かず、モーダルの案内文に
+      「狙った壁には入らなかったため、○○に入っています」と書き足す（モーダルの流れを優先）。
+   B. 窓（typeOf が "win"）が狙った壁に入った時は「腰窓を右の壁に入れました」の様に、
+      入った壁の名前をトーストで出す。壁の名前は host の線分の位置から決める
+      （外壁＝上の壁・右の壁・下の壁・左の壁、間仕切り＝「間仕切り」）。
+   チュートリアル中は A・B ともしない（従来の案内と配置判定を優先する）。 */
+(function(){ "use strict";
+  if (window.__winfeed563) return; window.__winfeed563 = true;
+  function tut(){ try { return (typeof HB !== "undefined" && HB.__nbtut) || document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+  function wallName(h){
+    try {
+      if (!h) return "壁";
+      if (h.t === "p") return "間仕切り";
+      const seg = hostSeg(h); if (!seg) return "壁";
+      const bb = bbox(), cx = (bb.x0 + bb.x1) / 2, cy = (bb.y0 + bb.y1) / 2;
+      const mx = (seg[0][0] + seg[1][0]) / 2, my = (seg[0][1] + seg[1][1]) / 2;
+      if (Math.abs(seg[1][0] - seg[0][0]) >= Math.abs(seg[1][1] - seg[0][1])) return my < cy ? "上の壁" : "下の壁";
+      return mx < cx ? "左の壁" : "右の壁";
+    } catch(e){ return "壁"; }
+  }
+  const orig = window.addStdOpening;
+  if (typeof orig !== "function" || orig.__winfeed563) return;
+  const w = function(ty){
+    const putAt = (typeof HB !== "undefined" && HB.__putAt) ? HB.__putAt : null;
+    let intended = null;
+    try { if (putAt && typeof nearestHost === "function") intended = nearestHost(putAt); } catch(e){}
+    const n0 = (typeof S !== "undefined" && S.sashes) ? S.sashes.length : 0;
+    const r = orig.apply(this, arguments);
+    try {
+      if (tut()) return r;
+      if (typeof S === "undefined" || !S.sashes || S.sashes.length <= n0) return r;
+      const sa = S.sashes[S.sashes.length - 1];
+      if (!sa || !sa.host) return r;
+      const modalEl = document.getElementById("modal");
+      const modalOpen = !!(modalEl && !modalEl.hidden);
+      const mismatch = !!(intended && intended.h && (sa.host.t !== intended.h.t || sa.host.i !== intended.h.i));
+      if (mismatch && modalOpen){
+        /* 状態確認のモーダルが出ている時は取り除かない。代わりにモーダルの案内文へ書き足す */
+        try {
+          const hint = document.querySelector("#mbox .hint");
+          if (hint && !hint.__w563) { hint.__w563 = 1; hint.textContent += "（狙った壁には入らなかったため、" + wallName(sa.host) + "に入っています。違えば、閉じてから消してください）"; }
+        } catch(e){}
+        return r;
+      }
+      if (mismatch){
+        const rem = (typeof hgRemHost === "function") && hgRemHost(intended.h);
+        S.sashes.splice(S.sashes.length - 1, 1);
+        try { sel = null; } catch(e){}
+        save(); drawPlan();
+        toast(rem ? "撤去する壁には置けません" : wallName(intended.h) + "にはもう入らないため、置きませんでした");
+        return r;
+      }
+      if (!modalOpen && typeof typeOf === "function" && typeOf(sa) === "win") toast(sa.cat + "を" + wallName(sa.host) + "に入れました");
+    } catch(e){}
+    return r;
+  };
+  w.__winfeed563 = true;
+  window.addStdOpening = w;
+})();
+</script>
