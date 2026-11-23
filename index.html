@@ -541,7 +541,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
     <div id="slot2"><div id="planWrap">
-    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><button class="btn sub" id="zUndoBtn" type="button" title="1つ戻す" disabled>↶<small>戻す</small></button><button class="btn sub" id="zRedoBtn" type="button" title="1つ進める" disabled>↷<small>進める</small></button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
+    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-label="壁を消す" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><button class="btn sub" id="zUndoBtn" type="button" title="1つ戻す" disabled>↶<small>戻す</small></button><button class="btn sub" id="zRedoBtn" type="button" title="1つ進める" disabled>↷<small>進める</small></button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
       <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
@@ -4557,6 +4557,21 @@ function drawToolTabs(){
       };
       sub.appendChild(b);
     });
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = "toolPanelClose";
+    close.textContent = "× 閉じる";
+    close.onclick = () => {
+      window.grp136 = null;
+      toolOpen = null;
+      HB.__put = null;
+      HB.__sashAct = null;
+      HB.__ltAct = null;
+      ltTool = null;
+      drawToolsUI();
+      drawPlan();
+    };
+    sub.appendChild(close);
   } else sub.hidden = true;
   $("partCh").hidden = toolOpen !== "part";
   $("toolCh").hidden = !(toolOpen === "door" || toolOpen === "win" || toolOpen === "gen");
@@ -22317,13 +22332,13 @@ setInterval(gkSync208, 600);
     var bar = $219("fxBranch219"); if (!bar) return;
     var eff = effBranch219();
     var btn = function(mode, label){ return "<button type=\"button\" data-br219=\"" + mode + "\" aria-pressed=\"" + String(state.brMode === mode) + "\">" + label + "</button>"; };
-    var h = "<div class=\"fbRow\">" + btn("place", "この部屋でよく使う") + btn("elec", "電気") + btn("setsubi", "設備") + btn("all", "全部");
+    var h = "<div class=\"fbRow\">" + btn("place", "よく使う") + btn("elec", "電気") + btn("setsubi", "設備") + btn("all", "全部");
     if (eff.key === "elec") BR219.elec.slots.forEach(function(s){ h += "<button type=\"button\" data-slot220=\"panel\">" + s + "</button>"; });   /* CAD-220：分電盤の場所を本物にした（押すと分電盤を構える） */
     h += "</div>";
     h += "<p class=\"fbCap\">" + (eff.key === "all" ? "全部の項目を出しています。"
-      : eff.key === "elec" ? "電気の枝です。設備とは分かれています。"
-      : eff.key === "setsubi" ? "設備の枝です。電気とは分かれています。"
-      : "「" + eff.label + "」でよく使う物を出しています。全部の項目は「全部」から出せます。") + "</p>";
+      : eff.key === "elec" ? "電気器具を選んでください。"
+      : eff.key === "setsubi" ? "設備器具を選んでください。"
+      : "「" + eff.label + "」でよく使う器具を表示しています。") + "</p>";
     bar.innerHTML = h;
     bar.querySelectorAll("[data-br219]").forEach(function(bd){
       bd.onclick = function(){ state.brMode = bd.getAttribute("data-br219"); renderBranch219(); applyBranch219(); };
@@ -35272,7 +35287,7 @@ nav.steps{padding:1px 6px 3px}
   d.className = "fs419drawer"; d.hidden = true;
   var h = document.createElement("div"); h.className = "fs418dh";
   var b = document.createElement("b"); b.textContent = "置く物・器具";
-  var c = document.createElement("button"); c.type = "button"; c.textContent = "閉じる";
+  var c = document.createElement("button"); c.type = "button"; c.textContent = "× 閉じる";
   c.addEventListener("click", function(){ d.hidden = true; });
   h.appendChild(b); h.appendChild(c); d.appendChild(h);
   ["fxBranch219", "fxMenu", "fxHint", "fxList"].forEach(function(id){
@@ -35369,7 +35384,7 @@ nav.steps{padding:1px 6px 3px}
   d.className = "fs421drawer"; d.hidden = true;
   var h = document.createElement("div"); h.className = "fs418dh";
   var b = document.createElement("b"); b.textContent = "説明・凡例";
-  var c = document.createElement("button"); c.type = "button"; c.textContent = "閉じる";
+  var c = document.createElement("button"); c.type = "button"; c.textContent = "× 閉じる";
   c.addEventListener("click", function(){ d.hidden = true; });
   h.appendChild(b); h.appendChild(c); d.appendChild(h);
   var lg = document.getElementById("pvLegend");
@@ -38943,7 +38958,7 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   function show(){
     try {
       var st6 = document.getElementById("st6");
-      var on = !!(st6 && !st6.hidden && st6.classList.contains("fsRoom") && st6.classList.contains("fsRm"));
+      var on = !!(st6 && !st6.hidden && st6.classList.contains("fsRoom") && st6.classList.contains("fsRm") && st6.querySelector(".fs419drawer").hidden);
       b.style.display = on ? "flex" : "none";
       if (on && !drag) place(getPos());
     } catch(e){}
@@ -39949,16 +39964,100 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
 })();
 </script>
 
+<style id="walnut-work-screens">
+@media screen {
+  body {
+    --cad-paper: #f7f2e8;
+    --cad-ink: #34291f;
+    --cad-edge: #ae997b;
+    --cad-wood: linear-gradient(#291c1375,#291c138c),var(--oak556);
+  }
+  body section :is(.modeSeg,#pvSeg,#fsSeg,#pcSeg377),
+  body #st4 .seg, body #st6 #roomBar {
+    background-color:#483527;
+    background-image:var(--cad-wood);
+    background-size:auto,320px 24px;
+    padding:4px!important;
+    gap:4px;
+    border:1px solid #786149;
+    border-radius:7px;
+  }
+  body section :is(.modeSeg,#pvSeg,#fsSeg,#pcSeg377) button,
+  body #st4 .seg button, body #st6 #roomBar button,
+  body #st5 .chips button, body .fs418dh button,
+  body #st6 #fxBranch219 .fbRow button,body #st6 #fxMenu button {
+    background:var(--cad-paper)!important;
+    color:var(--cad-ink)!important;
+    border:1px solid var(--cad-edge)!important;
+    border-radius:5px;
+    min-height:44px;
+    font-weight:700;
+  }
+  body section :is(.modeSeg,#pvSeg,#fsSeg,#pcSeg377) button[aria-pressed=true],
+  body #st4 .seg button[aria-pressed=true], body #st6 #roomBar button[aria-pressed=true],
+  body #st5 .chips button[aria-pressed=true],
+  body #st6 :is(#fxBranch219,#fxMenu) button[aria-pressed=true] {
+    color:#fff8e4!important;
+    background:#57412b!important;
+    box-shadow:inset 0 0 0 2px #d9b574;
+  }
+  body #st6 #roomBar {scroll-padding-inline:5px;scroll-snap-type:x proximity}
+  body #st6 #roomBar button {scroll-snap-align:start; padding-inline:12px}
+  body #st6.fsRoom .fs419drawer,body section :is(.fs418drawer,.fs421drawer) {
+    color:var(--cad-ink);background:#f3ecdf;border:1px solid #94795b;
+    border-radius:10px 10px 0 0;padding:0 8px max(10px,env(safe-area-inset-bottom));
+    box-sizing:border-box;overscroll-behavior:contain;
+  }
+  body #st6.fsRoom .fs419drawer {max-height:57%}
+  body section :is(.fs419drawer,.fs418drawer,.fs421drawer) .fs418dh {
+    position:sticky;top:0;z-index:2;
+    margin:0 -8px 8px;padding:5px 8px 5px 12px;gap:8px;
+    color:#fff5df;background-color:#493525;background-image:var(--cad-wood);
+    background-size:auto,320px 24px;border-bottom:1px solid #ae9066;
+  }
+  body section .fs418dh b {font-size:16px}
+  body section .fs418dh button {min-height:44px;padding:0 12px}
+  body #st6 #fxBranch219 .fbRow {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  body #st6 #fxBranch219 .fbRow button {min-width:0;padding:3px;font-size:13px}
+  body #st6 #fxBranch219 .fbRow [data-slot220] {grid-column:span 2}
+  body #st6 #fxBranch219 [data-br219] .row325 {gap:3px}
+  body #st6 #fxBranch219 [data-br219] img {width:20px;height:20px;object-fit:contain}
+  body #st6 #fxMenu.mrow {grid-template-columns:repeat(auto-fit,minmax(min(100%,136px),1fr))!important;gap:6px}
+  body #st6 #fxMenu button {
+    min-width:0;min-height:58px;padding:6px 8px;text-align:left;font-size:14px;
+    line-height:1.3;white-space:normal;overflow-wrap:anywhere;text-overflow:clip;
+  }
+  body #st6 #fxMenu button.btn325i .tx325 {display:none}
+  body #st6 #fxMenu button.btn325i .row325 {
+    position:static;display:grid;grid-template-columns:36px minmax(0,1fr);
+    gap:6px;align-items:center;overflow:visible;
+  }
+  body #st6 #fxMenu button.btn325i img.ic325 {width:36px;height:40px;max-width:100%;object-fit:contain;transform:none!important}
+  body #st6 #fxMenu button.btn325i .lb325 {display:block;white-space:normal;line-height:1.3;font-size:14px}
+  body #fab523 {color:#fff5df;background:#443023 var(--oak556) center/300px 24px;border:2px solid #d4b480}
+  body:has(#st6 .fs419drawer:not([hidden])) #fab523 {display:none!important}
+  body #st5 #estTop {border-radius:8px;border:1px solid #937753;background-color:#412e21;background-image:var(--cad-wood);background-size:auto,320px 24px;color:#fff9e9}
+  body #st5 .name {border:1px solid var(--cad-edge);border-radius:5px}
+  body #st5 #estTop strong {overflow-wrap:anywhere}
+  @media(max-width:370px) {
+    body #st6 #fxBranch219 [data-br219] .row325 {flex-direction:column;gap:0}
+    body section .modeSeg .btn325i .lb325 {white-space:normal;font-size:12px}
+  }
+}
+</style>
+<style>body #stM #grpSub{padding-right:80px!important}body #stM #grpSub .toolPanelClose{position:absolute;right:6px;top:6px;width:68px;min-height:44px!important;height:44px!important;padding:0!important;font-size:13px;font-weight:700;white-space:nowrap}</style>
+
 <style id="walnut-dimension-tools">
 /* ===== CAD-564：①描く→寸法画面の製図道具（実物調の絵＋名前＋ウォールナットの道具入れ）。
    ChatGPT納品「CAD556-製図道具」（2026-11-23、翔伍の指示で最優先組み込み）の style#walnut-dimension-tools から、
    納品の組み込み指示どおり #st2 #zRow に関わるスタイルと道具画像7点（WebP・無加工）だけを移した物。
    結合ルールにあった #flSeg 分は指示の範囲外として外し、道具入れの背景に要る --cad-wood 変数
    （納品の walnut-work-screens 内の定義と同値）をこのブロック内に足した。
-   クリック処理・選択中/無効状態・階切り替え・見積・保存には一切触らない（見た目だけ）。 ===== */
+   クリック処理・選択中/無効状態・階切り替え・見積・保存には一切触らない（見た目だけ）。
+   CAD-565：残りの寸法画面分（#flSeg結合ルール・#st2背景・#planWrap・#dimStatus・#areaBox・#flBox493・#flSegボタン・.fs418bar）も納品どおり追加した。 ===== */
 @media screen {
 body{--cad-wood:linear-gradient(#291c1375,#291c138c),var(--oak556)}
-body #st2 #zRow{background-color:#493426;background-image:var(--cad-wood);background-size:auto,320px 24px;border:1px solid #806649;border-radius:6px;padding:4px;gap:3px!important;box-sizing:border-box}
+body #st2 #zRow,body #st2 #flSeg {background-color:#493426;background-image:var(--cad-wood);background-size:auto,320px 24px;border:1px solid #806649;border-radius:6px;padding:4px;gap:3px!important;box-sizing:border-box}
 body #st2 #zRow {scroll-snap-type:x proximity;flex-shrink:0;margin-bottom:4px!important}
 body #st2 #zInfo:empty {display:none}
 body #st2 #zInfo:not(:empty){color:#fff6e3!important;min-width:6em}
@@ -39983,5 +40082,26 @@ body #st2 #zRow button:is([data-go="1"],#zKaki,#zDel215,#zEra215,#zUndoBtn,#zRed
 body #st2 #zRow button:is([data-go="1"],#zKaki,#zDel215,#zEra215,#zUndoBtn,#zRedoBtn,#zFs)[aria-pressed="true"] {outline:2px solid #eed39a;outline-offset:-2px}
 body #st2 #zRow button:is([data-go="1"],#zKaki,#zDel215,#zEra215,#zUndoBtn,#zRedoBtn,#zFs)[aria-pressed="true"]::after {background:#d9bc81;color:#291e15}
 body #st2 #zRow button:is([data-go="1"],#zKaki,#zDel215,#zEra215,#zUndoBtn,#zRedoBtn,#zFs):focus-visible {outline:2px solid #f2d999;outline-offset:-2px}
+/* CAD-565：寸法画面の残り（納品 style#walnut-dimension-tools の #zRow 以外の分）を追加 */
+body #st2:not([hidden]) {background:#f4f0e8;gap:4px}
+body #st2 #planWrap>.card {border:1px solid #b7a991;border-radius:5px;background:#fffefa}
+body #st2 #dimStatus .status {margin:2px 0 0;border-radius:3px;border-inline-start:3px solid currentColor}
+body #st2 #dimStatus .ok {color:#415b41;background:#e9ede1}
+body #st2 #areaBox:not(:empty){margin:0;padding:6px 0;gap:0;border:1px solid #cbbca7;border-radius:5px;background:#fffaf0}
+body #st2 #areaBox>div {min-width:0;background:transparent;border-radius:0;padding:0 8px}
+body #st2 #areaBox>div+div {border-left:1px solid #dacebb}
+body #st2 #areaBox span {color:#645443;font-size:12px}
+body #st2 #areaBox b {color:#35291e;font-size:clamp(17px,5vw,22px);line-height:1.2}
+body #st2 #areaBox small {font-size:12px}
+body #st2 #flBox493 h2 {font-size:14px;margin:4px 0;color:#4c3b29}
+body #st2 #flSeg button {flex:1;min-height:44px;background:#f4ecdd;color:#443622;border:1px solid #baa98d;border-radius:4px}
+body #st2 #flSeg button[aria-pressed=true]{color:#fff5db;background:#58402a;box-shadow:inset 0 0 0 2px #c4a169}
+body #st2 .fs418bar button {min-height:44px;color:#fff3d7;border:1px solid #856942;border-radius:5px;background-color:#493426;background-image:var(--cad-wood);background-size:auto,320px 24px;box-shadow:inset 0 0 0 2px #523d2a,inset 0 0 0 3px #aa895b}
 }
+</style>
+<style id="cad565css">
+/* ===== CAD-565：見る人（#tradeRow）は CAD-422 で右上「⋯」メニューの中へ移してあるが、
+   見出しの文字色が元のヘッダー用の白のままで、白いメニューの中では読めなかった。
+   メニューの中では濃い文字にする（置き場所・動き・保存は無変更）。 ===== */
+.mm #tradeRow>span{color:#1c2b3a}
 </style>
