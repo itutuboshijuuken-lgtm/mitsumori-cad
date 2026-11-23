@@ -606,6 +606,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
 
     <!-- ④ 仕様 -->
   <section id="st4" hidden>
+    <h2 class="screenTitle557">工事の仕様</h2>
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div id="tradeBox"></div>
     <div class="rf">
@@ -717,10 +718,21 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
   <!-- ⑤ 見積 -->
   <section id="st5" hidden>
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
-    <div style="height:10px"></div>
+
+    <div class="est" id="estTop"></div>
+    <details class="utility557"><summary>現場名・住所</summary>
     <input class="name" id="genba" placeholder="現場名（例：田中様邸 増築）" autocomplete="off">
     <div class="row" style="margin-top:6px"><input class="name" id="addr" placeholder="現場の住所（例：〇〇市△△町1-2-3）" autocomplete="off" style="flex:3;margin:0"><button class="btn" id="mapBtn" type="button" style="flex:1">🗺 地図</button></div>
-    <div class="est" id="estTop"></div>
+    </details>
+    <div class="area" id="areaBox4"></div>
+    <div id="matWarn"></div>
+    <div id="estimateItems557" hidden>
+      <h2 class="screenTitle557">工事の内訳 <small>原価・税抜</small></h2>
+      <p class="hint">工事の見出しを押すと、数量や単価の根拠が見られます。</p>
+      <table class="mat" id="mat"></table>
+    </div>
+    <p class="hint" id="estimateNotes557" hidden>表の金額は原価（税抜）。オレンジは単価が入っていない所です。タップすると単価を入れられます。本数は定尺（3m・4m）の目安です。4mより長い所は4m材を継ぎます（通し柱だけ6m）。</p>
+    <details id="priceSettings557" class="utility557"><summary>利益率・諸経費・交通費を調整</summary>
     <h2>利益率（大工・材料）</h2>
     <div class="chips" id="mgCh"></div>
     <h2>利益率（設備機器・外注）</h2>
@@ -734,10 +746,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <p class="hint" style="margin:0 2px">元請けで受ける時の目安は5〜10%（段取り・打合せ・検査の立会い・書類の手間）。手間請けなら「なし」か3%。</p>
     <div class="chips" id="skCh"></div>
     <div id="hojo"></div>
-    <div class="area" id="areaBox4"></div>
-    <div id="matWarn"></div>
-    <div style="margin-top:10px"><table class="mat" id="mat"></table></div>
-    <p class="hint">金額はすべて原価（税抜）。オレンジは単価が入っていない所です。タップすると単価を入れられます。本数は定尺（3m・4m）の目安です。4mより長い所は4m材を継ぎます（通し柱だけ6m）。</p>
+    </details>
+    <h2 class="screenTitle557">見積書・共有</h2>
     <div class="row"><button class="btn" id="copyBtn" type="button">原価内訳</button><button class="btn pri" id="shareBtn" type="button">お客様へ送る</button></div>
     <button class="btn" id="pdfBtn" type="button" style="width:100%;margin-top:8px">📄 見積書をPDFにする</button>
     <button class="btn" id="trSendBtn" type="button" style="width:100%;margin-top:8px">📤 職人さんに図面を送る（金額なし）</button>
@@ -8118,6 +8128,8 @@ let lastText = "", custText = "";
 function meyasu427Cfg(){ try { const v = JSON.parse(localStorage.getItem("gosei-meyasu-v1") || "null"); if (v && +v.per > 0) return {per: +v.per, up: Math.max(0, +v.up || 0)}; } catch(e){} return {per: 3, up: 2}; }
 function meyasu427Txt(x){ return String(Math.round(x * 100) / 100); }
 function drawEst(){
+  $("estimateItems557").hidden = true;
+  $("estimateNotes557").hidden = true;
   $("genba").value = S.genba || ""; $("startD").value = S.startD || ""; $("addr").value = S.addr || "";
   drawKotsu();
   if (S.mode !== "pt" && (unknown() || dimErr.length)){ $("mat").innerHTML = ""; $("estTop").innerHTML = ""; $("areaBox4").innerHTML = ""; $("matWarn").innerHTML = `<div class="warn">先に②で寸法を入れてください。</div>`; return; }
@@ -8126,7 +8138,11 @@ function drawEst(){
   if (HB.__frameErr154) C.frameErr154 = true;
   const tax = Math.round(C.mitsu * 0.1);
   $("estTop").innerHTML = `<span>見積金額（税込）</span><strong>${fmt(Math.round(C.mitsu) + tax)}<small>円</small></strong>
-    <div class="g"><div>税抜<b>${fmt(Math.round(C.mitsu))}</b></div><div>原価<b>${fmt(Math.round(C.genkaReal))}</b></div><div>利益<b>${fmt(Math.round(C.mitsu - C.genkaReal))}</b></div></div><div style="font-size:11px;color:#667;margin-top:4px">※「仮」の付いた金額は全国の目安です。実際の値段とは違うことがあります。</div>`;
+    <dl class="estimateBreakdown">
+      <div><dt>見積（税抜）</dt><dd>${fmt(Math.round(C.mitsu))}<small>円</small></dd></div>
+      <div><dt>原価</dt><dd>${fmt(Math.round(C.genkaReal))}<small>円</small></dd></div>
+      <div><dt>利益</dt><dd>${fmt(Math.round(C.mitsu - C.genkaReal))}<small>円</small></dd></div>
+    </dl><p class="estimateNote">「仮」の単価は全国の目安です。</p>`;
   const SK = [0, 3, 5, 8, 10];
   $("skCh").innerHTML = SK.map(v => `<button data-v="${v}" aria-pressed="${S.shokei.mode === "pct" && S.shokei.v === v}" type="button">${v ? v + "%" : "なし"}</button>`).join("") + `<button data-v="fix" aria-pressed="${S.shokei.mode === "fix"}" type="button">${S.shokei.mode === "fix" ? fmt(S.shokei.v) + "円" : "1式で入れる"}</button>`;
   $("skCh").querySelectorAll("button").forEach(b => b.onclick = () => { if (b.dataset.v === "fix") openPad({title: "諸経費（1式）", unit: "円", value: S.shokei.mode === "fix" ? S.shokei.v : "", done: v => { S.shokei = {mode: "fix", v: v || 0}; save(); drawEst(); }}); else { S.shokei = {mode: "pct", v: +b.dataset.v}; save(); drawEst(); } });
@@ -8179,7 +8195,9 @@ function drawEst(){
   });
   html += subRow() + `<tr class="sum"><td>原価合計</td><td class="cost">${fmt(Math.round(C.genka))}</td></tr><tr class="sum"><td>見積（税抜）利益率 ${fmt(S.margin, 1)}%・${fmt(S.marginEq ?? 15, 1)}%</td><td class="cost">${fmt(Math.round(C.mitsu))}</td></tr>`;
   $("mat").innerHTML = html;
-  $("mat").querySelectorAll("[data-row]").forEach(tr => tr.onclick = () => fixRow(C.rows[+tr.dataset.row]));
+  organizeEstimate557(C.rows);
+  $("estimateItems557").hidden = false;
+  $("estimateNotes557").hidden = false;
   const name = S.genba || "増築工事";
   lastText = `【${name}】内訳（原価）\n${C.two ? "2階建 延床" : "床"} ${fmt(C.nobeT, 2)}坪／天井高 ${fmt(S.ch)}${C.two ? "・" + fmt(S.ch2) : ""}／${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: (S.iri446 ? "入母屋" : "寄棟"), mune: "切妻（棟違い・招き）"}[S.roof]} ${fmt(S.k, 1)}寸\n柱 ${fmt(C.Lc)}／桁天 ${fmt(C.Hk)}\n\n` + C.rows.filter(r => !r.hide).map(r => r.grp ? `■${r.grp}` : `・${r.name} ${r.qty}（${r.spec}）… ${r.note ? r.note : r.miss ? "単価なし" : fmt(Math.round(r.cost)) + "円" + (r.avg ? "（仮・平均単価）" : "")}`).join("\n") + `${C.ouen && C.ouen.H > 0 ? `\n応援大工 ${fmt(C.ouen.H, 1)}人工（1日${fmt(C.ouen.wO)}円）… 原価 −${fmt(Math.round(C.ouen.diff))}円` : ""}\n\n原価合計 ${fmt(Math.round(C.genkaReal))}円\n利益率 大工・材料${fmt(S.margin, 1)}%／設備・外注${fmt(S.marginEq ?? 15, 1)}%\n見積（税抜）${fmt(Math.round(C.mitsu))}円`;
   custText = `${name} お見積り（概算）\n\n工事内容：増築${C.two ? "（2階建）" : ""} 延床 約${fmt(C.nobeT, 1)}坪（${fmt(C.nobe, 1)}㎡）\n天井高 ${fmt(S.ch)}mm／屋根 ${(S.riku412 && S.roof === "kata") ? "陸屋根（勾配5/100・パラペット）" : {kata: "片流れ", kiri: "切妻", yose: (S.iri446 ? "入母屋" : "寄棟"), mune: "切妻（棟違い・招き）"}[S.roof]}／外壁 ${{siding: "サイディング", yakisugi: "焼杉", nuri: "塗り壁"}[S.gaiheki]}${S.sashes.some(s => sState(s) !== "keep") ? `\nサッシ ${S.sashes.filter(s => sState(s) !== "keep").reduce((a, s) => a + s.n, 0)}か所` : ""}\n\n概算金額 ${fmt(Math.round(C.mitsu))}円（税抜）\n消費税 ${fmt(tax)}円\n合計 ${fmt(Math.round(C.mitsu) + tax)}円（税込）${HB.__kouteiDays ? `\n工期の目安：約${HB.__kouteiDays}日` : ""}\n\n※概算のため、現地調査後に正式なお見積りをお出しします。\n（会社名）`;
@@ -8200,6 +8218,85 @@ function drawEst(){
     const ex = `\n\n【土台と基礎の緊結方法について】\n今回は「${m}」でお見積りしています。\n・ケミカルアンカー：今の基礎に穴をあけ、薬剤で固めるボルトで土台と基礎をつなぎます。工期が短く、費用もおさえられます。\n・基礎増し打ち：今の基礎の横に新しくコンクリートを打ち足し、アンカーボルトで土台を固定します。基礎の補強にもなりますが、費用と日数がかかります。\nご契約前に、どちらにするかご相談させてください。`;
     custText = custText.replace(/\n+（会社名）$/, ex + "\n\n（会社名）");
     lastText += `\n（土台の緊結：${m}）`;
+  }
+}
+
+function organizeEstimate557(estimateRows){
+  const table = $("mat");
+  const opened = HB.__openEstimate557 ||= new Set();
+  let section;
+  const duplicateCount = new Map();
+  const names = new Set();
+
+  const finish = () => {
+    if (!section || !section.rows.length) return;
+    const {header, rows} = section;
+    const name = header.cells[0].textContent;
+    const index = (duplicateCount.get(name) || 0) + 1;
+    duplicateCount.set(name, index);
+    const key = S.mode + ":" + name + ":" + index;
+    const notice = /^(ご注意|■ \d+階)/.test(name);
+    const subtotal = rows.find(r => r.classList.contains("sum"));
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "estimateToggle557";
+    const title = document.createElement("span");
+    title.textContent = name.replace(/　原価 [\d,]+円$/, "");
+    const price = document.createElement("span");
+    if (!notice) price.textContent = (subtotal ? subtotal.cells[1].textContent : "0") + "円";
+    button.append(title, price);
+    header.cells[0].replaceChildren(button);
+    const update = (expanded) => {
+      button.setAttribute("aria-expanded", String(expanded));
+      rows.forEach(row => { row.hidden = !expanded; });
+    };
+    button.onclick = () => {
+      const expand = button.getAttribute("aria-expanded") === "false";
+      if (notice) {
+        if (expand) opened.delete(key); else opened.add(key);
+      } else {
+        if (expand) opened.add(key); else opened.delete(key);
+      }
+      update(expand);
+    };
+    update(notice ? !opened.has(key) : opened.has(key));
+    names.add(key);
+  };
+
+  for (const row of Array.from(table.rows)){
+    if (row.classList.contains("grp")){
+      finish();
+      section = {header:row, rows:[]};
+    } else if (row.classList.contains("sum") && row.cells[0].textContent !== "小計"){
+      finish();
+      section = null;
+    } else if (section) section.rows.push(row);
+
+    if (!row.hasAttribute("data-row")) continue;
+    const item = estimateRows[Number(row.dataset.row)];
+    row.onclick = () => fixRow(item);
+    // Link only when the wording identifies a specific specification tab.
+    const floor = /^(フローリング張り|床 (フローリング|フロアタイル|無垢板|CF|土間|置き床|小上がり))/.test(item.name);
+    const wall = /^壁 (塗装|珪藻土|漆喰|聚楽)/.test(item.name);
+    const ceiling = /^天井 塗装/.test(item.name);
+    if (S.mode !== "pt" && (floor || wall || ceiling)){
+      const tab = floor ? "床" : wall ? "壁" : "天井";
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "estimateSpec557";
+      edit.textContent = tab + "の仕様を確認";
+      edit.onclick = (event) => {
+        event.stopPropagation();
+        go(4);
+        HB.__selectSpecTab557?.(tab);
+        window.scrollTo(0, 0);
+      };
+      row.cells[0].append(edit);
+    }
+  }
+  finish();
+  for (const key of opened){
+    if (key.startsWith(S.mode + ":") && !names.has(key)) opened.delete(key);
   }
 }
 function fixRow(r){
@@ -25508,13 +25605,18 @@ body.gold #st4 .tabs254 button[aria-pressed="true"]{background:var(--gold);color
 <script>
 (function(){ "use strict";
   var TABS = ["床", "壁", "天井", "その他"], cur = "床";
-  var MAP = {"既存の床（いま張ってある床）": "床", "床": "床", "床の範囲": "床", "床の見切り": "床", "壁": "壁", "天井": "天井", "天井の高さ（全体）": "天井", "回り縁は新規に回しますか": "天井", "基礎": "構造・外まわり", "基礎の立ち上がり（GLから）": "構造・外まわり", "屋根の重さ": "構造・外まわり", "モジュール（柱・間柱の基準）": "構造・外まわり", "耐力壁": "構造・外まわり", "外壁": "構造・外まわり", "足場": "構造・外まわり", "構造材の積算方法": "構造・外まわり", "部材ごとの樹種": "構造・外まわり"}; /* CAD-311: zoMat258 の「構造・外まわり」タブと振り分けを一致させる（hid254 の付け外しの喧嘩＝二重表示とスクロール巻き戻しの原因を無くす） */
+  var previousMode;
+  var labels = {"床":"床","壁":"壁","天井":"天井","部屋別":"部屋別","構造・外まわり":"構造・外装","その他":"その他"};
+  var descriptions = {"床":"床の工事内容と仕上げ材を決めます。","壁":"壁の工事内容と仕上げ材を決めます。","天井":"天井の高さや仕上げ材を決めます。","部屋別":"全体と異なる仕上げや工事内容を、部屋ごとに指定できます。","構造・外まわり":"基礎・外壁・構造材を設定します。","その他":"建具や追加工事などを確認します。"};
+  HB.__selectSpecTab557 = function(tab){ cur = tab; apply(); };
+
+  var MAP = {"部屋ごとの設定":"部屋別","床の仕上げ":"床","床の仕上げ材":"床","壁の仕上げ材":"壁","左官の下地調整":"壁","天井の仕上げ材":"天井","既存の床（いま張ってある床）": "床", "床": "床", "床の範囲": "床", "床の見切り": "床", "壁": "壁", "天井": "天井", "天井の高さ（全体）": "天井", "回り縁は新規に回しますか": "天井", "基礎": "構造・外まわり", "基礎の立ち上がり（GLから）": "構造・外まわり", "屋根の重さ": "構造・外まわり", "モジュール（柱・間柱の基準）": "構造・外まわり", "耐力壁": "構造・外まわり", "外壁": "構造・外まわり", "足場": "構造・外まわり", "構造材の積算方法": "構造・外まわり", "部材ごとの樹種": "構造・外まわり"}; /* CAD-311: zoMat258 の「構造・外まわり」タブと振り分けを一致させる（hid254 の付け外しの喧嘩＝二重表示とスクロール巻き戻しの原因を無くす） */
   var TREE = "#rfWall,#rfCeil,#rfFloor,#rfCur,#rfWallMat,#rfCeilMat,#rfSakanBase,#rfMawari,#rfRooms";
   function vis(e){ return e.getClientRects().length > 0; }
   function isHdr(h){ return !h.closest("details") && !h.closest(TREE); }
   function keyOf(h){ return h.getAttribute("data-uxk") || (h.firstChild ? h.firstChild.textContent.trim() : h.textContent.trim()); }
   function groups(st){
-    var hs = [].slice.call(st.querySelectorAll("h2")).filter(function(h){ return isHdr(h) && !h.classList.contains("ux-sub") && h.classList.contains("ux-h"); });
+    var hs = [].slice.call(st.querySelectorAll("h2")).filter(function(h){ return isHdr(h) && !h.classList.contains("ux-sub") && h.classList.contains("ux-h") && !h.classList.contains("screenTitle557"); }); /* CAD-569: 画面見出し（工事の仕様）は仕様グループの見出しではないので数えない（数えると modeSeg・タブバー・説明文まで「その他」グループの項目として巻き込まれ、hid254 で消えてしまう） */
     return hs.map(function(h){ var items = [], el = h.nextElementSibling;
       while (el && (el.tagName !== "H2" || el.classList.contains("ux-sub")) && el.tagName !== "DETAILS" && !el.classList.contains("ux-n") && ![].some.call(el.querySelectorAll("h2"), isHdr)){ items.push(el); el = el.nextElementSibling; }
       return {h: h, items: items}; });
@@ -25523,10 +25625,13 @@ body.gold #st4 .tabs254 button[aria-pressed="true"]{background:var(--gold);color
     var bar = st.querySelector(":scope > .tabs254");
     if (bar) return bar;
     bar = document.createElement("div"); bar.className = "tabs254";
-    TABS.forEach(function(t){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.dataset.t254 = t; bar.appendChild(b); });
+    bar.setAttribute("aria-label", "仕様の分類");
+    TABS.concat("部屋別").forEach(function(t){ var b = document.createElement("button"); b.type = "button"; b.textContent = labels[t]; b.dataset.t254 = t; bar.appendChild(b); });
+    var hint = document.createElement("p"); hint.id = "specHint557"; hint.className = "hint";
     bar.addEventListener("click", function(e){ var b = e.target.closest("button"); if (!b) return; cur = b.dataset.t254; apply(); try { window.scrollTo({top: 0}); } catch(x){} });
     var anchor = st.querySelector(":scope > .modeSeg") || st.querySelector(".modeSeg");
     if (anchor && anchor.parentNode === st) st.insertBefore(bar, anchor.nextSibling); else st.insertBefore(bar, st.firstChild);
+    bar.after(hint);
     return bar;
   }
   function apply(){
@@ -25534,7 +25639,21 @@ body.gold #st4 .tabs254 button[aria-pressed="true"]{background:var(--gold);color
       var st = document.getElementById("st4"); if (!st || !vis(st)) return;
       st.classList.add("on254");
       var bar = ensureBar(st);
-      bar.querySelectorAll("button").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.t254 === cur)); });
+      var mode = S.mode;
+      if (mode !== previousMode){
+        if (mode === "pt") cur = "その他";
+        else if (previousMode === "pt" || (mode !== "rf" && cur === "部屋別") || (mode !== "zo" && cur === "構造・外まわり")) cur = "床";
+        previousMode = mode;
+      }
+      bar.hidden = mode === "pt";
+      var hint = document.getElementById("specHint557");
+      hint.hidden = mode === "pt";
+      if (hint.textContent !== descriptions[cur]) hint.textContent = descriptions[cur] || "";
+      bar.querySelectorAll("button").forEach(function(b){
+        var t = b.dataset.t254;
+        b.hidden = t === "部屋別" && mode !== "rf";
+        b.setAttribute("aria-pressed", String(t === cur));
+      });
       groups(st).forEach(function(g){
         var tab = MAP[keyOf(g.h)] || "その他", show = (tab === cur);
         [g.h].concat(g.items).forEach(function(e){ e.classList.toggle("hid254", !show); e.classList.remove("ux-c"); });
@@ -25796,7 +25915,7 @@ body.nbtutRun #zUndoBtn,body.nbtutRun #zRedoBtn{display:none!important}
     try{
       var st=document.getElementById("st4"), bar=st&&st.querySelector(":scope > .tabs254"); if(!st||!bar||!st.getClientRects().length) return;
       var zo=isZo(), kb=bar.querySelector('button[data-t254="'+T_KOZO+'"]');
-      if(zo&&!kb){ kb=document.createElement("button"); kb.type="button"; kb.textContent=T_KOZO; kb.dataset.t254=T_KOZO; var last=bar.lastElementChild; bar.insertBefore(kb,last); }
+      if(zo&&!kb){ kb=document.createElement("button"); kb.type="button"; kb.textContent="構造・外装"; kb.dataset.t254=T_KOZO; var last=bar.lastElementChild; bar.insertBefore(kb,last); }
       if(!zo&&kb){ var was=kb.getAttribute("aria-pressed")==="true"; kb.remove(); if(was){ var f=bar.querySelector("button"); if(f) f.click(); } }
       if(!zo){ [].forEach.call(st.querySelectorAll(".hid258"),function(e){e.classList.remove("hid258");}); return; }
       var cur=curTab(bar), cloth=SS().cloth!==false;
@@ -40084,9 +40203,7 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
   body #st6 #fxMenu button.btn325i .lb325 {display:block;white-space:normal;line-height:1.3;font-size:14px}
   body #fab523 {color:#fff5df;background:#443023 var(--oak556) center/300px 24px;border:2px solid #d4b480}
   body:has(#st6 .fs419drawer:not([hidden])) #fab523 {display:none!important}
-  body #st5 #estTop {border-radius:8px;border:1px solid #937753;background-color:#412e21;background-image:var(--cad-wood);background-size:auto,320px 24px;color:#fff9e9}
   body #st5 .name {border:1px solid var(--cad-edge);border-radius:5px}
-  body #st5 #estTop strong {overflow-wrap:anywhere}
   @media(max-width:370px) {
     body #st6 #fxBranch219 [data-br219] .row325 {flex-direction:column;gap:0}
     body section .modeSeg .btn325i .lb325 {white-space:normal;font-size:12px}
@@ -40241,9 +40358,113 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
   window.addEventListener("resize", function(){ if (open) place(); });
 })();
 </script>
+
+<style id="spec-estimate557">
+@media screen {
+  body :is(#st4,#st5) .screenTitle557 { margin:12px 0 6px; font-size:19px; color:#37291e; background:none!important; }
+  body #st4 .tabs254 { display:flex; flex-wrap:wrap; gap:5px; padding:5px; background:#845e3e var(--oak556) center/240px 100%; border-radius:5px; }
+  body #st4 .tabs254[hidden],body #st4 .tabs254 button[hidden],body #st5 #mat tr[hidden] {display:none!important}
+  body #st4 .tabs254 button { flex:1 1 auto; min-height:44px; padding:4px 7px; border-radius:4px; border:1px solid #b49c81; background:#eee3d3; color:#46372a; }
+  body #st4 .tabs254 button[aria-pressed=true] { background:#fff9ed; color:#3a2a1d; border-color:#9a732c; box-shadow:inset 0 -3px #9a732c; }
+  body #st4 #specHint557 { color:#57493c; margin:5px 2px 12px; }
+  body #st5 .utility557 { margin:10px 0; padding:0 9px 6px; border:1px solid #c4ae94; border-radius:5px; background:#fbf6ed; color:#46372a; }
+  body #st5 .utility557 > summary { min-height:44px; padding:11px 0; font-weight:750; cursor:pointer; }
+  body #st5 .utility557:not([open]) {padding-bottom:0}
+  body #st5 #estTop:empty {display:none}
+  body #st5 #estimateItems557 {margin:10px 0}
+  body #st5 #estimateItems557 small {font-size:.72em;color:#665444}
+  body #st5 #mat {width:100%;table-layout:fixed;}
+  body #st5 #mat td,body #st5 #mat th {overflow-wrap:anywhere;}
+  body #st5 #mat th:last-child {width:25%;}
+  body #st5 #mat tr.grp td {padding:0;background:#efe4d5;}
+  body #st5 .estimateToggle557 {
+    display:grid; grid-template-columns:minmax(0,1fr) auto 12px; align-items:center; gap:8px;
+    width:100%; min-height:46px; padding:8px 9px; text-align:left; font:inherit;
+    border:0; border-top:1px solid #c7b093; background:transparent; color:#392a1d; cursor:pointer;
+  }
+  body #st5 .estimateToggle557::after { content:"▸"; }
+  body #st5 .estimateToggle557[aria-expanded=true]::after { content:"▾"; }
+  body #st5 .estimateToggle557 span:nth-child(2) {white-space:nowrap;font-variant-numeric:tabular-nums}
+  body #st5 .estimateSpec557 {display:block;margin:4px 0;min-height:44px;padding:4px 8px;color:#4d3520;background:#f3e7d3;border:1px solid #ae9475;border-radius:4px;font:inherit;cursor:pointer;}
+}
+@media print {
+  #estimateItems557:not([hidden]) #mat tr[hidden] {display:table-row!important}
+  #st5 .estimateSpec557 {display:none!important}
+}
+</style>
+
+<style id="walnut-contrast558">
+@media screen {
+  body :is(#st3,#st4,#st5) :is(button.btn, button.set),
+  body #st3 :is(.fs420scroll .chips button,.fs420scroll .seg:not(#roofSeg) button),
+  body #st5 :is(#cal439btn,#fz478box button) {
+    border-color:#9b7c5a!important;
+    background:#fbf6ec!important;
+    color:#4e3625!important;
+  }
+  body :is(#st3,#st4,#st5) :is(button.btn.pri,button.btn[aria-pressed=true]),
+  body #st3 :is(.fs420scroll .chips button,.fs420scroll .seg:not(#roofSeg) button)[aria-pressed=true] {
+    background:#654831!important;
+    color:#fff8e9!important;
+    border-color:#906e43!important;
+  }
+  body #st3 .fs420scroll .set b { color:#4e3625;background:#ede1ce; }
+  body #st3 #secRes .res {
+    background:#fbf6ec; color:#37291e;
+    border:1px solid #b69d80; border-radius:6px;
+  }
+  body #st3 #secRes .res .grid {gap:0 12px;grid-template-columns:repeat(2,minmax(0,1fr));}
+  body #st3 #secRes .res .grid > div {
+    min-width:0;padding:7px 0;border-bottom:1px solid #dfcfba;
+  }
+  body #st3 #secRes .res .grid div span {font-size:12px;line-height:1.4;color:#624e3e;opacity:1}
+  body #st3 #secRes .res .grid div b {
+    display:block;background:none;color:#37291e;-webkit-text-fill-color:currentColor;
+    font-size:clamp(17px,5vw,24px);overflow-wrap:anywhere;
+  }
+  body #st5 #estTop {
+    background:#fffdf8;border:1px solid #bfaa90;border-top:3px solid #87693e;
+    color:#30251b;border-radius:6px;margin-top:8px;padding:12px;
+  }
+  body #st5 #estTop:empty {display:none}
+  body #st5 #estTop > span { display:block;opacity:1;color:#5e4a39;font-size:14px;font-weight:700; }
+  body #st5 #estTop strong {
+    margin:3px 0 9px;font-size:clamp(28px,9.4vw,46px);line-height:1.12;
+    overflow-wrap:anywhere;background:none;color:#2e2117;-webkit-text-fill-color:currentColor;
+    letter-spacing:0;font-variant-numeric:tabular-nums;
+  }
+  body #st5 #estTop small {font-size:.55em;margin-inline-start:4px;color:#5e4a39}
+  body #st5 .estimateBreakdown {margin:0}
+  body #st5 .estimateBreakdown > div {
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:8px;align-items:baseline;
+    border-top:1px solid #e5dacc;padding:4px 0;
+  }
+  body #st5 .estimateBreakdown dt {margin:0;color:#584737;font-size:13px}
+  body #st5 .estimateBreakdown dd {
+    margin:0;text-align:right;font-weight:750;font-size:17px;
+    font-variant-numeric:tabular-nums;overflow-wrap:anywhere;
+  }
+  body #st5 #estTop .estimateNote {margin:6px 0 0;color:#6a5543;font-size:12px}
+  body #st5 #mapBtn.btn {min-width:64px;padding-inline:5px}
+  body #st5 #mapBtn :is(.lb325,.tx325) {white-space:nowrap}
+}
+</style>
+
 <!-- ===== CAD-568：ChatGPT納品「CAD556-05 完成図」を CAD-567 の上に作り込んだ版。
    ⑤完成図の下にウォールナットの操作バー（歩く→置く物→向き→表示切替）を置き、
    表示切替からフェルトのトレイ（外観・断面・室内＋表示設定・材料・図面集）がバーの上に開く。
    接続は既存の #joy525/#put529/#joyR532/#modelDock/#modelLocation を再利用し、見積・保存は不変。
    あわせて室内で下のボタン類が全部重なる問題（2026-11-23 翔伍の実機指摘）を、
    ドックを流れの外（トレイ）へ出す事で解消。#h3d の幅・高さは CAD-567 と同一に保つ ===== -->
+
+<!-- ===== CAD-569：ChatGPT納品「CAD556-04-06-07」（④屋根・⑥仕様・⑦見積）を CAD-568 の上にパッチ移植した版。
+   納品の「今回の差分.patch」（基点＝①明るい木目版HTML）13ハンクのうち12本をそのまま適用し、
+   末尾の新規スタイル2ブロック（spec-estimate557／walnut-contrast558）は土台末尾へ手作業で追加。
+   ④屋根：下屋追加と設定ボタンを明るいベージュ・茶枠に、断面・小屋束の寸法カードを明るい無地に（計算は不変）。
+   ⑥仕様：見出し追加、タブに「部屋別」（rfのみ）と「構造・外装」（zo）の出し分け、タブ説明文、モード切替時のタブ初期化。
+   ⑦見積：税込の大表示＋税抜・原価・利益の右端揃え（estimateBreakdown）、現場名・住所と調整（利益率・諸経費・交通費）を
+   閉じた details へ、工事別内訳は小計付きアコーディオン（organizeEstimate557）、対応行に「○の仕様を確認」ボタン、
+   旧 estTop の木目ルール2行は指示どおり削除。計算式・保存キー・単価調整（fixRow）は不変
+   ※移植時の最小調整1件：新見出し h2.screenTitle557 が ux-h を付けられ tabs254 の仕様グループ見出しに
+   数えられると、modeSeg・タブバー・説明文まで「その他」グループの項目として hid254 で消えてしまう
+   （土台 CAD-568 との比較で実証）ため、groups() の見出し抽出から screenTitle557 だけを除外した ===== -->
