@@ -25968,12 +25968,21 @@ body.nbtutRun #zUndoBtn,body.nbtutRun #zRedoBtn{display:none!important}
   var expert=get();
   function key(h){ return (h.getAttribute("data-uxk")||(h.firstChild?h.firstChild.textContent:h.textContent)).trim(); }
   function ensure(st){
-    var bar=document.getElementById("exp259"); if(bar) return bar;
-    var tabs=st.querySelector(":scope > .tabs254"); if(!tabs) return null;
-    bar=document.createElement("div"); bar.className="seg"; bar.id="exp259";
-    bar.innerHTML='<button type="button" data-e="0">シンプル</button><button type="button" data-e="1">本職こだわり</button>';
-    bar.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; expert=b.dataset.e==="1"; set(expert); apply(); });
-    st.insertBefore(bar,tabs); return bar;
+    var bar=document.getElementById("exp259");
+    if(!bar){
+      var tabs=st.querySelector(":scope > .tabs254"); if(!tabs) return null;
+      bar=document.createElement("div"); bar.className="seg"; bar.id="exp259";
+      bar.innerHTML='<button type="button" data-e="0">シンプル</button><button type="button" data-e="1">本職こだわり</button>';
+      bar.addEventListener("click",function(e){ var b=e.target.closest("button"); if(!b) return; expert=b.dataset.e==="1"; set(expert); apply(); });
+      st.insertBefore(bar,tabs);
+    }
+    /* CAD-571（レビュー10件目）：切替の違いを一言で足す。通常時も読める常時表示（.hint ではない。既存CSSの .exp259note を使う） */
+    if(!document.getElementById("expNote571")){
+      var note=document.createElement("div"); note.className="exp259note"; note.id="expNote571";
+      note.textContent="シンプルは、細かい項目を標準で計算します。「本職こだわり」にすると、床の色味・見切り・建具枠・塗り壁の材料など、細かい項目も選べます。";
+      if(bar.parentNode) bar.parentNode.insertBefore(note,bar.nextSibling);
+    }
+    return bar;
   }
   function apply(){
     try{
