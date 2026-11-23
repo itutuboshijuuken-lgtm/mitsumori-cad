@@ -2335,36 +2335,15 @@ function dimOverlay(P, sc){
       const ex = (d * sc < dimTxtW319(fmtDR319(d)) * 4.7 + 5   /* CAD-426: 7px の文字幅 */ && k % 2) ? 14 / sc : 0;
       const mid = (ts[k] + ts[k + 1]) / 2, q0 = P([a[0] + u[0] * mid + n[0] * (off + 70 + ex   /* CAD-426: 区間数字 310→190mm */), a[1] + u[1] * mid + n[1] * (off + 70 + ex   /* CAD-426: 区間数字 310→190mm */)   /* CAD-425: 区間数字 430→310mm */]);
       const tw252 = dimTxtW319(fmtDR319(d)) * 4.7 / sc   /* CAD-426 */, crossed252 = swings252.some(sw => sw.e === i && Math.hypot(Math.max(0, Math.abs(mid - sw.t) - tw252 / 2), off + 70 + ex   /* CAD-426: 区間数字 310→190mm */) < sw.r   /* CAD-425 */);   /* CAD-252：ドアの開く線と重なる寸法文字は全体表示で隠し、拡大で出す */
-      out.push(tx(q0[0], q0[1], fmtDR319(d), ts.length > 2 ? "#C2571A" : col, vert, (crossed252 || tiny348) ? "zx252" : ""));
+      out.push(tx(q0[0], q0[1], fmtDR319(d), ts.length > 2 ? "#1B7A43" : col, vert, (crossed252 || tiny348) ? "zx252" : ""));
       chainVals.add(Math.round(d));
     }
     if (ts.length > 2){ const q0 = P([m[0] + n[0] * (off + 175), m[1] + n[1] * (off + 175)]);   /* CAD-426: 全長 500→295mm */   /* CAD-425: 全長 630→500mm */ out.push(tx(q0[0], q0[1], `全長 ${fmtDR319(L)}${e.set ? "" : "（自動）"}`, col, vert)); }
   });
-  // 選んだ間仕切り：両側の壁までの距離
-  // CAD-210: 当たった壁が外周に接していて、その距離が外周の寸法チェーンに既に出ている方向は
-  //   線もピルも描かない（同じ寸法が二重に出て、間仕切りのラベルに重なって読めなくなるため。
-  //   位置は下のコントローラーにも「左から○○」と出ている）。チェーンに出ていない距離は従来通り描く。
-  if (sel && sel.t === "p" && S.parts2D[sel.i]){
-    const q = S.parts2D[sel.i], horiz = q.y1 === q.y2, b = bbox(), mid = [(q.x1 + q.x2) / 2, (q.y1 + q.y2) / 2];
-    const segs = p.map((a, i) => ({ s: [a, p[(i + 1) % p.length]], edge: true })).concat(parts.filter(z => z !== q).map(z => ({ s: [[z.x1, z.y1], [z.x2, z.y2]], edge: false })));
-    const onPerim = pt => p.some((a, i) => segDist(pt, a, p[(i + 1) % p.length]).d < 3);
-    [-1, 1].forEach(dir => {
-      let best = null, bestSeg = null;
-      segs.forEach(sg => {
-        const [a, c] = sg.s;
-        if (horiz && Math.abs(a[1] - c[1]) < 1 && mid[0] >= Math.min(a[0], c[0]) - 1 && mid[0] <= Math.max(a[0], c[0]) + 1){ const d = (a[1] - mid[1]) * dir; if (d > 1 && (best == null || d < best)){ best = d; bestSeg = sg; } }
-        if (!horiz && Math.abs(a[0] - c[0]) < 1 && mid[1] >= Math.min(a[1], c[1]) - 1 && mid[1] <= Math.max(a[1], c[1]) + 1){ const d = (a[0] - mid[0]) * dir; if (d > 1 && (best == null || d < best)){ best = d; bestSeg = sg; } }
-      });
-      if (best == null) return;
-      if (bestSeg && (bestSeg.edge || bestSeg.s.some(pt => onPerim(pt))) && chainVals.has(Math.round(best))) return;
-      const e2 = horiz ? [mid[0], mid[1] + best * dir] : [mid[0] + best * dir, mid[1]], A1 = P(mid), B1 = P(e2), cm = [(A1[0] + B1[0]) / 2, (A1[1] + B1[1]) / 2];
-      /* CAD-210: ピルは測線の中点だと、間仕切り自身の長さラベル（中点の右上に出る）と重なる事がある
-         （距離が短い時）。ラベルは常に中点の右上なので、ピルだけ測線と直交方向へ少し逃がす。 */
-      if (horiz) cm[0] -= 14; else cm[1] += 14;
-      out.push(`<line x1="${A1[0]}" y1="${A1[1]}" x2="${B1[0]}" y2="${B1[1]}" stroke="#E8742C" stroke-width="1.2" stroke-dasharray="4 3"/><circle cx="${B1[0]}" cy="${B1[1]}" r="2.5" fill="#E8742C"/>`);
-      out.push(`<rect x="${cm[0] - 22}" y="${cm[1] - 8}" width="44" height="16" rx="4" fill="#E8742C"/><text x="${cm[0]}" y="${cm[1] + 4}" text-anchor="middle" style="font-size:10px;font-weight:900;fill:#fff">${fmtDR319(best)}</text>`);
-    });
-  }
+  /* CAD-591：選んだ間仕切りの距離ピル（旧 dimOverlay のこの部分）は廃止した。
+     同じ距離は v432 の大きいチップが両方向とも出していて、ピルが二重に出ると tidyPlanLabels の
+     回避移動で外周の壁際までずれて「オレンジの帯」に見えた（翔伍の実機指摘 2026-11-23）。
+     距離の値は v432 チップと下の「位置を直す」欄に出る。外周チェーンは従来どおり残す。 */
   return out.join("");
 }
 /* ---------- 畳（指で囲んだ所を畳にする） ---------- */
@@ -3233,7 +3212,7 @@ function alignSvg(P, sc){
       }
     });
     hits.sort((a, b) => (a.k === "pen" ? 0 : 1) - (b.k === "pen" ? 0 : 1) || a.d - b.d);
-    const CG = "#1E9E5A", CO = "#E8742C", CR = "#D32F2F", out = [], seen = {};
+    const CG = "#1E9E5A", CO = "#1B7A43", CR = "#D32F2F", out = [], seen = {};
     const uniq = []; hits.forEach(h => { if (!uniq.some(u => u.r.v === h.r.v && Math.abs(u.r.c - h.r.c) < 1.5)) uniq.push(h); });
     /* CAD-329：ガイドの文字が図の右端で見切れない様に、幅を見積もって収まる位置・向きに直す（文字そのものは変えない） */
     const estW329 = t => { let w = 0; for (const ch of String(t)){ const c = ch.codePointAt(0); w += c > 0xFF ? 10 : (c >= 48 && c <= 57) ? 5.8 : ch === "." ? 3.2 : ch === " " ? 3.3 : 6.5; } return w * 0.72; };
@@ -3286,7 +3265,7 @@ function planExtras(P, sc){
     if (beamOn(q) && L > 1){
       const bb = bbox(), ux = (q.x2 - q.x1) / L, uy = (q.y2 - q.y1) / L, ex = Math.max(0, (beamLen(q) - L) / 2), cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v)), sp = beamSpan(q);
       const A2 = sp.al ? P(sp.vert ? [q.x1, sp.lo] : [sp.lo, q.y1]) : P([cl(q.x1 - ux * ex, bb.x0, bb.x1), cl(q.y1 - uy * ex, bb.y0, bb.y1)]), B2 = sp.al ? P(sp.vert ? [q.x1, sp.hi] : [sp.hi, q.y1]) : P([cl(q.x2 + ux * ex, bb.x0, bb.x1), cl(q.y2 + uy * ex, bb.y0, bb.y1)]);
-      h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#E8742C" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#E8742C"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#E8742C"/></g>`;
+      h += `<g style="pointer-events:none"><line x1="${A2[0]}" y1="${A2[1]}" x2="${B2[0]}" y2="${B2[1]}" stroke="#1B7A43" stroke-opacity=".5" stroke-width="6" stroke-linecap="butt"/><circle cx="${A2[0]}" cy="${A2[1]}" r="4" fill="#1B7A43"/><circle cx="${B2[0]}" cy="${B2[1]}" r="4" fill="#1B7A43"/></g>`;
     }
     /* CAD-305: 開放（撤去でない）は壁が無いので見える線を描かない。当たり判定の透明線・文字・選択の点滅は従来通り */
     /* CAD-550（本人の指示 2026-11-22「間仕切りが細すぎる。柱の四角のサイズにあわせて太くして」）：間仕切りは柱の四角（105角）と同じ太さで、図面の縮尺どおりの帯として描く。CAD-372 の画面基準の細線（2.5px・実測で約47mm相当）は廃止。状態の区別は色（既存/新設）と撤去の破線のまま。選択時は帯その物がピンクになる（従来の決まり通り）。当たり判定の透明線・寸法文字・ふかし線は従来通り */
@@ -4794,10 +4773,10 @@ function jointMarks(P){
         /* CAD-372：選んだ間仕切りは、はみ出した部分（突き抜け）と空いて
            いる部分（すき間）を実寸の長さで色を付けて見せる */
         if (isSel372 && E.poke > 0 && E.pokeT != null){ const tp = P(vq ? [E.px, E.pokeT] : [E.pokeT, E.py]); h += `<line x1="${tp[0].toFixed(2)}" y1="${tp[1].toFixed(2)}" x2="${sx}" y2="${sy}" stroke="#D32F2F" stroke-width="6" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
-        else if (isSel372 && !E.touch && E.gap <= 300 && E.gapT != null){ const tp = P(vq ? [E.px, E.gapT] : [E.gapT, E.py]); h += `<line x1="${sx}" y1="${sy}" x2="${tp[0].toFixed(2)}" y2="${tp[1].toFixed(2)}" stroke="#E8742C" stroke-width="6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
+        else if (isSel372 && !E.touch && E.gap <= 300 && E.gapT != null){ const tp = P(vq ? [E.px, E.gapT] : [E.gapT, E.py]); h += `<line x1="${sx}" y1="${sy}" x2="${tp[0].toFixed(2)}" y2="${tp[1].toFixed(2)}" stroke="#1B7A43" stroke-width="6" stroke-dasharray="5 3" vector-effect="non-scaling-stroke" pointer-events="none"/>`; }
         if (E.poke > 0) h += sq372(sx, sy, SQ372, `fill="#D32F2F" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#D32F2F" pointer-events="none">突き抜け ${Math.round(E.poke)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
         else if (E.touch) h += sq372(sx, sy, SQ372s, `fill="#1B9E4B" stroke="#fff" stroke-width="2" vector-effect="non-scaling-stroke"`);
-        else if (E.gap <= 300) h += sq372(sx, sy, SQ372, `fill="none" stroke="#E8742C" stroke-width="3" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#E8742C" pointer-events="none">すき間 ${Math.round(E.gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
+        else if (E.gap <= 300) h += sq372(sx, sy, SQ372, `fill="none" stroke="#1B7A43" stroke-width="3" vector-effect="non-scaling-stroke"`) + `<text x="${sx + 9}" y="${sy - 7}" class="halo" style="font-size:15px;font-weight:900;fill:#1B7A43" pointer-events="none">すき間 ${Math.round(E.gap)}</text>` + (window.__hide369 && oi369 >= 0 ? `<rect class="jmHit369" data-jp="${oi369}" x="${sx - 8}" y="${sy - 17}" width="96" height="26" fill="#000" fill-opacity="0" stroke="none"/>` : "");   /* CAD-369：隠すモードでは印をタップできる */
         else h += sq372(sx, sy, SQ372s, `fill="none" stroke="#8A96A3" stroke-width="3" vector-effect="non-scaling-stroke"`);
       });
     });
@@ -36069,12 +36048,12 @@ nav.steps{padding:1px 6px 3px}
             if (p < at && (lo === null || p > lo)) lo = p; if (p > at && (hi === null || p < hi)) hi = p;
           });
           var A = h ? P(z.x1, z.y1) : P(z.x1, z.y1), B = h ? P(z.x2, z.y2) : P(z.x2, z.y2);
-          g.appendChild(el("line", {x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#E8742C", "stroke-width": (5 * k).toFixed(2), "stroke-linecap": "butt"}));   /* CAD-462：先端は四角（本人「先が丸いのが嫌」） */
-          var chip = function(cx, cy, v){ var w2 = (String(fmt(v)).length * 9 + 16) * k, h2 = 22 * k, cf = v < 455 ? "#C62828" : "#E8742C"; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: cf})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (14 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, fmt(v))); };
+          g.appendChild(el("line", {x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: "#1B7A43", "stroke-width": (5 * k).toFixed(2), "stroke-linecap": "butt"}));   /* CAD-462：先端は四角（本人「先が丸いのが嫌」） */
+          var chip = function(cx, cy, v){ var w2 = (String(fmt(v)).length * 9 + 16) * k, h2 = 22 * k, cf = v < 455 ? "#C62828" : "#1B7A43"; g.appendChild(el("rect", {x: (cx - w2 / 2).toFixed(1), y: (cy - h2 / 2).toFixed(1), width: w2.toFixed(1), height: h2.toFixed(1), rx: (h2 / 2).toFixed(1), fill: cf})); g.appendChild(el("text", {x: cx.toFixed(1), y: (cy + 5 * k).toFixed(1), "text-anchor": "middle", style: "font-size:" + (14 * k).toFixed(2) + "px;font-weight:900;fill:#fff"}, fmt(v))); };
           [[lo, -1], [hi, 1]].forEach(function(e){
             if (e[0] === null) return;
             var p1 = h ? P(mid, at) : P(at, mid), p2 = h ? P(mid, e[0]) : P(e[0], mid);
-            g.appendChild(el("line", {x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1], stroke: "#E8742C", "stroke-width": (1.3 * k).toFixed(2), "stroke-dasharray": (4 * k) + " " + (3 * k)}));
+            g.appendChild(el("line", {x1: p1[0], y1: p1[1], x2: p2[0], y2: p2[1], stroke: "#1B7A43", "stroke-width": (1.3 * k).toFixed(2), "stroke-dasharray": (4 * k) + " " + (3 * k)}));
             chip((p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2, Math.round(Math.abs(e[0] - at)));
           });
           /* CAD-433：動かして狭くなったら、その場で知らせる（狭い状態に入った時に1回だけ） */
@@ -36536,10 +36515,10 @@ nav.steps{padding:1px 6px 3px}
           var pol = pts(), mid = [(A[0] + B[0]) / 2, (A[1] + B[1]) / 2]; if (sa.host.t === "e" && !inside([mid[0] + n[0] * 50, mid[1] + n[1] * 50], pol)) n = [-n[0], -n[1]];
           var off = 380, at = function(t0){ return [A[0] + uu[0] * t0 + n[0] * off, A[1] + uu[1] * t0 + n[1] * off]; };
           [[0, p0, -1], [p0 + w, L, 1]].forEach(function(sgm){ var d = Math.round(sgm[1] - sgm[0]); if (d < 1) return; var q1 = P.apply(null, at(sgm[0])), q2 = P.apply(null, at(sgm[1]));
-            g.insertAdjacentHTML("beforeend", '<line x1="' + q1[0].toFixed(1) + '" y1="' + q1[1].toFixed(1) + '" x2="' + q2[0].toFixed(1) + '" y2="' + q2[1].toFixed(1) + '" stroke="#E8742C" stroke-width="' + (1.3 * k).toFixed(2) + '" stroke-dasharray="' + (4 * k) + ' ' + (3 * k) + '"/>');
+            g.insertAdjacentHTML("beforeend", '<line x1="' + q1[0].toFixed(1) + '" y1="' + q1[1].toFixed(1) + '" x2="' + q2[0].toFixed(1) + '" y2="' + q2[1].toFixed(1) + '" stroke="#1B7A43" stroke-width="' + (1.3 * k).toFixed(2) + '" stroke-dasharray="' + (4 * k) + ' ' + (3 * k) + '"/>');
             var t0 = fmt(d), cw = (t0.length * 8.2 + 10) * k, segPx = Math.hypot(q2[0] - q1[0], q2[1] - q1[1]), cx0 = (q1[0] + q2[0]) / 2, cy0 = (q1[1] + q2[1]) / 2;
             if (segPx < cw + 4 * k){ var ux = (q2[0] - q1[0]) / (segPx || 1), uy = (q2[1] - q1[1]) / (segPx || 1), base = sgm[2] < 0 ? q1 : q2, sh = (cw / 2 + 4 * k) * sgm[2]; if (!segPx){ ux = uu[0]; uy = uu[1]; } cx0 = base[0] + ux * sh; cy0 = base[1] + uy * sh; }   /* 短い時は線の外に出す（重ねない） */
-            chip(cx0, cy0, t0, "#E8742C"); });
+            chip(cx0, cy0, t0, "#1B7A43"); });
         }
       }
       sv.appendChild(g);
@@ -39536,7 +39515,10 @@ function getaSheet(i){
    ・#v432 の太い実線 … CAD-432/462 が「選んでいる間仕切り」の上に重ねて描くオレンジの太線（画面の5px・先端は四角）。選択した間仕切りの真ん中を覆ってピンクの帯より目立っていたため、選択表示として同じ水色↔白の点滅に統一した。同じ #v432 の細い破線（両側の壁までの寸法ガイド）とオレンジの寸法チップは「寸法の注記」なので従来のまま残す */
 @keyframes selBlue551{0%,100%{stroke:#00B0F0}50%{stroke:#FFFFFF}}
 #plan [stroke="#FF00C8"]:not(#edgeBlink316){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
-#plan #v432 line[stroke="#E8742C"]:not([stroke-dasharray]){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
+/* CAD-591：寸法の注記（v432 の太線・破線・チップ、dimOverlay、alignSvg、jointMarks、梁線、建具の角寸法）の色を
+   オレンジ #E8742C から緑 #1B7A43 へ（翔伍の決定 2026-11-23「緑にする」。床の木目と白い紙の両方で読める濃さ）。
+   太線の見た目（水色↔白の点滅）は従来どおり。455未満チップと突き抜けの赤は警告として残す */
+#plan #v432 line[stroke="#1B7A43"]:not([stroke-dasharray]){stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
 #plan #zoneSel383{stroke:#00B0F0;fill:rgba(0,176,240,.10);animation:selBlue551 .8s ease-in-out infinite}
 #plan #edgeBlink316{stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
 #selBar .cands [data-on="1"]{background:#00B0F0!important;border-color:#00B0F0!important}
