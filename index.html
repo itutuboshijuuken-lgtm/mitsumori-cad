@@ -20216,7 +20216,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
               rc.setAttribute("x", rr.x0 * T.s + T.ox); rc.setAttribute("y", rr.y0 * T.s + T.oy);
               rc.setAttribute("width", (rr.x1 - rr.x0) * T.s); rc.setAttribute("height", (rr.y1 - rr.y0) * T.s);
               rc.setAttribute("fill", "none");
-              rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "2"); rc.setAttribute("stroke-dasharray", "7 5");
+              rc.setAttribute("stroke", "#FF00C8"); rc.setAttribute("stroke-width", "3"); rc.setAttribute("stroke-dasharray", "7 5");
+              var vr = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+              vr.setAttribute("x", rr.x0 * T.s + T.ox); vr.setAttribute("y", rr.y0 * T.s + T.oy);
+              vr.setAttribute("width", (rr.x1 - rr.x0) * T.s); vr.setAttribute("height", (rr.y1 - rr.y0) * T.s);
+              vr.setAttribute("fill", "rgba(0,176,240,.13)"); vr.setAttribute("stroke", "none"); vr.setAttribute("class", "roomVeil588");
+              g.appendChild(vr);
               g.appendChild(rc); done = true;
             } else {
               var rm2 = roomAtPt176(roomSel176.pt);
@@ -20257,10 +20262,18 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
                   });
                 });
                 if (d){
+                  var dv = "";
+                  rm2.cells.forEach(function(k){ var ci2 = k % NX, cj2 = (k - ci2) / NX, vx = (bx + ci2 * stp) * T.s + T.ox, vy = (by + cj2 * stp) * T.s + T.oy, vs = stp * T.s; dv += "M" + vx + " " + vy + "h" + vs + "v" + vs + "H" + vx + "Z"; });
+                  if (dv){
+                    var vp = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    vp.setAttribute("d", dv);
+                    vp.setAttribute("fill", "rgba(0,176,240,.13)"); vp.setAttribute("stroke", "none"); vp.setAttribute("class", "roomVeil588");
+                    g.appendChild(vp);
+                  }
                   var pth = document.createElementNS("http://www.w3.org/2000/svg", "path");
                   pth.setAttribute("d", d);
                   pth.setAttribute("fill", "none");
-                  pth.setAttribute("stroke", "#FF00C8"); pth.setAttribute("stroke-width", "2"); pth.setAttribute("stroke-dasharray", "7 5");
+                  pth.setAttribute("stroke", "#FF00C8"); pth.setAttribute("stroke-width", "3"); pth.setAttribute("stroke-dasharray", "7 5");
                   g.appendChild(pth); done = true;
                 }
               }
@@ -39844,6 +39857,17 @@ function getaSheet(i){
 #plan #zoneSel383{stroke:#00B0F0;fill:rgba(0,176,240,.10);animation:selBlue551 .8s ease-in-out infinite}
 #plan #edgeBlink316{stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
 #selBar .cands [data-on="1"]{background:#00B0F0!important;border-color:#00B0F0!important}
+</style>
+<style>
+/* ===== CAD-595：選んだ部屋の選択表示を「輪郭＋薄い面」で一目で分かる様にする（翔伍の実機指摘 2026-11-24「選ばれた部屋は水色で点滅しない」） =====
+   実測（土台 CAD-586）：部屋の輪郭（#roomOut176）は太さ2の破線で、CSS上は selBlue551 で点滅していたが、
+   輪郭の多くが壁・間仕切りの太い線と重なり、面の塗りも無い（CAD-301 で全廃）ため、実機では点滅が見えなかった。
+   直し：部屋の形その物に薄い水色の面（roomVeil588）を輪郭の下へ足し、面も水色と白の薄色で交互に切り替える。
+   輪郭は太さ3にして壁の線に埋もれない様にする（破線・形は従来通り）。床の柄は面の下に透けて見える濃さにする。
+   点滅は選択中だけ（#roomOut176 は選択が外れれば要素ごと消える）。描画側の変更は __dpPost176 の中だけ。 */
+@keyframes selVeil588{0%,100%{fill:rgba(0,176,240,.13)}50%{fill:rgba(255,255,255,.13)}}
+#plan #roomOut176 .roomVeil588{animation:selVeil588 .8s ease-in-out infinite}
+#plan #roomOut176 rect[stroke="#FF00C8"],#plan #roomOut176 path[stroke="#FF00C8"]{stroke:#00B0F0;animation:selBlue551 .8s ease-in-out infinite}
 </style>
 <style>
 /* ===== CAD-552：②間取りでドアを選んだ時は、扉の形と開きの点線まで含めて選択表示にする（翔伍の指摘 2026-11-22・間取りの見た目キュー2の3件目） =====
