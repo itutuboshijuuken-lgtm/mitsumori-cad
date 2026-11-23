@@ -580,6 +580,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
 
   <!-- ③ 高さ・屋根 -->
   <section id="st3" hidden>
+    <p id="roofNote574">屋根の形や勾配、高さを決める画面です。変えなくても、標準のままで次へ進めます。</p>
     <div id="ceHome3"></div><div id="ceBox"><h2 id="chH">天井高</h2>
     <div class="chips" id="chCh"></div>
     <div id="ch2Box"><h2>2階の天井高</h2><div class="chips" id="ch2Ch"></div></div>
@@ -5660,7 +5661,7 @@ const SETS = [
   ["taruP", "垂木の間隔", ""]
 ];
 function drawSets(){
-  $("setList").innerHTML = SETS.map(([k, n, s]) => `<button class="set" data-set="${k}" type="button"><span>${n}${s ? `<small>${s}</small>` : ""}</span><b>${fmt(S[k])}</b></button>`).join("") + `<div class="sub2">母屋・棟木の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="moya" data-v="${v}" aria-pressed="${S.moya === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div><div class="sub2">小屋束の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="tsuka" data-v="${v}" aria-pressed="${S.tsuka === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div>`;
+  $("setList").innerHTML = SETS.map(([k, n, s]) => `<button class="set" data-set="${k}" type="button"><span>${n}${s ? `<small>${s.replace(/〇〇/g, fmt(S[k]))}</small>` : ""}</span><b>${fmt(S[k])}</b></button>`).join("") + `<div class="sub2">母屋・棟木の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="moya" data-v="${v}" aria-pressed="${S.moya === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div><div class="sub2">小屋束の角（すぐ選ぶ）</div><div class="chips">${[90, 105].map(v => `<button data-mq="tsuka" data-v="${v}" aria-pressed="${S.tsuka === v}" type="button">${v}角${v === 105 ? "（標準）" : ""}</button>`).join("")}</div>`;
   $("setList").querySelectorAll("[data-mq]").forEach(b => b.onclick = () => { S[b.dataset.mq] = +b.dataset.v; save(); drawSets(); });
   $("setList").querySelectorAll("[data-set]").forEach(b => b.addEventListener("click", () => {
     const [k, n] = SETS.find(x => x[0] === b.dataset.set);
@@ -40505,3 +40506,20 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
    （document幅429px）はみ出していたのが CAD-569 の作り替えで解消済み（現行は幅390pxに収まる）。
    残っていた2件だけ表示側で直した：アコーディオン見出しボタンの18pxはみ出しと、設定行の補足文字の小ささ。
    見積の計算・金額・保存キーは不変 ===== -->
+
+<style id="cad574Sty">
+/* CAD-574: ④屋根の目的の一言（初めての人レビュー13件目(a)、2026-11-23）。
+   「何のための画面か・変えなくても進める」が分かる短い一言を、④屋根（#st3）の
+   先頭に常時出す。.hint の全域ルール（チュートリアル時以外は非表示）の対象に
+   しないため専用IDで出す。黄色ガイド・点滅は使わない（本番画面の決まり）。 */
+#roofNote574{margin:0 2px 8px;font-size:13.5px;line-height:1.6;color:#5B6673}
+</style>
+
+<!-- ===== CAD-574：初めての人レビュー13件目（④屋根に案内文がなく用語が濃い／「〇〇」と出る項目）への対応。
+   (a) ④屋根の先頭に目的の一言 #roofNote574 を常時表示で追加（上の cad574Sty）。
+   (b) 「桁のせい105×〇〇180」の原因は、値の欠けではなく、詳細設定の定義 SETS の
+       説明文（small）に「105×〇〇」という固定のプレースホルダ文字列が入っていて、
+       右端の実値と並んで表示されていた事（実測：S.keta=180・S.dosa=240・S.hari=180 は
+       正しく入っている）。drawSets の描画で、説明文の「〇〇」をその項目の実値
+       fmt(S[k]) に置き換えて出す様にした（値が変われば説明も追随する）。
+       屋根の計算・保存キーは無変更 ===== -->
