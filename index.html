@@ -444,6 +444,141 @@ body.pt .steps{grid-template-columns:repeat(2,1fr)!important}
 </style>
 </head>
 <body>
+<script id="pzGate587js">
+/* ===== CAD-594：ピンチ中の見張り／タイマー一括休止ゲート =====
+   実機の重さ対策（perf-zoom 診断・2026-11-24）。②間取りでピンチ拡大・縮小を繰り返すと
+   落ちる寸前までカクつく主犯は、ピンチ中も MutationObserver（#plan／BODY 見張り）と
+   描画系の定期タイマーが全開で走り、互いの DOM 書き換えを見張り合う相乗ループ。
+   ここ（全スクリプトの先頭・1か所）で登録そのものにゲートを掛ける：
+   ・body.pz262（2本指ピンチ中）の間、#plan／BODY／HTML を見張る Observer の
+     コールバックは、レコードを溜めるだけで実行しない。ピンチが終わったら
+     溜めたレコード全部を1回だけ本来のコールバックへ渡す（後処理は抜けない）。
+   ・定期タイマー（setInterval）も同じく、ピンチ中は実行せず「汚れ」印だけ付け、
+     終わったら汚れた物だけ1回ずつ実行する。
+   ・止めない物：pz262 の張り付き見張り等の安全系（ソースに pz262／__pinchBusy を含む物）、
+     点滅の同期（syncBlink140。選択の水色点滅 selBlue551 は CSS アニメーションで無関係）、
+     ボタン長押しの繰り返し（holdStop／fxBarStop を含む物＝指の入力そのもの）。
+   ・保存はイベント駆動で定期タイマーに無いため対象外（止まる物は無い）。
+   新しい見張りを足して打ち消す方式ではない：既存の見張り・タイマーの登録口そのものに
+   効かせている。床まわりには触らない（clip／pattern／#st1・#st2 への追加なし）。 */
+(function(){
+  "use strict";
+  if (window.__pzGate587) return;
+  var NativeMO = window.MutationObserver;
+  var nativeSI = window.setInterval;
+  var nativeST = window.setTimeout;
+  if (!NativeMO || !nativeSI) return;
+
+  function pinching(){
+    try { return !!(document.body && document.body.classList && document.body.classList.contains("pz262")); }
+    catch(e){ return false; }
+  }
+
+  /* ---------- MutationObserver のゲート ---------- */
+  var moEntries = [];
+  function isGateTarget(t){
+    try {
+      if (!t || t.nodeType !== 1) return false;
+      if (t === document.body || t === document.documentElement) return true;
+      if (t.id === "plan") return true;
+    } catch(e){}
+    return false;
+  }
+  function GatedMO(callback){
+    if (typeof callback !== "function") return new NativeMO(callback);
+    var entry = { cb: callback, pending: [], gated: false, active: false, obs: null };
+    var obs = new NativeMO(function(records, o){
+      if (entry.gated && pinching()){
+        for (var i = 0; i < records.length; i++) entry.pending.push(records[i]);
+        return;
+      }
+      if (entry.pending.length){
+        var all = entry.pending.concat(records);
+        entry.pending = [];
+        callback.call(o, all, o);
+        return;
+      }
+      callback.call(o, records, o);
+    });
+    entry.obs = obs;
+    var origObserve = obs.observe.bind(obs);
+    var origDisconnect = obs.disconnect.bind(obs);
+    obs.observe = function(target, opts){
+      if (isGateTarget(target)) entry.gated = true;
+      entry.active = true;
+      return origObserve(target, opts);
+    };
+    obs.disconnect = function(){
+      entry.pending = [];
+      entry.active = false;
+      return origDisconnect();
+    };
+    moEntries.push(entry);
+    return obs;
+  }
+  GatedMO.prototype = NativeMO.prototype;
+  try { window.MutationObserver = GatedMO; } catch(e){}
+
+  /* ---------- setInterval のゲート ---------- */
+  var KEEP = /pz262|__pinchBusy|syncBlink140|holdStop|fxBarStop/;
+  var intEntries = [];
+  window.setInterval = function(fn, ms){
+    if (typeof fn !== "function") return nativeSI.apply(window, arguments);
+    var src = "";
+    try { src = String(fn); } catch(e){}
+    if (KEEP.test(src)) return nativeSI.apply(window, arguments);
+    var entry = { fn: fn, rest: [], dirty: false };
+    for (var i = 2; i < arguments.length; i++) entry.rest.push(arguments[i]);
+    var wrapped = function(){
+      if (pinching()){ entry.dirty = true; return; }
+      entry.dirty = false;
+      return fn.apply(this, arguments);
+    };
+    var args = [wrapped, ms];
+    for (var j = 0; j < entry.rest.length; j++) args.push(entry.rest[j]);
+    var id = nativeSI.apply(window, args);
+    intEntries.push(entry);
+    return id;
+  };
+
+  /* ---------- ピンチ終了で、溜めた後処理を1回だけ流す ---------- */
+  var flushing = false;
+  function flush(){
+    if (flushing || pinching()) return;
+    flushing = true;
+    try {
+      var i, e;
+      for (i = 0; i < moEntries.length; i++){
+        e = moEntries[i];
+        if (e.gated && e.active && e.pending.length){
+          var recs = e.pending; e.pending = [];
+          try { e.cb.call(e.obs, recs, e.obs); } catch(err){}
+        }
+      }
+      for (i = 0; i < intEntries.length; i++){
+        e = intEntries[i];
+        if (e.dirty){ e.dirty = false; try { e.fn.apply(window, e.rest); } catch(err){} }
+      }
+    } finally { flushing = false; }
+  }
+  /* 終了の拾い方：(1) 指が離れた直後に確認 (2) 200ms の見回りで pz262 の
+     ON→OFF を検出（touchend が届かず張り付き見張りが外した場合も拾う）。
+     見回り自体は素の setInterval で登録し、ゲートの対象にしない。 */
+  var wasPinch = false;
+  nativeSI.call(window, function(){
+    var p = pinching();
+    if (wasPinch && !p) flush();
+    wasPinch = p;
+  }, 200);
+  ["touchend", "touchcancel"].forEach(function(t){
+    document.addEventListener(t, function(){
+      nativeST.call(window, function(){ if (!pinching()) flush(); }, 60);
+    }, { capture: true, passive: true });
+  });
+
+  window.__pzGate587 = { flush: flush, moEntries: moEntries, intEntries: intEntries, pinching: pinching };
+})();
+</script>
 <script>/* CAD-194: 画面デザイン（黒×金）の先行適用。描画前に保存済みの見た目を付ける */
 try{ if (localStorage.getItem("gosei-theme-v1") === "gold") document.body.classList.add("gold"); }catch(e){}</script>
 <script>/* CAD-319: 尺／mm 全体切替の状態と寸法の物差し。本体より前に置き、描画の時に
