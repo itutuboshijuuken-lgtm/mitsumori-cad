@@ -40161,3 +40161,89 @@ body #st2 .fs418bar button {min-height:44px;color:#fff3d7;border:1px solid #8569
    （識別子 sa565/fx565/obj565/__edit565/sheet565 は元のまま）。チェックボタンの注記は私側の公開履歴に合わせ CAD-557 のまま据え置き。
    内容：⑤完成図の室内の直し（ドアが図で決めた側に開く・引き戸の戸袋が図と一致・タップで物/ドアを直すシート・
    他の階は案内文で止める・案内文の文言変更）と、室内歩行の衝突（壁で止まる）・横の見回し高速化・折れ戸が開く。 ===== -->
+
+<style id="bar568css">
+/* ===== CAD-568（ChatGPT納品05・完成図の操作バー）：#ctl530 をウォールナットの操作バーにし、
+   #modelDock を「表示切替」から開くフェルトのトレイにする（バー直上に重ねる）。
+   #h3d の大きさ・位置は変えない：室内ではバーの高さを CAD-567 の #ctl530 と同じ 116px に固定し、
+   big534 の計算（画面下端－バーの高さ）を変えない。ドックを流れから外すので、
+   室内でキャンバス・スティック段とドックが重なる問題（2026-11-23 翔伍の実機指摘）も解消する ===== */
+/* --- バー（中身のノードと登録済みイベントは既存のまま） --- */
+#ctl530{position:relative;z-index:5;align-items:center;gap:8px;background:#483424 var(--oak556);border:1px solid #786149;border-radius:10px;margin-top:8px;padding:10px}
+body.has568 #ctl530{display:none}
+body.has568 #st6.modelActive #ctl530{display:flex}
+body.in534 #ctl530{height:116px;box-sizing:border-box}
+#ctl530:not(.on530) #joyR532{display:none!important}
+#ctl530 #joy525,#ctl530 #joyR532{width:60px;height:60px;flex:0 0 auto}
+body.in534 #joy525,body.in534 #joyR532{width:60px!important;height:60px!important}
+#joy525 i,#joyR532 i{width:32px;height:32px;margin:-16px 0 0 -16px;font-size:16px}
+#joy525 b,#joyR532 b{top:calc(100% + 3px);bottom:auto;color:#F4EEDD;text-shadow:0 1px 3px rgba(0,0,0,.6)}
+#put529{width:auto;min-width:66px;height:48px;padding:0 12px;border-radius:10px;background:#f1e8db;color:#30271e;border:1px solid #937d61;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+#tgl568{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;gap:6px;min-height:48px;padding:6px 12px;background:rgba(241,232,219,.14);border:1px solid #937d61;border-radius:10px;color:#F4EEDD;font:inherit;font-weight:800;font-size:15px;cursor:pointer}
+#tgl568 svg{width:20px;height:20px;flex:0 0 auto}
+#tgl568 .car568{font-size:11px;opacity:.85}
+#ctl530.t568lock #joy525,#ctl530.t568lock #put529,#ctl530.t568lock #joyR532{pointer-events:none;opacity:.45}
+/* --- トレイ（旧 #modelDock をカード内へ移し、バーの上に重ねる） --- */
+body.has568 #modelDock{display:none!important}
+body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
+#modelDock{position:absolute;left:6px;right:6px;z-index:40;background-color:#8f8b83;background-image:var(--felt556);border:1px solid #6f6a61;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.4);padding:42px 10px 10px}
+#modelDock nav{gap:8px}
+#modelDock nav button{background-color:#c3b8a9;border-radius:8px;padding:clamp(56px,10vh,76px) 0 5px;background-size:auto 74%;font-size:15px}
+#modelDock nav button[aria-pressed="true"]{box-shadow:inset 0 0 0 3px #9b762e}
+#modelDock .modelFoot{gap:8px}
+#modelDock .modelFoot button{margin-top:8px;border-radius:8px}
+#modelDock .t568close{position:absolute;top:2px;right:4px;flex:none;min-width:44px;min-height:36px;padding:2px 8px;background:transparent;border:0;border-radius:6px;color:#2e2a24;font-weight:800;font-size:13px;box-shadow:none}
+</style>
+<script id="bar568js">
+/* ===== CAD-568：表示切替トレイの開閉。模型の切替処理・部屋選択・表示設定/資料の導線は
+   既存（#modelDock の同期・#h3dView254・#modelLocation）のまま使い、ここでは
+   「トレイの開閉・位置・開いている間の誤操作防止」だけを足す ===== */
+(function(){
+  "use strict";
+  var section = document.getElementById("st6"), dock = document.getElementById("modelDock"),
+      bar = document.getElementById("ctl530"), cnv = document.getElementById("h3d");
+  if (!section || !dock || !bar || !cnv) return;
+  var card = cnv.closest(".card"); if (!card) return;
+  if (getComputedStyle(card).position === "static") card.style.position = "relative";
+  document.body.classList.add("has568");
+  card.appendChild(dock);   /* トレイはカードの中へ（バーの上に重ねるため） */
+  var close = document.createElement("button");
+  close.type = "button"; close.className = "t568close"; close.textContent = "閉じる ×";
+  close.setAttribute("aria-label", "表示切替を閉じる");
+  dock.appendChild(close);
+  var tgl = document.createElement("button");
+  tgl.type = "button"; tgl.id = "tgl568";
+  tgl.setAttribute("aria-label", "表示切替"); tgl.setAttribute("aria-expanded", "false");
+  tgl.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span class="nm568">外観</span><span class="car568">▴</span>';
+  bar.appendChild(tgl);
+  var open = false;
+  function place(){ dock.style.bottom = (card.clientHeight - bar.offsetTop + 8) + "px"; }
+  function setOpen(v){
+    if (v === open) { if (v) place(); return; }
+    open = v;
+    dock.classList.toggle("t568open", v);
+    bar.classList.toggle("t568lock", v);
+    tgl.setAttribute("aria-expanded", String(v));
+    if (v) place();
+  }
+  tgl.addEventListener("click", function(){ setOpen(!open); });
+  close.addEventListener("click", function(){ setOpen(false); });
+  dock.querySelectorAll("[data-model]").forEach(function(b){ b.addEventListener("click", function(){ setOpen(false); }); });
+  dock.addEventListener("pointerdown", function(e){ e.stopPropagation(); }, true);
+  function sync(){
+    var active = section.classList.contains("modelActive");
+    if (!active && open) setOpen(false);
+    var cur = dock.querySelector('[data-model][aria-pressed="true"]');
+    if (cur){ var nm = tgl.querySelector(".nm568"), t = cur.textContent.trim(); if (nm && nm.textContent !== t) nm.textContent = t; }
+    if (open) place();
+  }
+  setInterval(sync, 300);
+  window.addEventListener("resize", function(){ if (open) place(); });
+})();
+</script>
+<!-- ===== CAD-568：ChatGPT納品「CAD556-05 完成図」を CAD-567 の上に作り込んだ版。
+   ⑤完成図の下にウォールナットの操作バー（歩く→置く物→向き→表示切替）を置き、
+   表示切替からフェルトのトレイ（外観・断面・室内＋表示設定・材料・図面集）がバーの上に開く。
+   接続は既存の #joy525/#put529/#joyR532/#modelDock/#modelLocation を再利用し、見積・保存は不変。
+   あわせて室内で下のボタン類が全部重なる問題（2026-11-23 翔伍の実機指摘）を、
+   ドックを流れの外（トレイ）へ出す事で解消。#h3d の幅・高さは CAD-567 と同一に保つ ===== -->
