@@ -541,8 +541,6 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
     <div id="slot2"><div id="planWrap">
-    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-label="壁を消す" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><button class="btn sub" id="zUndoBtn" type="button" title="1つ戻す" disabled>↶<small>戻す</small></button><button class="btn sub" id="zRedoBtn" type="button" title="1つ進める" disabled>↷<small>進める</small></button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
-      <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
     <div class="card" style="overflow:hidden;padding:4px"><svg id="plan" viewBox="0 0 360 300" aria-label="平面図" style="touch-action:none"></svg></div>
     </div></div>
     <div id="presetBar363" hidden></div>
@@ -554,6 +552,8 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <style>body.fsDraw #st2 #flBox493{display:none!important}</style><div class="zo" id="flBox493" hidden><h2>階数</h2>
     <div class="seg" id="flSeg"><button data-fls="1" type="button">平屋</button><button data-fls="2" type="button">2階建（総2階）</button></div></div>
     <div class="row flowNext"><button class="btn pri" data-go="M" type="button">次へ（間取り）</button></div>
+    <div id="zRow" style="display:flex;gap:6px;align-items:center;margin-bottom:6px"><button class="btn sub" data-go="1" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">✏️ 描き直す</button><button class="btn sub" id="zKaki" onclick="openKakitasu()" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">👆 描き足す</button><button class="btn sub" id="zDel215" aria-label="壁を消す" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消す</button><button class="btn sub" id="zEra215" aria-pressed="false" type="button" style="height:42px;min-height:42px;padding:0 10px;font-size:13px;font-weight:900;white-space:nowrap">消しゴム</button><button class="btn sub" id="zUndoBtn" type="button" title="1つ戻す" disabled>↶<small>戻す</small></button><button class="btn sub" id="zRedoBtn" type="button" title="1つ進める" disabled>↷<small>進める</small></button><span id="zInfo" style="flex:1;font-size:12px;color:var(--sub)"></span>
+      <button id="zFs" type="button" style="height:42px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:13px;font-weight:900;color:var(--ai)">全画面</button></div>
   </section>
 
   <!-- 間取り（間仕切り・建具） -->
@@ -35471,10 +35471,14 @@ nav.steps{padding:1px 6px 3px}
   /* 開閉バー */
   var bar = document.createElement("div"); bar.className = "fs419bar";
   var tb = document.createElement("button"); tb.type = "button"; tb.className = "btn"; tb.textContent = "置く物・器具を選ぶ";
+  d.id = "roomFixtureDrawer";
+  tb.setAttribute("aria-controls", d.id);
+  const syncDrawerButton = () => tb.setAttribute("aria-expanded", String(!d.hidden));
+  syncDrawerButton();
+  new MutationObserver(syncDrawerButton).observe(d, {attributes:true, attributeFilter:["hidden"]});
   tb.addEventListener("click", function(){ d.hidden = !d.hidden; });
   bar.appendChild(tb);
-  var fc = st6.querySelector(".flowNext");
-  if (fc) st6.insertBefore(bar, fc); else st6.appendChild(bar);
+  st6.appendChild(bar);
   /* 器具を選んだら閉じる（分岐の切替と一覧の編集では閉じない） */
   d.addEventListener("click", function(e){
     if (e.target.closest && e.target.closest("[data-fk]")) setTimeout(function(){ d.hidden = true; }, 60);
@@ -39116,7 +39120,6 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
 <style id="fab523css">
 /* ===== CAD-523：③室内図の下の帯「置く物・器具を選ぶ」をやめ、他の画面と同じ丸いボタンにそろえる（本人の指示 2026-11-22）。
    丸ボタンの置き場所は図面の画面と共通（localStorage fab515pos）。押すと今までの帯と同じ引き出し（置く物・器具）が開く。中身・計算は変えない ===== */
-#st6.fsRoom .fs419bar{display:none!important}
 #fab523{position:fixed;z-index:60;width:60px;height:60px;margin:-60px 0 0 -60px;border-radius:50%;border:2px solid #fff;background:#534AB7;color:#fff;font-weight:900;font-size:13px;line-height:1.1;box-shadow:0 2px 8px rgba(0,0,0,.28);display:none;align-items:center;justify-content:center;text-align:center;padding:0;touch-action:none}
 </style>
 <script id="fab523js">
@@ -39873,7 +39876,9 @@ function roofPaper556(){
  svg.setAttribute("viewBox","0 0 360 220");svg.innerHTML=shape;
 }
 (()=>{
- const sec=$("sec"),stage=sec.closest(".card"),nav=document.createElement("div");nav.id="roofView556";stage.before(nav);
+ const roof = $("st3"), nav = document.createElement("div"), sec = $("sec");
+ nav.id = "roofView556";
+ roof.insertBefore(nav, roof.querySelector(".flowNext"));
  for(const [mode,label] of [["plan","屋根伏図"],["section","断面・小屋束"]]){
  const b=document.createElement("button");b.type="button";b.textContent=label;b.dataset.view=mode;nav.append(b);
  b.onclick=()=>{roofView556=mode;drawSec();};
@@ -39881,7 +39886,10 @@ function roofPaper556(){
  const sync=()=>{for(const b of nav.children)b.setAttribute("aria-pressed",String(b.dataset.view===roofView556));roofPaper556()};
  new MutationObserver(()=>{if(!sec.querySelector("#flow556"))sync()}).observe(sec,{childList:true});
  sync();
- const box=$("elevBox"),tray=document.createElement("div");tray.className="roomTools556";box.after(tray);
+ const box = $("elevBox"), tray = document.createElement("div");
+ tray.className = "roomTools556";
+ const actions = $("st6").querySelector(".fs419bar");
+ if (actions) actions.before(tray); else box.after(tray);
  function tools(){
  tray.style.display=box.classList.contains("mf503sel")&&box.offsetHeight?"flex":"none";
  for(const b of tray.children)b.setAttribute("aria-pressed",String(fxPending===b.dataset.key));
@@ -40633,3 +40641,85 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
        （実データ相当の状態で再現して確認）。対応：tradeLayer の塗り・丸・線から selBlink を外し、
        範囲は点滅させず静かに示す形にした。チェックの検出・件数・赤丸の印は無変更。
    見積・保存キーは無変更 ===== -->
+
+<style id="walnut-thumb-tools">
+@media screen {
+  body #st2 > #zRow { margin:0!important; padding-bottom:max(3px,env(safe-area-inset-bottom,0px)); }
+  body #stM #oak556 { order:100; padding-bottom:max(3px,env(safe-area-inset-bottom,0px))!important; }
+  body #st6.fsRoom.fsRm .fs419bar {
+    display:flex; order:100; justify-content:flex-end; align-items:center;
+    padding:4px 5px max(4px,env(safe-area-inset-bottom,0px));
+    background:#493426 var(--oak556) center/320px 24px; border-radius:4px;
+  }
+  body:has(#st6.fsRoom.fsRm:not([hidden])) #fab523 {display:none!important}
+  body #st6.fsRoom.fsRm .fs419bar button {
+    flex:0 1 auto; min-height:44px; padding:0 16px;
+    background:#fbf6ec; border:1px solid #a18869; border-radius:4px;
+    color:#433326;
+  }
+  body #st6.fsRoom.fsRm .roomTools556 {order:98;flex:none}
+  body #st6:not(.fsRm) > .roomTools556 {display:none!important}
+  body #st3 > #roofView556 {flex:none;margin:0}
+  body #st3 > #roofView556 button {min-height:44px}
+  body :is(#st4,#st5) {padding-bottom:calc(70px + env(safe-area-inset-bottom,0px))}
+  body :is(.fs422next,#toShorui) {bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+}
+</style>
+
+<style id="walnut-graphite-drawings">
+:root { --drawing-paper:#fffefa; --drawing-ink:#292927; --drawing-detail:#666660; }
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) {background-color:var(--drawing-paper)!important;}
+body #st2 #planWrap>.card,body #stM #slotM .card,body #st3 .fs420stage,body #miniPlan219,body #st6 #pvCard {background:var(--drawing-paper)!important;}
+body #draw #drawGround {fill:var(--drawing-paper)!important;}
+body #draw :is(#grid,#gridGold) path {stroke:#e5e3db!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([fill="#2563B0" i],[fill="#255DA2" i],[fill="#28669A" i],[fill="#245D90" i],[fill="#1F4E8C" i],[fill="#1F6FB5" i],[fill="#1F5F8B" i],[fill="#1D5B9E" i],[fill="#1D4ED8" i],[fill="#2563EB" i],[fill="#3E4A57" i],[fill="#18202A" i]) {fill:#292927;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="fill:#2563B0" i],[style*="fill: #2563B0" i],[style*="fill:#255DA2" i],[style*="fill: #255DA2" i],[style*="fill:#28669A" i],[style*="fill: #28669A" i],[style*="fill:#245D90" i],[style*="fill: #245D90" i],[style*="fill:#1F4E8C" i],[style*="fill: #1F4E8C" i],[style*="fill:#1F6FB5" i],[style*="fill: #1F6FB5" i],[style*="fill:#1F5F8B" i],[style*="fill: #1F5F8B" i],[style*="fill:#1D5B9E" i],[style*="fill: #1D5B9E" i],[style*="fill:#1D4ED8" i],[style*="fill: #1D4ED8" i],[style*="fill:#2563EB" i],[style*="fill: #2563EB" i],[style*="fill:#3E4A57" i],[style*="fill: #3E4A57" i],[style*="fill:#18202A" i],[style*="fill: #18202A" i]) {fill:#292927!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stroke="#2563B0" i],[stroke="#255DA2" i],[stroke="#28669A" i],[stroke="#245D90" i],[stroke="#1F4E8C" i],[stroke="#1F6FB5" i],[stroke="#1F5F8B" i],[stroke="#1D5B9E" i],[stroke="#1D4ED8" i],[stroke="#2563EB" i],[stroke="#3E4A57" i],[stroke="#18202A" i]) {stroke:#292927;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stroke:#2563B0" i],[style*="stroke: #2563B0" i],[style*="stroke:#255DA2" i],[style*="stroke: #255DA2" i],[style*="stroke:#28669A" i],[style*="stroke: #28669A" i],[style*="stroke:#245D90" i],[style*="stroke: #245D90" i],[style*="stroke:#1F4E8C" i],[style*="stroke: #1F4E8C" i],[style*="stroke:#1F6FB5" i],[style*="stroke: #1F6FB5" i],[style*="stroke:#1F5F8B" i],[style*="stroke: #1F5F8B" i],[style*="stroke:#1D5B9E" i],[style*="stroke: #1D5B9E" i],[style*="stroke:#1D4ED8" i],[style*="stroke: #1D4ED8" i],[style*="stroke:#2563EB" i],[style*="stroke: #2563EB" i],[style*="stroke:#3E4A57" i],[style*="stroke: #3E4A57" i],[style*="stroke:#18202A" i],[style*="stroke: #18202A" i]) {stroke:#292927!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stop-color="#2563B0" i],[stop-color="#255DA2" i],[stop-color="#28669A" i],[stop-color="#245D90" i],[stop-color="#1F4E8C" i],[stop-color="#1F6FB5" i],[stop-color="#1F5F8B" i],[stop-color="#1D5B9E" i],[stop-color="#1D4ED8" i],[stop-color="#2563EB" i],[stop-color="#3E4A57" i],[stop-color="#18202A" i]) {stop-color:#292927;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stop-color:#2563B0" i],[style*="stop-color: #2563B0" i],[style*="stop-color:#255DA2" i],[style*="stop-color: #255DA2" i],[style*="stop-color:#28669A" i],[style*="stop-color: #28669A" i],[style*="stop-color:#245D90" i],[style*="stop-color: #245D90" i],[style*="stop-color:#1F4E8C" i],[style*="stop-color: #1F4E8C" i],[style*="stop-color:#1F6FB5" i],[style*="stop-color: #1F6FB5" i],[style*="stop-color:#1F5F8B" i],[style*="stop-color: #1F5F8B" i],[style*="stop-color:#1D5B9E" i],[style*="stop-color: #1D5B9E" i],[style*="stop-color:#1D4ED8" i],[style*="stop-color: #1D4ED8" i],[style*="stop-color:#2563EB" i],[style*="stop-color: #2563EB" i],[style*="stop-color:#3E4A57" i],[style*="stop-color: #3E4A57" i],[style*="stop-color:#18202A" i],[style*="stop-color: #18202A" i]) {stop-color:#292927!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([fill="#789ABF" i],[fill="#4F6D8F" i],[fill="#5B6B7A" i],[fill="#8A96A3" i],[fill="#5B6673" i],[fill="#657D99" i],[fill="#9AA5B1" i],[fill="#5C6B78" i]) {fill:#666660;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="fill:#789ABF" i],[style*="fill: #789ABF" i],[style*="fill:#4F6D8F" i],[style*="fill: #4F6D8F" i],[style*="fill:#5B6B7A" i],[style*="fill: #5B6B7A" i],[style*="fill:#8A96A3" i],[style*="fill: #8A96A3" i],[style*="fill:#5B6673" i],[style*="fill: #5B6673" i],[style*="fill:#657D99" i],[style*="fill: #657D99" i],[style*="fill:#9AA5B1" i],[style*="fill: #9AA5B1" i],[style*="fill:#5C6B78" i],[style*="fill: #5C6B78" i]) {fill:#666660!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stroke="#789ABF" i],[stroke="#4F6D8F" i],[stroke="#5B6B7A" i],[stroke="#8A96A3" i],[stroke="#5B6673" i],[stroke="#657D99" i],[stroke="#9AA5B1" i],[stroke="#5C6B78" i]) {stroke:#666660;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stroke:#789ABF" i],[style*="stroke: #789ABF" i],[style*="stroke:#4F6D8F" i],[style*="stroke: #4F6D8F" i],[style*="stroke:#5B6B7A" i],[style*="stroke: #5B6B7A" i],[style*="stroke:#8A96A3" i],[style*="stroke: #8A96A3" i],[style*="stroke:#5B6673" i],[style*="stroke: #5B6673" i],[style*="stroke:#657D99" i],[style*="stroke: #657D99" i],[style*="stroke:#9AA5B1" i],[style*="stroke: #9AA5B1" i],[style*="stroke:#5C6B78" i],[style*="stroke: #5C6B78" i]) {stroke:#666660!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stop-color="#789ABF" i],[stop-color="#4F6D8F" i],[stop-color="#5B6B7A" i],[stop-color="#8A96A3" i],[stop-color="#5B6673" i],[stop-color="#657D99" i],[stop-color="#9AA5B1" i],[stop-color="#5C6B78" i]) {stop-color:#666660;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stop-color:#789ABF" i],[style*="stop-color: #789ABF" i],[style*="stop-color:#4F6D8F" i],[style*="stop-color: #4F6D8F" i],[style*="stop-color:#5B6B7A" i],[style*="stop-color: #5B6B7A" i],[style*="stop-color:#8A96A3" i],[style*="stop-color: #8A96A3" i],[style*="stop-color:#5B6673" i],[style*="stop-color: #5B6673" i],[style*="stop-color:#657D99" i],[style*="stop-color: #657D99" i],[style*="stop-color:#9AA5B1" i],[style*="stop-color: #9AA5B1" i],[style*="stop-color:#5C6B78" i],[style*="stop-color: #5C6B78" i]) {stop-color:#666660!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([fill="#7FB8DC" i],[fill="#A9C8E6" i]) {fill:#797970;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="fill:#7FB8DC" i],[style*="fill: #7FB8DC" i],[style*="fill:#A9C8E6" i],[style*="fill: #A9C8E6" i]) {fill:#797970!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stroke="#7FB8DC" i],[stroke="#A9C8E6" i]) {stroke:#797970;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stroke:#7FB8DC" i],[style*="stroke: #7FB8DC" i],[style*="stroke:#A9C8E6" i],[style*="stroke: #A9C8E6" i]) {stroke:#797970!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stop-color="#7FB8DC" i],[stop-color="#A9C8E6" i]) {stop-color:#797970;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stop-color:#7FB8DC" i],[style*="stop-color: #7FB8DC" i],[style*="stop-color:#A9C8E6" i],[style*="stop-color: #A9C8E6" i]) {stop-color:#797970!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([fill="#EEF4FB" i],[fill="#F2F6FB" i],[fill="#EEF4FA" i],[fill="#DBE8F4" i],[fill="#CFE6F7" i],[fill="#BFDCEF" i],[fill="#E6EFFA" i],[fill="#DAE7F3" i]) {fill:#e9e8e3;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="fill:#EEF4FB" i],[style*="fill: #EEF4FB" i],[style*="fill:#F2F6FB" i],[style*="fill: #F2F6FB" i],[style*="fill:#EEF4FA" i],[style*="fill: #EEF4FA" i],[style*="fill:#DBE8F4" i],[style*="fill: #DBE8F4" i],[style*="fill:#CFE6F7" i],[style*="fill: #CFE6F7" i],[style*="fill:#BFDCEF" i],[style*="fill: #BFDCEF" i],[style*="fill:#E6EFFA" i],[style*="fill: #E6EFFA" i],[style*="fill:#DAE7F3" i],[style*="fill: #DAE7F3" i]) {fill:#e9e8e3!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stroke="#EEF4FB" i],[stroke="#F2F6FB" i],[stroke="#EEF4FA" i],[stroke="#DBE8F4" i],[stroke="#CFE6F7" i],[stroke="#BFDCEF" i],[stroke="#E6EFFA" i],[stroke="#DAE7F3" i]) {stroke:#e9e8e3;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stroke:#EEF4FB" i],[style*="stroke: #EEF4FB" i],[style*="stroke:#F2F6FB" i],[style*="stroke: #F2F6FB" i],[style*="stroke:#EEF4FA" i],[style*="stroke: #EEF4FA" i],[style*="stroke:#DBE8F4" i],[style*="stroke: #DBE8F4" i],[style*="stroke:#CFE6F7" i],[style*="stroke: #CFE6F7" i],[style*="stroke:#BFDCEF" i],[style*="stroke: #BFDCEF" i],[style*="stroke:#E6EFFA" i],[style*="stroke: #E6EFFA" i],[style*="stroke:#DAE7F3" i],[style*="stroke: #DAE7F3" i]) {stroke:#e9e8e3!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stop-color="#EEF4FB" i],[stop-color="#F2F6FB" i],[stop-color="#EEF4FA" i],[stop-color="#DBE8F4" i],[stop-color="#CFE6F7" i],[stop-color="#BFDCEF" i],[stop-color="#E6EFFA" i],[stop-color="#DAE7F3" i]) {stop-color:#e9e8e3;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stop-color:#EEF4FB" i],[style*="stop-color: #EEF4FB" i],[style*="stop-color:#F2F6FB" i],[style*="stop-color: #F2F6FB" i],[style*="stop-color:#EEF4FA" i],[style*="stop-color: #EEF4FA" i],[style*="stop-color:#DBE8F4" i],[style*="stop-color: #DBE8F4" i],[style*="stop-color:#CFE6F7" i],[style*="stop-color: #CFE6F7" i],[style*="stop-color:#BFDCEF" i],[style*="stop-color: #BFDCEF" i],[style*="stop-color:#E6EFFA" i],[style*="stop-color: #E6EFFA" i],[style*="stop-color:#DAE7F3" i],[style*="stop-color: #DAE7F3" i]) {stop-color:#e9e8e3!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([fill="#D7DCE2" i],[fill="#C9D1DC" i],[fill="#B9C0C9" i]) {fill:#d8d6d0;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="fill:#D7DCE2" i],[style*="fill: #D7DCE2" i],[style*="fill:#C9D1DC" i],[style*="fill: #C9D1DC" i],[style*="fill:#B9C0C9" i],[style*="fill: #B9C0C9" i]) {fill:#d8d6d0!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stroke="#D7DCE2" i],[stroke="#C9D1DC" i],[stroke="#B9C0C9" i]) {stroke:#d8d6d0;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stroke:#D7DCE2" i],[style*="stroke: #D7DCE2" i],[style*="stroke:#C9D1DC" i],[style*="stroke: #C9D1DC" i],[style*="stroke:#B9C0C9" i],[style*="stroke: #B9C0C9" i]) {stroke:#d8d6d0!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([stop-color="#D7DCE2" i],[stop-color="#C9D1DC" i],[stop-color="#B9C0C9" i]) {stop-color:#d8d6d0;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) :is([style*="stop-color:#D7DCE2" i],[style*="stop-color: #D7DCE2" i],[style*="stop-color:#C9D1DC" i],[style*="stop-color: #C9D1DC" i],[style*="stop-color:#B9C0C9" i],[style*="stop-color: #B9C0C9" i]) {stop-color:#d8d6d0!important;}
+body :is(svg#draw, svg#plan, svg#sec, svg#pvSvg, #miniPlan219 svg, #elevBox svg, #st6.fsRm svg#iso) [fill^="rgba(37,99,176" i] {fill:#e9e8e3;}
+body svg#plan polygon[fill="#eef4fb" i] {stroke-width:3;stroke-linejoin:miter;}
+body svg#plan g[data-edge] rect[fill="#fff" i] {fill:var(--drawing-paper);}
+body svg#sec line[stroke="#2563b0" i] {stroke-width:1.15;}
+body svg#sec pattern[id^="secWood"] rect {fill:#e9e8e3;}
+body svg#sec pattern[id^="secWood"] :is(path,line) {stroke:#aaa79e;opacity:.45;}
+body svg#sec pattern[id^="secWood"] ellipse {display:none;}
+body svg#sec rect:where([fill^="url(#secWood"]) {stroke:#4d4b44;}
+body svg#plan pattern image, body svg#pvSvg pattern image, body #elevBox svg pattern image {filter:grayscale(1);}
+</style>
+
+<!-- ===== CAD-579：ChatGPT納品「A黒鉛＋道具下配置」（2026-11-23、翔伍が採用）を Claude の CAD-578（②クロス表示で黄色を出さない直し、土台 md5 d0ff4d31）へ移植。
+  (1) 図面の配色：末尾 style#walnut-graphite-drawings（納品パッチからそのまま）。紙 #fffefa・主線 #292927・
+      細線 #666660・薄い灰の塗り #e9e8e3 に寄せ、屋根断面の木目（secWood）は薄い灰＋線に。描画データ・寸法・数量・操作は無変更。
+  (2) 道具の下側配置：①の #zRow を #st2 の末尾（次へボタンの下）へ DOM 移動。③の .fs419bar は #st6 の末尾へ付け、
+      引き出しに id=roomFixtureDrawer と aria を付与（fab523css の非表示ルールは外し、fsRm では下の帯が開閉ボタン、
+      丸ボタン #fab523 は style#walnut-thumb-tools で隠す）。④の #roofView556 は #st3 の末尾（flowNext の前）へ移動し、
+      ③の .roomTools556 は .fs419bar の直前へ。⑥#st4・⑦#st5 は下端の安全余白（70px＋safe-area）。
+  (3) 入れなかった物：選択色の黄土色化（selBlue551 の #a36225 化）は本人の決定（2026-11-23「選択は水色の方が
+      わかりやすい」）で見送り、水色↔白の点滅のまま。style#walnut-plan-surface は本番の #oak556 が既に
+      order:100 で下側にあり採用済みデザインと重なるため見送り（紙色は graphite 側で #stM のカードにも効く）。 ===== -->
