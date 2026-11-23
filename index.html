@@ -4056,6 +4056,171 @@ function cleanZones187(){
   } catch(e){ return 0; }
 }
 HB.__cleanZones187 = cleanZones187;
+/* ===== CAD-593（仮）：床の範囲を「壁で区切り、同室・同仕上げは1つにまとめる」 =====
+   翔伍の実機指摘（2026-11-24）：「床、こんな事になるわけないのになってしまう」
+   「こんな小分けにされてるのもおかしい」。床の範囲（S.tatami の四角）は、囲みが
+   壁を越えたり、床を決めた後に間仕切りを足す・動かすと、壁をまたいだまま残った。
+   逆に、重なりの引き算で細かく割れた同室・同仕上げの範囲は、辺がそろわないため
+   mergeAssign では二度と1つに戻らなかった。
+   直しは fixAssign（割り当ての整え役）と drawPlan の前段（間仕切りの追加・移動・
+   削除は全て save→drawPlan で確定する）で、毎回同じ整え方をする事：
+   (1) 間仕切り（撤去を除く）の線で床の範囲を割る。ギロチン分割で面積は変えない。
+       壁の端が範囲の途中で止まる時は、端を回り込める側はそのまま残す。
+       斜めの壁は mergeAssign の wallOn と同じく対象外。
+   (2) 同じ部屋の中で、仕上げ（fk・st・za・h・fin・det・tk388）が同じで
+       つながっている範囲は、四角の和集合を取り直して大きな四角に組み直す
+       （小分けの解消）。部屋が違う・間に壁やゾーンがある範囲はまとめない。
+       印（rm・ec）は混ざっていてもまとめるが、まとめた範囲の印は保護の
+       強い方へそろえる（囲んだ範囲の保護 CAD-170/343 のため。見切りの境界＝
+       出入口・開口や仕上げの切り替わりは、部屋と仕上げの組が違うので残る）。
+   見積は範囲の面積の合計で数えるため、(1)(2)とも前後で金額は変わらない。 */
+function splitFloorsAtWalls587(){
+  if (!S || !Array.isArray(S.tatami) || !S.tatami.length) return false;
+  const walls = (S.parts2D || []).filter(q => q && pState(q) !== "remove" && Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100);
+  if (!walls.length) return false;
+  let changed = false;
+  let arr = S.tatami.slice();
+  walls.forEach(q => {
+    const vert = Math.abs(q.x1 - q.x2) < 1, horiz = Math.abs(q.y1 - q.y2) < 1;
+    if (!vert && !horiz) return;
+    const wc = vert ? q.x1 : q.y1;
+    const wlo = vert ? Math.min(q.y1, q.y2) : Math.min(q.x1, q.x2);
+    const whi = vert ? Math.max(q.y1, q.y2) : Math.max(q.x1, q.x2);
+    const out = [];
+    arr.forEach(r => {
+      if (!r || !(r.x1 > r.x0) || !(r.y1 > r.y0)){ out.push(r); return; }
+      const lo = vert ? r.x0 : r.y0, hi = vert ? r.x1 : r.y1;
+      const plo = vert ? r.y0 : r.x0, phi = vert ? r.y1 : r.x1;
+      if (!(wc > lo && wc < hi)){ out.push(r); return; }
+      const sy0 = Math.max(plo, wlo), sy1 = Math.min(phi, whi);
+      if (!(sy1 > sy0)){ out.push(r); return; }
+      changed = true;
+      const mk = (a0, a1, b0, b1) => vert ? cpRec141(r, {x0: a0, x1: a1, y0: b0, y1: b1}) : cpRec141(r, {x0: b0, x1: b1, y0: a0, y1: a1});
+      const pieces = [mk(lo, wc, plo, phi), mk(wc, hi, sy0, sy1)];
+      if (sy0 > plo) pieces.push(mk(wc, hi, plo, sy0));
+      if (sy1 < phi) pieces.push(mk(wc, hi, sy1, phi));
+      pieces.forEach((p, k) => { if (k > 0 && p.id) p.id = zid(); out.push(p); });
+    });
+    arr = out;
+  });
+  if (changed) S.tatami = arr;
+  return changed;
+}
+function mergeFloorsInRoom587(){
+  if (!S || !Array.isArray(S.tatami) || S.tatami.length < 2) return false;
+  let R = null;
+  try { R = roomsCalc(); } catch(e){ return false; }
+  if (!R || !R.rooms || !R.rooms.length) return false;
+  /* 印（rm・ec）はグループ分けには使わない（混ざっていても1つにまとめるのが
+     本人の指示）。代わりに、まとめた範囲の印は保護が強い方へそろえる：
+     ec（囲んだ範囲）はどれか1つでもあれば引き継ぎ、rm（部屋タップで
+     置き換えてよい範囲）は全部が rm の時だけ残す（CAD-170/343 の保護を守る） */
+  const keyOf = r => JSON.stringify([r.fk || "", r.st || "new", r.za ? 1 : 0, r.h || 0, r.fin || "", r.det || null, r.tk388 || ""]);
+  /* レコードが1つの部屋だけに入っているか（内側の格子で見る。
+     複数の部屋にまたがる物は組み直しの対象外にして、そのまま残す。
+     端の1mmの点は壁際・外周際のブロックセルに当たって部屋が取れないため、
+     端から60mm内側の格子で見る） */
+  const roomOf = r => {
+    let cid = null, seen = 0;
+    for (let y = r.y0 + 60; y < r.y1; y += 100){
+      for (let x = r.x0 + 60; x < r.x1; x += 100){
+        const rm = roomAt(x, y); if (!rm) continue;
+        seen++;
+        if (cid === null) cid = rm.cid; else if (rm.cid !== cid) return null;
+      }
+    }
+    return seen ? cid : null;
+  };
+  const groups = new Map();
+  S.tatami.forEach((r, i) => {
+    if (!r || !(r.x1 > r.x0) || !(r.y1 > r.y0)) return;
+    const cid = roomOf(r); if (cid === null) return;
+    const k = cid + "|" + keyOf(r);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(i);
+  });
+  let changed = false;
+  const drop = new Set(), add = [];
+  const touch587 = (a, b) => {
+    const ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0), oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+    return (ox >= -1 && oy > 1) || (oy >= -1 && ox > 1);
+  };
+  groups.forEach(idxs => {
+    if (idxs.length < 2) return;
+    /* つながっている物同士で集まりに分ける（離れた範囲は別の範囲のまま） */
+    const pool = idxs.map(i => ({i, r: S.tatami[i]})), clusters = [];
+    while (pool.length){
+      const cl = [pool.shift()];
+      let grew = true;
+      while (grew){
+        grew = false;
+        for (let i = pool.length - 1; i >= 0; i--){
+          if (cl.some(c => touch587(c.r, pool[i].r))){ cl.push(pool[i]); pool.splice(i, 1); grew = true; }
+        }
+      }
+      clusters.push(cl);
+    }
+    clusters.forEach(cl => {
+      if (cl.length < 2) return;
+      const conn = cl.map(c => c.r);
+    /* 和集合を、四角の辺だけの格子で取り直す（面積は厳密に同じ）。
+       ただし壁の線の所では四角をまたがない（壁の端を回り込む形でも、
+       組み直した四角が壁を越えない様に、壁のある帯・境目でランを切る） */
+    const xs = [...new Set(conn.flatMap(r => [r.x0, r.x1]))].sort((a, b) => a - b);
+    const ys = [...new Set(conn.flatMap(r => [r.y0, r.y1]))].sort((a, b) => a - b);
+    const cov = (x0, y0, x1, y1) => conn.some(r => r.x0 <= x0 + 0.01 && r.x1 >= x1 - 0.01 && r.y0 <= y0 + 0.01 && r.y1 >= y1 - 0.01);
+    const walls587 = (S.parts2D || []).filter(q => q && pState(q) !== "remove");
+    const vBreak587 = (x, y0, y1) => walls587.some(q => Math.abs(q.x1 - q.x2) < 1 && Math.abs(q.x1 - x) < 1 && Math.max(Math.min(q.y1, q.y2), y0) < Math.min(Math.max(q.y1, q.y2), y1) - 1);
+    const hBreak587 = (y, x0, x1) => walls587.some(q => Math.abs(q.y1 - q.y2) < 1 && Math.abs(q.y1 - y) < 1 && Math.max(Math.min(q.x1, q.x2), x0) < Math.min(Math.max(q.x1, q.x2), x1) - 1);
+    const rowMap = {};
+    for (let j = 0; j < ys.length - 1; j++){
+      const runs = []; let s = -1;
+      for (let i = 0; i < xs.length - 1; i++){
+        const brk = i > 0 && vBreak587(xs[i], ys[j], ys[j + 1]);
+        if (cov(xs[i], ys[j], xs[i + 1], ys[j + 1]) && !brk){ if (s < 0) s = i; }
+        else { if (s >= 0){ runs.push([s, i - 1]); s = -1; } if (cov(xs[i], ys[j], xs[i + 1], ys[j + 1])) s = i; }
+      }
+      if (s >= 0) runs.push([s, xs.length - 2]);
+      rowMap[j] = runs;
+    }
+    const cellRects = [], openR = {};
+    Object.keys(rowMap).sort((a, b) => a - b).forEach(bj => {
+      const j = +bj, seenK = {};
+      rowMap[bj].forEach(([a, b2]) => {
+        const key = a + "|" + b2; seenK[key] = 1;
+        if (openR[key] && openR[key].j1 === j - 1 && !hBreak587(ys[j], xs[a], xs[b2 + 1])) openR[key].j1 = j;
+        else { if (openR[key]) cellRects.push(openR[key]); openR[key] = {i0: a, i1: b2, j0: j, j1: j}; }
+      });
+      Object.keys(openR).forEach(key => { if (!seenK[key]){ cellRects.push(openR[key]); delete openR[key]; } });
+    });
+    Object.keys(openR).forEach(key => cellRects.push(openR[key]));
+    const newRects = cellRects.map(c => ({x0: xs[c.i0], y0: ys[c.j0], x1: xs[c.i1 + 1], y1: ys[c.j1 + 1]}));
+    /* 組み直しても形が変わらない組は、レコードを触らない（印や素性を守る） */
+    const sigOf = list => list.map(r => [r.x0, r.y0, r.x1, r.y1].join(",")).sort().join(";");
+    if (sigOf(newRects) === sigOf(conn)) return;
+    changed = true;
+    cl.forEach(c => drop.add(c.i));
+    const anyEc587 = conn.some(r => r.ec), allRm587 = conn.every(r => r.rm);
+    newRects.forEach((nr, k) => {
+      const p = cpRec141(conn[0], nr);
+      if (k > 0 && p.id) p.id = zid();
+      if (anyEc587) p.ec = 1; else delete p.ec;
+      if (allRm587) p.rm = 1; else delete p.rm;
+      add.push(p);
+    });
+    });
+  });
+  if (changed){
+    S.tatami = S.tatami.filter((r, i) => !drop.has(i)).concat(add);
+  }
+  return changed;
+}
+function tidyFloors587(){
+  let ch = false;
+  try { if (splitFloorsAtWalls587()) ch = true; } catch(e){ console.warn("CAD-593 split", e); }
+  try { if (mergeFloorsInRoom587()) ch = true; } catch(e){ console.warn("CAD-593 merge", e); }
+  return ch;
+}
 // 畳・土間・水回り・収納が、外周の外に出たり、重なったりしないように整える（あとに置いた物が優先）
 function fixAssign(){
   /* --- CAD-187 B：種別不明ゾーンの退避（本体は下の try の中身が原文のまま） --- */
@@ -4080,6 +4245,7 @@ function fixAssign(){
     pieces.forEach((p, k) => { if (k > 0 && p.id) p.id = zid(); win.push(p); (seq[i].k === "t" ? outT : outZ).unshift(p); });
   }
   S.tatami = outT; S.zones = outZ;
+  tidyFloors587();   /* CAD-593（仮）：床の範囲を壁で区切り、同室・同仕上げの小分けを1つにまとめる */
   mergeAssign(S.zones, (a, b) => a.k === b.k);
   // CAD-141: 合体は st だけでなく fk・det・za・h・fin まで全部同じ時だけ。st だけで
   // 見ていた頃は、隣り合う「CF住宅用」と「CF土足OK」が合体して片方の det が消えた
@@ -5486,6 +5652,10 @@ function drawPlan(){
   if (HB.__dpN0 !== undefined){ try { const n = (S.lights || []).length; if (ltTool && !sel && HB.__dpN0 != null && n > HB.__dpN0) sel = {t: "lt", i: n - 1}; HB.__dpN0 = n; } catch(e){} }   /* 旧 blk22（dp）前段：照明が増えたら置いた直後の物を自動で選ぶ（前回の個数は HB.__dpN0） */
   if (!HB.__padEdgeUI){ const q = document.getElementById("plan"); if (q && q.style.maxHeight){ q.style.maxHeight = ""; q.style.margin = ""; } }   /* 旧 blk09（dp）前段：数字パッド表示中以外は図の大きさを戻す */
   snap5All();   /* 旧 blk02内IIFE（dp）前段 */
+  /* CAD-593（仮）：間仕切りの追加・移動・削除は全て save→drawPlan で確定するため、
+     ここでも床の範囲を整える（壁で区切り、同室・同仕上げはまとめる）。囲みの編集中は
+     レコードの番号がずれるため触らない。変わった時だけ保存し直す。 */
+  try { if (typeof tidyFloors587 === "function" && !(typeof encl !== "undefined" && encl && encl.edit) && tidyFloors587()) save(); } catch(e){ console.warn("CAD-593", e); }
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawPlanCompass();
   let Ht = 0;
