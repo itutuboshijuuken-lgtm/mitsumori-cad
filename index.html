@@ -1203,6 +1203,9 @@ const WORK = [
   ["tTear", "トイレ 既存撤去", "円/台", 0, 5000],
   ["tTearai", "トイレ 手洗い付きタンクにする差額", "円/台", 0, 8000],
   ["doorGlass", "ドア ガラス入り差額", "円/枚", 0, 15000],   /* CAD-283：室内ドアのガラス入り差額（仮単価・単価表で変更可） */
+  ["tobShita581", "戸袋 薄壁下地（面材）", "円/㎡", 0, 2000],   /* CAD-581：両側薄壁の戸袋・現場造作の下地（面材24mm。仮単価・単価表で変更可） */
+  ["tobUnit581", "戸袋ユニット（メーカー製）", "円/式", 0, 50000],   /* CAD-581：両側薄壁の戸袋ユニット（仮単価・単価表で変更可。裏取り済み定価：ラフィス戸袋ユニット¥50,000／ラシッサUD スチール戸袋ユニット¥129,000） */
+  ["tobKen581", "戸袋 点検口", "円/か所", 0, 19000],   /* CAD-581：戸袋の点検口（仮単価・単価表で変更可。裏取り済み定価¥19,000） */
   ["tRemodel", "トイレ リモデル排水（排水芯の調整）", "円/台", 0, 15000],
   ["tAcc", "紙巻器・タオル掛け 交換", "円/か所", 0, 6000],
   ["tTesuri", "手すり 取付", "円/か所", 0, 12000],
@@ -3295,6 +3298,8 @@ function planExtras(P, sc){
           const s2 = [PKA308[0], PKA308[1]], e2 = [s2[0] + u[0] * (w / 2), s2[1] + u[1] * (w / 2)];   /* CAD-553：戸袋の中の扉は壁の中心に描く */
           g += `<line x1="${P(s1)[0]}" y1="${P(s1)[1]}" x2="${P(e1)[0]}" y2="${P(e1)[1]}" stroke="#3E4A57" stroke-width="3"/>`;
           g += `<line x1="${P(s2)[0]}" y1="${P(s2)[1]}" x2="${P(e2)[0]}" y2="${P(e2)[1]}" stroke="#3E4A57" stroke-width="3" stroke-dasharray="4 3"/>`;
+          if (sa.tob581 === "both"){ const t1 = [s2[0] + n[0] * 16, s2[1] + n[1] * 16], t2 = [e2[0] + n[0] * 16, e2[1] + n[1] * 16], t3 = [s2[0] - n[0] * 16, s2[1] - n[1] * 16], t4 = [e2[0] - n[0] * 16, e2[1] - n[1] * 16];
+            g += `<line x1="${P(t1)[0]}" y1="${P(t1)[1]}" x2="${P(t2)[0]}" y2="${P(t2)[1]}" stroke="#3E4A57" stroke-width="2"/><line x1="${P(t3)[0]}" y1="${P(t3)[1]}" x2="${P(t4)[0]}" y2="${P(t4)[1]}" stroke="#3E4A57" stroke-width="2"/>`; }   /* CAD-581：両側薄壁の時は、戸袋の両側の薄壁の内面を2線で描く（壁の面から約36mm内側。中央の破線が戸） */
           const E553 = k308.pk ? A : B, eA = [E553[0] - n[0] * 55, E553[1] - n[1] * 55], eB = [E553[0] + n[0] * 55, E553[1] + n[1] * 55];   /* CAD-553：戸袋の遠い端の短線 */
           g += `<line x1="${P(eA)[0]}" y1="${P(eA)[1]}" x2="${P(eB)[0]}" y2="${P(eB)[1]}" stroke="#3E4A57" stroke-width="2"/>`;
           g += arrow553(90);   /* CAD-553：扉の脇に、戸袋の側を指す矢印 */
@@ -5293,19 +5298,22 @@ function changeSheet(i){
   const sa = S.sashes[i]; if (!sa) return;
   const p = pickInit(sa);
   const render = () => {
-    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${wakuLbl405(sa.cat)}${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (sa.cat === "玄関" ? elockSeg248(sa) : "") + (sa.cat === "室内ドア" ? glassSeg283(sa) : "") + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
+    $("mbox").innerHTML = `<h3>種類・大きさを変える</h3><p class="hint" style="margin-top:0">今：${sashLabel(sa)}（${wakuLbl405(sa.cat)}${sa.w}×${sa.h}）</p>` + pickerHtml(p, false) + (sa.cat === "玄関" ? elockSeg248(sa) : "") + (sa.cat === "室内ドア" ? glassSeg283(sa) : "") + (sa.cat === "室内ドア" ? tobSeg581(sa) : "") + (typeOf(sa) === "door" ? `<div class="chips"><button data-cfl="1" type="button">開く向きを反対に</button><button data-cfl="2" type="button">吊元を左右反対に</button></div>` : "") + `<div class="row"><button class="btn sub" id="csNo" type="button">戻る</button></div>`;
     $("modal").hidden = false;
     $("csNo").onclick = () => { $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-cfl]").forEach(b => b.onclick = () => { pushUndo(); sa.flip = (sa.flip || 0) ^ +b.dataset.cfl; save(); drawPlan(); });
     $("mbox").querySelectorAll("[data-elk248]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.elk248) sa.elock = b.dataset.elk248; else delete sa.elock; save(); drawPlan(); render(); });   /* CAD-248：電子錠の選択 */
     $("mbox").querySelectorAll("[data-gls283]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.gls283) sa.glass = 1; else delete sa.glass; save(); drawPlan(); render(); });   /* CAD-283：ガラスの選択 */
-    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (x.cat !== "室内ドア") delete sa.glass; if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sa.w}×${sa.h} にしました`); });
+    $("mbox").querySelectorAll("[data-tob581]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.tob581) sa.tob581 = b.dataset.tob581; else { delete sa.tob581; delete sa.tobM581; delete sa.tobK581; } save(); drawPlan(); render(); });   /* CAD-581：戸袋の作り（片側壁／両側薄壁） */
+    $("mbox").querySelectorAll("[data-tobm581]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.tobm581) sa.tobM581 = b.dataset.tobm581; else delete sa.tobM581; save(); drawPlan(); render(); });   /* CAD-581：戸袋の作り方（現場造作／メーカーユニット） */
+    $("mbox").querySelectorAll("[data-tobk581]").forEach(b => b.onclick = () => { pushUndo(); if (b.dataset.tobk581) sa.tobK581 = 1; else delete sa.tobK581; save(); drawPlan(); render(); });   /* CAD-581：点検口の有無 */
+    pickerBind(p, render, x => { pushUndo(); Object.assign(sa, {cat: x.cat, name: x.name, w: x.w, h: x.h, frame: x.frame}); if (x.cat !== "玄関") delete sa.elock; if (x.cat !== "室内ドア") delete sa.glass; if (!kata308(sa)){ delete sa.tob581; delete sa.tobM581; delete sa.tobK581; }   /* CAD-581：片引き（戸袋あり）でなくなったら戸袋の作りの選択も消す */ if (!sOpts(sa).includes(sState(sa))) sa.st = "new";   /* CAD-248：玄関以外に変えたら電子錠の選択は消す */ save(); drawPlan(); $("modal").hidden = true; toast(`${sa.w}×${sa.h} にしました`); });
   };
   render();
 }
 function glassSeg283(sa){ const cur = sa.glass ? "1" : ""; return `<div class="sub2" style="margin-top:8px">ガラス</div><div class="seg">${[["", "ガラスなし"], ["1", `ガラス入り（＋${fmt(workP("doorGlass").p)}円/枚）`]].map(([v, n]) => `<button data-gls283="${v}" aria-pressed="${cur === v}" type="button">${n}</button>`).join("")}</div>`; }   /* CAD-283：室内ドアのガラス有無を選ぶ段（電子錠と同じ作り・初期値はガラスなし） */
 function elockSeg248(sa){ const cur = sa.elock || ""; return `<div class="sub2" style="margin-top:8px">電子錠（任意）</div><div class="seg">${[["", "付けない"]].concat(ELOCK248.map(x => [x[0], x[1] + " ＋" + fmt(workP(x[2]).p) + "円"])).map(([v, n]) => `<button data-elk248="${v}" aria-pressed="${cur === v}" type="button">${n}</button>`).join("")}</div>`; }   /* CAD-248：電子錠を選ぶ段 */
-function sashLabel(s){ return s.cat === "室内ドア" ? (s.name === "片開き" ? "ドア 片開き" : s.name) + (s.frame === "outset" ? "（アウトセット）" : s.frame === "casing" ? "（ケーシング枠）" : "（固定枠）") : `${s.cat} ${s.name}`; }
+function sashLabel(s){ return s.cat === "室内ドア" ? (s.name === "片開き" ? "ドア 片開き" : s.name) + (s.frame === "outset" ? "（アウトセット）" : s.frame === "casing" ? "（ケーシング枠）" : "（固定枠）") + (s.tob581 === "both" ? "（両側薄壁）" : "") : `${s.cat} ${s.name}`; }   /* CAD-581：両側薄壁の時は表示にも出す */
 
 function openSheet(i){
   const sa = S.sashes[i]; if (!sa) return;
@@ -7118,7 +7126,7 @@ function calc00(){
     }
   }
   function sash(){
-    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+    S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ tobRows581(s).forEach(x => rows.push(x));   /* CAD-581：両側薄壁の戸袋の行（選んだ時だけ） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
   function floorFin(a, pre, ft, tkid388){
@@ -8123,7 +8131,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   work(S.ashK === "waku" ? "ashibaW" : "ashiba", "足場" + (S.ashK === "waku" ? "（枠組）" : "（くさび式）") + gaiSfx, ashibaA, "㎡", ashPro ? `${ashPro.spec} × ${fmt(workP(S.ashK === "waku" ? "ashibaW" : "ashiba").p)}円` : undefined);
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two && !(S.tenken || []).some(o => o.k === "stair")){ if (typeof stairAuto389 === "function" && workP("kaidan").avg) rows.push(...stairAuto389((S.ch || 2400) + (S.dosa || 240))); else work("kaidan", "階段", 1, "か所"); }   /* CAD-389：自動の階段も直階段として積み上げ＋手間（単価を自分で入れている時は従来の1行） */
-  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+  S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ tobRows581(s).forEach(x => rows.push(x));   /* CAD-581：両側薄壁の戸袋の行（選んだ時だけ） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
   /* CAD-391：従来の大工手間（人工の積み上げ）の計算は廃止。下の行で「大工手間（基本）」に置き換えた */   /* CAD-248：刻み・間仕切りの扱いを明示 */
   rows.push(...daikuBaseRows391(nobeT));   /* CAD-391：大工手間（基本）＝基本坪単価×延床（ハウスメーカー方式・翔伍の決定 2026-11-19） */
   if (S.mode === "zo" && S.tr === "menzai") work("mensaiTe", "面材の手間", nobeT, "坪");   /* CAD-427：耐力面材を使う家だけ（翔伍の決定 2026-11-20：延床×3,500円/坪。面材＋筋交いの家も S.tr === "menzai" なので出す） */
@@ -15820,6 +15828,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         if (ty === "hiki" && k308){
           /* CAD-308：片引きの型。戸袋あり＝開口の半分に実線・戸袋の半分は壁の中に破線／アウトセット＝壁の面の外側を走る実線。中方立の短線（jamb）も足す */
           if (k308.out){ const oo = band / s / 2 + 35; g += ln(A, oo, w, false); if (sa.glass && sa.cat === "室内ドア") g += gm(A, oo, w, false); }
+          else if (sa.tob581 === "both"){ g += ln(OA308, 35, w / 2, false) + ln(PKA308, 16, w / 2, false) + ln(PKA308, -16, w / 2, false) + lnD(PKA308, 0, w / 2, false); if (sa.glass && sa.cat === "室内ドア") g += gm(OA308, 35, w / 2, false); }   /* CAD-581：両側薄壁は薄壁2線＋中央の戸（破線） */
           else { g += ln(OA308, 35, w / 2, false) + lnD(PKA308, 35, w / 2, false); if (sa.glass && sa.cat === "室内ドア") g += gm(OA308, 35, w / 2, false); }
           g += jamb(PA) + jamb(PB) + jamb(PM308); return;
         }
@@ -38537,7 +38546,7 @@ function kozo478(C){
       var sa = S.sashes[s.i]; if (!sa) return;
       var pick = {cat: sa.cat, name: sa.name, w: sa.w, h: sa.h};
       var ty = sashTy502(sa), g = sashGrp502(sa);
-      var snap = {frame: sa.frame, elock: sa.elock, glass: sa.glass, flip: (typeof sa.flip === "number") ? sa.flip : null};
+      var snap = {frame: sa.frame, elock: sa.elock, glass: sa.glass, tob581: sa.tob581, tobM581: sa.tobM581, tobK581: sa.tobK581, flip: (typeof sa.flip === "number") ? sa.flip : null};   /* CAD-581：戸袋の作りも引き継ぐ */
       var lbl = sa.cat === "室内ドア" ? sa.name : (g === "gen" ? sa.cat + (sa.name || "") : sa.cat);
       try { toolOpen = g; } catch(e){}
       HB.__put = {g: g, label: lbl, same502: true, fn: function(){
@@ -38549,6 +38558,9 @@ function kozo478(C){
           if (snap.frame) ns.frame = snap.frame;
           if (snap.elock) ns.elock = snap.elock;
           if (snap.glass) ns.glass = snap.glass;
+          if (snap.tob581) ns.tob581 = snap.tob581;
+          if (snap.tobM581) ns.tobM581 = snap.tobM581;
+          if (snap.tobK581) ns.tobK581 = snap.tobK581;
           if (snap.flip != null) ns.flip = snap.flip;
           try { save(); } catch(e){}
         }
@@ -40838,3 +40850,71 @@ body svg#plan pattern image, body svg#pvSvg pattern image, body #elevBox svg pat
   参照HTML側も同じ inline width:100% を上書きする採用デザインのまま）。
   入れなかった物・効かない物：選択色（selBlue551 の水色↔白）と黒鉛の色は本人の決定どおり無変更（このCSS自体にも
   含まれない）。#st7 向けの指定は本番に同名の静的要素が無く、他の画面分で効く（参照HTMLと同じ構成）。 ===== -->
+
+<script id="tob581js">
+/* ===== CAD-581：片引き戸に「両側薄壁の戸袋」タイプを追加（翔伍の決定 2026-11-23）。
+   仕様の正：hidden_files/harness/katahiki-ryogawa-spec-2026-11-23.md（6. 訂正と追加）。
+   ・片側壁（現行）が標準。両側薄壁は、置いた後から「種類・大きさを変える」シートで選んだ時だけ。
+   ・両側薄壁では作り方も選べる：現場造作（標準）／メーカーユニット。点検口は付ける場合だけ1か所。
+   ・両側薄壁の見積：戸袋区間の表面ボード両面は現行の面積のまま（opW308 は変えない＝戸袋半分は壁として拾う）。
+     両端の縦材も現行どおり。増えるのは戸袋の中身だけ＝現場造作は「薄壁下地（面材）」を戸袋幅×高さ×2面、
+     ユニットは「戸袋ユニット」1式、点検口は1か所を、建具の行の後ろに足す。
+     ※間柱は現行でも戸袋スパン内には入らない（開口として除外され、両端の受けだけ）ため、間柱側の変更は不要。
+   ・未設定の保存データ（sa.tob581 が無い）は片側壁として扱い、既存の家の見積は変えない。
+   ・2D記号：両側薄壁の時だけ、戸袋の両側の薄壁の内面を2線で描き、中央の破線が戸（drawPlan・pvSashes 側で実施）。
+   ・3D（⑤完成図）の戸袋表示は今回やらない（別キュー）。
+   ・ChatGPT建具版（chatgpt-rounds/tategu-2026-11-23）との照合（2026-11-23）：向こうは frame に
+     "singlewall" を足し "fixed" を両側薄壁と読み替える方式で、未設定の既存の片引きが両側薄壁に
+     なってしまう（翔伍の決定「未設定＝片側壁」と合わない）ため、保存の持ち方は取り込まない。
+     向こうの見積は両タイプ同額（拾い分けなし）で、仕様メモの拾い分けとは違うため、見積も仕様メモが正。
+     取り込んだのは「選ぶ所に両タイプの絵を出す」工夫だけ（上の tobSeg581 の絵プレビュー）。 ===== */
+function tob581(sa){
+  if (!sa || typeof kata308 !== "function") return null;
+  var k = kata308(sa); if (!k || k.out) return null;   /* 対象は kata308 と同じ：室内ドアの片引き（アウトセット以外） */
+  return {both: sa.tob581 === "both", unit: sa.tobM581 === "unit", ken: !!sa.tobK581};
+}
+function tobSeg581(sa){
+  var t = tob581(sa); if (!t) return "";
+  var h = '<div class="sub2" style="margin-top:8px">戸袋の作り（壁）</div><div class="seg">' +
+    [["", "片側壁"], ["both", "両側薄壁（戸袋）"]].map(function(x){ return '<button data-tob581="' + x[0] + '" aria-pressed="' + ((t.both ? "both" : "") === x[0]) + '" type="button">' + x[1] + "</button>"; }).join("") + "</div>";
+  /* CAD-581：タイプの絵（ChatGPT建具版のプレビューの工夫を取り込み。左＝開口・右＝戸袋側。選んでいる方に水色の枠） */
+  var figS = function(on){ return 'flex:1;margin:0;padding:4px;border:2px solid ' + (on ? '#2f7fc4' : '#d8d3c8') + ';border-radius:6px;background:#fff'; };
+  var capS = 'font-size:11px;text-align:center;color:#4a3828;margin-top:2px';
+  h += '<div class="tobPrev581" style="display:flex;gap:8px;margin-top:6px">' +
+    '<figure style="' + figS(!t.both) + '"><svg viewBox="0 0 120 40" style="width:100%;height:auto;display:block">' +
+    '<line x1="2" y1="20" x2="14" y2="20" stroke="#3E4A57" stroke-width="9"/><line x1="14" y1="20" x2="62" y2="20" stroke="#3E4A57" stroke-width="3"/>' +
+    '<rect x="62" y="14" width="44" height="12" fill="#3E4A57"/><line x1="62" y1="32" x2="106" y2="32" stroke="#3E4A57" stroke-width="2.5" stroke-dasharray="4 3"/>' +
+    '<line x1="106" y1="20" x2="118" y2="20" stroke="#3E4A57" stroke-width="9"/></svg>' +
+    '<figcaption style="' + capS + '">片側壁（戸は壁に沿って走る）</figcaption></figure>' +
+    '<figure style="' + figS(t.both) + '"><svg viewBox="0 0 120 40" style="width:100%;height:auto;display:block">' +
+    '<line x1="2" y1="20" x2="14" y2="20" stroke="#3E4A57" stroke-width="9"/><line x1="14" y1="20" x2="62" y2="20" stroke="#3E4A57" stroke-width="3"/>' +
+    '<line x1="62" y1="12" x2="106" y2="12" stroke="#3E4A57" stroke-width="2.5"/><line x1="62" y1="28" x2="106" y2="28" stroke="#3E4A57" stroke-width="2.5"/>' +
+    '<line x1="62" y1="20" x2="106" y2="20" stroke="#3E4A57" stroke-width="2.5" stroke-dasharray="4 3"/>' +
+    '<line x1="106" y1="20" x2="118" y2="20" stroke="#3E4A57" stroke-width="9"/></svg>' +
+    '<figcaption style="' + capS + '">両側薄壁（戸は薄壁の間に入る）</figcaption></figure></div>';
+  if (t.both){
+    h += '<div class="sub2" style="margin-top:8px">戸袋の作り方</div><div class="seg">' +
+      [["", "現場造作"], ["unit", "メーカーユニット"]].map(function(x){ return '<button data-tobm581="' + x[0] + '" aria-pressed="' + ((t.unit ? "unit" : "") === x[0]) + '" type="button">' + x[1] + "</button>"; }).join("") + "</div>";
+    h += '<div class="sub2" style="margin-top:8px">点検口（任意）</div><div class="seg">' +
+      [["", "付けない"], ["1", "付ける（＋" + fmt(workP("tobKen581").p) + "円）"]].map(function(x){ return '<button data-tobk581="' + x[0] + '" aria-pressed="' + ((t.ken ? "1" : "") === x[0]) + '" type="button">' + x[1] + "</button>"; }).join("") + "</div>";
+  }
+  return h;
+}
+function tobRows581(s){
+  var t = tob581(s);
+  if (!t || !t.both || sState(s) !== "new") return [];
+  var out = [], n = s.n || 1;
+  if (t.unit){
+    var wu = workP("tobUnit581");
+    out.push({name: "戸袋ユニット（メーカー製）", spec: "片引き " + s.w + "×" + s.h + "・両側薄壁の戸袋", qty: n + "式", cost: wu.p * n, avg: wu.avg, fix: {kind: "work", key: "tobUnit581"}});
+  } else {
+    var ws = workP("tobShita581"), area = (s.w / 2) * s.h / 1e6 * 2 * n;   /* 戸袋幅（全体幅の半分）×高さ×両側2面 */
+    out.push({name: "戸袋 薄壁下地（面材）", spec: "片引き " + s.w + "×" + s.h + "・戸袋の両側2面（面材24mm）", qty: fmt(area, 2) + "㎡", cost: Math.round(ws.p * area), avg: ws.avg, fix: {kind: "work", key: "tobShita581"}});
+  }
+  if (t.ken){
+    var wk = workP("tobKen581");
+    out.push({name: "戸袋 点検口", spec: "片引き " + s.w + "×" + s.h, qty: n + "か所", cost: wk.p * n, avg: wk.avg, fix: {kind: "work", key: "tobKen581"}});
+  }
+  return out;
+}
+</script>
