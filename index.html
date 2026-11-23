@@ -39796,3 +39796,66 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
 #stM #selBar .dpad{grid-template-columns:repeat(3,44px)!important;grid-template-rows:repeat(3,44px)!important}
 #stM #selBar .dpad .ar,#stM #selBar .dpad .rot{width:44px!important;height:44px!important;min-height:44px!important}
 </style>
+<script id="resume562js">
+/* ===== CAD-562：開き直した時に、前回いた画面（手順）に戻る（初めての人レビュー7件目） =====
+   症状：アプリを開き直すたびに最初の手順から始まり、作業の途中で閉じると
+   いた画面に戻れなかった（土台 CAD-561 で実測：④屋根→開き直し→②、⑦見積→開き直し→②）。
+   直し：(1) 画面が移るたびに「今の現場（PJ.cur）と今の手順」を専用キー gosei-step-v1 に控える。
+            控えるのは go() の包みで、実際に表示された手順（go 内の振り分けを終えた後の
+            step 全局変数）を読むので、リフォームで屋根→仕様に振り替わる場合も
+            表示された画面がそのまま控えられる。チュートリアル実行中は控えない
+            （練習の手順で本番の控えを上書きしないため）。
+        (2) 起動後に、控えが「今開いている現場」と一致し、家のデータがあり、
+            質問画面（kindBox）もチュートリアルも出ていない時だけ、その手順へ戻る。
+            優先順位：家のデータが無い時の「何をつくりますか？」（CAD-561）が先、
+            チュートリアル実行中はその流れが先。控えの手順が想定外の値なら捨てる。
+            起動直後に利用者が自分で別の画面へ移っていたら、その操作を優先して戻さない。
+   戻すのは「どの画面にいたか」だけ（選択中の物・開いたパネル・入力途中は戻さない）。
+   既存の保存キー・保存データの形は一切変えない（追加するのは gosei-step-v1 だけ）。 */
+(function(){ "use strict";
+  if (window.__resume562) return; window.__resume562 = true;
+  var KEY = "gosei-step-v1";
+  var OK = [1, 2, 3, 4, 5, 6, "M"];
+  var bootStep = (typeof step !== "undefined") ? step : null;
+  var moved = false, done = false;
+  function tut(){ try { return (typeof HB !== "undefined" && HB.__nbtut === 1) || document.body.classList.contains("nbtutRun"); } catch(e){ return false; } }
+  function record(){
+    try {
+      if (tut()) return;
+      if (typeof step === "undefined" || typeof PJ === "undefined" || !PJ || !PJ.cur) return;
+      if (OK.indexOf(step) < 0) return;
+      localStorage.setItem(KEY, JSON.stringify({ pid: PJ.cur, step: step }));
+    } catch(e){}
+  }
+  var origGo = window.go;
+  if (typeof origGo === "function" && !origGo.__resume562){
+    var w = function(){
+      var r = origGo.apply(this, arguments);
+      try { if (typeof step !== "undefined" && step !== bootStep) moved = true; } catch(e){}
+      record();
+      return r;
+    };
+    w.__resume562 = true;
+    window.go = w;
+  }
+  function restore(){
+    if (done) return;
+    try {
+      if (typeof S === "undefined" || typeof PJ === "undefined" || typeof step === "undefined") return; /* まだ読み込み途中なら次の回で */
+      done = true;
+      if (moved) return;                                   /* 起動後に自分で移っていたら邪魔しない */
+      if (tut()) return;                                   /* チュートリアルが優先 */
+      if (document.getElementById("kindBox")) return;      /* 「何をつくりますか？」が優先 */
+      if (!S.edges) return;                                /* 家のデータが無い時は質問画面が先 */
+      if (!PJ || !PJ.cur) return;
+      var m = null; try { m = JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){}
+      if (!m || m.pid !== PJ.cur) return;                  /* 別の現場の控えでは戻らない */
+      if (OK.indexOf(m.step) < 0) return;                  /* 想定外の値は捨てる（変な画面に飛ばさない） */
+      if (step === m.step) return;
+      if (typeof origGo === "function") origGo(m.step);    /* 包みを通さず直接戻す */
+      record();
+    } catch(e){}
+  }
+  [700, 1800, 3200].forEach(function(ms){ setTimeout(restore, ms); });
+})();
+</script>
