@@ -26440,41 +26440,6 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
 })();
 </script>
 <script>
-/* CAD-265: 描く画面のとびらの見た目MAX（扉板を木色の2重線＋開く範囲をうすく塗り＋実線の弧＋吊元の点）。位置・向き・寸法は今のまま */
-(function(){
-"use strict";
-var NS="http://www.w3.org/2000/svg";
-function mk(t,a){var e=document.createElementNS(NS,t);for(var k in a)e.setAttribute(k,a[k]);return e}
-function apply(){
-  try{
-    var svg=document.getElementById("plan"); if(!svg)return;
-    if(typeof dragging!=="undefined"&&dragging&&dragging.moved)return;
-    if(document.body.classList.contains("pz262"))return;
-    var arcs=svg.querySelectorAll('path[stroke-dasharray="3 2"][stroke="#3E4A57"]');
-    arcs.forEach(function(ar){
-      if(ar.getAttribute("data-d265"))return;
-      var ln=ar.previousElementSibling; if(!ln||ln.tagName!=="line"||ln.getAttribute("stroke")!=="#3E4A57")return;
-      var d=ar.getAttribute("d"), m=/M\s*([-\d.]+)[ ,]([-\d.]+)\s*A\s*([-\d.]+)\s*([-\d.]+)\s*0\s*0\s*([01])\s*([-\d.]+)[ ,]([-\d.]+)/.exec(d); if(!m)return;
-      var hx=+ln.getAttribute("x1"),hy=+ln.getAttribute("y1"),tx=+ln.getAttribute("x2"),ty=+ln.getAttribute("y2");
-      var g=mk("g",{"data-d265":"1","pointer-events":"none"});
-      /* 開く範囲 */
-      g.appendChild(mk("path",{d:"M"+hx+","+hy+" L"+m[1]+","+m[2]+" A"+m[3]+" "+m[4]+" 0 0 "+m[5]+" "+m[6]+","+m[7]+" Z",fill:"#7FA3C7","fill-opacity":".13",stroke:"none"}));
-      /* 弧（点線のまま残す） */
-      g.appendChild(mk("path",{d:d,fill:"none",stroke:"#4F6683","stroke-width":"1.2","stroke-dasharray":"3 2"}));
-      /* 扉板 */
-      g.appendChild(mk("line",{x1:hx,y1:hy,x2:tx,y2:ty,stroke:"#4A3320","stroke-width":"3.6","stroke-linecap":"round"}));
-      g.appendChild(mk("line",{x1:hx,y1:hy,x2:tx,y2:ty,stroke:"#D9A66B","stroke-width":"1.7","stroke-linecap":"round"}));
-      /* 吊元 */
-      g.appendChild(mk("circle",{cx:hx,cy:hy,r:"2.3",fill:"#fff",stroke:"#3E4A57","stroke-width":"1.1"}));
-      ln.parentNode.insertBefore(g,ln); ln.style.display="none"; ar.style.display="none"; ar.setAttribute("data-d265","1");
-    });
-  }catch(e){ try{console.warn("CAD-265",e)}catch(_){} }
-}
-var prev=window.tidyPlanLabels;
-if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply(this,arguments); apply(); return r } }
-})();
-</script>
-<script>
 /* CAD-266: 描く画面の窓の見た目MAX（ガラス色・枠・ガラス2本線・引違いの中央召し合わせ）。位置・寸法は今のまま */
 (function(){
 "use strict";
