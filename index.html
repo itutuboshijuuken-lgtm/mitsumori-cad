@@ -766,6 +766,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <div class="seg modeSeg"><button data-mode="zo" type="button">新築・増築</button><button data-mode="rf" type="button">内装リフォーム</button><button data-mode="pt" type="button">部分工事</button></div>
     <div style="height:10px"></div>
     <div class="seg" id="pvSeg"><button data-pv="iso" type="button" aria-pressed="true">立体図</button><button data-pv="room" type="button" aria-pressed="false">室内図</button><button data-pv="plan" type="button" aria-pressed="false" style="display:none">平面図</button><!-- CAD-477：平面図は図面集（A-01）に入っているため、完成図のバーには出さない（本人の指示 2026-11-21） --></div>
+    <p id="roomNote570">壁ごとに、仕上げや置く物（照明・コンセントなど）を決める画面です。変えなくても、そのまま見積へ進めます。</p>
     <div id="pvBar">
       <div class="row" style="margin:0 0 6px"><button class="btn" id="pvStruct" type="button" aria-pressed="true" style="flex:1">柱・間柱を表示</button></div>
       <p id="pvLegend" style="margin:0 0 8px;font-size:12.5px;line-height:1.55;color:#5B6673"></p>
@@ -19317,6 +19318,15 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
 #st6[data-v162="room"]:not(.pvOn) #pvIsoCard,
 #st6[data-v162="room"]:not(.pvOn) #pvRotRow,
 #st6[data-v162="room"]:not(.pvOn) #pvIsoHint{display:none!important}
+</style>
+<style id="cad570Sty">
+/* CAD-570: ③室内図の目的の一言（初めての人レビュー9件目、2026-11-23）。
+   「何のための画面か・変えなくても見積へ進める」が分かる短い一言を、室内図（room表示）の
+   先頭に常時出す。.hint の全域ルール（チュートリアル時以外は非表示）の対象にしないため
+   専用IDで出し、表示は data-v162="room" の時だけにする（立体図・平面図では出さない）。
+   黄色ガイド・点滅は使わない（本番画面の決まり）。 */
+#roomNote570{display:none;margin:0 2px 8px;font-size:13.5px;line-height:1.6;color:#5B6673}
+#st6[data-v162="room"]:not(.pvOn) #roomNote570{display:block}
 </style>
 <script>
 /* CAD-162: 完成図（⑥）の中で、立体図と室内図（室内の展開）を別々の画面にする。
