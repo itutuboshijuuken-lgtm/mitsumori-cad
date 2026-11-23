@@ -549,6 +549,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
     <p class="hint" id="dimHint"></p>
     <div id="edgeList"></div>
     <div id="dimStatus"></div>
+    <p id="dimNote575">丸い数字は、辺の番号です。図のチップ・辺の一覧・入力画面で、同じ番号が同じ辺を指します。</p>
     <div class="area" id="areaBox"></div>
     <style>body.fsDraw #st2 #flBox493{display:none!important}</style><div class="zo" id="flBox493" hidden><h2>階数</h2>
     <div class="seg" id="flSeg"><button data-fls="1" type="button">平屋</button><button data-fls="2" type="button">2階建（総2階）</button></div></div>
@@ -2191,7 +2192,7 @@ const DIRJ = {R: "→", L: "←", D: "↓", U: "↑"};
 function drawEdgeList(){
   if (!S.edges) { $("edgeList").innerHTML = ""; return; }
   const fu = HB.__nbtut ? -1 : S.edges.findIndex(x => !x.set && !x.auto);
-  $("edgeList").innerHTML = `<div class="card" style="margin-top:8px;padding:4px 10px">${S.edges.map((e, i) => `<button class="set${i === fu ? " armBlink" : ""}" data-el="${i}" type="button"><span><i style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#2563B0;color:#fff;font-size:12px;font-style:normal;font-weight:900;margin-right:6px">${i + 1}</i>${wallLabel(i).split(" ")[0]}<small style="display:inline;margin-left:6px">${DIRJ[e.d]}${e.auto ? "・自動" : ""}</small></span><b style="${e.set ? "" : e.auto ? "color:#8A96A3;background:#EEF2F6" : "color:#E8742C;background:#FFF3E6"}">${fmtD319(e.v)}</b></button>`).join("")}</div>`;
+  $("edgeList").innerHTML = `<div class="card" style="margin-top:8px;padding:4px 10px"><div style="font-size:12.5px;line-height:1.55;color:#5B6673;padding:4px 2px 2px">丸い数字は、辺の番号です。図のチップ・辺の一覧・入力画面で、同じ番号が同じ辺を指します。</div>${S.edges.map((e, i) => `<button class="set${i === fu ? " armBlink" : ""}" data-el="${i}" type="button"><span><i style="display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#2563B0;color:#fff;font-size:12px;font-style:normal;font-weight:900;margin-right:6px">${i + 1}</i>${wallLabel(i).split(" ")[0]}<small style="display:inline;margin-left:6px">${DIRJ[e.d]}${e.auto ? "・自動" : ""}</small></span><b style="${e.set ? "" : e.auto ? "color:#8A96A3;background:#EEF2F6" : "color:#E8742C;background:#FFF3E6"}">${fmtD319(e.v)}</b></button>`).join("")}</div>`;
   $("edgeList").querySelectorAll("[data-el]").forEach(b => b.onclick = () => editEdge(+b.dataset.el));
 }
 /* ---------- 図に描く：間仕切り・建具 ---------- */
@@ -5575,7 +5576,7 @@ function drawPlan(){
   const u = unknown();
   $("dimStatus").innerHTML = dimErr.length ? `<div class="status ng">${dimErr.join("<br>")}</div>`
     : u ? `<div class="status todo">オレンジの「？」の辺をあと ${u} か所 入れてください。グレーの辺は自動で出ます。</div>`
-    : `<div class="status ok">寸法がそろいました。</div>`;
+    : `<div class="status ok">寸法がそろいました。上の「②間取り」を押して、次へ進めます。</div>`;
   const a = areaMM() / 1e6;
   $("areaBox").innerHTML = u || dimErr.length ? "" : `<div><span>床面積</span><b>${fmt(a, 2)}<small>㎡</small></b></div><div><span>坪数</span><b>${fmt(a * 0.3025, 2)}<small>坪</small></b></div><div><span>畳</span><b>${fmt(a / 1.62, 1)}<small>畳</small></b></div>`;
   /* CAD-493（決定2・本人の決定 2026-11-21）：階数（平屋／2階建）を④屋根から①描くの後（この画面）の
@@ -5627,7 +5628,7 @@ function editEdge(i){
       if (v !== null && !HB.__padNav316){
         const nx = S.edges.findIndex((x, j) => j !== i && !x.set && !x.auto);
         if (nx >= 0 && HB.__nbtut) setTimeout(() => editEdge(nx), 250);
-        else if (!unknown()) toast("寸法がそろいました。「次へ」で間取りへ");
+        else if (!unknown()) toast("寸法がそろいました。上の「②間取り」へ進めます");
       }
     }
   });
@@ -16844,7 +16845,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     "body.fsDraw #stM .mtools .seg{background:transparent}",
     "body.fsDraw #stM .mtools button,body.fsDraw #stM #planBar button{pointer-events:auto}",
     "body.fsDraw #stM #floorPanel>div{background:rgba(255,255,255,.55);border-radius:4px;padding:1px 4px}",
-    "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext{display:none!important}",
+    "body.fsDraw #st2 .modeSeg,body.fsDraw #st2 #zRow,body.fsDraw #st2 .hint,body.fsDraw #st2 #edgeList,body.fsDraw #st2 #dimStatus,body.fsDraw #st2 #areaBox,body.fsDraw #st2 .flowNext,body.fsDraw #st2 #dimNote575{display:none!important}",
     /* item 50: close-all float (above sheets: pad40 modal45 ask200 pro300; below tutorial 99996+) */
     "#closeAllFloat{position:fixed;right:10px;top:calc(var(--hdrH,100px) + 6px);z-index:9000;min-height:44px;padding:0 16px;border-radius:22px;border:2px solid #37474F;background:transparent;color:#37474F;font-size:14px;font-weight:900}",
     /* CAD-145: 全画面中は「閉じる」を右上に置く（旧「戻す」ピルの位置。戻すは廃止し、閉じるに統一） */
@@ -40523,3 +40524,32 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
        正しく入っている）。drawSets の描画で、説明文の「〇〇」をその項目の実値
        fmt(S[k]) に置き換えて出す様にした（値が変われば説明も追随する）。
        屋根の計算・保存キーは無変更 ===== -->
+
+<style id="cad575Sty">
+/* CAD-575: ②寸法の番号説明の一行（初めての人レビュー14件目(b)、2026-11-23）。
+   図のチップの丸数字（辺の通し番号）の意味を、状態表示 #dimStatus の直下に常時出す。
+   .hint の全域ルール（チュートリアル時以外は非表示）の対象にしないため専用IDで出す。
+   黄色ガイド・点滅は使わない（本番画面の決まり）。全画面（fsDraw）では cad128Sty 側の
+   非表示リストに #dimNote575 を足して、他の②寸法の要素と同じく隠す。 */
+#dimNote575{margin:6px 2px 2px;font-size:13.5px;line-height:1.6;color:#5B6673}
+</style>
+
+<!-- ===== CAD-575：初めての人レビュー14件目（①描く→②寸法：外形が描けた後の進み方の案内が無い／寸法チップの①〜④の番号の意味が不明）への対応。
+   実測（CAD-574・390×844・まっさらな状態から四角プリセットで外形を作った直後）：
+   ・②寸法の状態表示 #dimStatus は緑の「寸法がそろいました。」だけで、次に何をするかは出ていなかった。
+   ・「次へ（間取り）」ボタン（.flowNext）は CAD-89 の決まりで本番では display:none（上の手順タブで移動する形）。
+     本番で見える進み先は上のタブ「②間取り」だけなので、案内はタブを指す文言にした（ボタン自体は復活させない）。
+   ・チップの丸数字は S.edges の通し番号（外形を一周する順の辺番号）。図のチップ・下の辺の一覧・
+     タップで出る入力画面の見出しと「前へ・次へ」が、同じ番号で同じ辺を指す（コードと表示で実測）。
+     ただし、その意味を説明する文は本番のどこにも無かった。
+   対応（表示の文言だけ。寸法の入力・確定・計算・保存は無変更）：
+   (a) #dimStatus の完了文を「寸法がそろいました。上の「②間取り」を押して、次へ進めます。」に変更。
+       あわせて、最後の寸法を入れた直後のトースト（従来「「次へ」で間取りへ」）も、本番では
+       「次へ」ボタンが出ていないため「寸法がそろいました。上の「②間取り」へ進めます」にそろえた。
+   (b) 番号の説明の一行「丸い数字は、辺の番号です。図のチップ・辺の一覧・入力画面で、同じ番号が
+       同じ辺を指します。」を2か所へ：(1) 本体側は #dimStatus の直後に #dimNote575 として常時表示
+       （上の cad575Sty。実測で、辺の一覧 #edgeList は fs418 の引き出し「辺の寸法を入れる」の中に
+       移動されていて初期状態では隠れているため、一覧の中だけではチップの番号の説明にならない）。
+       (2) 辺の一覧（#edgeList のカード）の先頭にも同文を入れた（drawEdgeList の生成文字列内。
+       引き出しを開いた時に一覧の番号の説明になる）。
+   黄色ガイド・点滅は使っていない（本番画面の決まり）。チュートリアルには触っていない ===== -->
