@@ -40487,3 +40487,21 @@ body.has568 #st6.modelActive #modelDock.t568open{display:block!important}
    ※移植時の最小調整1件：新見出し h2.screenTitle557 が ux-h を付けられ tabs254 の仕様グループ見出しに
    数えられると、modeSeg・タブバー・説明文まで「その他」グループの項目として hid254 で消えてしまう
    （土台 CAD-568 との比較で実証）ため、groups() の見出し抽出から screenTitle557 だけを除外した ===== -->
+
+<style id="cad572css">
+/* CAD-572（初めての人レビュー11件目・⑦見積）：
+   1) 内訳アコーディオンの見出しボタン .estimateToggle557 は width:100%＋左右padding 9px で、
+      box-sizing 未指定のためセル（350px）より18px広くなり、右端の▸/▾と金額が表の外へはみ出していた。
+      border-box にしてセル幅に収める（min-height は今までの見た目の高さに合わせて 62px に付け替え）。
+   2) 設定行 .set の補足文字（small）が 12px で、行の文字が詰まって読みにくいので 13px に少しだけ大きくする。
+   どちらも表示だけの変更で、金額・入力の動き・保存には触らない */
+  body #st5 .estimateToggle557 { box-sizing: border-box; min-height: 62px; }
+  body #st5 .set small { font-size: 13px; line-height: 19.5px; }
+</style>
+
+<!-- ===== CAD-572：初めての人レビュー11件目（⑦見積の設定行の文字の詰まり／「ご注意」の文の途中切れ）への対応。
+   実測（CAD-571・390×844）：「ご注意」の構造説明文は全文が表示され、切れていない事を確認（35坪2階・35坪平屋・練習の家。
+   内部の桁の文は innerText＝textContent で一致、高さの切れなし）。CAD-556 時点では ⑦ の表が画面より39px広く
+   （document幅429px）はみ出していたのが CAD-569 の作り替えで解消済み（現行は幅390pxに収まる）。
+   残っていた2件だけ表示側で直した：アコーディオン見出しボタンの18pxはみ出しと、設定行の補足文字の小ささ。
+   見積の計算・金額・保存キーは不変 ===== -->
