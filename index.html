@@ -2807,6 +2807,8 @@ function addEquip(k){
     o = mkO(side); if (!inside([o.x, o.y], pol)) o = mkO(-side);
   }
   if (HB.__snap207 && !best){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：壁が無い所では床置きと同じ吸着 */
+  const chosen=chosenWaterDirection(k);
+  if (chosen && chosen !== o.dir){ o.dir=chosen; o.x=c[0]; o.y=c[1]; moveTenken(o,0,0); }
   if (k === "makura") o.h = 1800; if (k === "chudan") o.h = 800;
   pushUndo(); S.tenken = S.tenken || []; if (HB.__putAt && HB.__put?.meetingQuick) o.meetingPending = true;
   S.tenken.push(o); sel = {t: "k", i: S.tenken.length - 1}; flashAt = Date.now(); save(); drawPlan();
@@ -2829,7 +2831,7 @@ function addTenken(k){
   if (k === "kitchen" || k === "senmen" || k === "counter" || k === "makura" || k === "chudan" || k === "tearai" || k === "geta" || k === "senpan" || k === "stair") return addEquip(k);
   pushUndo(); const c = HB.__putAt || viewCenterMM(), w = k === "wc" ? 400 : k === "bath" ? 1600 : k === "acout" ? 200 : k === "pillar" ? 105 : k === "floor" ? 600 : k === "yukashu" ? 600 : k === "yukaten" ? 410 : k === "dansa" ? 910 : 450, o = {k, w, x: Math.round(c[0] / 5) * 5, y: Math.round(c[1] / 5) * 5};
   if (HB.__snap207 && k !== "dansa"){ const s207 = HB.__snap207.tk(k, c); o.x = s207[0]; o.y = s207[1]; }   /* CAD-207：配置の吸着（段差はドア中心から決まるので対象外） */
-  if (k === "wc" || k === "bath"){ o.d = k === "wc" ? 700 : 800; o.dir = "n"; }
+  if (k === "wc" || k === "bath"){ o.d = k === "wc" ? 700 : 800; o.dir = chosenWaterDirection(k) || "n"; }
   if (k === "yukaten"){ o.d = 560; o.dir = "n"; }   /* CAD-273: 床下点検口は開口寸法 410×560 で置く（城東テクノ 450×600タイプの床開口） */
   if (k === "dansa"){ o.dir = "h"; const d = S.sashes.filter(sa => sa.drawn && sa.host && /室内ドア|クローゼット/.test(sa.cat)).map(sa => { const sg = hostSeg(sa.host); if (!sg) return null; const L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L], m = [sg[0][0] + u[0] * (sa.pos + sa.w / 2), sg[0][1] + u[1] * (sa.pos + sa.w / 2)]; return {m, w: sa.w, v: Math.abs(u[1]) > 0.5, d: Math.hypot(m[0] - c[0], m[1] - c[1])}; }).filter(Boolean).sort((a, b2) => a.d - b2.d)[0];
     if (d){ o.x = Math.round(d.m[0] / 5) * 5; o.y = Math.round(d.m[1] / 5) * 5; o.w = d.w; o.dir = d.v ? "v" : "h"; } }
@@ -2842,10 +2844,11 @@ function addTenken(k){
   if (HB.__atPost34) HB.__atPost34(k, __atR);   /* 旧 blk34 後段 */
   if (HB.__atSeg36){
     try {
-      if ((k === "wc" || k === "bath") && HB.__putDir){
+      const waterDir=chosenWaterDirection(k) || HB.__putDir;
+      if ((k === "wc" || k === "bath") && waterDir){
         const o = (S.tenken || [])[S.tenken.length - 1];
         if (o && o.k === k){
-          o.dir = HB.__putDir;
+          o.dir = waterDir;
           const R = roomsCalc(), i = Math.floor((o.x - R.b.x0) / R.st), j = Math.floor((o.y - R.b.y0) / R.st);
           if (i >= 0 && j >= 0 && i < R.NX && j < R.NY){
             const cid = R.comp[j * R.NX + i], rm = R.rooms.find(q => q.cid === cid);
@@ -2854,10 +2857,10 @@ function addTenken(k){
               const rc = {x0: R.b.x0 + i0 * R.st, y0: R.b.y0 + j0 * R.st, x1: R.b.x0 + (i1 + 1) * R.st, y1: R.b.y0 + (j1 + 1) * R.st};
               if ((rc.x1 - rc.x0) * (rc.y1 - rc.y0) <= 0.7 * areaMM()){
                 const d = o.d || 700, gap = 5, cl = (v, a, b2) => Math.max(a, Math.min(b2, v));
-                if (HB.__putDir === "n"){ o.y = rc.y0 + gap + d / 2; o.x = cl(o.x, rc.x0 + o.w / 2, rc.x1 - o.w / 2); }
-                else if (HB.__putDir === "s"){ o.y = rc.y1 - gap - d / 2; o.x = cl(o.x, rc.x0 + o.w / 2, rc.x1 - o.w / 2); }
-                else if (HB.__putDir === "w"){ o.x = rc.x0 + gap + d / 2; o.y = cl(o.y, rc.y0 + o.w / 2, rc.y1 - o.w / 2); }
-                else if (HB.__putDir === "e"){ o.x = rc.x1 - gap - d / 2; o.y = cl(o.y, rc.y0 + o.w / 2, rc.y1 - o.w / 2); }
+                if (waterDir === "n"){ o.y = rc.y0 + gap + d / 2; o.x = cl(o.x, rc.x0 + o.w / 2, rc.x1 - o.w / 2); }
+                else if (waterDir === "s"){ o.y = rc.y1 - gap - d / 2; o.x = cl(o.x, rc.x0 + o.w / 2, rc.x1 - o.w / 2); }
+                else if (waterDir === "w"){ o.x = rc.x0 + gap + d / 2; o.y = cl(o.y, rc.y0 + o.w / 2, rc.y1 - o.w / 2); }
+                else if (waterDir === "e"){ o.x = rc.x1 - gap - d / 2; o.y = cl(o.y, rc.y0 + o.w / 2, rc.y1 - o.w / 2); }
               }
             }
           }
@@ -2904,6 +2907,58 @@ function planImg554(im, x, y, wItem){
     return `<svg x="${x}" y="${y}" width="${wItem}" height="${wItem * im.bh / im.bw}" viewBox="${im.bx * 512} ${im.by * 512} ${im.bw * 512} ${im.bh * 512}"><defs><clipPath id="${id}"><polygon points="${pts}"/></clipPath></defs><image href="${im.u}" x="0" y="0" width="512" height="512" clip-path="url(#${id})"/></svg>`;
   }
   return `<svg x="${x}" y="${y}" width="${wItem}" height="${wItem * im.bh / im.bw}" viewBox="${im.bx * 512} ${im.by * 512} ${im.bw * 512} ${im.bh * 512}"><image href="${im.u}" x="0" y="0" width="512" height="512"/></svg>`;
+}
+
+const waterPlan = {
+  senmen: {name:"洗面台", w:750, d:560, cue:"立つ側", side:["下","左","上","右"]},
+  wc: {name:"トイレ", w:400, d:700, cue:"座る向き", side:["下","左","上","右"]},
+  bath: {name:"浴槽", w:1600, d:800, cue:"排水口", side:["右","下","左","上"]},
+  washer: {name:"洗濯機", w:640, d:640, cue:"操作・開く側", side:["下","左","上","右"]}
+};
+function waterTurn(o){
+  return Math.max(0, ["n","e","s","w"].indexOf(o.dir));
+}
+function waterPlanArt(key, turn, cx, cy, w, d){
+  const asset = {senmen:PLANIMG554.senmen, wc:PLANIMG554.wc, bath:PLANIMG555.bath}[key];
+  let art;
+  if (asset){
+    const width = Math.min(w, d * asset.bw / asset.bh);
+    const height = width * asset.bh / asset.bw;
+    art = planImg554(asset,-width/2,-height/2,width);
+  } else {
+    art = `<svg x="${-w/2}" y="${-d/2}" width="${w}" height="${d}" viewBox="0 0 100 100" pointer-events="none">
+      <rect x="2" y="2" width="96" height="96" rx="5" fill="#ede4d8" stroke="#a5835c" stroke-width="2.4"/>
+      <path d="M3 83h94v10q0 4-4 4H7q-4 0-4-4z" fill="#dfcdb7"/>
+      <path d="M14 89h15m43 0h12" stroke="#9b7754" stroke-width="2.4" stroke-linecap="round"/>
+      <circle cx="89" cy="89" r="2" fill="#9b7754"/>
+    </svg>`;
+  }
+  return `<g transform="translate(${cx} ${cy}) rotate(${90*turn})">${art}</g>`;
+}
+function waterOrientationSheet(key, turn, prepare, apply){
+  const spec=waterPlan[key];
+  const dimensions=key === "washer" || prepare || !sel || sel.t !== "k" ? spec : S.tenken[sel.i] || spec;
+  const w=dimensions.w || spec.w, d=dimensions.d || spec.d;
+  const fit=142/Math.max(w,d);
+  $("mbox").innerHTML = `<h3>${spec.name}の向き</h3><section class="kitchenPreview">
+    <div class="kitchenPreviewPaper"><svg viewBox="0 0 170 166" role="img" aria-label="${spec.name}の平面図"></svg><p aria-live="polite"></p></div>
+    <button class="btn sub" type="button" id="waterRotate">90°回転</button></section>
+    <div class="row" style="margin-top:12px">${prepare ? '<button class="btn sub" type="button" id="waterCancel">やめる</button>' : ''}
+    <button class="btn pri" type="button" id="waterOk">${prepare ? "この向きで置く" : "閉じる"}</button></div>`;
+  const svg=$("mbox").querySelector("svg"), label=$("mbox").querySelector("p");
+  const update=()=>{
+    svg.innerHTML=waterPlanArt(key,turn,85,83,w*fit,d*fit);
+    label.textContent=`${spec.cue}は図の${spec.side[turn]}側`;
+  };
+  update();
+  $("waterRotate").onclick=()=>{turn=(turn+1)%4; if(!prepare) apply(turn); update();};
+  $("waterOk").onclick=()=>{$("modal").hidden=true; if(prepare) apply(turn);};
+  if(prepare) $("waterCancel").onclick=()=>{$("modal").hidden=true;};
+  $("modal").hidden=false;
+}
+function chosenWaterDirection(k){
+  const choice=HB.__put?.waterOrientation;
+  return HB.__putAt && choice?.key === k ? ["n","e","s","w"][choice.turn] : null;
 }
 /* CAD-578：2階以上の間取りに、下の階の階段を「下り」として読み取り専用で描く（見積・選択・保存には関係しない）。この階に自分の階段が無い時だけ */
 function stairBelowSvg578(P){
@@ -3010,7 +3065,8 @@ function tenkenSvg(o, i, P){
        キッチンの反転は scale で重ねる：lr（左右）＝シンクとコンロが入れ替わる（立つ側は不変）、
        fb（表裏）＝立つ側が反対になる（シンク・コンロの左右は不変）。枠（物の範囲）と名前は従来通り。 */
     const im554 = PLANIMG554[o.k], ew554 = o.dir === "e" || o.dir === "w", L554 = ew554 ? H2 : W2, D554 = ew554 ? W2 : H2, rot554 = {n: 0, e: 90, s: 180, w: 270}[o.dir || "n"] || 0, fx554 = o.k === "kitchen" && o.lr ? -1 : 1, fy554 = o.k === "kitchen" && o.fb ? -1 : 1;
-    g += `<g transform="translate(${cx} ${cy}) rotate(${rot554}) scale(${fx554} ${fy554})">${planImg554(im554, -L554 / 2, -D554 / 2, L554)}</g>`;
+    if (o.k === "senmen"){ g += waterPlanArt("senmen", waterTurn(o), cx, cy, L554, D554); }
+    else { g += `<g transform="translate(${cx} ${cy}) rotate(${rot554}) scale(${fx554} ${fy554})">${planImg554(im554, -L554 / 2, -D554 / 2, L554)}</g>`; }
     g += `<text x="${cx}" y="${cy + H2 / 2 + 11}" text-anchor="middle" class="halo" style="font-size:9px;font-weight:800;fill:#3E4A57">${nm}</text></g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt([cx, cy]); flashClear(); }
     return g;
@@ -3109,6 +3165,21 @@ function drawSelBarK(bar){
         if (o.k === "bath" && HB.__doorBtn205){ try { HB.__doorBtn205(o); } catch(e){} }   /* CAD-205：浴槽の選択バーから浴室の入口を設定 */
       }
     } catch(e){}
+  }
+  const water = sel && sel.t === "k" && S.tenken?.[sel.i];
+  if (water && ["senmen","wc","bath"].includes(water.k)){
+    const buttons=bar.querySelector(".r1 > span:last-child");
+    if (buttons && !bar.querySelector("#waterDirection")){
+      const control=document.createElement("button");
+      control.id="waterDirection";
+      control.type="button";
+      control.textContent="向きを見る";
+      control.onclick=()=>waterOrientationSheet(water.k,waterTurn(water),false,turn=>{
+        pushUndo(); water.dir=["n","e","s","w"][turn];
+        moveTenken(water,0,0); save(); drawPlan();
+      });
+      buttons.prepend(control);
+    }
   }
   return r;
 }
@@ -13673,7 +13744,7 @@ setInterval(() => { try {
       /* CAD-554：便器も絵（タンクが奥＝壁側）で描く。グループの rotate（dir）がそのまま効く。
          当たり判定の透明 rect と、選択時の枠（CAD-373）は従来通り残す。 */
       g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" fill="#fff" fill-opacity="0.01"/>`
-        + planImg554(PLANIMG554.wc, x0, y0, lw);
+        + waterPlanArt("wc",0,c[0],c[1],lw,ld);
     } else if (o.k === "tearai"){
       /* CAD-555：手洗いも絵（水栓が奥＝壁側、丸い前面が手前）で描く。グループの rotate（dir）がそのまま効く。
          外枠（選択時の色・当たり判定）は従来通り残す。 */
@@ -13682,7 +13753,7 @@ setInterval(() => { try {
     } else {
       /* CAD-555：浴槽も絵（排水口が右端＝従来の線画と同じ側）で描く。外枠は従来通り残す。 */
       g += `<rect x="${x0}" y="${y0}" width="${lw}" height="${ld}" rx="4" fill="none" stroke="${isSel ? "#FF00C8" : col}" stroke-width="1.8"/>`   /* CAD-586：白い下地はやめ、床を見せる（枠線は残す） */
-        + planImg554(PLANIMG555.bath, x0, y0, lw);
+        + waterPlanArt("bath",0,c[0],c[1],lw,ld);
     }
     g += `</g>`;
     if (isSel && Date.now() - flashAt < 2500){ g += pulseAt(c); flashClear(); }
@@ -36606,6 +36677,12 @@ nav.steps{padding:1px 6px 3px}
       var P = function(x, y){ return [(x - a[0]) * sx, (y - a[1]) * sy]; }, g = document.createElementNS(NS, "g"); g.id = "f434"; g.setAttribute("pointer-events", "none");
       (S.furn434 || []).forEach(function(f, i){
         var w = f.r ? f.h : f.w, h = f.r ? f.w : f.h, q0 = P(f.x - w / 2, f.y - h / 2), q1 = P(f.x + w / 2, f.y + h / 2), on = i === fsel;
+        if (f.n === "洗濯機"){
+          g.insertAdjacentHTML("beforeend",waterPlanArt("washer",f.turn ?? (f.r ? 1 : 0),(q0[0]+q1[0])/2,(q0[1]+q1[1])/2,q1[0]-q0[0],q1[1]-q0[1]));
+          g.insertAdjacentHTML("beforeend",`<text x="${(q0[0]+q1[0])/2}" y="${(q0[1]+q1[1])/2+4*k}" text-anchor="middle" style="font-size:${11*k}px;font-weight:800;fill:#594a3b">洗濯機</text>`);
+          if (on) g.insertAdjacentHTML("beforeend",`<rect x="${q0[0]}" y="${q0[1]}" width="${q1[0]-q0[0]}" height="${q1[1]-q0[1]}" fill="none" stroke="#a37a40" stroke-width="${2*k}"/>`);
+          return;
+        }
         g.insertAdjacentHTML("beforeend", '<rect x="' + q0[0].toFixed(1) + '" y="' + q0[1].toFixed(1) + '" width="' + (q1[0] - q0[0]).toFixed(1) + '" height="' + (q1[1] - q0[1]).toFixed(1) + '" rx="' + (3 * k).toFixed(1) + '" fill="' + (/ベッド/.test(f.n) ? "rgba(91,127,168,.22)" : "rgba(165,131,92,.22)") + '" stroke="' + ((on && drag && drag.armed) ? "#FF00C8" : on ? "#E8742C" : (/ベッド/.test(f.n) ? "#5b7fa8" : "#a5835c")) + '" stroke-width="' + ((on ? 3 : 1.5) * k).toFixed(2) + '"/>'
           + '<text x="' + ((q0[0] + q1[0]) / 2).toFixed(1) + '" y="' + ((q0[1] + q1[1]) / 2 + 4 * k).toFixed(1) + '" text-anchor="middle" style="font-size:' + (11 * k).toFixed(2) + 'px;font-weight:800;fill:#37474F">' + f.n + '</text>');
       });
@@ -36640,11 +36717,22 @@ nav.steps{padding:1px 6px 3px}
       L.forEach(function(it, i){ h += '<button type="button" data-i="' + i + '">' + it[0] + '<br><small style="font-weight:700">' + fmt(it[1]) + "×" + fmt(it[2]) + "</small></button>"; });
       h += '</div><button class="btn sub" type="button" id="pk434c" style="width:100%;margin-top:8px">やめる</button>';
       var mb = sheet(h); mb.querySelector("#pk434c").onclick = closeSheet;
-      mb.querySelectorAll("[data-i]").forEach(function(b){ b.onclick = function(){ arm = {kind: w === "parts" ? "part" : "furn", it: L[+b.dataset.i]}; closeSheet(); try { if (HB.__partDrawOff) HB.__partDrawOff(true); } catch(e){} toast(arm.it[0] + "：置く所をタップ"); chips(); }; });
+      mb.querySelectorAll("[data-i]").forEach(function(b){ b.onclick = function(){ const item=L[+b.dataset.i];
+        const prepare=turn=>{
+          arm={kind:w === "parts" ? "part" : "furn",it:item,turn};
+          closeSheet(); try { if (HB.__partDrawOff) HB.__partDrawOff(true); } catch(e){}
+          toast(item[0] + "：置く所をタップ"); chips();
+        };
+        prepare(); }; });
       return;
     }
     var F = S.furn434 || [];
-    if (w === "rot" && F[fsel]){ pushUndo(); F[fsel].r = F[fsel].r ? 0 : 1; save(); drawPlan(); }
+    if (w === "rot" && F[fsel]){
+      const f=F[fsel];
+      if(f.n === "洗濯機") {
+        waterOrientationSheet("washer", f.turn ?? (f.r ? 1 : 0),false,turn=>{pushUndo(); f.turn=turn; save(); drawPlan();});
+      } else {pushUndo(); f.r=f.r ? 0 : 1; save(); drawPlan();}
+    }
     if (w === "del" && F[fsel]){ pushUndo(); F.splice(fsel, 1); fsel = -1; save(); drawPlan(); }
     if (w === "done"){ fsel = -1; drawPlan(); }
     chips();
@@ -36657,9 +36745,9 @@ nav.steps{padding:1px 6px 3px}
       var m; try { m = toMM(planPt(e)); } catch(er){ return; }
       if (arm){
         e.preventDefault(); e.stopImmediatePropagation(); e.stopPropagation();
-        var it = arm.it, kind = arm.kind; arm = null;
+        var it = arm.it, kind = arm.kind, turn=arm.turn; arm = null;
         if (kind === "part"){ pdrag = {id: e.pointerId, it: it, base: [(S.parts2D || []).length, (S.roomNames || []).length], x0: e.clientX, y0: e.clientY, on: false}; placePart(it, m); try { sl.setPointerCapture(e.pointerId); } catch(er){} }   /* CAD-477：置いた直後は掴んだまま */
-        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0}); fsel = S.furn434.length - 1; try { var fz = S.furn434[fsel], sz = HB.__snapBox474(fz.x, fz.y, fz.w / 2, fz.h / 2, []); fz.x = sz[0]; fz.y = sz[1]; } catch(er){} save(); drawPlan(); toast("指で動かせます。↻で回す");
+        else { pushUndo(); S.furn434 = S.furn434 || []; S.furn434.push({n: it[0], w: it[1], h: it[2], x: Math.round(m[0] / 50) * 50, y: Math.round(m[1] / 50) * 50, r: 0, ...(it[0] === "洗濯機" ? {turn:turn || 0} : {})}); fsel = S.furn434.length - 1; try { var fz = S.furn434[fsel], sz = HB.__snapBox474(fz.x, fz.y, fz.w / 2, fz.h / 2, []); fz.x = sz[0]; fz.y = sz[1]; } catch(er){} save(); drawPlan(); toast("指で動かせます。↻で回す");
           /* CAD-476：置いた直後は掴んだままの状態にして、そのままドラッグで位置を決められるようにする */
           var nf476 = S.furn434[fsel]; drag = {id: e.pointerId, dx: nf476.x - m[0], dy: nf476.y - m[1], moved: false, armed: true, born: true};
           try { sl.setPointerCapture(e.pointerId); } catch(er){} }
@@ -41172,3 +41260,8 @@ body #stM #oak556.quickNext .oakRow i{display:none}
 .meetingStatus{display:flex;align-items:center;gap:8px;margin:3px 0;color:#513b21;font-size:13px}
 .meetingStatus button{min-height:36px;padding:4px 8px}
 </style>
+
+<style>@media screen{#waterDirection{min-height:34px;color:#40372c;background:#faf6ee;border:1px solid #a68d69;border-radius:4px;padding:0 8px}.kitchenPreview #waterRotate{width:100%;min-height:44px}}</style>
+<style>@media screen{
+body:not(.nbtutRun) #stM [data-putdir]{display:none!important}
+}</style>
