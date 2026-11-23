@@ -39952,39 +39952,76 @@ body .top h1[data-floor]:not([data-floor=""])::before{content:attr(data-floor);p
   const row = document.createElement('div');
   row.className = 'oakRow';
   tray.append(row);
-  const tools = [
-    ['part','間仕切り','part'],['door','建具','ds'],['win','窓','ds'],
-    ['gen','玄関','ds'],['mizu','設備','put'],['light','電気','put'],
-    ['etc','造作','put'],['floor','床','floor'],['all','全部','all']
+  const groups = [
+    ['part','間仕切り','part'], ['door','建具','ds'],
+    ['mizu','設備・家具','put'], ['floor','床','floor']
   ];
-  for (const [key,label,step] of tools) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.dataset.k = key;
-    button.dataset.owner = step;
-    button.append(document.createElement('i'),document.createTextNode(label));
-    button.onclick = () => {
+  const hint=document.createElement('div');
+  hint.className='shelfHint';
+  const choices=document.createElement('div');
+  choices.className='shelfChoices';
+  tray.prepend(hint,choices);
+  let entered=false, returnToDraw=true, editing=false;
+  function drawMode(){
+    HB.__setStep399('part');
+    window.__rad381.activate('part');
+    if (!HB.__partDraw) HB.__partDrawOn();
+  }
+  function pick(key,step){
+    if(sel && (sel.t==='k' || sel.t==='o')){
+      sel=null;
+      HB.__grab476=null;
+      HB.__put=null;
+      drawPlan();
+    }
+    returnToDraw=step==='part';
+    editing=false;
+    if(step==='part') drawMode();
+    else {
       HB.__setStep399(step);
-      if (step === 'ds' || step === 'put') {
-        document.body.classList.remove('ux-sheet-off');
-        window.__rad381.activate(key);
-      }
-      refresh();
-    };
+      document.body.classList.remove('ux-sheet-off');
+      window.__rad381.activate(key);
+    }
+    schedule();
+  }
+  for (const [key,label,step] of groups){
+    const button=document.createElement('button');
+    button.type='button'; button.dataset.k=key; button.dataset.owner=step;
+    button.append(document.createElement('i'),document.createTextNode(label));
+    button.onclick=()=>pick(key,step);
     row.append(button);
   }
+  for(const [key,label,step] of [['door','室内建具','ds'],['win','窓','ds'],['gen','玄関','ds'],['mizu','水まわり','put'],['light','電気','put'],['etc','造作','put'],['furn','家具','put']]){
+    const button=document.createElement('button');
+    button.type='button'; button.dataset.group=step; button.dataset.key=key; button.textContent=label;
+    button.onclick=()=>key==='furn' ? section.querySelector('#chips434 [data-w="furn"]')?.click() : pick(key,step);
+    choices.append(button);
+  }
   section.append(tray);
-  const panels = ['toolCh','toolCh2','toolCh3','selBar','roomBar176','enclBar']
-    .map(id=>document.getElementById(id)).filter(Boolean);
+  const panels=['toolCh','toolCh2','toolCh3','selBar','roomBar176','enclBar'].map(id=>document.getElementById(id)).filter(Boolean);
   function refresh(){
-    if (section.hidden) return;
-    tray.hidden = panels.some(el => !el.hidden && el.offsetHeight > 0 && el.childElementCount > 0);
-    const step = HB.__step399();
-    for (const button of row.children) {
-      const selected = button.dataset.owner === step &&
-        (step !== 'ds' && step !== 'put' || button.dataset.k === toolOpen);
-      button.setAttribute('aria-pressed',String(selected));
+    if(section.hidden || document.body.classList.contains('nbtutRun')){entered=false; return;}
+    const selected=!!sel || ['selBar','roomBar176','enclBar'].some(id=>{
+      const panel=document.getElementById(id);
+      return panel && !panel.hidden && panel.offsetHeight>0 && panel.childElementCount>0;
+    });
+    if(!entered){entered=true;returnToDraw=true;if(!selected)drawMode();}
+    if(editing && !selected && returnToDraw) drawMode();
+    editing=selected;
+    const placed=selected && sel && (sel.t==='k' || sel.t==='o');
+    tray.hidden=selected && !placed;
+    tray.classList.toggle("quickNext",Boolean(placed));
+    const step=HB.__step399();
+    section.dataset.shelfStep=step;
+    for(const button of row.children) button.setAttribute('aria-pressed',String(button.dataset.owner===step));
+    const showChoices=!selected && (step==='put'||step==='ds') && !document.body.classList.contains('ux-sheet-off');
+    choices.hidden=!showChoices;
+    for(const b of choices.children){
+      b.hidden=b.dataset.group!==step;
+      b.setAttribute('aria-pressed',String(b.dataset.key===toolOpen));
     }
+    hint.textContent=placed ? '' : step==='part' && HB.__partDraw ? 'なぞって間仕切りを描く　｜　タップで選ぶ' : step==='floor' ? '床を変える部屋をタップ' : '';
+    hint.hidden=!hint.textContent;
   }
   let pending = false;
   function schedule(){
@@ -41053,3 +41090,18 @@ function tobRows581(s){
   return out;
 }
 </script>
+<style>
+@media screen{
+body:not(.nbtutRun):has(#stM:not([hidden])) :is(#fab510,#radial381){display:none!important}
+body:not(.nbtutRun) #stM[data-shelf-step] #grpSub,body:not(.nbtutRun) #stM[data-shelf-step] #chips434 [data-w="furn"]{display:none!important}
+body:not(.nbtutRun) #stM #oak556 .oakRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}
+body #stM #oak556 .oakRow button{min-width:0;width:100%}
+body #stM #oak556 .shelfHint{font:600 clamp(11px,3.1vw,14px)/1.6 sans-serif;text-align:center;color:#3f3427;background:#faf5e9}
+body #stM #oak556 .shelfChoices{display:flex;gap:3px;margin:3px 0}
+body #stM #oak556 .shelfChoices button{display:block;flex:1;min-width:0;height:40px;min-height:40px;font:600 13px sans-serif}
+body #stM #oak556 [hidden]{display:none!important}
+}</style><style>@media screen{
+body.mSel:not(.fsDraw):not(.nbtutRun):not(.enclEdit185) #stM #oak556.quickNext:not([hidden]){display:block}
+body #stM #oak556.quickNext .oakRow button{height:44px;min-height:44px;display:block}
+body #stM #oak556.quickNext .oakRow i{display:none}
+}</style>
