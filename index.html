@@ -39745,3 +39745,24 @@ body :is(#st1,#st2,#st3,#st4,#st5,#st6,#st7):not([hidden]) { border-image-source
   sync558();
 })();
 </script>
+<style id="cad559css">
+/* CAD-559：②間取りの選択パネル（#selBar）の収まりと読みやすさ（初めての人レビュー3件目）
+   症状：CAD-473で格子を32pxに縮めた所へ CAD-556 の「ボタン44px」が当たり、44pxのボタンが
+   32pxの行・36pxの列に押し込まれて、ボタン同士が約8pxずつ重なり、最下段がパネルの箱から
+   はみ出して画面下端に貼り付き見切れた。タイトルもボタン横の182px幅に押し込まれ2行に折れ、
+   透明な地の上では図面の線と重なって読みにくかった。
+   直し：(1) 格子の行・列を44pxに揃え、ボタンをセルの中に入れる（ボタン44pxは維持）
+        (2) タイトルは自分の行に全幅で出し、OK・消す・✕は次の行の右に置く（重なり解消）
+        (3) パネルは「選ぶ時のシート」として白地を塗る（本人の決定：選ぶだけのシートは
+            背景を塗りつぶしてよい）。図面は選択中以外は今まで通り見える
+        (4) 万一高さが足りない時はパネルの中でスクロールさせ、画面の外には出さない
+   下端は従来通り bottom:6px + safe-area のまま。ドラッグ中にUIを消す仕組み（CAD-533）や
+   パネル表示中の図面タップ（選択解除）は変更していない。 */
+#stM #selBar{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 3px 14px rgba(20,27,36,.20);padding:8px;max-height:calc(100% - 12px);overflow-y:auto;overscroll-behavior:contain}
+#stM #selBar .r1{flex-wrap:wrap;row-gap:6px}
+#stM #selBar .r1>span:not(.r1b){flex:1 1 100%;min-width:0}
+#stM #selBar .r1b{margin-left:auto}
+#stM #selBar .sbL{grid-template-rows:none!important;grid-auto-rows:44px!important}
+#stM #selBar .dpad{grid-template-columns:repeat(3,44px)!important;grid-template-rows:repeat(3,44px)!important}
+#stM #selBar .dpad .ar,#stM #selBar .dpad .rot{width:44px!important;height:44px!important;min-height:44px!important}
+</style>
