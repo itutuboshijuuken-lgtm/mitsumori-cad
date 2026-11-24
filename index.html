@@ -25250,13 +25250,13 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
  /* CAD-297（同・取り込み1）：床の範囲は fk に応じた材料で描く（全部を畳にしない）。座上げは上の仕上げ（fin）で描く */
  const flMat297=t=>{const f=t.fk||'tatami';if(f==='tatami')return mat.tatami;if(f==='flCF')return mat.cf;if(f==='flDoma')return mat.conc;if(f==='floorFin')return mat.tileF;if(f==='flAge'){const g=t.fin||'tatami';return g==='flCF'?mat.cf:(g==='tatami'?mat.tatami:mat.floor)}return mat.floor};
  (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileB:z.k==='toilet'?mat.wcF:z.k==='doma'?mat.conc:mat.floor; /* CAD-312：浴室の床はタイル調、トイレの床は便器の白と区別できる色に */if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-STEP547+.004:.004),m,z.k==='ub'?.6:1))});
- (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const d547=t.fk==='flDoma',yT547=d547?FL-STEP547+.012:FL+.012,yB547=d547?FL-STEP547:FL;/* CAD-547：土間の仕上げの範囲は一段低く */{const tx=flTex525(t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami'),(r.z1-r.z0)>(r.x1-r.x0)*1.05);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,yT547,tx));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,yT547,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(m)),0)});
+ (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const d547=t.fk==='flDoma',yT547=d547?FL-STEP547+.012:FL+.012,yB547=d547?FL-STEP547:FL;/* CAD-547：土間の仕上げの範囲は一段低く */{const fk582=t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami');let vt582=(r.z1-r.z0)>(r.x1-r.x0)*1.05;if(fk582==='flComp'||fk582==='flMuku'||fk582==='flMuku30'){const jv582=window.__dir295Vert?window.__dir295Vert(t):null;if(jv582!==null&&jv582!==undefined)vt582=!!jv582;else{const JJ582=window.__judge582&&window.__judge582();if(JJ582&&JJ582.mode582==='nashi')vt582=JJ582.houseVert582}}const tx=flTex525(fk582,vt582);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,yT547,tx));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,yT547,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(m)),0)});
  /* 洗面所(2枚目のroomRecs)はCF */
  (S.roomRecs||[]).forEach(r0=>{const nm=(S.roomNames||[]).find(n=>n.p[0]>=Math.min(r0.x0,r0.x1)&&n.p[0]<=Math.max(r0.x0,r0.x1)&&n.p[1]>=Math.min(r0.y0,r0.y1)&&n.p[1]<=Math.max(r0.y0,r0.y1));if(nm&&(nm.name==='洗面所'||nm.name==='浴室'||nm.name==='トイレ')){const r=clipR297(R(r0));if(r)add(flat(r.x0,r.z0,r.x1,r.z1,FL+.004,nm.name==='浴室'?mat.tileB:(nm.name==='トイレ'?mat.wcF:mat.cf),nm.name==='浴室'?.6:1))} /* CAD-312：浴室・トイレの床も（従来は洗面所のCFだけ描いていた） */});
- {const ft=S.flType==='flSheet'?'flComp':(S.flType||'floorFin');base525.forEach(r=>{const tx=flTex525(ft,false);sub547(r,DR547).forEach(q=>add(tx?flatT525(q[0],q[1],q[2],q[3],FL+.002,tx):flat(q[0],q[1],q[2],q[3],FL+.002,mat.floor,1.0)))})}
+ {const ft=S.flType==='flSheet'?'flComp':(S.flType||'floorFin');base525.forEach(r=>{const tx=flTex525(ft,(()=>{try{const J582b=window.__judge582&&window.__judge582();return !!(J582b&&J582b.mode582==='nashi'&&J582b.houseVert582)}catch(e){return false}})());sub547(r,DR547).forEach(q=>add(tx?flatT525(q[0],q[1],q[2],q[3],FL+.002,tx):flat(q[0],q[1],q[2],q[3],FL+.002,mat.floor,1.0)))})}
  try{if(S===__gS307()&&typeof roomsCalc==='function'&&HB.__effFk282&&((S.floors||1)===1||(S.fi||0)===0)){const RC=roomsCalc();
-  (RC.rooms||[]).forEach(rm=>{let nm5='';try{nm5=roomNm(rm)||''}catch(e){}if(/UB|ユニットバス|バス|浴/i.test(nm5))return;const fk=HB.__effFk282(rm);if(!fk)return;const xs=rm.cells.map(k=>k%RC.NX),ys=rm.cells.map(k=>(k-k%RC.NX)/RC.NX);
-   const vert=(Math.max(...ys)-Math.min(...ys))>(Math.max(...xs)-Math.min(...xs))*1.05;const tx=flTex525(fk,vert);if(!tx)return;
+  (RC.rooms||[]).forEach((rm,rmi582)=>{let nm5='';try{nm5=roomNm(rm)||''}catch(e){}if(/UB|ユニットバス|バス|浴/i.test(nm5))return;const fk=HB.__effFk282(rm);if(!fk)return;const xs=rm.cells.map(k=>k%RC.NX),ys=rm.cells.map(k=>(k-k%RC.NX)/RC.NX);
+   let vert=(Math.max(...ys)-Math.min(...ys))>(Math.max(...xs)-Math.min(...xs))*1.05;if(fk==='flComp'||fk==='flMuku'||fk==='flMuku30'){const J582c=window.__judge582&&window.__judge582();if(J582c&&J582c.infos&&J582c.infos[rmi582])vert=!!J582c.infos[rmi582].vert}const tx=flTex525(fk,vert);if(!tx)return;
    const rows={};rm.cells.forEach(k=>{const i=k%RC.NX,j=(k-i)/RC.NX;(rows[j]=rows[j]||[]).push(i)});
    const runs=[];Object.keys(rows).map(Number).sort((a,b)=>a-b).forEach(j=>{const a=rows[j].sort((p,q)=>p-q);let s0=a[0],pv=a[0];for(let n=1;n<=a.length;n++){if(n<a.length&&a[n]===pv+1){pv=a[n];continue}runs.push([j,s0,pv]);if(n<a.length){s0=pv=a[n]}}});
    const open={};runs.forEach(r=>{const key=r[1]+','+r[2],o=open[key];if(o&&o.j1===r[0]-1)o.j1=r[0];else{open[key]={i0:r[1],i1:r[2],j0:r[0],j1:r[0]};(open.__l=open.__l||[]).push(open[key])}});
@@ -27991,14 +27991,17 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
             var b = bbox(), s = Math.min((360 - 68 - 42) / b.w, (470 - 68 - 38) / b.h);
             var NX = R.NX, st = R.st, bx0 = R.b ? R.b.x0 : 0, by0 = R.b ? R.b.y0 : 0;
             var P = function(q){ return [68 + (q[0] - b.x0) * s, 68 + (q[1] - b.y0) * s]; };
-            var boxes = R.rooms.map(function(r){
+            var boxes = R.rooms.map(function(r, ridx281){
               var mnx = 1e9, mxx = -1, mny = 1e9, mxy = -1;
               r.cells.forEach(function(c){ var y = (c / NX) | 0, x = c % NX;
                 if (x < mnx) mnx = x; if (x > mxx) mxx = x; if (y < mny) mny = y; if (y > mxy) mxy = y; });
               var A = P([bx0 + mnx * st, by0 + mny * st]), B = P([bx0 + (mxx + 1) * st, by0 + (mxy + 1) * st]);
+              /* CAD-583：向きは dir295 の物差し（見切り・収納・家全体の決まり込み）を正とする */
+              var vert281 = isVert((mxx - mnx + 1) * st, (mxy - mny + 1) * st);
+              try { var J281 = window.__judge582 && window.__judge582(); if (J281 && J281.infos && J281.infos[ridx281]) vert281 = !!J281.infos[ridx281].vert; } catch(e){}
               return { x0: A[0], y0: A[1], x1: B[0], y1: B[1],
                        area: Math.max(0, B[0] - A[0]) * Math.max(0, B[1] - A[1]),
-                       vert: isVert((mxx - mnx + 1) * st, (mxy - mny + 1) * st) };
+                       vert: vert281 };
             });
             if (boxes.some(function(bx){ return bx.vert; })) syncPat(pFl, "p263FlV", true);
             targets.forEach(function(r){
@@ -29011,7 +29014,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         return [r.x0, r.y0, r.x1, r.y1, r.fk || "", r.fin || "", (r.za && r.det) ? (r.det.fin || "") : ""].join(",");
       }).join(";");
       return t + "|" + (S.flType || "") + "|" + JSON.stringify(S.roomFin || null) +
-             "|" + JSON.stringify(S.edges || []) + "|" + JSON.stringify(S.parts2D || []) +
+             "|" + JSON.stringify(S.edges || []) + "|mk582:" + (S.mikiri253 || "") + "|" + JSON.stringify(S.parts2D || []) +
              "|st" + (S.tenken || []).filter(function(o){ return o && o.k === "stair"; }).map(function(o){ return [o.x, o.y, o.w, o.d, o.dir].join(","); }).join(";"); /* CAD-401：階段の置き場も判定の材料 */
     } catch(e){ return null; }
   }
@@ -29090,7 +29093,60 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
         });
       }
     } catch (e) {}
-    var J = { roomIdxAt: roomIdxAt, infos: infos };
+    /* CAD-583：床の張り方向の決まり（本人の決定 2026-11-23）。
+       ・床見切り「あり」の時だけ、各部屋の長手方向に合わせる。収納は部屋として
+         見ないで、属する部屋（最も長く接する隣の部屋、無ければ一番近い部屋）の
+         向きに合わせる。
+       ・床見切り「なし」の時は、部屋ごとに変えず家全体を家の長手方向で統一する。
+       判定はこの物差し（judge295）1つに集め、②間取り・⑤平面図・⑤3D が共有する。 */
+    var mode582 = (typeof S !== "undefined" && S && S.mikiri253 === "nashi") ? "nashi" : "ari";
+    var houseVert582 = false;
+    try {
+      var bbH582 = (typeof bbox === "function") ? bbox() : null;
+      if (bbH582 && bbH582.w > 0) houseVert582 = isVert(bbH582.w, bbH582.h);
+      else if (boxes401 && boxes401.length) {
+        var ux0 = 1e18, uy0 = 1e18, ux1 = -1e18, uy1 = -1e18;
+        boxes401.forEach(function(bx){ if (!bx) return; ux0 = Math.min(ux0, bx.x0); uy0 = Math.min(uy0, bx.y0); ux1 = Math.max(ux1, bx.x1); uy1 = Math.max(uy1, bx.y1); });
+        if (ux1 > ux0 && uy1 > uy0) houseVert582 = isVert(ux1 - ux0, uy1 - uy0);
+      }
+    } catch (e) {}
+    if (mode582 === "nashi") {
+      infos.forEach(function(inf){ if (inf) inf.vert = houseVert582; });
+    } else {
+      try {
+        var sto582 = R.rooms.map(function(room){ return /収納|クローゼット|物入|押入|納戸|C$/.test(roomName295(room)); });
+        if (sto582.some(Boolean)) {
+          var share582 = function(a, b){
+            if (!a || !b) return 0;
+            var s = 0;
+            if (Math.abs(a.x1 - b.x0) <= 160 || Math.abs(b.x1 - a.x0) <= 160) s = Math.max(s, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+            if (Math.abs(a.y1 - b.y0) <= 160 || Math.abs(b.y1 - a.y0) <= 160) s = Math.max(s, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0));
+            return s;
+          };
+          R.rooms.forEach(function(room, ri){
+            if (!sto582[ri]) return;
+            var a = boxes401[ri]; if (!a) return;
+            var best = -1, bestShare = 0;
+            R.rooms.forEach(function(o, oi){
+              if (oi === ri || sto582[oi]) return;
+              var sh = share582(a, boxes401[oi]);
+              if (sh > bestShare) { bestShare = sh; best = oi; }
+            });
+            if (best < 0) { /* 接する部屋が無い時は一番近い部屋に合わせる */
+              var bd = 1e18, acx = (a.x0 + a.x1) / 2, acy = (a.y0 + a.y1) / 2;
+              R.rooms.forEach(function(o, oi){
+                if (oi === ri || sto582[oi]) return;
+                var ob = boxes401[oi]; if (!ob) return;
+                var dx = (ob.x0 + ob.x1) / 2 - acx, dy = (ob.y0 + ob.y1) / 2 - acy, dd = dx * dx + dy * dy;
+                if (dd < bd) { bd = dd; best = oi; }
+              });
+            }
+            if (best >= 0 && infos[best]) infos[ri].vert = infos[best].vert;
+          });
+        }
+      } catch (e) {}
+    }
+    var J = { roomIdxAt: roomIdxAt, infos: infos, mode582: mode582, houseVert582: houseVert582 };
     if (sig !== null){ cache295.sig = sig; cache295.J = J; }
     return J;
   }
@@ -29185,7 +29241,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
           var cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
           var mx = (cx - T.ox) / T.s, my = (cy - T.oy) / T.s;
           var ri = J.roomIdxAt(mx, my);
-          var vert = (ri >= 0) ? J.infos[ri].vert : isVert(bb.width, bb.height);
+          var vert = (ri >= 0) ? J.infos[ri].vert : (J.mode582 === "nashi" ? J.houseVert582 : isVert(bb.width, bb.height));
           var want = fillFor(mk, vert, false);
           if (f !== want){ el.setAttribute("fill", want); el.setAttribute("fill-opacity", "1"); }
         }catch(e){}
@@ -29212,7 +29268,7 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
           var cx = bb.x + bb.width / 2, cy = bb.y + bb.height / 2;
           var mx = b.x0 + (cx - 68) / s, my = b.y0 + (cy - 68) / s;
           var ri = J.roomIdxAt(mx, my);
-          var vert = (ri >= 0) ? J.infos[ri].vert : isVert(bb.width, bb.height);
+          var vert = (ri >= 0) ? J.infos[ri].vert : (J.mode582 === "nashi" ? J.houseVert582 : isVert(bb.width, bb.height));
           var want = fillFor(mk, vert, true);
           if (f !== want) el.setAttribute("fill", want);
         }catch(e){}
@@ -29221,6 +29277,8 @@ if(typeof prev==="function"){ window.tidyPlanLabels=function(){ var r=prev.apply
   }
 
   /* CAD-290（dir290js）から呼ばれる共通の物差し：レコードの部屋の向きを返す */
+  /* CAD-583：⑤3D など他の描画にも、床の向きの物差し（judge295）をそのまま渡す */
+  window.__judge582 = function(){ try { return judge295(); } catch(e){ return null; } };
   window.__dir295Vert = function(rec){
     try{
       if (!rec || !finOf(rec)) return null;
