@@ -8573,12 +8573,31 @@ let lastText = "", custText = "";
    保存は新しいキー gosei-meyasu-v1。既存の保存キーは触らない */
 function meyasu427Cfg(){ try { const v = JSON.parse(localStorage.getItem("gosei-meyasu-v1") || "null"); if (v && +v.per > 0) return {per: +v.per, up: Math.max(0, +v.up || 0)}; } catch(e){} return {per: 3, up: 2}; }
 function meyasu427Txt(x){ return String(Math.round(x * 100) / 100); }
+function editMeetingNote25(item){
+  if(!item) return;
+  const box=$("mbox"), modal=$("modal");
+  box.innerHTML='<h3><label for="note25">打ち合わせメモ</label></h3><textarea id="note25" rows="3" maxlength="400"></textarea><div class="row"><button class="btn sub" type="button">キャンセル</button><button class="btn pri" type="button">保存</button></div>';
+  const field=box.querySelector("textarea"), [cancel,commit]=box.querySelectorAll("button");
+  field.value=item.meetingNote || "";
+  modal.hidden=false;field.focus();
+  cancel.onclick=()=>{modal.hidden=true;};
+  commit.onclick=()=>{
+    const value=field.value.trim();
+    if(value!==(item.meetingNote || "")){
+      pushUndo();
+      if(value){item.meetingNote=value; item.meetingPending=true;}
+      else delete item.meetingNote;
+      save();
+    }
+    modal.hidden=true;drawPlan();
+  };
+}
 function meetingItems(state){
   const currentFloor = state.fi || 0;
   const floors = state.fl?.length ? state.fl : [{name:"1階"}];
   return floors.flatMap((floor, index) => {
     const drawing = index === currentFloor ? state : floor.snap;
-    return [["o", drawing?.sashes], ["k", drawing?.tenken]].flatMap(([type, objects]) =>
+    return [["o", drawing?.sashes], ["k", drawing?.tenken], ["p",drawing?.parts2D], ["lt",drawing?.lights]].flatMap(([type, objects]) =>
       (objects || []).flatMap((item, position) => item.meetingPending === true
         ? [{floor:index, floorName:floor.name, type, position, item}]
         : []));
@@ -8589,9 +8608,9 @@ function renderMeetingSummary(items){
   return `<details class="meetingReview"><summary>次の打ち合わせで決める項目 <strong>${items.length}件</strong></summary>
     <p>詳細未確定の項目を含む概算です。仕様を決めたら、図面で項目を開いて「詳細を確定」を押してください。</p>
     <div>${items.map(({floor,floorName,type,position,item}) => {
-      const name = type === "o" ? item.name || item.cat : TKN[item.k] || item.k;
+      const name = type==="e" ? "外壁" : type==="p" ? "間仕切り" : type==="lt" ? (LTN[item.k] || "照明") : type === "o" ? item.name || item.cat : TKN[item.k] || item.k;
       const location = type === "o" ? `　図面の${position+1}番` : "";
-      return `<button type="button" data-meeting-floor="${floor}" data-meeting-type="${type}" data-meeting-item="${position}"><b>${esc(floorName)}　${esc(name)}${location}</b><small>図面で確認 ›</small></button>`;
+      return `<button type="button" data-meeting-floor="${floor}" data-meeting-type="${type}" data-meeting-item="${position}"><b>${esc(floorName)}　${esc(name)}${location}${item.meetingNote ? `<span class="note25">${esc(item.meetingNote)}</span>` : ""}</b><small>図面で確認 ›</small></button>`;
     }).join("")}</div></details>`;
 }
 function bindMeetingSummary(){
@@ -8609,7 +8628,7 @@ function bindMeetingSummary(){
 function renderMeetingSelection(){
   const bar=$("selBar");
   if (!bar || bar.hidden) return;
-  const item=sel?.t === "o" ? S.sashes[sel.i] : sel?.t === "k" ? S.tenken?.[sel.i] : null;
+  const item=sel?.t === "o" ? S.sashes[sel.i] : sel?.t === "k" ? S.tenken?.[sel.i] : sel?.t==="p" ? S.parts2D?.[sel.i] : sel?.t==="lt" ? S.lights?.[sel.i] : null;
   const old=bar.querySelector(".meetingStatus");
   const header=bar.querySelector(".r1");
   if (!item || !header){ old?.remove(); return; }
@@ -8623,8 +8642,11 @@ function renderMeetingSelection(){
     else item.meetingPending=true;
     save(); drawSelBar();
   };
+  const note=document.createElement("button");note.type="button";note.textContent=item.meetingNote ? "メモを編集" : "メモを残す";
+  note.onclick=()=>editMeetingNote25(item);row.append(note);
   if(!old) header.after(row);
 }
+
 function drawEst(){
   $("estimateItems557").hidden = true;
   $("estimateNotes557").hidden = true;
@@ -41323,3 +41345,7 @@ body #stM #oak556.quickNext .oakRow i{display:none}
 <style>@media screen{
 body:not(.nbtutRun) #stM [data-putdir]{display:none!important}
 }</style>
+<style>
+.note25{display:block;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
+#note25{display:block;width:100%;font:inherit;padding:8px;box-sizing:border-box}
+</style>
