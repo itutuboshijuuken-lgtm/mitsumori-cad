@@ -4776,6 +4776,12 @@ function tidyPlanLabels(){
   const pillOf560 = t => {
     const r = t.previousElementSibling;
     if (!r || r.tagName !== "rect") return null;
+    /* 畳・床の「面」の rect はピルの背景ではない：レコードのラベル（3帖など）の中心が
+       たまたま最後の畳マットの上に乗り、大きさもチップの範囲に収まると、マットごと
+       ラベル回避で動かされて畳がずれ、下に平色の帯が残った（実機指摘 2026-11-24）。
+       畳マットは縁の色 #7E8752、写真柄に変換済みの面は fill が url() 始まりで見分ける。 */
+    if (r.getAttribute("stroke") === "#7E8752") return null;
+    if ((r.getAttribute("fill") || "").indexOf("url(") === 0) return null;
     /* CAD-374 と同じ流儀：tidy が触る前の transform を控え、かけ直しでは基へ戻してから測る */
     if (r.__tidyBase374 === undefined) r.__tidyBase374 = r.getAttribute("transform") || "";
     else { const pb = r.__tidyBase374; if (pb) r.setAttribute("transform", pb); else r.removeAttribute("transform"); }
@@ -4787,6 +4793,9 @@ function tidyPlanLabels(){
     const R = conv(rb, mm), T = conv(tb, mt), cx = (T.x0 + T.x1) / 2, cy = (T.y0 + T.y1) / 2;
     if (cx < R.x0 - 1 || cx > R.x1 + 1 || cy < R.y0 - 1 || cy > R.y1 + 1) return null;
     if (R.x1 - R.x0 > 130 || R.y1 - R.y0 > 70) return null;
+    /* チップは文字に合わせた大きさのはず（本物の距離ピルの実測：幅=文字+38・高さ=文字+11）。
+       文字よりずっと大きい rect は面の描画なのでピルにしない。 */
+    if (R.x1 - R.x0 > (T.x1 - T.x0) + 44 || R.y1 - R.y0 > (T.y1 - T.y0) + 15) return null;
     return {el: r, m: mm, box: R};
   };
   texts.forEach(t => {
