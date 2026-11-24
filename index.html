@@ -36363,15 +36363,47 @@ nav.steps{padding:1px 6px 3px}
         });
         if (ok) decided[rm.cid] = true;
       });
+      /* 2026-11-24 訂正（実機指摘「間柱の先端の白い線」）：間仕切りの自由端の先や、接合の向こう側のマスは、
+         roomsCalc の CAD-348 延長（すき間を閉じるための判定）で「どの部屋でもない」（comp=-1）になり、
+         床の clip が欠けて白い帯に見えた。部屋を分けて「いない」壁マスだけ、決めた部屋のマスとして clip に足す：
+         ・4方向の隣のうち、部屋に属するマスが「1つの決めた部屋」だけのマスに限る（2部屋に挟まれた壁は足さない）
+         ・その部屋のマスに接する所から順に広げる（自由端の先の奥まで届く）
+         ・外形の外のマスは足さない。roomsCalc・見積の数量には触らない（表示の clip だけの直し） */
+      var compF = R.comp;
+      try {
+        var polF = (typeof pts === "function") ? pts() : null;
+        var filledF = new Int32Array(R.comp);
+        var changedF = true, guardF = 0;
+        while (changedF && guardF++ < 12){   /* 広がりは最大12マス（600mm）まで。帯の欠けは壁マスの厚み（3マス）以内で収まる */
+          changedF = false;
+          for (var j2 = 0; j2 < R.NY; j2++) for (var i2 = 0; i2 < R.NX; i2++){
+            var k2 = j2 * R.NX + i2;
+            if (R.comp[k2] >= 0 || filledF[k2] >= 0) continue;
+            var roomF = -1, okF = true;
+            var nbF = [[i2 + 1, j2], [i2 - 1, j2], [i2, j2 + 1], [i2, j2 - 1]];
+            for (var n2 = 0; n2 < 4; n2++){
+              var a3 = nbF[n2][0], b3 = nbF[n2][1];
+              if (a3 < 0 || b3 < 0 || a3 >= R.NX || b3 >= R.NY) continue;
+              var c3 = R.comp[b3 * R.NX + a3], f3 = filledF[b3 * R.NX + a3];
+              var eff3 = c3 >= 0 ? c3 : f3;
+              if (eff3 >= 0){ if (roomF < 0) roomF = eff3; else if (roomF !== eff3){ okF = false; break; } }
+            }
+            if (!okF || roomF < 0 || !decided[roomF]) continue;
+            if (polF && typeof inside === "function" && !inside([R.b.x0 + (i2 + 0.5) * R.st, R.b.y0 + (j2 + 0.5) * R.st], polF)) continue;
+            filledF[k2] = roomF; changedF = true;
+          }
+        }
+        compF = filledF;
+      } catch(e){ compF = R.comp; }
       /* 決めた部屋のセルを行ラン（mm）にまとめる */
       var runs = [];
       for (var j = 0; j < R.NY; j++){
         var i = 0;
         while (i < R.NX){
-          var cid = R.comp[j * R.NX + i];
+          var cid = compF[j * R.NX + i];
           if (cid >= 0 && decided[cid]){
             var i0 = i;
-            while (i < R.NX && R.comp[j * R.NX + i] === cid) i++;
+            while (i < R.NX && compF[j * R.NX + i] === cid) i++;
             runs.push([R.b.x0 + i0 * R.st, R.b.y0 + j * R.st, (i - i0) * R.st, R.st]);
           } else i++;
         }
