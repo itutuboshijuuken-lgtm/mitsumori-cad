@@ -1881,6 +1881,7 @@ HB.__sy = HB.__sy || {}; if (step !== n) HB.__sy[step] = window.scrollY;
   } catch(er){}
   document.querySelectorAll("details.rfAdv").forEach(d => { if (!RF()) d.open = true; });
   HB.__pageM = n === "M";
+  if(!HB.__pageM){$("planControls25")?.remove();closePlaceActions24();}
   document.body.classList.toggle("mfull", n === "M");
   document.body.classList.toggle("dlock", n === "M");
   document.documentElement.style.setProperty("--hdrH", document.querySelector("header.top").offsetHeight + "px");
@@ -2247,13 +2248,13 @@ $("plan").addEventListener("pointerdown", e => {
   if (HB.__pageM && sel && HB.__grab476 && HB.__grab476 === sel.t + sel.i) HB.__pickGrab477 = true;   /* CAD-477：置いた直後の物は構え中でも候補に入れる */
   const cands = HB.__pageM ? pickCands(toMM(planPt(e))) : [];
   HB.__pickGrab477 = false;
-HB.__cands = cands;
+HB.__tap25=toMM(planPt(e)); HB.__cands = cands;
   const keep = sel && cands.find(c => c.t === sel.t && c.i === sel.i);
   const pk = keep || cands[0] || null;
   if (pk && pk.t === "r"){ touches.delete(e.pointerId); tareEdit(pk.i); e.stopImmediatePropagation(); return; }
   if (pk){
     const isP = pk.t === "p", i = pk.i;
-    sel = {t: pk.t, i}; pushUndo();
+    sel = {t: pk.t, i, tapMM:HB.__tap25}; pushUndo();
     const obj = isP ? S.parts2D[i] : pk.t === "k" ? S.tenken[i] : S.sashes[i];
     dragging = {isP, kind: pk.t, obj, start: [e.clientX, e.clientY], orig: JSON.parse(JSON.stringify(obj)), moved: false, cands, wasSel: !!keep, armed: false, cancel: false};
     { const dg = dragging; dg.timer = setTimeout(() => { if (dragging === dg && !dg.cancel){ dg.armed = true; try { navigator.vibrate && navigator.vibrate(15); } catch(er){} $("planWrap").classList.add("dragArmed"); } }, 280); }   /* CAD-476：間仕切りも長押しでつかめるようにした（dg.isP の除外を外した。トイレ等の部屋パーツの壁もこれで動かせる） */
@@ -2306,7 +2307,7 @@ $("plan").addEventListener("pointermove", e => {
         if (!dragging) return; dragging.raf = 0;
         Object.assign(dragging.obj, JSON.parse(JSON.stringify(dragging.orig)));
         const r5 = v => Math.round(v / 5) * 5;
-        if (dragging.kind === "k"){ moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); snapTenken474(dragging.obj); } else if (dragging.kind === "lt"){ moveLight476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); } else if (dragging.isP){ movePart476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); /* CAD-476：CAD-137で廃止した間仕切りのドラッグを、長押しでつかんだ時だけ復活（トイレ等の部屋パーツも動かせるように） */ } else moveOpening(dragging.obj, dragging.dx, dragging.dy);
+        if (dragging.kind === "k"){ moveTenken(dragging.obj, r5(dragging.dx), r5(dragging.dy)); snapTenken474(dragging.obj); } else if (dragging.kind === "lt"){ moveLight476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); } else if (dragging.isP){ movePart476(dragging.obj, r5(dragging.dx), r5(dragging.dy)); /* CAD-476：CAD-137で廃止した間仕切りのドラッグを、長押しでつかんだ時だけ復活（トイレ等の部屋パーツも動かせるように） */ } else if(HB.__pageM) slideOnHost25(dragging.obj,dragging.dx,dragging.dy); else moveOpening(dragging.obj, dragging.dx, dragging.dy);
         drawPlan();
       });
     }
@@ -2320,7 +2321,7 @@ $("plan").addEventListener("pointermove", e => {
 }, true);
 const endT = e => { touches.delete(e.pointerId); if (touches.size < 2) pinch = null; if (!touches.size){
     if (panning){ PV.cx = panning.c[0] - panning.dx * panning.k; PV.cy = panning.c[1] - panning.dy * panning.k; $("plan").style.transform = ""; $("plan").style.willChange = ""; applyPV(); }
-    panning = null; $("planWrap").classList.remove("dragArmed"); if (dragging){ clearTimeout(dragging.timer); if (!dragging.moved){ undoStack.pop(); const cs = dragging.cands || []; if (dragging.wasSel && cs.length > 1){ const k = cs.findIndex(c => c.t === sel.t && c.i === sel.i); const nx = cs[(k + 1) % cs.length]; sel = {t: nx.t, i: nx.i}; toast("重なっている物を順に選んでいます"); } } dragging = null; save(); drawPlan(); } } };
+    panning = null; $("planWrap").classList.remove("dragArmed"); if (dragging){ clearTimeout(dragging.timer); if (!dragging.moved){ undoStack.pop(); const cs = dragging.cands || []; if (dragging.wasSel && cs.length > 1){ const k = cs.findIndex(c => c.t === sel.t && c.i === sel.i); const nx = cs[(k + 1) % cs.length]; sel = {t:nx.t,i:nx.i,tapMM:HB.__tap25}; toast("重なっている物を順に選んでいます"); } } dragging = null; save(); drawPlan(); } } };
 ["lostpointercapture", "pointerleave"].forEach(ev => $("plan").addEventListener(ev, e => { if (e.type === "lostpointercapture" || !e.buttons) endT(e); }, true));
 $("plan").addEventListener("pointerup", endT, true); $("plan").addEventListener("pointercancel", endT, true);
 $("plan").addEventListener("click", e => { if (moved){ e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
@@ -3652,7 +3653,7 @@ function drawToolsUICore(){
   /* --- 旧 blk06 後段：置く物のボタンへの結線と、構え中ボタンの点滅 --- */
   if (HB.__dtSeg06){ try {
       const mk = (qs, key, grp, run) => document.querySelectorAll(qs).forEach(b => { b.onclick = () => { const v = b.dataset[key]; const lbl = b.textContent.trim(); const gg = grp === "door" ? (toolOpen === "win" ? "win" : toolOpen === "gen" ? "gen" : "door") : grp; if (HB.__put && HB.__put.label === lbl && HB.__put.g === gg){ if (HB.__put.autoArm){ HB.__put.autoArm = false; toast(`${lbl}：置く所をタップ`); drawToolsUI(); return; } HB.__putOff(); return; }   /* CAD-247：自動で構えられた道具は、最初の再押し（選ぶつもりの押し直し）では外さない */ if (key === "tool") HB.__pickSash = null;
-        sel = null; HB.__put = {g: gg, label: lbl, meetingQuick: !HB.__nbtut, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ`); drawToolsUI(); }; });
+        sel = null; if(key==="tool") HB.__pickSash=null; HB.__put = {g: gg, label: lbl, meetingQuick: !HB.__nbtut, fn: () => run(v)}; toast(`${HB.__put.label}：置く所をタップ`); drawToolsUI(); }; });
       mk("#toolCh [data-tool]", "tool", "door", v => addStdOpening(v));
       mk("#toolCh2 [data-tk]", "tk", toolOpen === "mizu" ? "mizu" : "etc", v => addTenken(v));
       /* CAD-95：「いま：○○（やめる）」チップは廃止。やめる操作は、光っている道具ボタンをもう一度押す（R2のトグル／window.__putOff） */
@@ -5196,17 +5197,20 @@ function wallTapPx175(pt, h, t){
     return dPx175;
   } catch(e){ return null; }
 }
-function addStdOpening(ty){
-  const c = HB.__putAt || viewCenterMM(); let nh = nearestHost(c); if (!nh) return;
-  if (HB.__putAt && hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
+function addStdOpening(ty, context){
+  const c = context?.at || HB.__putAt || viewCenterMM();
+  const segment = context && hostSeg(context.host);
+  if (context && !segment) return;
+  let nh = context ? {h:context.host, ...segDist(c,...segment)} : nearestHost(c);
+  if (!nh) return;
+  if ((context || HB.__putAt) && hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
   /* CAD-175: 実タップが画面上で一番近い壁から 25px より遠ければ置かない
      （何もしない。構えは残るので、壁の近くを押し直せば置ける）。
      判定は狙った壁までの距離。狙った壁が満杯の時に別の壁へ回す既存の
      fallback は、この先の従来処理にそのまま任せる。 */
   if (HB.__putAt){ const px175 = wallTapPx175(c, nh.h, nh.t); if (px175 != null && px175 > 25) return; }
-  pushUndo();
   const ORD = ["腰窓", "小窓", "掃き出し", "FIX"];
-  const x = (HB.__pickSash && TYPE_CATS[ty](HB.__pickSash)) ? HB.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
+  const x = (!context && HB.__pickSash && TYPE_CATS[ty](HB.__pickSash)) ? HB.__pickSash : SASH.filter(q => TYPE_CATS[ty](q)).sort((a, b) => ty === "win" ? ORD.indexOf(a.cat) - ORD.indexOf(b.cat) : 0)[0];
   let pos = Math.max(0, Math.min(nh.L - x.w, HB.__snap207 ? HB.__snap207.sash(x.cat, nh.t * nh.L - x.w / 2) : Math.round((nh.t * nh.L - x.w / 2) / 5) * 5));   /* CAD-207：壁に沿った位置の吸着 */
   // 同じ壁の建具と重なる時は横にずらす。その壁に空きが無ければ近い別の壁へ
   const spot = r => {
@@ -5217,16 +5221,18 @@ function addStdOpening(ty){
     const cs = same.flatMap(o => [o.pos + o.w + 50, o.pos - x.w - 50]).map(v => Math.round(v / 5) * 5).filter(free).sort((a, b2) => Math.abs(a - p0) - Math.abs(b2 - p0));
     return cs.length ? cs[0] : null;
   };
+  if (context && spot(nh) == null){ toast("この壁には建具を付ける空きがありません"); return; }
   if (hgRemHost(nh.h) || spot(nh) == null){
     const p = pts(), hs = p.map((a, i) => (S.edges[i] && S.edges[i].hg && S.edges[i].hgD === "rem") ? null : ({h: {t: "e", i}, ...segDist(c, a, p[(i + 1) % p.length])})).filter(Boolean).concat((S.parts2D || []).map((q, i) => (pState(q) === "remove" || (q.hg && q.hgD === "rem")) ? null : ({h: {t: "p", i}, ...segDist(c, [q.x1, q.y1], [q.x2, q.y2])})).filter(Boolean)).filter(r => r.L >= x.w).sort((a, b2) => a.d - b2.d);
     for (const r of hs){ const v = spot(r); if (v != null){ nh = r; break; } }
   }
-  if (hgRemHost(nh.h)){ undoStack.pop(); toast("撤去する壁には置けません"); return; }
+  if (hgRemHost(nh.h)){ toast("撤去する壁には置けません"); return; }
+  pushUndo();
   { const v = spot(nh); if (v != null) pos = v; }
   S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: (nh.h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0});
   sel = {t: "o", i: S.sashes.length - 1};
-  const placed = S.sashes[sel.i];
-  if (HB.__putAt && HB.__put?.meetingQuick) placed.meetingPending = true;
+  const placed = S.sashes[sel.i]; HB.__cands=[]; HB.__tap25=null; HB.__grab476="o"+sel.i;
+  if (context || (HB.__putAt && HB.__put?.meetingQuick)) placed.meetingPending = true;
   flashAt = Date.now(); save(); drawPlan();
   if (!placed.meetingPending && ipOK(placed)) sashAskState(S.sashes.length - 1);
 }
@@ -5265,6 +5271,20 @@ function movePart(q, dx, dy){ const b = bbox(); const w = q.x2 - q.x1, h = q.y2 
     else if (HB.__g148.seg({x1: q.x1, y1: ny, x2: q.x1 + w, y2: ny + h})) nx = q.x1;
     else { nx = q.x1; ny = q.y1; } } } catch(e){}
   q.x1 = nx; q.x2 = nx + w; q.y1 = ny; q.y2 = ny + h; }
+function slideOnHost25(sa,dx,dy){
+  const seg=hostSeg(sa.host);
+  if(!seg) return;
+  const [[ax,ay],[bx,by]]=seg, len=Math.hypot(bx-ax,by-ay);
+  if(!len) return;
+  let lo=0,hi=len-sa.w;
+  for(const other of S.sashes){
+    if(other===sa || !other.drawn || other.host?.t!==sa.host.t || other.host.i!==sa.host.i) continue;
+    if(other.pos>=sa.pos+sa.w) hi=Math.min(hi,other.pos-sa.w);
+    if(other.pos+other.w<=sa.pos) lo=Math.max(lo,other.pos+other.w);
+  }
+  const delta=(dx*(bx-ax)+dy*(by-ay))/len;
+  if(hi>=lo) sa.pos=Math.max(lo,Math.min(hi,Math.round((sa.pos+delta)/5)*5));
+}
 function moveOpening(sa, dx, dy){
   const seg = hostSeg(sa.host); if (!seg) return;
   const L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
@@ -5302,7 +5322,7 @@ function candBarAdd(){
   row.innerHTML = cs.map((x, k) => { const on = x.c.t === sel.t && x.c.i === sel.i; return `<button type="button" data-ci="${k}" data-on="${on ? 1 : 0}" style="flex:none;min-height:32px;padding:0 9px;border-radius:8px;font-size:12px;font-weight:800;border:1.5px solid ${on ? "var(--ai)" : "var(--line)"};background:${on ? "var(--ai)" : "#fff"};color:${on ? "var(--on-ai)" : "var(--ink)"}">${x.n}</button>`; }).join("");
   bar.insertBefore(row, bar.firstChild);
   const onb = row.querySelector('[data-on="1"]'); if (onb) row.scrollLeft = onb.offsetLeft - row.clientWidth / 2 + onb.clientWidth / 2;
-  row.querySelectorAll("[data-ci]").forEach(b => b.onclick = () => { const x = cs[+b.dataset.ci]; sel = {t: x.c.t, i: x.c.i}; drawPlan(); });
+  row.querySelectorAll("[data-ci]").forEach(b => b.onclick = () => { const x = cs[+b.dataset.ci]; sel = {t:x.c.t,i:x.c.i,tapMM:HB.__tap25}; flashAt=Date.now(); drawPlan(); });
 }
 // 下のパネルの高さを、なぞっている間は縮ませない（高さが変わると図面の枠が伸び縮みして、ビクビクして見えるため）
 function enclBarLock(){
@@ -5353,6 +5373,219 @@ function drawEnclBar(){
   }
   try { if (HB.__syncEncl185) HB.__syncEncl185(); } catch(e){}   /* 旧 blk83 後段：囲み寸法編集中は上の項目を閉じる同期 */
 }
+function closePlaceActions24(){
+  $("placeActions24")?.remove();
+  $("contextPoint24")?.remove();
+}
+function showPlaceActions(at,exactHost){
+  if (HB.__nbtut || !HB.__pageM || !S.edges || (!exactHost && HB.__armedAny?.())) return false;
+  const near=exactHost ? {h:exactHost,...segDist(at,...hostSeg(exactHost))} : nearestHost(at);
+  const distance=near && wallTapPx175(at,near.h,near.t);
+  const onOutside=near?.h.t==="e" && distance!=null && distance<=18;
+  const room=onOutside ? null : roomAt(...at);
+  if (!onOutside && !room) return false;
+  sel=null;
+  HB.__closeRoom176?.();
+  const roomName=room ? roomDispNm366(room) || "部屋" : "";
+  drawPlan();
+  const panel=document.createElement("section");
+  panel.id="placeActions24";
+  panel.className="partitionDoorActions";
+  const title=document.createElement("strong");
+  title.textContent=onOutside ? "外周の壁" : roomName;
+  const row=document.createElement("div");
+  row.className="partitionDoorRow";
+  const actions=document.createElement("div");
+  actions.className="contextActionGrid";
+  actions.hidden=true;
+  const close=()=>{panel.remove();$("contextPoint24")?.remove();};
+  const button=(label,action)=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.textContent=label;
+    b.onclick=action;
+    return b;
+  };
+  const choice=(key,label,action)=>{
+    const b=button(label,action);
+    b.dataset.choice=key;
+    actions.appendChild(b);
+    return b;
+  };
+  if(onOutside){
+    const place=kind=>{
+      const count=S.sashes.length;
+      addStdOpening(kind,{host:near.h,at});
+      if (S.sashes.length>count) close();
+    };
+    row.append(button("＋ 窓・サッシ",()=>{actions.hidden=!actions.hidden;}),button("打ち合わせメモ",()=>editMeetingNote25(S.edges[near.h.i])));
+    if(S.edges[near.h.i].meetingPending) row.append(button("詳細を確定",()=>{pushUndo();delete S.edges[near.h.i].meetingPending;close();save();drawPlan();}));
+    choice("win","腰窓",()=>place("winK"));
+    choice("small","小窓",()=>place("winS"));
+    choice("sweep","掃き出し窓",()=>place("winH"));
+    choice("fixed","FIX窓",()=>place("winF"));
+    choice("gen","玄関ドア",()=>place("genS"));
+    choice("back","勝手口",()=>place("genD"));
+  } else {
+    const chooseFloor=()=>{
+      close(); HB.__setStep399("floor"); window.__rad381.activate("floor"); HB.__openRoomContext24?.(at);
+    };
+    row.append(button("この部屋に置く",()=>{actions.hidden=!actions.hidden;}),button("床を選ぶ",chooseFloor),button("部屋名",()=>roomNameSheet(room)));
+    const place=k=>{
+      close();
+      HB.__contextEquip24?.(k,at);
+    };
+    for(const k of contextRoomEquipment(roomName)) choice(k,TKN[k],()=>place(k));
+    for(const [key,label] of [["mizu","水まわり一覧"],["light","電気・照明"],["etc","造作・その他"],["furn","家具"]]){
+      choice(key,label,()=>{
+        close(); HB.__setStep399("put"); document.body.classList.remove("ux-sheet-off");
+        window.__rad381.activate(key==="furn" ? "mizu" : key);
+        if(key==="furn") requestAnimationFrame(()=>$("chips434")?.querySelector('[data-w="furn"]')?.click());
+      });
+    }
+  }
+  const status=document.createElement("p");
+  status.hidden=true;
+  status.setAttribute("aria-live","polite");
+  row.append(button("🎤",()=>HB.__contextVoice24?.(message=>{
+    if(!panel.isConnected) return;
+    status.hidden=false;
+    status.textContent=message.status;
+    if(!message.text) return;
+    const key=contextPlaceVoice(message.text,onOutside);
+    if(key==="floor"){ row.children[1].classList.add("voiceMatch"); return; }
+    if(key && !onOutside && TKN[key] && !actions.querySelector(`[data-choice="${key}"]`)) choice(key,TKN[key],()=>{close();HB.__contextEquip24?.(key,at);});
+    actions.hidden=false;
+    const target=actions.querySelector(`[data-choice="${key}"]`);
+    actions.querySelectorAll("button").forEach(b=>b.classList.toggle("voiceMatch",b===target));
+    if(target) target.focus({preventScroll:true});
+  })),button("閉じる",close));
+  panel.append(title,row,actions,status);
+  const tray=$("oak556"); if(tray?.parentNode) tray.before(panel); else $("stM").append(panel);
+  const svg=$("plan"), t=HB.__planT;
+  if(svg && t){
+    const point=document.createElementNS("http://www.w3.org/2000/svg","circle");
+    point.id="contextPoint24";
+    point.setAttribute("cx",at[0]*t.s+t.ox);
+    point.setAttribute("cy",at[1]*t.s+t.oy);
+    point.setAttribute("r",5);
+    point.setAttribute("fill","#a76a26");
+    point.setAttribute("stroke","#fff");
+    point.setAttribute("pointer-events","none");
+    svg.appendChild(point);
+  }
+  return true;
+}
+function contextRoomEquipment(name){
+  if (/トイレ|便所/.test(name)) return ["wc","tearai"];
+  if (/洗面|脱衣/.test(name)) return ["senmen","senpan","tearai"];
+  if (/浴室|風呂/.test(name)) return ["bath"];
+  if (/台所|キッチン|LDK/i.test(name)) return ["kitchen","counter"];
+  if (/玄関/.test(name)) return ["geta"];
+  if (/収納|クローゼット/.test(name)) return ["makura","chudan"];
+  return [];
+}
+function contextPlaceVoice(text, outside){
+  const spoken=text.replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-96));
+  const commands=outside ? [
+    [/勝手口|かってぐち/,"back"],[/玄関|げんかん|どあ/,"gen"],[/掃き出|はきだし/,"sweep"],
+    [/小窓|こまど/,"small"],[/FIX|ふぃっくす/i,"fixed"],[/窓|まど|さっし/,"win"]
+  ] : [
+    [/床|ゆか|ふろーりんぐ/,"floor"],[/風呂|ふろ|浴槽|よくそう/,"bath"],[/トイレ|といれ|便器|べんき/,"wc"],
+    [/洗面|せんめん/,"senmen"],[/洗濯機ぱん|せんたくきぱん/,"senpan"],[/洗濯機|せんたくき/,"furn"],[/台所|きっちん/,"kitchen"],
+    [/照明|しょうめい|こんせんと|電気/,"light"],[/家具|かぐ/,"furn"],[/水まわり|設備|せつび/,"mizu"]
+  ];
+  return commands.find(([pattern])=>pattern.test(spoken))?.[1] || "";
+}
+function renderContextEdit24(){
+  const bar=$("selBar");
+  if(!bar || bar.hidden || !sel){ if(bar) bar.classList.remove("contextCompact24"); HB.__contextDetails24=null; return; }
+  closePlaceActions24();
+  const header=bar.querySelector(".r1");
+  const body=bar.querySelector(".sbw");
+  if(!header || !body || bar.querySelector(".contextEdit24")) return;
+  const actions=document.createElement("div");
+  actions.className="contextEdit24";
+  const add=(label,selector)=>{
+    const b=document.createElement("button");
+    b.type="button";
+    b.textContent=label;
+    b.onclick=()=>bar.querySelector(selector)?.click();
+    actions.append(b);
+  };
+  if(sel.t==="p") add("長さ","#sbLen");
+  if(sel.t==="o"){
+    if(bar.querySelector("#sbFlip") && typeOf(S.sashes[sel.i])==="door") add("開く向き","#sbFlip");
+    if(bar.querySelector("#sbTob308")) add("引く向き","#sbTob308");
+    if(bar.querySelector("#sbSize")) add("寸法・種類","#sbSize");
+  }
+  if(sel.t==="k"){
+    if(bar.querySelector("#waterDirection")) add("向き","#waterDirection");
+    else if(bar.querySelector("#sbKK")) add("回転","#sbKK");
+    if(bar.querySelector("#sbKS") && !["wc","bath"].includes(S.tenken[sel.i]?.k)) add("設定","#sbKS");
+  }
+  const toggle=document.createElement("button");
+  toggle.type="button";
+  toggle.textContent="移動・その他";
+  toggle.setAttribute("aria-expanded","false");
+  const key=sel.t+":"+sel.i;
+  const isOpen=()=>HB.__contextDetails24===key;
+  const setOpen=()=>{
+    bar.classList.toggle("contextCompact24",!isOpen());
+    toggle.setAttribute("aria-expanded",String(isOpen()));
+    toggle.textContent=isOpen() ? "操作を閉じる" : "移動・その他";
+  };
+  toggle.onclick=()=>{HB.__contextDetails24=isOpen() ? null : key;setOpen();};
+  actions.append(toggle);
+  header.after(actions);
+  setOpen();
+}
+
+function partitionDoorActions(){
+  const bar=$("selBar");
+  if (!bar || bar.hidden) return;
+  const old=bar.querySelector(".partitionDoorActions");
+  const wall=sel?.t === "p" ? S.parts2D?.[sel.i] : null;
+  const header=bar.querySelector(".r1");
+  if (!wall || !header || pState(wall)==="remove"){ old?.remove(); return; }
+  if (old) return;
+  const selection=sel;
+  const section=document.createElement("div");
+  section.className="partitionDoorActions";
+  section.innerHTML=`<div class="partitionDoorRow">
+    <button type="button" data-part-door="door">＋ ドアを付ける</button>
+    <button type="button" data-part-door-options aria-expanded="false">種類</button>
+    ${HB.__partitionVoice ? '<button type="button" data-part-door-voice aria-label="声でドアを探す">🎤</button>' : ''}
+  </div><div class="partitionDoorRow" data-part-door-menu hidden>
+    <button type="button" data-part-door="door">片開き</button>
+    <button type="button" data-part-door="hiki">片引き</button>
+  </div><span class="partitionVoiceStatus" aria-live="polite" hidden></span>`;
+  const menu=section.querySelector("[data-part-door-menu]");
+  const options=section.querySelector("[data-part-door-options]");
+  const setOpen=open=>{menu.hidden=!open;options.setAttribute("aria-expanded",String(open));};
+  options.onclick=()=>setOpen(menu.hidden);
+  for(const button of section.querySelectorAll("[data-part-door]")){
+    button.onclick=()=>{
+      if (sel !== selection || S.parts2D?.[selection.i] !== wall) return;
+      const host={t:"p",i:selection.i};
+      const at=selection.tapMM || [(wall.x1+wall.x2)/2,(wall.y1+wall.y2)/2];
+      addStdOpening(button.dataset.partDoor,{host,at});
+    };
+  }
+  const mic=section.querySelector("[data-part-door-voice]");
+  if(mic) mic.onclick=()=>HB.__partitionVoice((message, choice)=>{
+    if(sel!==selection || !section.isConnected) return;
+    const status=section.querySelector(".partitionVoiceStatus");
+    status.textContent=message;status.hidden=false;
+    if(choice){
+      setOpen(true);
+      const match=menu.querySelector(`[data-part-door="${choice}"]`);
+      menu.querySelectorAll("[data-part-door]").forEach(button=>button.classList.toggle("voiceMatch",button===match));
+    }
+  });
+  header.after(section);
+}
+
 function drawSelBar(){
   /* ===== 段階1・心臓部一本化：drawSelBar（旧連鎖 blk68 → blk67 → blk54 → blk46 → blk08 → blk07 → 本体 を畳み込み） =====
      実行順は元の連鎖通り：本体 → 後段は内側→外側の巻き戻し順（blk07 → blk08 → blk46 → blk54 → blk67 → blk68）。本体・全ラッパーとも戻り値は実質 undefined（blk54・67・68 は undefined をそのまま伝播していた）ため、統合後も戻り値なしで一致する。本体（drawSelBar0）が例外を投げた場合は全後段が走らずそのまま伝播する点も元の連鎖と同じ（各ラッパーの apply は try の外にあった）。
@@ -5361,7 +5594,7 @@ function drawSelBar(){
      読み込み途中の呼び出し：blk02 評価中の初期 go(step) → drawPlan() → drawToolsUI() → drawToolsUICore() 末尾の drawSelBar() は、元の連鎖では本体だけが効いていた。blk14 評価末尾の drawToolsUI() 経由では blk07＋blk08 の段までが効いていた。登録がまだ無い段は「まだ無ければ呼ばない／実行しない」形にしてあるため、どちらの段階でも従来通りになる。 */
   /* --- 本体（旧 blk02 本体そのまま） --- */
   drawSelBar0(); try { candBarAdd(); ctlArbitrate(); } catch(e){}
-  if (!HB.__nbtut) renderMeetingSelection();
+  if (!HB.__nbtut){ renderMeetingSelection(); partitionDoorActions(); }
   /* --- 後段（内側→外側） --- */
   try { if (HB.__dsbPost07) HB.__dsbPost07(); } catch(e){}   /* 旧 blk07（dsb）後段：外のサッシに庇ボタンを足す addBtn（実体は blk07 で登録） */
   try { if (HB.__dsbPost08) HB.__dsbPost08(); } catch(e){}   /* 旧 blk08（dsb2）後段：ドア系に吊元ボタンを足す addHinge（実体は blk08 で登録。addHinge は関数宣言で巻き上げられるため登録位置で参照できる） */
@@ -5399,6 +5632,8 @@ function drawSelBar(){
       if (note576.textContent !== txt576) note576.textContent = txt576;
     }
   } catch(e){}
+  if (!HB.__nbtut) renderContextEdit24();
+  queuePlanControls25();
 }
 function drawSelBar0(){
   /* ===== 段階2・画面4前半：drawSelBar0（旧連鎖 blk22 → 本体 を畳み込み） =====
@@ -5512,6 +5747,7 @@ function flTitle(){
   const b = $("flBtn"); if (b) b.textContent = String(S.fl[S.fi].name || "").replace(/^(\d+)階$/, "$1F");   /* CAD-472：絵ではなく「1F」の文字 */
 }
 function flSwitch(i){
+  HB.__tap25=null;HB.__cands=[];closePlaceActions24();
   flEnsure(); if (i === S.fi || !S.fl[i]) return;
   { const st = (S.zones || []).filter(z => z.k === "stair"); S.fl.forEach((f, k) => { if (k !== S.fi && f.snap) f.snap.zones = (f.snap.zones || []).filter(z => z.k !== "stair").concat(flClone(st)); }); }   // 階段は、どの階でも同じ位置にそろえる
   S.fl[S.fi].snap = flSnap(); const snap = S.fl[i].snap; S.fi = i; flLoad(snap); S.fl[i].snap = null;
@@ -8592,12 +8828,58 @@ function editMeetingNote25(item){
     modal.hidden=true;drawPlan();
   };
 }
+function queuePlanControls25(){
+  if(HB.__controlFrame25) return;
+  HB.__controlFrame25=requestAnimationFrame(()=>{HB.__controlFrame25=0;renderPlanControls25();});
+}
+function renderPlanControls25(){
+  let panel=$("planControls25");
+  if(panel) panel.hidden=true;
+  document.body.classList.remove("nearCandidates25");
+  if(!HB.__pageM || HB.__nbtut || !sel || $("selBar")?.hidden || !$("modal")?.hidden || typeof dragging!=="undefined" && dragging?.moved) return;
+  const {t,i}=sel;
+  const cs=HB.__cands || [];
+  const overlap=cs.some(c=>c.t===t && c.i===i) ? cs.filter(c=>candLabel(c)) : [];
+  const sa=t==="o" && S.sashes[i], swing=sa?.host && typeOf(sa)==="door";
+  if(overlap.length<2 && !swing) return;
+  let at=sel.tapMM || HB.__tap25;
+  if(swing){
+    const seg=hostSeg(sa.host);
+    if(!seg) return;
+    const [a,b]=seg, len=Math.hypot(b[0]-a[0],b[1]-a[1]);
+    if(!len) return;
+    const u=b.map((v,k)=>(v-a[k])/len), n=[-u[1],u[0]];
+    let sign=sa.flip&1 ? -1 : 1;
+    if(sa.host.t==="e" && !inside(a.map((v,k)=>(v+b[k])/2+n[k]*50),pts())) sign=-sign;
+    at=a.map((v,k)=>v+u[k]*(sa.pos+sa.w/2)+n[k]*sa.w*.7*sign);
+  }
+  if(!at || !HB.__planT || HB.__same502Arm && HB.__put) return;
+  const svg=$("plan"), rect=svg.getBoundingClientRect(), matrix=svg.getScreenCTM();
+  if(!matrix || !rect.width) return;
+  const trans=HB.__planT, p=svg.createSVGPoint();p.x=trans.ox+at[0]*trans.s;p.y=trans.oy+at[1]*trans.s;
+  const anchor=p.matrixTransform(matrix), clip=$("planWrap").getBoundingClientRect();
+  const top=Math.max(0,rect.top,clip.top),bottom=Math.min(innerHeight,rect.bottom,clip.bottom);
+  if(anchor.y<top || anchor.y>bottom || anchor.x<0 || anchor.x>innerWidth || bottom-top<50) return;
+  if(!panel){panel=document.createElement("div");panel.id="planControls25";panel.setAttribute("role","group");panel.setAttribute("aria-label","図面上の操作");document.body.appendChild(panel);}
+  const key=JSON.stringify([S.fi,t,i,swing,overlap.map(c=>[c.t,c.i,candLabel(c)])]);
+  if(panel.dataset.key!==key){
+    panel.dataset.key=key;panel.replaceChildren();
+    const add=(label,act,on)=>{const b=document.createElement("button");b.type="button";b.textContent=label;if(on!=null)b.setAttribute("aria-pressed",String(on));b.onclick=act;panel.append(b);};
+    if(overlap.length>1) for(const c of overlap) add(candLabel(c),()=>{sel={t:c.t,i:c.i,tapMM:HB.__tap25};flashAt=Date.now();drawPlan();},c.t===t && c.i===i);
+    if(swing) add("開き反転",()=>{if(sel?.t==="o" && sel.i===i) $("sbFlip")?.click();});
+  }
+  panel.hidden=false;
+  document.body.classList.toggle("nearCandidates25",overlap.length>1);
+  panel.style.left=Math.max(4,Math.min(innerWidth-panel.offsetWidth-4,anchor.x-panel.offsetWidth/2))+"px";
+  panel.style.top=Math.max(top,Math.min(bottom-panel.offsetHeight,anchor.y-panel.offsetHeight-7))+"px";
+}
+
 function meetingItems(state){
   const currentFloor = state.fi || 0;
   const floors = state.fl?.length ? state.fl : [{name:"1階"}];
   return floors.flatMap((floor, index) => {
     const drawing = index === currentFloor ? state : floor.snap;
-    return [["o", drawing?.sashes], ["k", drawing?.tenken], ["p",drawing?.parts2D], ["lt",drawing?.lights]].flatMap(([type, objects]) =>
+    return [["o", drawing?.sashes], ["k", drawing?.tenken], ["p",drawing?.parts2D], ["e",drawing?.edges], ["lt",drawing?.lights]].flatMap(([type, objects]) =>
       (objects || []).flatMap((item, position) => item.meetingPending === true
         ? [{floor:index, floorName:floor.name, type, position, item}]
         : []));
@@ -8620,6 +8902,12 @@ function bindMeetingSummary(){
     const {meetingFloor,meetingType,meetingItem}=button.dataset;
     go("M");
     if (+meetingFloor !== (S.fi || 0)) flSwitch(+meetingFloor);
+    HB.__cands=[]; HB.__tap25=null;
+    if(meetingType==="e"){
+      const seg=hostSeg({t:"e",i:+meetingItem});
+      if(seg) showPlaceActions(seg[0].map((v,k)=>(v+seg[1][k])/2),{t:"e",i:+meetingItem});
+      return;
+    }
     sel={t:meetingType,i:+meetingItem};
     flashAt=Date.now();
     drawPlan();
@@ -17227,14 +17515,16 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
      垂れ壁は垂れ壁の編集、ゾーンは囲み編集（CAD-204 と同じく描く状態を
      落としてから開く）。 */
   function pdSelect216(tp){
+    closePlaceActions24();
     if (tp.pk){
-      var pk = tp.pk;
+      var pk = tp.pk; HB.__tap25=tp.mm; HB.__cands=pickCands(tp.mm);
       if (pk.t === "r"){ try { tareEdit(pk.i); } catch(er){} return; }
-      sel = {t: pk.t, i: pk.i};
+      sel = {t: pk.t, i: pk.i, ...(pk.t === "p" ? {tapMM:tp.mm} : {})};
       try { drawPlan(); } catch(er){}
       try { drawSelBar(); } catch(er){}
       return;
     }
+    if (showPlaceActions(tp.mm)) return;
     if (tp.zi >= 0 && !(HB.__lockRoom443 && HB.__lockRoom443())){
       pdOff(true);
       if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(er){} }
@@ -17254,6 +17544,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if ((typeof tatMode !== "undefined" && tatMode) || (typeof eraMode !== "undefined" && eraMode)) return;
     if (HB.__delMode) return;
     if (e.isPrimary === false) return;
+    if(sel?.t==="o" && HB.__grab476==="o"+sel.i && pickCands(toMM(planPt(e))).some(c=>c.t==="o" && c.i===sel.i)) return;
     e.preventDefault(); e.stopPropagation();
     try { slot.setPointerCapture(e.pointerId); } catch(er){}
     var p = planPt(e);
@@ -17278,7 +17569,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         }
       } catch(er){}
     }
-    pdTap = {id: e.pointerId, cx: e.clientX, cy: e.clientY, t: Date.now(), pk: pkD, zi: ziD, dev: 0};
+    pdTap = {id: e.pointerId, cx: e.clientX, cy: e.clientY, t: Date.now(), pk: pkD, zi: ziD, mm:mmD, dev: 0};
   }, true);
   slot.addEventListener("pointermove", function(e){
     if (!pdInk || e.pointerId !== pdInk.id) return;
@@ -17313,7 +17604,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     pdInk = null;
     /* CAD-216: 動かさないタップで物の上なら、壁を作らず選択に回す */
     var tp = (pdTap && pdTap.id === e.pointerId) ? pdTap : null; pdTap = null;
-    if (tp && tp.dev <= 14 && Date.now() - tp.t <= 900 && (tp.pk || tp.zi >= 0)){ pdSelect216(tp); return; }
+    if (tp && tp.dev <= 14 && Date.now() - tp.t <= 900 && (tp.pk || tp.zi >= 0 || e.type==="pointerup")){ pdSelect216(tp); return; }
+    closePlaceActions24();
     pdFinish(mm);
   };
   slot.addEventListener("pointerup", end, true);
@@ -20304,6 +20596,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     renderRoomBar176();
     try { drawPlan(); } catch(e){}
   }
+  HB.__openRoomContext24=openRoom176;
   function closeRoom176(){
     if (zaForRoom176){ var zc = document.querySelector("#flBranch [data-zcan]"); if (zc) zc.click(); zaForRoom176 = false; }
     if (multi375){ multi375 = false; disarmFloor176(); }   /* CAD-375：バーが閉じたら、まとめて指定も終わる（構えも落とす） */
@@ -37789,6 +38082,48 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
     for (var a = 0; a < all.length; a++){ for (var j = 0; j < vis.length; j++){ var t = kana(vis[j].textContent); if (t.length >= 2 && all[a].indexOf(t) >= 0){ vis[j].click(); toast("🎤 " + vis[j].textContent.trim()); return true; } } }
     return false;
   }
+  function partitionVoiceChoice(text){
+    const spoken=kana(text);
+    if (/片引|かたびき|引き戸|ひきど/.test(spoken)) return "hiki";
+    if (/片開|かたびらき/.test(spoken)) return "door";
+    if (/どあ|扉|とびら|建具|たてぐ/.test(spoken)) return "any";
+    return null;
+  }
+  HB.__contextVoice24 = callback=>{
+    if(!SR){callback({status:"音声入力が使えません。ボタンから選べます。"});return;}
+    const recognition=new SR();
+    recognition.lang="ja-JP";
+    recognition.onstart=()=>callback({status:"聞いています"});
+    recognition.onresult=e=>{
+      const text=e.results[0][0].transcript;
+      callback({text,status:`「${text}」と聞き取りました。候補を選んでください。`});
+    };
+    recognition.onerror=e=>callback({status:e.error==="not-allowed" ? "マイクが許可されていません。" : "聞き取れませんでした。"});
+    recognition.onnomatch=()=>callback({status:"聞き取れませんでした。"});
+    try{recognition.start();}catch(e){callback({status:"音声入力を開始できませんでした。"});}
+  };
+  HB.__partitionVoice = status=>{
+    if (!SR){status("この環境では音声入力を使えません。上のボタンから選べます。");return;}
+    const recognition=new SR();
+    recognition.lang="ja-JP";
+    recognition.maxAlternatives=3;
+    let finished=false;
+    recognition.onstart=()=>status("聞いています");
+    recognition.onresult=event=>{
+      const alternatives=Array.from(event.results[0],answer=>answer.transcript);
+      const heard=alternatives.find(text=>partitionVoiceChoice(text));
+      finished=true;
+      if (heard) status(`「${heard}」と聞き取りました。候補を選んでください。`,partitionVoiceChoice(heard));
+      else status(`「${alternatives[0] || ""}」と聞き取りました。片開き・片引きは「種類」から選べます。`);
+    };
+    recognition.onerror=event=>{
+      finished=true;
+      status(event.error==="not-allowed" ? "マイクが許可されていません。" : "聞き取れませんでした。上のボタンから選べます。");
+    };
+    recognition.onend=()=>{if (!finished) status("音声入力を終了しました。");};
+    try {recognition.start();status("マイクを開始しています");}
+    catch(e){status("音声入力を開始できませんでした。");}
+  };
   HB.__voice459 = run;   /* テスト用：HB.__voice459(["浴槽"]) */
   function listen(){
     if (!SR){ toast("この端末では声の入力が使えません"); return; }
@@ -38884,13 +39219,14 @@ function kozo478(C){
       return;
     }
     if (s.t === "o"){
+      HB.__partDrawOff?.(true);
       var sa = S.sashes[s.i]; if (!sa) return;
       var pick = {cat: sa.cat, name: sa.name, w: sa.w, h: sa.h};
       var ty = sashTy502(sa), g = sashGrp502(sa);
       var snap = {frame: sa.frame, elock: sa.elock, glass: sa.glass, tob581: sa.tob581, tobM581: sa.tobM581, tobK581: sa.tobK581, flip: (typeof sa.flip === "number") ? sa.flip : null};   /* CAD-581：戸袋の作りも引き継ぐ */
       var lbl = sa.cat === "室内ドア" ? sa.name : (g === "gen" ? sa.cat + (sa.name || "") : sa.cat);
       try { toolOpen = g; } catch(e){}
-      HB.__put = {g: g, label: lbl, same502: true, fn: function(){
+      HB.__put = {g: g, label: lbl, same502: true, meetingQuick:true, fn: function(){
         var n0 = (S.sashes || []).length;
         HB.__pickSash = pick;
         addStdOpening(ty);
@@ -38915,7 +39251,7 @@ function kozo478(C){
       ["w", "d", "h", "st", "kh", "sh", "use", "l2", "e"].forEach(function(f){ if (o[f] !== undefined) sz[f] = o[f]; });
       var lbl2 = (typeof TKN !== "undefined" && TKN[k]) || k;
       try { toolOpen = g2; } catch(e){}
-      HB.__put = {g: g2, label: lbl2, same502: true, fn: function(){
+      HB.__put = {g: g2, label: lbl2, same502: true, meetingQuick:true, fn: function(){
         var n0 = (S.tenken || []).length;
         addTenken(k);
         if ((S.tenken || []).length > n0){
@@ -41344,8 +41680,56 @@ body #stM #oak556.quickNext .oakRow i{display:none}
 <style>@media screen{#waterDirection{min-height:34px;color:#40372c;background:#faf6ee;border:1px solid #a68d69;border-radius:4px;padding:0 8px}.kitchenPreview #waterRotate{width:100%;min-height:44px}}</style>
 <style>@media screen{
 body:not(.nbtutRun) #stM [data-putdir]{display:none!important}
-}</style>
+}</style><style>
+</style><style>
+.partitionDoorActions{margin:5px 0 8px;padding:5px;background:#f6f0e5;border:1px solid #aa8a5b;border-radius:6px}
+.partitionDoorRow{display:flex;gap:5px}
+.partitionDoorRow[hidden],.partitionVoiceStatus[hidden]{display:none}
+.partitionDoorRow button{min-height:44px;padding:4px 9px;border:1px solid #a4875c;border-radius:5px;color:#44331f;background:#fffaf1}
+.partitionDoorRow [data-part-door]{flex:1}
+.partitionDoorRow:first-child [data-part-door]{font-weight:800;background:#ead7b1}
+.partitionDoorRow [data-part-door-menu],.partitionDoorRow + .partitionDoorRow{margin-top:4px}
+.partitionDoorRow .voiceMatch{outline:2px solid #946335}
+.partitionVoiceStatus{display:block;padding:3px 0;font-size:13px;color:#513f29}
+</style><script id="contextEquipment24">
+HB.__contextEquip24=(key,at)=>{
+  HB.__setStep399("put");
+  HB.__partDrawOff?.(true);
+  HB.__put=null;
+  HB.__putAt=at;
+  const count=(S.tenken || []).length;
+  try { addTenken(key); } finally { HB.__putAt=null; }
+  if ((S.tenken || []).length>count){
+    const item=S.tenken[S.tenken.length-1];
+    item.meetingPending=true;
+    save();
+    drawPlan();
+  }
+};
+document.addEventListener("click",event=>{
+  if(event.target.closest(".steps,#oak556,#planBar")) closePlaceActions24();
+},true);
+</script>
 <style>
+#stM #placeActions24{order:99;flex:0 0 auto;max-height:31vh;overflow:auto}
+#placeActions24 .partitionDoorRow{flex-wrap:wrap}
+.contextActionGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;margin-top:5px}
+.contextActionGrid[hidden]{display:none}
+.contextActionGrid button,.contextEdit24 button{min-height:40px;background:#fff8ed;color:#442f20;border:1px solid #9e8058;border-radius:5px}
+.contextEdit24{display:flex;gap:4px;margin:4px 0}
+.contextEdit24 button{flex:1}
+#selBar.contextCompact24 .sbw,#selBar.contextCompact24 #sbDel{display:none!important}
+#placeActions24 .voiceMatch{outline:2px solid #956432}
+</style>
+<style>
+.nearCandidates25 #selBar .cands{display:none!important}
+#planControls25{position:fixed;z-index:16;display:flex;gap:3px;max-width:80vw;overflow-x:auto;padding:3px;border:1px solid #92754e;border-radius:7px;background:#f7f1e6;box-shadow:0 2px 6px #46322129}
+#planControls25[hidden]{display:none}#planControls25 button{flex:none;min-height:40px;border:1px solid #b59e77;border-radius:4px;background:#fffaf0;color:#45321e;font-weight:700}
+#planControls25 button[aria-pressed=true]{background:#60442b;color:white}
 .note25{display:block;font-weight:400;white-space:pre-wrap;overflow-wrap:anywhere}
 #note25{display:block;width:100%;font:inherit;padding:8px;box-sizing:border-box}
-</style>
+#selBar #sbSame502{background:#f4e9d4!important;color:#47351e!important;border-color:#a78b5e!important}
+</style><script>
+window.addEventListener("scroll",()=>{if(document.getElementById("planControls25") && HB.__pageM) queuePlanControls25();},true);
+window.addEventListener("resize",queuePlanControls25);
+</script>
