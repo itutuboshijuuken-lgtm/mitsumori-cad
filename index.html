@@ -4795,7 +4795,7 @@ function tidyPlanLabels(){
     if (t.__tidy342) return;   /* CAD-342：同じ DOM に tidy をかけ直しても、縮小は1回だけ */
     t.__tidy342 = 1;
     const cs = getComputedStyle(t), fs = parseFloat(cs.fontSize);
-    if (fs) t.style.fontSize = (fs * PLAN_FONT_K) + "px";
+    if (fs && !((cs.fill === "rgb(37, 99, 176)" || cs.fill === "rgb(29, 42, 58)") && fs >= 10 && /^(\u5168\u9577\s*)?[\d,]+$/.test((t.textContent || "").trim()))) t.style.fontSize = (fs * PLAN_FONT_K) + "px";   /* CAD-642：寸法の数字（青→濃色に直された物も含む）は view432 が画面で一定の大きさに決めるので、ここでは縮めない（縮める側と決める側が交互に勝って数字の大きさが揺れるのを止める） */
     if (t.classList.contains("halo")){ const sw = parseFloat(cs.strokeWidth); if (sw) t.style.strokeWidth = (sw * PLAN_FONT_K) + "px"; }
   });
   svg.querySelectorAll("line.lead342").forEach(l => l.remove());   /* CAD-342：かけ直しの前に、前回の引き出し線を消す */
@@ -27153,7 +27153,7 @@ body.gold #putBar261 button.pb261e{background:#E3C777;color:#1B1405}
     var texts=[].filter.call(svg.querySelectorAll("text"),function(t){ return !t.closest("#planInk")&&!t.closest("[data-sno]"); }), cs=[];
     texts.forEach(function(t){ cs.push(getComputedStyle(t)); });
     var fs=cs.map(function(c){ return parseFloat(c.fontSize); }), sw=cs.map(function(c){ return parseFloat(c.strokeWidth); });
-    texts.forEach(function(t,i){ if(fs[i]) t.style.fontSize=(fs[i]*K)+"px"; if(t.classList.contains("halo")&&sw[i]) t.style.strokeWidth=(sw[i]*K)+"px"; });
+    texts.forEach(function(t,i){ if(fs[i] && !t.__tidy342 && !((cs[i].fill === "rgb(37, 99, 176)" || cs[i].fill === "rgb(29, 42, 58)") && fs[i] >= 10 && /^(\u5168\u9577\s*)?[\d,]+$/.test((t.textContent || "").trim()))) t.style.fontSize=(fs[i]*K)+"px"; if(t.classList.contains("halo")&&sw[i]) t.style.strokeWidth=(sw[i]*K)+"px"; });   /* CAD-642：寸法の数字は縮めない（tidyPlanLabels と同じ決め） */
   }
   try{
     orig=tidyPlanLabels;
@@ -37105,6 +37105,7 @@ nav.steps{padding:1px 6px 3px}
       var old = sv.querySelector("#v432"); if (old) old.remove();
       if (!on()){ document.body.classList.remove("v432"); return; }
       document.body.classList.add("v432");
+      var sig0 = sig();
       var ctm = sv.getScreenCTM(); if (!ctm || !ctm.a) return;
       var k = 1 / ctm.a;                                  /* 画面1pxが図面の何単位か */
       var a = toMM([0, 0]), c = toMM([100, 100]), sx = 100 / (c[0] - a[0]), sy = 100 / (c[1] - a[1]);
@@ -37120,7 +37121,7 @@ nav.steps{padding:1px 6px 3px}
           if (m2 >= 1){ var bx = t.getBBox(); t.__jo = {x: bx.x + bx.width / 2, y: bx.y + bx.height, v: (m2 / 1.62).toFixed(1) + "畳"}; } else t.__jo = null;
           t.classList.add("h432");
         }
-        if (f === "rgb(37, 99, 176)" && s >= 10){ t.style.fontSize = (15 * k).toFixed(2) + "px"; t.style.fill = "#1d2a3a"; t.style.fontWeight = "900"; }
+        if (f === "rgb(37, 99, 176)" && s >= 10){ t.style.fontSize = (15 * k).toFixed(2) + "px"; t.style.fill = "#1d2a3a"; t.style.fontWeight = "900"; t.__tidy342 = 1; }   /* CAD-642：決めた数字に印を付け、後からの縮小に触らせない */
       });
       sv.querySelectorAll("line,path,polyline").forEach(function(l){
         if (l.closest("#v432")) return;
@@ -37210,7 +37211,7 @@ nav.steps{padding:1px 6px 3px}
       } catch(e){}
       var poly = sv.querySelector("polygon"); sv.appendChild(g);
       if (poly && dots.parentNode === g){ var dg = dots; g.removeChild(dg); dg.setAttribute("id", "v432d"); var ex = sv.querySelector("#v432d"); if (ex) ex.remove(); poly.parentNode.insertBefore(dg, poly.nextSibling); }
-      lastSig = sig();
+      lastSig = sig0;
     } catch(e){} finally { busy = false; }
   }
   function sig(){ try { var sv = document.getElementById("plan"), ctm = sv.getScreenCTM(); return [on(), ctm ? ctm.a.toFixed(4) : 0, typeof sel !== "undefined" && sel ? sel.t + sel.i : "", (HB.__roomPt433 && HB.__roomPt433() || []).join(","), (function(){ try { return sel && sel.t === "p" ? JSON.stringify(S.parts2D[sel.i]) : ""; } catch(e){ return ""; } })(), (S.parts2D || []).length, !!sv.querySelector("#v432"), S.mode].join("|"); } catch(e){ return ""; } }
