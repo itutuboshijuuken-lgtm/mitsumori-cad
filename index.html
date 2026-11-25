@@ -42271,3 +42271,54 @@ html body:not(.nbtutRun) #stM #selBar[data-k] :is(.r1b,.sbL,.sbR,.partitionDoorR
 html body:not(.nbtutRun) #stM #selBar[data-k] .r1b button{min-width:32px!important}
 
 </style>
+
+<style id="cad608big">
+html body #stM #selBar:not([hidden]){padding:1px 4px!important}
+html body #stM #selBar .r1{margin:0 0 1px!important}
+html body #stM #selBar .r1b{gap:4px!important}
+html body #stM #selBar .r1b button{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;font-size:14px!important}
+html body #stM #selBar .r1b #sbOk{width:48px!important}
+html body #stM #selBar .r1b [data-cad606-note] svg{width:24px!important;height:24px!important}
+html body #stM #selBar .meetingStatus{margin:2px 0!important;gap:4px!important}
+html body #stM #selBar .meetingStatus button{min-height:36px!important;padding:2px 9px!important;font-size:13px!important}
+html body #stM #selBar .partitionDoorRow:not([hidden]){grid-template-columns:minmax(0,1fr) 114px 48px!important;gap:3px!important;margin:0 0 3px!important;padding:0!important}
+html body #stM #selBar .partitionDoorRow button{min-height:36px!important;height:36px!important;font-size:13px!important}
+html body #stM #selBar .partitionDoorRow button[data-part-door="door"]{font-size:15px!important}
+html body #stM #selBar .sbw{grid-template-columns:minmax(0,1fr) 114px 48px!important;gap:3px!important}
+html body #stM #selBar .sbL{grid-auto-rows:34px!important;gap:3px!important}
+html body #stM #selBar .sbL button{height:34px!important;min-height:34px!important;font-size:14px!important;padding:1px 4px!important}
+html body #stM #selBar .sbL.o:has(> :nth-child(5)){grid-template-columns:repeat(3,minmax(0,1fr))!important}
+html body #stM #selBar .dpad{grid-template-columns:repeat(3,36px)!important;grid-template-rows:repeat(3,36px)!important;gap:2px!important}
+html body #stM #selBar .dpad button{width:36px!important;height:36px!important}
+html body #stM #selBar .sbR{gap:3px!important}
+html body #stM #selBar .sbR button{min-height:36px!important;font-size:13px!important}
+html body #stM #selBar .cad606StepPair button{min-height:36px!important;height:36px!important}
+html body #stM #selBar #sbSame502{min-height:36px!important;margin:0 0 3px!important}
+html body #stM #selBar .seg button{min-height:36px!important}
+html body:not(.nbtutRun) #stM #selBar[data-k] .dpad button:is(.ar,.rot){width:36px!important;height:36px!important}
+html body:not(.nbtutRun) #stM #selBar[data-k] :is(.r1b,.sbL,.sbR,.partitionDoorRow) button{min-height:36px!important}
+html body:not(.nbtutRun) #stM #selBar[data-k] .sbL button{height:34px!important}
+html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair button:is(#sbStep,#fxStep,#sbSame502,#fxSame507){height:36px!important;min-height:36px!important;font-size:12px!important}
+</style>
+
+<script id="cad608order">
+(function(){
+  var IDS=["joy525","put529","joyR532","tgl568"];
+  function ord(){
+    var bar=document.getElementById("ctl530"); if(!bar) return;
+    var els=IDS.map(function(i){return document.getElementById(i)}).filter(function(e){return e&&e.parentNode===bar});
+    if(els.length<2) return;
+    var cur=[].slice.call(bar.children).filter(function(c){return IDS.indexOf(c.id)>=0});
+    var ok=cur.length===els.length&&cur.every(function(c,i){return c===els[i]});
+    if(ok) return;
+    els.forEach(function(e){bar.appendChild(e)});
+  }
+  function boot(){
+    var bar=document.getElementById("ctl530");
+    if(bar){ try{ new MutationObserver(ord).observe(bar,{childList:true}); }catch(e){} }
+    ord();
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot); else boot();
+  setInterval(ord,1500);
+})();
+</script>
