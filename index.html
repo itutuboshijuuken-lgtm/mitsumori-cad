@@ -137,16 +137,11 @@ body.mfull main{padding:0}
 #slotM .card{padding:0!important;overflow:scroll!important;-webkit-overflow-scrolling:touch;touch-action:none;overscroll-behavior:contain;position:absolute!important;inset:0}
 #slotM svg{width:100%;height:100%;display:block;touch-action:none}
 #slotM svg *{touch-action:none}
-.mfloat{position:absolute;top:6px;z-index:2;display:flex;flex-direction:column;gap:4px}
-.mfloat button{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.95);font-size:18px;font-weight:900;color:var(--ai)}
 #selBar{touch-action:manipulation;background:#fff;border:2px solid #E8742C;border-radius:12px;padding:6px}
 #selBar .r1{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:4px;font-size:13px;font-weight:800}
 #selBar .r2{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
 #selBar .r2 button,#selBar .r1 button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;font-weight:800;color:var(--ai);padding:0 4px}
 #selBar .r2 .ar{font-size:20px}
-.selgrid{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,44px);gap:4px}
-.selgrid button,.selbtn{border:1px solid var(--line);border-radius:10px;background:#fff;font-size:20px;font-weight:900;color:var(--ai)}
-.selbtn{min-height:44px;padding:0 10px;font-size:14px}
 .sub2{font-size:13px;color:var(--sub);font-weight:700;margin:6px 2px 0}
 .est{background:var(--ai);color:#fff;border-radius:14px;padding:12px 14px;margin-top:10px}
 .est span{font-size:13px;opacity:.9}
@@ -230,11 +225,6 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #enclBar .ecd small{font-size:10px;font-weight:700;color:var(--sub)}
 #enclBar .ect{display:grid;grid-template-columns:repeat(5,1fr);gap:3px}
 #enclBar .ect button{min-height:38px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:11px;font-weight:800;color:var(--ai);padding:0;line-height:1.15}
-#enclBar .ect5{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-#enclBar .ect5 button{min-height:40px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:11.5px;font-weight:800;color:var(--ai);padding:0 1px;line-height:1.2}
-#enclBar .ecx{display:grid;grid-template-columns:2fr 1fr;gap:4px}
-#enclBar .ecx button{min-height:44px;border:1px solid var(--ai);border-radius:8px;background:var(--ai);color:#fff;font-size:14px;font-weight:900}
-#enclBar .ecx button.d{background:#fff;color:#C62828;border-color:#C62828}
 #padStd:empty{display:none}
 #selBar .sbw,#fxBar .sbw{column-gap:16px}
 #selBar .sbR,#fxBar .sbR{grid-template-rows:34px 1fr;row-gap:16px}
@@ -374,7 +364,6 @@ body.enclmode #slotM .card{box-shadow:inset 0 0 0 3px #2563B0}
 #selBar .sbR,#fxBar .sbR{grid-template-rows:30px 1fr;row-gap:8px}
 #enclBar .ecd button{min-height:34px}
 #enclBar .ect button,#enclBar .ect5 button{min-height:32px}
-#enclBar .ecx button{min-height:38px}
 /* CAD-329：選択のピンク点滅の波形を作り替え（本人の指定：濃い時間は短く・薄い時間は中くらい・消えている時間を長く）
  CAD-331：実機の追加の指摘で濃い時間をさらに短縮（約0.4秒→約0.2秒）。その分は消えている時間へ（約1.2秒→約1.4秒）。周期2.4秒・薄い約0.8秒・色は不変 */
 .selBlink{animation:selBlink 2.4s linear infinite}
@@ -22007,8 +21996,6 @@ body.gold #stM #roomBar176{background:transparent}
 body.gold #roomBar176 button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
 body.gold #planBar button{background:#0B0D10;color:#E3C777;border-color:rgba(227,199,119,.30)}
 body.gold #zOut,body.gold #zIn,body.gold #zAll,body.gold #zFs{background:#0B0D10!important;color:#E3C777!important;border-color:rgba(227,199,119,.30)!important}
-body.gold .selgrid button,body.gold .selbtn{background:#0B0D10;color:#E3C777;border-color:rgba(227,199,119,.30)}
-body.gold .mfloat button{background:rgba(11,13,16,.92);color:#E3C777;border-color:rgba(227,199,119,.30)}
 /* ===== 操作バー（選ぶシートは塗りつぶし＝従来の決定どおり） ===== */
 body.gold #selBar{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
 body.gold #selBar button,body.gold #fxBar button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
@@ -22017,7 +22004,6 @@ body.gold #selBar .dpad .ar.on,body.gold #fxBar .dpad .ar.on{background:var(--go
 body.gold #selBar .dpad .rot[disabled],body.gold #fxBar .dpad .rot[disabled],body.gold #fxBar .sbR .rot[disabled]{background:#2A2D33;color:#8D9099}
 body.gold #enclBar{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
 body.gold #enclBar button,body.gold #enclBar .r1 button,body.gold #enclBar .ecd button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
-body.gold #enclBar .ecx button.d{background:#0B0D10;color:#F08A80;border-color:#F08A80}
 body.gold #gkBar208{background:linear-gradient(160deg,#1C1F26,#121418);border-color:rgba(227,199,119,.55);color:var(--ink)}
 body.gold #gkBar208 button{background:#0B0D10;color:#F4EEDD;border-color:rgba(227,199,119,.30)}
 body.gold #floorPanel{background:linear-gradient(160deg,#1C1F26,#121418);color:var(--ink)}
@@ -25082,7 +25068,6 @@ window.ASH230F = function(rows){
 #tradeRow button{min-height:36px}
 #undoBtn,#redoBtn,#listBtn,#flBtn{min-width:40px}
 #gkM208,#gkN208{min-width:48px;white-space:nowrap}
-.ux234lab{font-size:12px;font-weight:700;color:#456;margin:6px 4px 2px}
 body.mfull .toast,.toast{top:auto!important;bottom:calc(64px + env(safe-area-inset-bottom,0px))!important}
 </style>
 <script>
@@ -42307,8 +42292,6 @@ body:not(.nbtutRun) #stM #selBar .partitionDoorRow button{min-height:36px!import
 /* CAD1125 phase2: actual editing surfaces */
 html body #stM:has(>#chips434.furniture26) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important;height:auto!important;order:0}
 html body #stM #chips434.furniture26{position:relative!important;inset:auto!important;order:91;flex:0 0 auto!important;width:100%;box-sizing:border-box;grid-template-columns:136px minmax(0,1fr)!important;max-height:46vh;overflow:auto!important;background:#f7f1e5!important;color:#443523!important;border:1px solid #a78b61!important;padding:5px!important;gap:5px!important}
-html body #stM #chips434.furniture26 .factions26{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;align-content:start}
-html body #stM #chips434.furniture26 .dpad26{display:grid!important;grid-template:repeat(3,44px)/repeat(3,44px)!important;gap:2px!important}
 html body #st6 #fxBar:not([hidden]){position:relative!important;inset:auto!important;flex:0 0 auto!important;order:97;max-height:46vh;overflow:auto!important;margin:0!important;padding:5px!important;box-shadow:none!important}
 html body #st6.fsRm:has(#fxBar:not([hidden])) .fs419stage{min-height:0!important;flex:1 1 0!important;overflow:auto!important}
 html body #st6 #fxBar .r1{display:flex!important;flex-wrap:wrap;gap:4px!important}
@@ -42325,10 +42308,6 @@ html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-c
 html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]>*{display:none!important}
 html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]::before{content:none!important}
 html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]::after{content:""!important;position:absolute!important;inset:8px!important;background:var(--cadnext-art) center/contain no-repeat!important;pointer-events:none!important}
-html body #stM #selBar.cad1125.controller26 .sbL{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(44px,auto)!important;grid-template-rows:none!important}
-html body #stM #selBar.cad1125.controller26 .sbw{grid-template-columns:minmax(0,1fr) 136px!important}
-html body #stM #selBar.cad1125.controller26 .r1{flex-wrap:wrap!important}
-html body #stM #selBar.cad1125.controller26 .r1b{flex-wrap:wrap!important}
 
 </style>
 <script id="cad1125-phase2-js">
@@ -42612,9 +42591,7 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #enclBar{posit
 body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important}
 </style>
 
-<style id="cad615closecss">/* CAD-615: 道具の選択肢パネル（toolCh等）の「閉じる」ボタンの見た目。素材は既存チップに合わせる。 */
-#stM .chipClose615{min-height:44px;border:1px solid var(--line,#C9BFA9);border-radius:10px;background:#fff;font-size:14px;font-weight:800;color:#5B4A2A;padding:4px 6px}
-</style>
+
 <script id="cad615close">
 /* CAD-615: 開いた枠に「閉じる」が無い問題への対処。
    道具の選択肢パネル（#toolCh / #toolCh2 / #toolCh3 / #partCh / #grpSub）は、道具を構えると
