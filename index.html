@@ -37219,7 +37219,7 @@ nav.steps{padding:1px 6px 3px}
     if (typeof drawPlan === "function" && !drawPlan.__v432){ var d0 = drawPlan; window.drawPlan = function(){ var r = d0.apply(this, arguments); try { apply(); } catch(e){} return r; }; window.drawPlan.__v432 = true; }
   } catch(e){}
   try { var pl = document.getElementById("plan"); if (pl) new MutationObserver(function(){ if (busy) return; var s = document.getElementById("plan"); if (on() && !s.querySelector("#v432")) apply(); }).observe(pl, {childList: true}); } catch(e){}
-  setInterval(function(){ if (sig() !== lastSig) apply(); }, 300);
+  setInterval(function(){ try { if (window.HB && HB.__pinch153State && HB.__pinch153State().mode === "pinch") return; } catch(e){} if (sig() !== lastSig) apply(); }, 300);   /* CAD-643：ピンチ中は引き伸ばしだけにして、寸法の付け直しは指を離してから1回だけ */
   apply();
 })();
 </script>
@@ -43874,5 +43874,30 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
   wrapped.__w641 = true;
   window.drawPlan = wrapped;
+})();
+</script>
+<script id="cad643pinch">
+/* CAD-643：拡大・縮小は「引き伸ばし」でやる（翔伍の決定 2026-11-25 朝）。
+   ピンチの最中は図面を描き直さず、ブラウザの引き伸ばし（pz320 の transform）に任せる。
+   その間、文字の並べ直し（tidyPlanLabels）も止めて、指を離してから1回だけやる。
+   タップの時は今まで通り（ピンチの時だけの決め）。 */
+(function(){
+  "use strict";
+  var orig = window.tidyPlanLabels;
+  if (typeof orig !== "function" || orig.__w643) return;
+  var pending = false, timer = 0;
+  function pinching(){ try { return !!(window.HB && HB.__pinch153State && HB.__pinch153State().mode === "pinch"); } catch(e){ return false; } }
+  function later(){
+    if (timer) return;
+    timer = setInterval(function(){
+      if (!pinching()){ clearInterval(timer); timer = 0; if (pending){ pending = false; try { orig(); } catch(e){} } }
+    }, 120);
+  }
+  var wrapped = function(){
+    if (pinching()){ pending = true; later(); return; }
+    return orig.apply(this, arguments);
+  };
+  wrapped.__w643 = true;
+  window.tidyPlanLabels = wrapped;
 })();
 </script>
