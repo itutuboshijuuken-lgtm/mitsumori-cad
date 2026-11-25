@@ -6193,7 +6193,7 @@ function drawPlan(){
   HB.__planT = {s, ox, oy}; HB.__lbl = []; const lbl316 = [];   /* CAD-316: 寸法の札の材料（反発レイアウト用） */
   let h = `<polygon points="${sp.map(q => q.join(",")).join(" ")}" fill="#EEF4FB" stroke="#2563B0" stroke-width="3" stroke-linejoin="round"/>`;
   h += ((HB.__pageM || HB.__dimShowAll) ? planExtras(P, s) : "") + jointMarks(P);
-  if (HB.__pageM){ const r345 = Math.max(6, 115 * s), c345 = P([b.x0, b.y0]); h += gridSym345(P, b, c345[1] - r345 - 50 * s, c345[0] - r345 - 50 * s, r345); }   /* CAD-345：通り芯の符号（上＝いろは、左＝数字）。壁から50mm外・半径115mm相当で、寸法チェーン（300mm外）との間に20mm空ける */
+  /* CAD-646：編集画面では通り芯の符号を最初から描かない。以前は描いてから fs424 が 500ms 間隔で隠していたため、描き直しのたびに下地の符号がチラチラ出ていた（翔伍の指摘）。符号は完成図・図面集の側で従来どおり描く */   /* CAD-345：通り芯の符号（上＝いろは、左＝数字）。壁から50mm外・半径115mm相当で、寸法チェーン（300mm外）との間に20mm空ける */
   S.edges.forEach((e, i) => {
     const a = sp[i], c = sp[(i + 1) % sp.length], m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
     let nx = (c[1] - a[1]), ny = -(c[0] - a[0]); const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl;
@@ -36812,8 +36812,7 @@ nav.steps{padding:1px 6px 3px}
       if (!svg || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
       if (typeof bbox !== "function" || typeof gridLines345 !== "function") return;
       var grp = svg.querySelector('g[data-sno="grid345"]');
-      if (!grp) return;
-      if (grp.style.display !== "none") grp.style.display = "none";
+      if (grp && grp.style.display !== "none") grp.style.display = "none";   /* CAD-646：符号は描かなくなったので、無くても寸法列は続ける */
       var b = bbox(); if (!b || !(b.w > 0)) return;
       var poly = null;
       svg.querySelectorAll("polygon").forEach(function(p){ if (!poly && (p.getAttribute("fill") || "").indexOf("url(#pFl") === 0) poly = p; });
