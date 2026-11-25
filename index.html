@@ -432,6 +432,13 @@ body.rf [data-step="3"]{display:none}
 .rfAdv>summary{font-weight:800;color:var(--ai);padding:12px 2px;border-top:1px solid var(--line);margin-top:10px;cursor:pointer}
 body.rf:not(.pt) .steps{grid-template-columns:repeat(5,1fr)!important}
 </style>
+<style id="cad627early">
+/* CAD-627: 最初の描画から本テーマの色で出す（青い画面のチラつき防止）。
+   最終形（oak556css）の色だけを先に当て、画像や詳細は後段の正規ルールが上書きする */
+body header.top, body header .bar, body .steps { background-color:#d5b48b; color:#30271e }
+body .steps button { background-color:#eee2d0; color:#493d31; border:1px solid #a18e75; border-radius:4px }
+body header.top h1 { color:#30271e }
+</style>
 <style>.steps button[data-step="1"]{order:1}.steps button[data-step="2"]{order:2}.steps button[data-step="M"]{order:3}.steps button[data-step="7"]{order:4}.steps button[data-step="3"]{order:5}.steps button[data-step="6"]{order:6}.steps button[data-step="4"]{order:7}.steps button[data-step="5"]{order:8}body.rf [data-step="7"],body.pt [data-step="7"]{display:none}</style>
 <style>
 /* CAD-92：手順タブは全モードで必ず1行（新築7／リフォーム5／部分2）。
