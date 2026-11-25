@@ -35898,8 +35898,13 @@ function daikuBaseRows391(nobeT){
           var slot3 = document.getElementById("slotM"), sv3 = document.getElementById("plan");
           if (slot3 && sv3 && !applied400){
             var sr3 = slot3.getBoundingClientRect(), vr3 = sv3.getBoundingClientRect();
+            /* CAD-650：選択中（selBar 表示中）は高さを直さない。選択で枠が狭まる間の
+               はみ出しは一時的なもので、ここで pinH を下げると選択のたびに図面が縮む。
+               従来は描き直しの山に隠れて発火しなかったが、描き直しを1回に減らした
+               分、瞬間的な状態を拾うようになったため、条件に明示する。 */
             if (vr3.height > 0 && vr3.bottom > sr3.bottom + 3 && (HB.__pinH || 0) > sr3.height + 3
-                && Date.now() - lastOv400 >= 1000 && !(typeof PV !== "undefined" && PV.z > 1.01)){
+                && Date.now() - lastOv400 >= 1000 && !(typeof PV !== "undefined" && PV.z > 1.01)
+                && (!document.getElementById("selBar") || document.getElementById("selBar").hidden)){
               lastOv400 = Date.now();
               try { HB.__pinH = 0; if (typeof drawPlan === "function") drawPlan(); } catch(e){}
             }
@@ -43743,6 +43748,7 @@ body.hasAux632 #auxBtn632{display:inline-flex}
 <script id="cad632fit">
 (function () {
   var appliedKey = "";
+  var fitCache650 = {};   /* CAD-650：この家・階で一度決めた縦フィット（z と中心）を覚える */
   function key() {
     try { return (S.id || "") + "/" + (S.fi || 0) + "/" + (S.edges || []).length + "/" + (S.parts2D || []).length + "/" + (S.tatami || []).length; }
     catch (e) { return ""; }
@@ -43755,6 +43761,12 @@ body.hasAux632 #auxBtn632{display:inline-flex}
       var k = key(); if (!k) return;
       if (k === appliedKey) return;
       if (PV.z > 1.01) { appliedKey = k; return; }
+      /* CAD-650：選択の流れで PV.z が 1 に戻されても、測り直さない。
+         測る瞬間の画面（選択中の寸法や一時的な重なり）で z が変わり、
+         タップのたびに図面の大きさが変わるため。決めた値は key ごとに
+         覚えておき、戻されたら同じ値を復元する。 */
+      var fc = fitCache650[k];
+      if (fc) { PV.z = fc.z; PV.cx = fc.cx; PV.cy = fc.cy; appliedKey = k; applyPV(); return; }
       var sv = document.getElementById("plan"); if (!sv) return;
       var card = sv.parentNode; if (!card) return;
       var r0 = sv.getBoundingClientRect(); if (!r0.width || !r0.height) return;
@@ -43774,6 +43786,7 @@ body.hasAux632 #auxBtn632{display:inline-flex}
       PV.cx = ((x0 + x1) / 2 - r0.left) / r0.width * PV.W;
       PV.cy = ((y0 + y1) / 2 - r0.top) / r0.height * PV.H;
       PV.z = z;
+      fitCache650[k] = { z: z, cx: PV.cx, cy: PV.cy };
       applyPV();
     } catch (e) {}
   }
@@ -43936,6 +43949,57 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.drawPlan = function(){
     var r = prev.apply(this, arguments);
     try { if (typeof window.tidyShrink342 === "function") window.tidyShrink342(); } catch(e){}
+    return r;
+  };
+})();
+</script>
+<script id="cad650coalesce">
+/* CAD-650：タップ1回で drawPlan が3回（各約600ms）走る重なりを止める。
+   実測：3回の描画結果は、内部の連番ID（pc586_N）を除いて完全一致だった。
+   呼び元は (1) 選択処理 (2) 選択バーの表示切替の予約 (3) mSel 見張り で、
+   (2)(3) は CAD-338 の 250ms ガードで省く設計だったが、印が「描き始め」の
+   時刻で、描画自体が約600ms かかる間に窓を使い切って効いていなかった。
+   ここでは一番外側で「直前の描画から250ms以内 かつ 描画の入力（選択・階・
+   間仕切り/建具/床の形・拡大・図面の高さ）が同じ」時だけ描き直しを省く。
+   入力が変われば必ず描く。 */
+(function(){ if (window.__cad650c) return; window.__cad650c = 1;
+  var prev = window.drawPlan; if (typeof prev !== "function") return;
+  var lastEnd = 0, lastSig = "";
+  function sig650(){
+    try {
+      var h = 0, i, a;
+      if (typeof S !== "undefined" && S){
+        var P = S.parts2D || []; for (i = 0; i < P.length; i++){ a = P[i]; h = (h * 31 + a.x1 * 3 + a.y1 * 5 + a.x2 * 7 + a.y2 * 11) | 0; }
+        var W = S.sashes || []; for (i = 0; i < W.length; i++){ a = W[i]; h = (h * 31 + (a.pos | 0) * 13 + (a.w | 0) * 17 + (a.flip | 0) * 19) | 0; }
+        var T = S.tatami || []; for (i = 0; i < T.length; i++){ a = T[i]; h = (h * 31 + a.x0 * 23 + a.y0 * 29 + a.x1 * 37 + a.y1 * 41) | 0; }
+        h = (h * 31 + (S.tenken ? S.tenken.length : 0) * 43 + (S.lights ? S.lights.length : 0) * 47) | 0;
+        h = (h * 31 + ((S.roomPt && S.roomPt[0]) | 0) * 53 + ((S.roomPt && S.roomPt[1]) | 0) * 59) | 0;
+      }
+      var selS = "";
+      try { if (typeof sel !== "undefined" && sel) selS = sel.t + ":" + sel.i; } catch(e){}
+      var bar = document.getElementById("selBar");
+      /* body のクラスは drawPlan 自身が読む v432 / fsDraw だけを入れる。
+         mSel は CSS で HTML のバーを隠すだけの状態で、SVG の中身は変わらない
+         （実測で3回の描画結果が一致）。クラス全体を入れると mSel の追随で必ず外れる。 */
+      var bc = document.body.classList;
+      return [ h, selS, bar ? (bar.hidden ? 0 : 1) : -1,
+        (typeof PV !== "undefined") ? PV.z + "," + PV.cx + "," + PV.cy : "",
+        (typeof HB !== "undefined") ? (HB.__pinH || 0) + "," + (HB.__pageM ? 1 : 0) + "," + (HB.__landM128 ? 1 : 0) : "",
+        (bc.contains("v432") ? 1 : 0) + "," + (bc.contains("fsDraw") ? 1 : 0) ].join("|");
+    } catch(e){ return ""; }
+  }
+  window.drawPlan = function(){
+    var now = performance.now(), sg = sig650();
+    /* 省くのは「物を選択中」の重なりだけに限る。選択していない時の描き直し
+       （読み込み・階の切替・フィット等）は従来通り全部描く。 */
+    var barNow = document.getElementById("selBar");
+    var selecting = !!(barNow && !barNow.hidden);
+    if (selecting && lastEnd && sg && sg === lastSig && now - lastEnd < 400){
+      window.__cad650skip = (window.__cad650skip || 0) + 1;
+      return;
+    }
+    var r = prev.apply(this, arguments);
+    lastEnd = performance.now(); lastSig = sig650();
     return r;
   };
 })();
