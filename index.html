@@ -2763,7 +2763,7 @@ function tatFromStroke(pm){ return floorRectFromStroke(pm); }
 /* ---------- 床下・天井点検口 ---------- */
 const STN = {s: "直階段", L: "かね折れ", M: "回り（3等分）", N: "回り（2等分）"};
 const TKN = {floor: "床下点検口", ceil: "天井点検口", dansa: "段差解消・敷居撤去", pillar: "独立柱", acout: "エアコン用コンセント（天井付け）", kitchen: "キッチン", senmen: "洗面化粧台", makura: "枕棚", chudan: "中段棚", wc: "便器", bath: "浴槽", tearai: "手洗い", geta: "下駄箱", senpan: "洗濯機パン", yukashu: "床下収納庫", yukaten: "床下点検口（開口410×560）", stair: "階段"};
-const tkExt = o => o.k === "dansa" ? (o.dir === "v" ? [60, o.w / 2] : [o.w / 2, 60]) : (o.k === "kitchen" || o.k === "senmen" || o.k === "counter" || o.k === "makura" || o.k === "chudan" || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan" || o.k === "stair" || o.k === "yukaten") ? ((o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2]) : [o.w / 2, o.w / 2];
+const tkExt = o => o.k === "dansa" ? (o.dir === "v" ? [60, o.w / 2] : [o.w / 2, 60]) : (o.k === "kitchen" || o.k === "senmen" || o.k === "counter" || o.k === "makura" || o.k === "chudan" || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan" || o.k === "stair" || o.k === "yukaten" || o.k === "acout") ? ((o.dir === "e" || o.dir === "w") ? [o.d / 2, o.w / 2] : [o.w / 2, o.d / 2]) : [o.w / 2, o.w / 2];
 const isShelf = o => o.k === "makura" || o.k === "chudan", isKS = o => o.k === "kitchen" || o.k === "senmen" || isShelf(o) || o.k === "wc" || o.k === "bath" || o.k === "tearai" || o.k === "geta" || o.k === "senpan" || o.k === "stair";
 function moveTenken(o, dx, dy){ const b = bbox(), [hx, hy] = tkExt(o), sn = (v, h) => Math.round((v - h) / 2.5) * 2.5 + h; const ox = o.x, oy = o.y; o.x = Math.max(b.x0 + hx, Math.min(b.x1 - hx, sn(o.x + dx, hx))); o.y = Math.max(b.y0 + hy, Math.min(b.y1 - hy, sn(o.y + dy, hy)));
   // CAD-148: 外形ポリゴンの外（L字の凹みを含む）へは動かさない
@@ -14215,8 +14215,37 @@ HB.__dskSeg32 = true;
      後段は早期 return（対象外なら即戻る）を含むため、実体はそのまま HB 内部専用の口として登録だけ残す（registry の94種には含めない）。 */
   HB.__atPost34 = function(k, r){
     try {
-      if (k !== "wc" && k !== "bath") return r;
+      if (k !== "wc" && k !== "bath" && k !== "acout") return r;   /* CAD-621: エアコンも置いた時に部屋のいちばん近い壁へ背を付けて吸い付かせる（便器・浴槽と同じ仕組み） */
       const o = S.tenken[S.tenken.length - 1]; if (!o || o.k !== k) return r;
+      if (k === "acout"){
+        /* CAD-621：エアコンは部屋の区切りでなく実際の壁（外周＋間仕切り）へ吸い付かせる。
+           部屋が開口でつながっている家では roomsCalc の部屋が合体して吸着できないため、壁の線その物を見る */
+        const P0 = [o.x, o.y], segs = [];
+        const pp = pts();
+        for (let q = 0; q < pp.length; q++){ const A = pp[q], B = pp[(q + 1) % pp.length]; if (A && B && (A[0] !== B[0] || A[1] !== B[1])) segs.push([A[0], A[1], B[0], B[1]]); }
+        (S.parts2D || []).forEach(q => { if (q && (q.x1 !== q.x2 || q.y1 !== q.y2)) segs.push([q.x1, q.y1, q.x2, q.y2]); });
+        let best = null;
+        for (const sg of segs){
+          const vx = sg[2] - sg[0], vy = sg[3] - sg[1], L2 = vx * vx + vy * vy; if (!L2) continue;
+          let t = ((P0[0] - sg[0]) * vx + (P0[1] - sg[1]) * vy) / L2; t = Math.max(0, Math.min(1, t));
+          const px = sg[0] + vx * t, py = sg[1] + vy * t, dist = Math.hypot(P0[0] - px, P0[1] - py);
+          if (!best || dist < best.dist) best = { dist, t, px, py, vx, vy, L: Math.sqrt(L2), sg };
+        }
+        if (best){   /* 距離の上限は付けない：エアコンは必ずどこかの壁に付く物なので、置いたら一番近い壁へ吸い付かせる */
+          const half = (o.d || 250) / 2 + 5, along = (o.w || 800) / 2;
+          let t = best.t;
+          if (best.L >= along * 2) t = Math.max(along / best.L, Math.min(1 - along / best.L, t));
+          let nx = -best.vy / best.L, ny = best.vx / best.L;
+          const cx0 = best.sg[0] + best.vx * t, cy0 = best.sg[1] + best.vy * t;
+          if ((P0[0] - cx0) * nx + (P0[1] - cy0) * ny < 0){ nx = -nx; ny = -ny; }
+          o.x = Math.round((cx0 + nx * half) / 5) * 5;
+          o.y = Math.round((cy0 + ny * half) / 5) * 5;
+          if (Math.abs(best.vx) >= Math.abs(best.vy)) o.dir = ny > 0 ? "n" : "s";
+          else o.dir = nx > 0 ? "w" : "e";
+          save(); drawPlan();
+        }
+        return r;
+      }
       const R = roomsCalc(), i = Math.floor((o.x - R.b.x0) / R.st), j = Math.floor((o.y - R.b.y0) / R.st);
       if (i < 0 || j < 0 || i >= R.NX || j >= R.NY) return r;
       const cid = R.comp[j * R.NX + i], rm = R.rooms.find(q => q.cid === cid); if (!rm) return r;
