@@ -19169,7 +19169,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var cur = S.flType || "floorFin"; if (cur === "flSheet") cur = "flComp";
     var ra = restArea183();
     var h = "<h3>残りの床" + (ra > 0.05 ? "　" + fmt(ra, 1) + "㎡" : "") + "</h3>"
-      + "<p class='hint' style='margin-top:0'>間取りで指定していない分の床の仕上げです（見積に反映します）</p>"
+      + "<p style='margin-top:0;font-size:12.5px;color:var(--sub);line-height:1.5'>間取りで指定していない分の床は、この仕上げで自動で計算します（見積に反映します）</p>"
       + "<div class='seg' style='flex-wrap:wrap'>" + FT.map(function(x){ return "<button type='button' data-rfk='" + x[0] + "' aria-pressed='" + (cur === x[0]) + "'>" + x[1] + "</button>"; }).join("") + "</div>"
       /* CAD-311: 色チップ廃止（同上） */
       + "<div class='row'><button class='btn pri' id='rsOk' type='button'>OK</button></div>";
@@ -19269,7 +19269,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
       var cur = S.flType || "floorFin"; if (cur === "flSheet") cur = "flComp";
       var nm = {flComp: "フローリング", floorFin: "フロアタイル", flCF: "CF", flMuku: "無垢板15mm", flMuku30: "無垢板30mm"}[cur] || "フロアタイル";
       var ra = restArea183();
-      rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
+      rows += "<div class='sprow'><div>残りの床<small>間取りで指定していない分は自動で計算・" + nm + "</small>" + (ra > 0.05 ? "<small>" + fmt(ra, 1) + "㎡</small>" : "") + "</div><div><button class='btn' data-specrest='1' type='button' style='min-height:38px;padding:0 10px;font-size:14px'>詳細設定</button></div></div>";
     }
     /* CAD-311: フローリングの色選択は廃止（標準色のみ。本人の決定 2026-11-16）。保存済みの色の読み替えは従来通り */
     entries.forEach(function(idxs){
