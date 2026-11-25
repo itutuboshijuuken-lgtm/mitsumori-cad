@@ -2494,7 +2494,7 @@ function dimOverlay(P, sc){
      同じ距離は v432 の大きいチップが両方向とも出していて、ピルが二重に出ると tidyPlanLabels の
      回避移動で外周の壁際までずれて「オレンジの帯」に見えた（翔伍の実機指摘 2026-11-23）。
      距離の値は v432 チップと下の「位置を直す」欄に出る。外周チェーンは従来どおり残す。 */
-  return out.join("");
+  return '<g id="dimChain426">' + out.join("") + "</g>";   /* CAD-645：外周チェーン寸法を1つのグループにまとめる（view432 の大きい寸法と二重に出るため、画面では view432 側を残してこちらを隠す） */
 }
 /* ---------- 畳（指で囲んだ所を畳にする） ---------- */
 let tatMode = false, tatInk = null;
@@ -37093,7 +37093,7 @@ nav.steps{padding:1px 6px 3px}
   "use strict";
   var NS = "http://www.w3.org/2000/svg", busy = false, lastSig = "", narrowKey = "";
   var css = document.createElement("style");
-  css.textContent = "body.v432 #plan #dim424,body.v432 #plan .h432{display:none!important}";
+  css.textContent = "body.v432 #plan #dim424,body.v432 #plan .h432,body.v432 #plan #dimChain426{display:none!important}";   /* CAD-645：外周チェーン（小さい寸法）と view432 の大きい寸法が同じ寸法を二重に出し、tidyPlanLabels の回避が終わらなかった。二重を止める */
   document.head.appendChild(css);
   function on(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM && typeof S !== "undefined" && S.edges); }
   function el(tag, at, txt){ var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (txt != null) e.textContent = txt; return e; }
@@ -43898,6 +43898,30 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return orig.apply(this, arguments);
   };
   wrapped.__w643 = true;
+  window.tidyPlanLabels = wrapped;
+})();
+</script>
+<script id="cad644tidy">
+/* CAD-644：文字の並べ直し（tidyPlanLabels）は、タップのたびに何度も
+   フルで走って画面を止めていた（実測：1タップで遅い実行が3回・合計約2秒）。
+   並べ直しは「最後の描き直しが終わってから1回」で足りるので、
+   呼び出しをまとめる：最後の呼び出しから250ms後に1回だけ実行する
+   （待ち続けても900msで必ず1回は実行する）。 */
+(function(){
+  "use strict";
+  var orig = window.tidyPlanLabels;
+  if (typeof orig !== "function" || orig.__w644) return;
+  var timer = 0, firstAt = 0;
+  function run(){ timer = 0; firstAt = 0; try { orig(); } catch(e){} }
+  var wrapped = function(){
+    var now = performance.now();
+    if (!firstAt) firstAt = now;
+    if (timer) clearTimeout(timer);
+    var wait = Math.min(250, Math.max(0, firstAt + 900 - now));
+    timer = setTimeout(run, wait === 250 ? 250 : Math.max(30, wait));
+    return undefined;
+  };
+  wrapped.__w644 = true;
   window.tidyPlanLabels = wrapped;
 })();
 </script>
