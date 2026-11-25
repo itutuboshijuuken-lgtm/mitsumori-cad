@@ -8895,7 +8895,7 @@ function renderPlanControls25(){
   panel.hidden=false;
   document.body.classList.toggle("nearCandidates25",overlap.length>1);
   panel.style.left=Math.max(4,Math.min(innerWidth-panel.offsetWidth-4,anchor.x-panel.offsetWidth/2))+"px";
-  panel.style.top=Math.max(top,Math.min(bottom-panel.offsetHeight,anchor.y-panel.offsetHeight-7))+"px";
+  panel.style.top=(function(){var ph=panel.offsetHeight;if(bottom-top<ph+24)return Math.max(top,Math.min(bottom-ph,anchor.y-ph-7));return (anchor.y>(top+bottom)/2?top+6:bottom-ph-6);})()+"px";  /* CAD-628: 選んだ物から一番遠い側へ（磁石の反発） */
 }
 
 function meetingItems(state){
@@ -43437,3 +43437,8 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{positio
  }
 })();
 </script>
+
+<style id="cad628css">
+/* CAD-628: 「この区間を消す」の長い文言がボタンからはみ出すのを止める（1行で収める） */
+#stM #selBar #sbDel{white-space:nowrap!important;flex:0 0 auto!important;width:auto!important;font-size:12.5px;padding:0 10px!important}
+</style>
