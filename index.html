@@ -42544,3 +42544,8 @@ body:not(.nbtutRun) #stM #roomBar176 .rmFl176 button{min-height:36px!important}
 body:not(.nbtutRun) #stM #roomBar176 .rmMulti375>button{min-height:38px!important}
 body:not(.nbtutRun) #stM #roomBar176 [data-flgrp612]{min-height:38px!important}
 </style>
+
+<style id="cad614enclbar">/* CAD-614: 床の範囲バー（enclBar）も図面に被せない。通常画面ではフロー内配置。全画面で囲む編集（fsDraw）の時は従来どおり重ねる。素材・色・大きさは変更しない。 */
+body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #enclBar{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;flex:0 0 auto;max-height:46dvh!important;overflow-y:auto!important;margin:0!important;z-index:auto!important}
+body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important}
+</style>
