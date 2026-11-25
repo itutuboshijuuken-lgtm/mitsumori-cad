@@ -42930,3 +42930,465 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{positio
  }, 150);
 })();
 </script>
+<style id="omakase618css">
+ #omakaseSheet{position:fixed;inset:0;z-index:2147483600;background:#F7F1E3;display:none;overflow:auto;padding:14px 14px calc(20px + env(safe-area-inset-bottom))}
+ #omakaseSheet .omT{font-size:19px;font-weight:900;color:#3A2A16;margin:6px 0 2px}
+ #omakaseSheet .omSub{font-size:12.5px;color:#7A5A2E;font-weight:700;margin-bottom:10px}
+ #omakaseSheet .omItem{display:flex;align-items:center;gap:10px;background:#FFFDF7;border:1.5px solid #B08D4F;border-radius:12px;padding:12px;margin-bottom:8px;min-height:56px}
+ #omakaseSheet .omItem input{width:26px;height:26px;flex:0 0 auto;accent-color:#1F6FB5}
+ #omakaseSheet .omItem .omNm{font-weight:900;font-size:15.5px;color:#3A2A16}
+ #omakaseSheet .omItem .omDs{font-size:12px;color:#8A6D3B;font-weight:700}
+ #omakaseSheet .omGo{width:100%;min-height:56px;border-radius:14px;border:none;background:#1F6FB5;color:#fff;font-weight:900;font-size:17px;margin-top:8px}
+ #omakaseSheet .omCancel{width:100%;min-height:50px;border-radius:14px;border:1.5px solid #B08D4F;background:#FFFDF7;color:#3A2A16;font-weight:900;font-size:15px;margin-top:8px}
+ #omakaseSheet .omRes{font-size:14px;font-weight:800;color:#3A2A16;line-height:1.9;white-space:pre-wrap}
+ [data-omakase618]{background:#1F6FB5 !important;color:#fff !important;border-color:#1F6FB5 !important;font-weight:900 !important}
+</style>
+<script id="omakase618">
+(function(){ "use strict";
+ /* ===== CAD-618：おまかせ（自動で予測して入れる） =====
+    設計：hidden_files/harness/design-omakase-2026-11-25.md
+    ・入口は②間取りの棚と「器具を置く」シート。全画面で項目チェックを聞く。
+    ・既にある物は上書きしない。置いた物には meetingPending（後で決める印）。
+    ・実行は今見ている階だけ。 */
+ if (window.__omakase618) return; window.__omakase618 = 1;
+ function $(id){ return document.getElementById(id); }
+ function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+ var ITEMS618 = [
+   ["genkan", "玄関ドア", "土間・玄関の外壁に。無ければ一番長い外壁"],
+   ["win", "窓", "部屋ごとに外壁へ。居室は大きめ、水まわりは小窓"],
+   ["door", "室内ドア", "廊下や一番大きい部屋との間の壁に"],
+   ["kitchen", "キッチン", "一番大きい部屋の一番長い壁に I型"],
+   ["senmen", "洗面台", "洗面の部屋の壁沿いに"],
+   ["wc", "便器", "トイレの部屋の壁側に"],
+   ["bath", "浴槽", "浴室の部屋の壁沿いに"],
+   ["light", "照明", "部屋の広さに合わせて天井に"],
+   ["switch", "スイッチ", "各ドアの脇に"],
+   ["outlet", "コンセント", "部屋の壁沿いに。キッチン・トイレ・洗面にも"]
+ ];
+ /* ---------- 全画面シート ---------- */
+ var sh = document.createElement("div"); sh.id = "omakaseSheet"; document.body.appendChild(sh);
+ function openOmakase(){
+   sh.innerHTML = '<div class="omT">おまかせで入れる</div><div class="omSub">チェックした物だけ、標準の形で自動で入れます。入れた物には「後で決める」印が付くので、あとから歩きながら直せます。既に入っている物は上書きしません。（今見ている階だけ）</div>' +
+     ITEMS618.map(function(it){ return '<label class="omItem"><input type="checkbox" data-om618="' + it[0] + '" checked><span><span class="omNm">' + it[1] + '</span><br><span class="omDs">' + it[2] + "</span></span></label>"; }).join("") +
+     '<button type="button" class="omGo" data-omgo618>自動で入れる</button><button type="button" class="omCancel" data-omx618>やめる</button><div class="omRes" style="margin-top:10px"></div>';
+   sh.style.display = "block";
+ }
+ function closeOmakase(){ sh.style.display = "none"; }
+ sh.addEventListener("click", function(e){
+   if (e.target.closest("[data-omx618]")){ closeOmakase(); return; }
+   if (e.target.closest("[data-omgo618]")){
+     var opts = {};
+     sh.querySelectorAll("[data-om618]").forEach(function(c){ opts[c.dataset.om618] = c.checked; });
+     var res = runOmakase(opts);
+     var resEl = sh.querySelector(".omRes");
+     if (resEl) resEl.textContent = res;
+     var go = sh.querySelector("[data-omgo618]"); if (go) go.textContent = "もう一度入れる";
+     return;
+   }
+ });
+ /* ---------- 入口ボタン ---------- */
+ function addButtons(){
+   var anchor = document.querySelector('[data-k="door"]') || document.querySelector('[data-k="win"]');
+   if (anchor && anchor.parentElement && !anchor.parentElement.querySelector("[data-omakase618]")){
+     var b = document.createElement("button"); b.type = "button"; b.dataset.omakase618 = "1"; b.textContent = "おまかせ";
+     b.className = anchor.className || "";
+     anchor.parentElement.appendChild(b);
+   }
+   var s529 = $("sheet529");
+   if (s529 && s529.style.display !== "none" && s529.querySelector("[data-k529]") && !s529.querySelector("[data-omakase618]")){
+     var b2 = document.createElement("button"); b2.type = "button"; b2.dataset.omakase618 = "1"; b2.textContent = "おまかせ（自動で入れる）";
+     s529.appendChild(b2);
+   }
+ }
+ document.addEventListener("click", function(e){
+   var b = e.target.closest && e.target.closest("[data-omakase618]");
+   if (b){ var s529 = $("sheet529"); if (s529) s529.style.display = "none"; openOmakase(); }
+ }, true);
+ var mo618 = new MutationObserver(addButtons);
+ setInterval(addButtons, 900);
+ document.addEventListener("DOMContentLoaded", function(){ var s = $("sheet529"); if (s) mo618.observe(s, { childList: true, attributes: true, attributeFilter: ["style"] }); });
+
+ /* ---------- 幾何ヘルパー ---------- */
+ function roomBB(r, R){
+   var x0 = 1e18, y0 = 1e18, x1 = -1e18, y1 = -1e18;
+   r.cells.forEach(function(c){ var i = c % R.NX, j = (c - i) / R.NX, X = R.b.x0 + i * R.st, Y = R.b.y0 + j * R.st; if (X < x0) x0 = X; if (Y < y0) y0 = Y; if (X + R.st > x1) x1 = X + R.st; if (Y + R.st > y1) y1 = Y + R.st; });
+   return { x0: x0, y0: y0, x1: x1, y1: y1, w: x1 - x0, h: y1 - y0 };
+ }
+ function segLen(a, b){ return Math.hypot(b[0] - a[0], b[1] - a[1]); }
+ /* 外壁：辺ごとに「内側の部屋」と区間（t: 0..1 の範囲リスト） */
+ function exteriorRanges(){
+   var p = pts(), out = [];
+   for (var i = 0; i < p.length; i++){
+     var a = p[i], b = p[(i + 1) % p.length], L = segLen(a, b); if (L < 100) continue;
+     var ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux;
+     var mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, sgn = 1;
+     try { if (!inside([mx + nx * 200, my + ny * 200], p)) sgn = -1; } catch(e){}
+     var ranges = [], cur = null;
+     for (var t = 0; t <= 1.0001; t += 100 / L){
+       var tt = Math.min(1, t), X = a[0] + (b[0] - a[0]) * tt + nx * sgn * 300, Y = a[1] + (b[1] - a[1]) * tt + ny * sgn * 300;
+       var rm = null; try { rm = roomAt(X, Y); } catch(e){}
+       var cid = rm ? rm.cid : -1;
+       if (!cur || cur.cid !== cid){ if (cur) ranges.push(cur); cur = { cid: cid, t0: tt, t1: tt }; }
+       else cur.t1 = tt;
+     }
+     if (cur) ranges.push(cur);
+     out.push({ i: i, a: a, b: b, L: L, ranges: ranges.filter(function(r){ return r.cid >= 0 && (r.t1 - r.t0) * L >= 300; }) });
+   }
+   return out;
+ }
+ /* 間仕切り：両側の部屋と共有区間 */
+ function partitionRanges(){
+   var out = [];
+   (S.parts2D || []).forEach(function(q, qi){
+     if (typeof pState === "function" && pState(q) === "remove") return;
+     var a = [q.x1, q.y1], b = [q.x2, q.y2], L = segLen(a, b); if (L < 100) return;
+     var ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = uy, ny = -ux;
+     var ranges = [], cur = null;
+     for (var t = 0; t <= 1.0001; t += 100 / L){
+       var tt = Math.min(1, t), X = a[0] + (b[0] - a[0]) * tt, Y = a[1] + (b[1] - a[1]) * tt;
+       var r1 = null, r2 = null;
+       try { r1 = roomAt(X + nx * 300, Y + ny * 300); } catch(e){}
+       try { r2 = roomAt(X - nx * 300, Y - ny * 300); } catch(e){}
+       var c1 = r1 ? r1.cid : -1, c2 = r2 ? r2.cid : -1, key = c1 + "/" + c2;
+       if (!cur || cur.key !== key){ if (cur) ranges.push(cur); cur = { key: key, c1: c1, c2: c2, t0: tt, t1: tt }; }
+       else cur.t1 = tt;
+     }
+     if (cur) ranges.push(cur);
+     out.push({ qi: qi, a: a, b: b, L: L, ranges: ranges.filter(function(r){ return (r.t1 - r.t0) * L >= 300; }) });
+   });
+   return out;
+ }
+ function sashOverlap(hostT, hostI, pos, w){
+   return (S.sashes || []).some(function(o){
+     if (!o.drawn || !o.host || o.host.t !== hostT || o.host.i !== hostI) return false;
+     return pos < o.pos + o.w + 50 && pos + w + 50 > o.pos;
+   });
+ }
+ function pickSash(cat, wantW){
+   var list = (typeof SASH !== "undefined" ? SASH : []).filter(function(q){ return q.cat === cat; });
+   if (!list.length) return null;
+   return list.slice().sort(function(a, b){ return Math.abs(a.w - wantW) - Math.abs(b.w - wantW); })[0];
+ }
+ function pushSash(x, host, pos){
+   S.sashes = S.sashes || [];
+   S.sashes.push({ cat: x.cat, name: x.name, w: x.w, h: x.h, wall: host.t === "e" ? host.i : -1, n: 1, price: 0, drawn: true, host: host, pos: Math.round(pos / 5) * 5, flip: 0, meetingPending: true });
+   return true;
+ }
+ function roomOf(x, y){ try { return roomAt(x, y); } catch(e){ return null; } }
+ function tenkenInRoom(k, cid){
+   return (S.tenken || []).some(function(o){ if (o.k !== k) return false; var r = roomOf(o.x, o.y); return r && r.cid === cid; });
+ }
+ /* ---------- 部屋の役割 ---------- */
+ function classify(){
+   var R = roomsCalc();
+   var guess = {}; try { guess = roomGuessMap366(false); } catch(e){}
+   var rooms = R.rooms.map(function(r){
+     var g = guess[r.cid] || {};
+     var userNm = ""; try { userNm = roomUserNm366(r) || ""; } catch(e){}
+     var nm = userNm || g.nm || "";
+     /* 366の予想（fixed:false の廊下など）は仮名。役割の確定には使わず、softNm として残す */
+     var hard = !!userNm || g.fixed === true || /トイレ|浴室|風呂|洗面|玄関|和室|階段|クローゼット|収納|キッチン/.test(nm);
+     return { r: r, cid: r.cid, nm: hard ? nm : "", softNm: nm, area: r.area, bb: roomBB(r, R), px: r.p[0], py: r.p[1], cx: r.cxm, cy: r.cym, role: "" };
+   });
+   function setRole(rm, role){ if (!rm.role) rm.role = role; }
+   rooms.forEach(function(rm){
+     if (/トイレ/.test(rm.nm)) rm.role = "wc";
+     else if (/浴室|風呂/.test(rm.nm)) rm.role = "bath";
+     else if (/洗面/.test(rm.nm)) rm.role = "senmen";
+     else if (/玄関/.test(rm.nm)) rm.role = "genkan";
+     else if (/廊下|ホール/.test(rm.nm)) rm.role = "corridor";
+     else if (/和室/.test(rm.nm)) rm.role = "washitsu";
+     else if (/キッチン/.test(rm.nm)) rm.role = "kitchen";
+     else if (/リビング|LDK/.test(rm.nm)) rm.role = "living";
+     else if (/寝室|子供部屋|洋室|書斎/.test(rm.nm)) rm.role = "bedroom";
+     else if (/階段/.test(rm.nm)) rm.role = "stair";
+     else if (/クローゼット|収納/.test(rm.nm)) rm.role = "storage";
+   });
+   /* 水まわりの幾何推定：小部屋の塊の中で振り分ける */
+   var parts = partitionRanges();
+   var adj = {};
+   parts.forEach(function(pw){ pw.ranges.forEach(function(rg){ if (rg.c1 >= 0 && rg.c2 >= 0 && rg.c1 !== rg.c2){ (adj[rg.c1] = adj[rg.c1] || {})[rg.c2] = 1; (adj[rg.c2] = adj[rg.c2] || {})[rg.c1] = 1; } }); });
+   var small = rooms.filter(function(rm){ return !rm.role && rm.area <= 3.6; });
+   var seen = {};
+   small.forEach(function(s0){
+     if (seen[s0.cid]) return;
+     var cluster = [], stack = [s0]; seen[s0.cid] = 1;
+     while (stack.length){ var c = stack.pop(); cluster.push(c); Object.keys(adj[c.cid] || {}).forEach(function(k){ var n = small.find(function(x){ return x.cid === +k; }); if (n && !seen[n.cid]){ seen[n.cid] = 1; stack.push(n); } }); }
+     if (cluster.length < 2) return;
+     var bathCand = cluster.filter(function(rm){ return Math.max(rm.bb.w, rm.bb.h) >= 1450 && Math.min(rm.bb.w, rm.bb.h) >= 1150; }).sort(function(a, b){ return b.area - a.area; })[0];
+     if (bathCand) setRole(bathCand, "bath");
+     var wcCand = cluster.filter(function(rm){ return !rm.role && Math.min(rm.bb.w, rm.bb.h) <= 1050 && rm.area >= 0.9 && rm.area <= 2.4; }).sort(function(a, b){ return a.area - b.area; })[0];
+     if (wcCand) setRole(wcCand, "wc");
+     if (bathCand) cluster.forEach(function(rm){ if (!rm.role && rm.area >= 2.0 && (adj[rm.cid] || {})[bathCand.cid]) setRole(rm, "senmen"); });
+   });
+   /* soft名（366の予想）は、水まわり推定が終わった部屋にだけ役割として使う */
+   rooms.forEach(function(rm){
+     if (rm.role) return;
+     if (/リビング|LDK/.test(rm.softNm)) rm.role = "living";
+     else if (/寝室|子供部屋|洋室|書斎/.test(rm.softNm)) rm.role = "bedroom";
+   });
+   var big = rooms.slice().sort(function(a, b){ return b.area - a.area; })[0];
+   return { rooms: rooms, big: big, parts: parts, ext: exteriorRanges(), adj: adj };
+ }
+ /* ---------- 実行 ---------- */
+ function runOmakase(opts){
+   var C = classify(), rooms = C.rooms, byCid = {};
+   rooms.forEach(function(rm){ byCid[rm.cid] = rm; });
+   var log = [], counts = {};
+   function done(key, label, n){ if (n > 0){ counts[key] = n; log.push(label + " " + n + "件"); } }
+   try { pushUndo(); } catch(e){}
+   var savedPutAt = null, savedPut = null;
+   try { savedPutAt = HB.__putAt; savedPut = HB.__put; } catch(e){}
+   /* 玄関ドア */
+   if (opts.genkan){
+     var has = (S.sashes || []).some(function(o){ return o.drawn && /玄関/.test(o.cat); });
+     if (!has){
+       var x = pickSash("玄関", 920);
+       if (x){
+         var genRoom = rooms.find(function(rm){ return rm.role === "genkan"; });
+         var candEdges = C.ext.filter(function(e){ return e.ranges.length; });
+         var pick = null;
+         if (genRoom) pick = candEdges.filter(function(e){ return e.ranges.some(function(rg){ return rg.cid === genRoom.cid; }); })[0] || null;
+         if (!pick) pick = candEdges.slice().sort(function(a, b){ return b.L - a.L; })[0] || null;
+         if (pick){
+           var rg0 = pick.ranges.slice().sort(function(a, b){ return (b.t1 - b.t0) - (a.t1 - a.t0); })[0];
+           var mid = ((rg0.t0 + rg0.t1) / 2) * pick.L, pos = Math.max(200, Math.min(pick.L - x.w - 100, mid - x.w / 2));
+           if (!sashOverlap("e", pick.i, pos, x.w) && pushSash(x, { t: "e", i: pick.i }, pos)) done("genkan", "玄関ドア", 1);
+         }
+       }
+     }
+   }
+   /* 窓 */
+   if (opts.win){
+     var nWin = 0;
+     C.ext.forEach(function(e){
+       e.ranges.forEach(function(rg){
+         var rm = byCid[rg.cid]; if (!rm) return;
+         var rangeLen = (rg.t1 - rg.t0) * e.L; if (rangeLen < 900) return;
+         var isLiving = rm.role === "living" || rm === C.big, isWet = rm.role === "wc" || rm.role === "bath" || rm.role === "senmen";
+         var x2 = null;
+         if (isWet) x2 = pickSash("小窓", 620);
+         else if (rm.role === "corridor" || rm.role === "stair" || rm.role === "storage") x2 = pickSash("小窓", 620);
+         else if (isLiving && rangeLen >= 2200) x2 = pickSash("掃き出し", 1690) || pickSash("腰窓", 1690);
+         else x2 = pickSash("腰窓", 1690);
+         if (!x2 || x2.w > rangeLen - 100) return;
+         var posC = rg.t0 * e.L + (rangeLen - x2.w) / 2;
+         var tries = [posC, rg.t0 * e.L + 100, rg.t1 * e.L - x2.w - 100];
+         for (var ti = 0; ti < tries.length; ti++){
+           var pos2 = Math.max(0, Math.min(e.L - x2.w, tries[ti]));
+           if (!sashOverlap("e", e.i, pos2, x2.w)){ if (pushSash(x2, { t: "e", i: e.i }, pos2)) nWin++; break; }
+         }
+       });
+     });
+     done("win", "窓", nWin);
+   }
+   /* 室内ドア */
+   var doorHosts = [];
+   if (opts.door){
+     var nDoor = 0;
+     var pairs = {};
+     C.parts.forEach(function(pw){
+       pw.ranges.forEach(function(rg){
+         if (rg.c1 < 0 || rg.c2 < 0 || rg.c1 === rg.c2) return;
+         var key = Math.min(rg.c1, rg.c2) + "-" + Math.max(rg.c1, rg.c2);
+         if (!pairs[key]) pairs[key] = { a: rg.c1, b: rg.c2, segs: [] };
+         pairs[key].segs.push({ pw: pw, rg: rg });
+       });
+     });
+     var served = {};
+     /* 既存の建具がある壁・部屋ペアは「出入口あり」として扱う（2回目の実行で増やさない） */
+     var pairServed = {};
+     (S.sashes || []).forEach(function(o){
+       if (!o.drawn || !o.host || o.host.t !== "p") return;
+       var pw = null; for (var pi = 0; pi < C.parts.length; pi++) if (C.parts[pi].qi === o.host.i) { pw = C.parts[pi]; break; } if (!pw) return;
+       var mx = pw.a[0] + (pw.b[0] - pw.a[0]) * ((o.pos + o.w / 2) / pw.L), my = pw.a[1] + (pw.b[1] - pw.a[1]) * ((o.pos + o.w / 2) / pw.L);
+       var ux = (pw.b[0] - pw.a[0]) / pw.L, uy = (pw.b[1] - pw.a[1]) / pw.L;
+       var r1 = roomOf(mx + uy * 300, my - ux * 300), r2 = roomOf(mx - uy * 300, my + ux * 300);
+       if (r1 && r2 && r1.cid !== r2.cid) pairServed[Math.min(r1.cid, r2.cid) + "-" + Math.max(r1.cid, r2.cid)] = 1;
+     });
+     function doorForPair(pr, prio){
+       var A = byCid[pr.a], B = byCid[pr.b]; if (!A || !B) return false;
+       var target = prio(A, B); if (!target) return false;
+       var other = target === A ? B : A;
+       var pk = Math.min(target.cid, other.cid) + "-" + Math.max(target.cid, other.cid);
+       if (served[pk] || pairServed[pk]) return false;
+       for (var si = 0; si < pr.segs.length; si++){
+         var sg = pr.segs[si], rangeLen = (sg.rg.t1 - sg.rg.t0) * sg.pw.L;
+         var isWa = target.role === "washitsu";
+         var x3 = isWa ? (pickSash("室内ドア", 1645) || { cat: "室内ドア", name: "片開き", w: 780, h: 2033 }) : { cat: "室内ドア", name: "片開き", w: 780, h: 2033 };
+         if (isWa){ var hik = (typeof SASH !== "undefined" ? SASH : []).filter(function(q){ return q.cat === "室内ドア" && /引違/.test(q.name); })[0]; if (hik) x3 = hik; }
+         if (rangeLen < x3.w + 250) continue;
+         var pos3 = sg.rg.t0 * sg.pw.L + 150;
+         if (sashOverlap("p", sg.pw.qi, pos3, x3.w)) pos3 = sg.rg.t1 * sg.pw.L - x3.w - 150;
+         if (sashOverlap("p", sg.pw.qi, pos3, x3.w)) continue;
+         if (pushSash(x3, { t: "p", i: sg.pw.qi }, pos3)){
+           served[pk] = 1;
+           doorHosts.push({ qi: sg.pw.qi, pos: pos3, w: x3.w, roomCid: target.cid });
+           return true;
+         }
+       }
+       return false;
+     }
+     var pairList = Object.keys(pairs).map(function(k){ return pairs[k]; });
+     var roomServed = {};
+     Object.keys(pairServed).forEach(function(k){ k.split("-").forEach(function(c){ roomServed[+c] = 1; }); });
+     /* (1) 廊下・玄関に接する部屋 */
+     pairList.forEach(function(pr){
+       var A = byCid[pr.a], B = byCid[pr.b]; if (!A || !B) return;
+       var corrA = A.role === "corridor" || A.role === "genkan" || /廊下|ホール/.test(A.softNm), corrB = B.role === "corridor" || B.role === "genkan" || /廊下|ホール/.test(B.softNm);
+       if (corrA && !corrB) { if (doorForPair(pr, function(){ return B; })) nDoor++; }
+       else if (corrB && !corrA) { if (doorForPair(pr, function(){ return A; })) nDoor++; }
+     });
+     /* (2) 残りの部屋は一番大きい隣室へ */
+     pairList.forEach(function(pr){
+       var A = byCid[pr.a], B = byCid[pr.b]; if (!A || !B) return;
+       if (A.role === "corridor" || B.role === "corridor" || A.role === "genkan" || B.role === "genkan" || /廊下|ホール/.test(A.softNm) || /廊下|ホール/.test(B.softNm)) return;
+       var hasDoorA = doorHosts.some(function(d){ return d.roomCid === A.cid; }) || !!roomServed[A.cid], hasDoorB = doorHosts.some(function(d){ return d.roomCid === B.cid; }) || !!roomServed[B.cid];
+       if (hasDoorA && hasDoorB) return;
+       if (hasDoorA && hasDoorB) return;
+       var tgt = !hasDoorA && (hasDoorB || A.area <= B.area) ? A : (!hasDoorB ? B : null);
+       if (tgt && doorForPair(pr, function(){ return tgt; })) nDoor++;
+     });
+     done("door", "室内ドア", nDoor);
+   }
+   /* 水まわり・キッチン（本体の配置経路を駆動） */
+   function driveTenken(k, x, y, dirFix){
+     try {
+       HB.__putAt = [Math.round(x), Math.round(y)];
+       HB.__put = { meetingQuick: true };
+       addTenken(k);
+       var arr = S.tenken || [], o = arr[arr.length - 1];
+       if (o && o.k === k){
+         o.meetingPending = true;
+         if (dirFix) o.dir = dirFix;
+         return true;
+       }
+     } catch(e){}
+     return false;
+   }
+   if (opts.kitchen){
+     var kRoom = rooms.find(function(rm){ return rm.role === "kitchen"; }) || C.big;
+     if (kRoom && !tenkenInRoom("kitchen", kRoom.cid)){
+       /* 一番長い壁の内側の点を渡す（addEquip が壁に吸着させる） */
+       var bb = kRoom.bb, ptK;
+       if (bb.w >= bb.h) ptK = [kRoom.cx, bb.y0 + 500]; else ptK = [bb.x0 + 500, kRoom.cy];
+       if (driveTenken("kitchen", ptK[0], ptK[1])) done("kitchen", "キッチン", 1);
+     }
+   }
+   if (opts.senmen){
+     var sRoom = rooms.find(function(rm){ return rm.role === "senmen"; });
+     if (sRoom && !tenkenInRoom("senmen", sRoom.cid)){
+       var bb2 = sRoom.bb, ptS = bb2.w >= bb2.h ? [sRoom.cx, bb2.y0 + 450] : [bb2.x0 + 450, sRoom.cy];
+       if (driveTenken("senmen", ptS[0], ptS[1])) done("senmen", "洗面台", 1);
+     }
+   }
+   if (opts.wc){
+     var wRoom = rooms.find(function(rm){ return rm.role === "wc"; });
+     if (wRoom && !tenkenInRoom("wc", wRoom.cid)){
+       var bb3 = wRoom.bb, ptW, dirW;
+       if (bb3.w <= bb3.h){ ptW = [(bb3.x0 + bb3.x1) / 2, bb3.y0 + 380]; dirW = "s"; }
+       else { ptW = [bb3.x0 + 380, (bb3.y0 + bb3.y1) / 2]; dirW = "e"; }
+       if (driveTenken("wc", ptW[0], ptW[1], dirW)) done("wc", "便器", 1);
+     }
+   }
+   if (opts.bath){
+     var bRoom = rooms.find(function(rm){ return rm.role === "bath"; });
+     if (bRoom && !tenkenInRoom("bath", bRoom.cid)){
+       var bb4 = bRoom.bb, ptB, dirB;
+       if (bb4.w >= bb4.h){ ptB = [(bb4.x0 + bb4.x1) / 2, bb4.y0 + 420]; dirB = "s"; }
+       else { ptB = [bb4.x0 + 420, (bb4.y0 + bb4.y1) / 2]; dirB = "e"; }
+       if (driveTenken("bath", ptB[0], ptB[1], dirB)) done("bath", "浴槽", 1);
+     }
+   }
+   try { HB.__putAt = savedPutAt; HB.__put = savedPut; } catch(e){}
+   /* 照明 */
+   if (opts.light){
+     var nLt = 0;
+     S.lights = S.lights || [];
+     rooms.forEach(function(rm){
+       var has = S.lights.some(function(l){ var r = roomOf(l.x, l.y); return r && r.cid === rm.cid; });
+       if (has) return;
+       function addLt(k, x, y){ if (roomOf(x, y) && roomOf(x, y).cid === rm.cid){ S.lights.push({ k: k, x: Math.round(x), y: Math.round(y), act: "new", meetingPending: true }); nLt++; } }
+       if (rm.role === "corridor"){
+         var horiz = rm.bb.w >= rm.bb.h, len = horiz ? rm.bb.w : rm.bb.h, n = Math.max(1, Math.round(len / 2730));
+         for (var ci = 0; ci < n; ci++){ var f = (ci + 0.5) / n; addLt("down", horiz ? rm.bb.x0 + len * f : rm.cx, horiz ? rm.cy : rm.bb.y0 + len * f); }
+       } else if (rm.area <= 3.6){ addLt("down", rm.px, rm.py); }
+       else if (rm.area >= 20){ addLt("ceil", rm.px, rm.py); [[-800, -800], [800, -800], [-800, 800], [800, 800]].forEach(function(d){ addLt("down", rm.px + d[0], rm.py + d[1]); }); }
+       else if (rm.area >= 13){ addLt("ceil", rm.px, rm.py); addLt("down", rm.px - 800, rm.py); addLt("down", rm.px + 800, rm.py); }
+       else addLt("ceil", rm.px, rm.py);
+     });
+     done("light", "照明", nLt);
+   }
+   /* スイッチ・コンセント（fx の本体経路を駆動） */
+   function driveFx(k, wi, u, z){
+     try {
+       var keepPend = null; try { keepPend = fxPending; } catch(e){}
+       fxPending = k;
+       fxPlace({ w: wi, u: u, z: z });
+       try { fxPending = keepPend; } catch(e){}
+       return true;
+     } catch(e){ return false; }
+   }
+   if (opts.switch){
+     var nSw = 0;
+     var allDoors = (S.sashes || []).filter(function(o){ return o.drawn && o.host && o.host.t === "p" && /室内ドア|引違|片引き|ふすま|クローゼット/.test(o.cat + o.name) === false ? false : (o.drawn && o.host && o.host.t === "p"); });
+     allDoors = (S.sashes || []).filter(function(o){ return o.drawn && o.host && o.host.t === "p"; });
+     allDoors.forEach(function(o){
+       var wi = 100 + o.host.i;
+       var has = (S.fx || []).some(function(f){ return f.k === "switch" && f.w === wi && Math.abs(f.u - (o.pos - 250)) < 500; });
+       if (has) return;
+       if (driveFx("switch", wi, Math.max(150, o.pos - 250), 1200)) nSw++;
+     });
+     done("switch", "スイッチ", nSw);
+   }
+   if (opts.outlet){
+     var nOut = 0;
+     rooms.forEach(function(rm){
+       if (rm.role === "storage" || rm.role === "stair") return;
+       var target = rm.area <= 2 ? 1 : rm.area <= 6 ? 2 : rm.area <= 13 ? 3 : 4;
+       if (rm.role === "wc" || rm.role === "senmen" || rm.role === "bath") target = 1;
+       var have = (S.fx || []).filter(function(f){
+         if (f.k !== "outlet") return false;
+         try { var g = fxProj(), w = fxWall(g, f.w); var X = w.a[0] + w.ux * f.u, Y = w.a[1] + w.uy * f.u;
+           var rA = roomOf(X + w.uy * 200, Y - w.ux * 200), rB = roomOf(X - w.uy * 200, Y + w.ux * 200), rC = roomOf(X, Y);
+           return (rA && rA.cid === rm.cid) || (rB && rB.cid === rm.cid) || (rC && rC.cid === rm.cid); } catch(e){ return false; }
+       }).length;
+       if (have >= target) return;
+       /* 部屋に面した壁（外壁・間仕切り）を集めて、隅寄りの位置へ */
+       var spots = [];
+       C.ext.forEach(function(e){ e.ranges.forEach(function(rg){ if (rg.cid === rm.cid && (rg.t1 - rg.t0) * e.L >= 1200) spots.push({ wi: e.i, u: rg.t0 * e.L + 500 }); }); });
+       C.parts.forEach(function(pw){ pw.ranges.forEach(function(rg){ if ((rg.c1 === rm.cid || rg.c2 === rm.cid) && (rg.t1 - rg.t0) * pw.L >= 1200) spots.push({ wi: 100 + pw.qi, u: rg.t0 * pw.L + 500 }); }); });
+       for (var si2 = 0; si2 < spots.length && have < target; si2++){
+         var sp = spots[si2];
+         var dup = (S.fx || []).some(function(f){ return f.k === "outlet" && f.w === sp.wi && Math.abs(f.u - sp.u) < 600; });
+         if (dup) continue;
+         if (driveFx("outlet", sp.wi, sp.u, 300)){ nOut++; have++; }
+       }
+     });
+     /* キッチンの壁に高めのコンセント */
+     var kit = (S.tenken || []).find(function(o){ return o.k === "kitchen"; });
+     if (kit){
+       var kr = roomOf(kit.x, kit.y);
+       var hasHigh = (S.fx || []).some(function(f){
+         if (f.k !== "outlet" || (f.z || 0) < 1000) return false;
+         try { var g = fxProj(), w = fxWall(g, f.w); var X = w.a[0] + w.ux * f.u, Y = w.a[1] + w.uy * f.u;
+           var rA = roomOf(X + w.uy * 200, Y - w.ux * 200), rB = roomOf(X - w.uy * 200, Y + w.ux * 200), rC = roomOf(X, Y);
+           return kr && ((rA && rA.cid === kr.cid) || (rB && rB.cid === kr.cid) || (rC && rC.cid === kr.cid)); } catch(e){ return false; }
+       });
+       if (kr && !hasHigh){
+         var doneK = false;
+         C.parts.concat([]).forEach(function(){});
+         C.ext.forEach(function(e){ if (doneK) return; e.ranges.forEach(function(rg){ if (doneK || rg.cid !== kr.cid) return; if ((rg.t1 - rg.t0) * e.L >= 2000){ var nFx0 = (S.fx || []).length; if (driveFx("outlet", e.i, rg.t0 * e.L + 700, 1100)){ var nf = (S.fx || [])[nFx0]; if (nf && nf.k === "outlet"){ nf.z = 1100; try { save(); } catch(e2){} } nOut++; doneK = true; } } }); });
+       }
+     }
+     done("outlet", "コンセント", nOut);
+   }
+   try { save(); } catch(e){}
+   try { drawPlan(); } catch(e){}
+   var total = Object.keys(counts).reduce(function(a, k){ return a + counts[k]; }, 0);
+   var msg = total ? ("入れました（合計" + total + "件）\n" + log.join("\n") + "\n置いた物には「後で決める」印が付いています。歩きながら直してください。") : "新しく入れる物はありませんでした（既に入っているか、置ける場所が見つかりませんでした）。";
+   try { toast(total ? "おまかせで " + total + " 件入れました" : "おまかせ：入れる物がありませんでした"); } catch(e){}
+   return msg;
+ }
+})();
+</script>
