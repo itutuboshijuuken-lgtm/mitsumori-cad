@@ -4784,12 +4784,10 @@ function padStdBuild(cfg){
 
 /* ---------- 図の文字：小さくして、重なったらずらす（拡大して読む前提） ---------- */
 const PLAN_FONT_K = 0.6;
-function tidyPlanLabels(){
-  const svg = $("plan"); if (!svg || !svg.getScreenCTM) return;
-  const root = svg.getScreenCTM(); if (!root || !(Math.abs(root.a) > 1e-9) || !(Math.abs(root.d) > 1e-9)) return;  /* CAD-137: 変換が縮退 (レイアウト未確定) の時はラベルを動かさない */
-  /* CAD-374：同じ DOM・同じ拡大側・同じ表示大きさでは計算し直さない（境の往復や連鎖の重複で連発させない。DOM は drawPlan のたびに入れ替わるので、その時は必ず計算する） */
-  const memoKey374 = (typeof PV !== "undefined" && PV.z >= 1.5 ? "z" : "a") + "|" + Math.round(svg.getBoundingClientRect().width / 50) + "x" + Math.round(svg.getBoundingClientRect().height / 50);
-  if (svg.__tidyMemo374 && svg.__tidyMemo374.dom === svg.firstElementChild && svg.__tidyMemo374.key === memoKey374) return;
+function tidyShrink342(){
+  /* CAD-649（下地組み替え第2段・大きさの側）：tidyPlanLabels の「縮小」だけを切り出した物（中身は元のまま）。
+     描いた直後にここで縮小まで済ませ、字は最初から最終の大きさで出す。 */
+  const svg = $("plan"); if (!svg) return null;
   const texts = [...svg.querySelectorAll("text")].filter(t => !t.closest("#planInk") && !t.closest("[data-sno]"));
   texts.forEach(t => {
     if (t.__tidy342) return;   /* CAD-342：同じ DOM に tidy をかけ直しても、縮小は1回だけ */
@@ -4798,6 +4796,15 @@ function tidyPlanLabels(){
     if (fs && !((cs.fill === "rgb(37, 99, 176)" || cs.fill === "rgb(29, 42, 58)") && fs >= 10 && /^(\u5168\u9577\s*)?[\d,]+$/.test((t.textContent || "").trim()))) t.style.fontSize = (fs * PLAN_FONT_K) + "px";   /* CAD-642：寸法の数字（青→濃色に直された物も含む）は view432 が画面で一定の大きさに決めるので、ここでは縮めない（縮める側と決める側が交互に勝って数字の大きさが揺れるのを止める） */
     if (t.classList.contains("halo")){ const sw = parseFloat(cs.strokeWidth); if (sw) t.style.strokeWidth = (sw * PLAN_FONT_K) + "px"; }
   });
+  return texts;
+}
+function tidyPlanLabels(){
+  const svg = $("plan"); if (!svg || !svg.getScreenCTM) return;
+  const root = svg.getScreenCTM(); if (!root || !(Math.abs(root.a) > 1e-9) || !(Math.abs(root.d) > 1e-9)) return;  /* CAD-137: 変換が縮退 (レイアウト未確定) の時はラベルを動かさない */
+  /* CAD-374：同じ DOM・同じ拡大側・同じ表示大きさでは計算し直さない（境の往復や連鎖の重複で連発させない。DOM は drawPlan のたびに入れ替わるので、その時は必ず計算する） */
+  const memoKey374 = (typeof PV !== "undefined" && PV.z >= 1.5 ? "z" : "a") + "|" + Math.round(svg.getBoundingClientRect().width / 50) + "x" + Math.round(svg.getBoundingClientRect().height / 50);
+  if (svg.__tidyMemo374 && svg.__tidyMemo374.dom === svg.firstElementChild && svg.__tidyMemo374.key === memoKey374) return;
+  const texts = tidyShrink342() || [];
   svg.querySelectorAll("line.lead342").forEach(l => l.remove());   /* CAD-342：かけ直しの前に、前回の引き出し線を消す */
   /* CAD-374：基の transform の記録と復元。記録は tidy 本体の入口（連鎖の後段ラッパーが
      translate を足す前）に取る：後段が足した分まで「基」にしてしまうと、戻した時に残る。
@@ -43918,5 +43925,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
   wrapped.__w644 = true;
   window.tidyPlanLabels = wrapped;
+})();
+</script>
+<script id="cad649shrink">
+/* CAD-649（下地組み替え第2段・大きさの側）：描いた直後に縮小まで済ませる。
+   字は最初から最終の大きさで出す（並べ直しの実行を待って縮む、をやめる）。
+   並べ直し（位置の側）は従来どおり tidyPlanLabels が担う。 */
+(function(){ if (window.__cad649s) return; window.__cad649s = 1;
+  var prev = window.drawPlan; if (typeof prev !== "function") return;
+  window.drawPlan = function(){
+    var r = prev.apply(this, arguments);
+    try { if (typeof window.tidyShrink342 === "function") window.tidyShrink342(); } catch(e){}
+    return r;
+  };
 })();
 </script>
