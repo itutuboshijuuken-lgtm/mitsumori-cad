@@ -38028,33 +38028,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
 })();
 </script>
 
-<style id="gz448css">
-/* ===== CAD-448：指で図面を動かしている間だけ、図面のテクスチャを平色にして軽くする。
-   本人の決定（2026-11-21）「絵のクオリティ下げてスムーズに動く方がいい」。
-   落とすのはジェスチャ中だけ。止まったら class が外れて元の絵に戻る。
-   対象は図面のテクスチャだけ（ボタンの絵は対象外）。 ===== */
-body.gz448 #plan [fill^="url(#"],body.gz448 #iso [fill^="url(#"],body.gz448 #pvSvg [fill^="url(#"],body.gz448 #sec [fill^="url(#"]{fill:#E7D3A7!important}
-body.gz448 #plan [fill="url(#pFl)"],body.gz448 #plan [fill="url(#pFlV)"],body.gz448 #pvSvg [fill="url(#pFl)"]{fill:#EBD2A8!important}
-body.gz448 #plan [fill="url(#pPly)"]{fill:#F0DBBC!important}
-body.gz448 #plan [fill="url(#pTa)"],body.gz448 #pvSvg [fill="url(#pTa)"]{fill:#DDE3B6!important}
-body.gz448 #plan [fill="url(#pTi)"]{fill:#D3E9E3!important}
-body.gz448 #plan [fill="url(#pBt)"]{fill:#C4DEEE!important}
-body.gz448 #plan [fill="url(#pDo)"]{fill:#D2C3A5!important}
-body.gz448 #plan [fill="url(#pCf)"]{fill:#E3DED6!important}
-body.gz448 #plan [fill="url(#pFt277)"]{fill:#D8D5CF!important}
-body.gz448 #plan [fill="url(#pCfT278)"]{fill:#EFEBE4!important}
-body.gz448 #plan [fill="url(#pMuku279)"]{fill:#E3C08A!important}
-body.gz448 #plan [fill="url(#pDoma280)"]{fill:#B9B7B3!important}
-body.gz448 #plan [fill="url(#pTat282)"]{fill:#C9CFA3!important}
-body.gz448 #plan [fill="url(#pCarp282)"]{fill:#D9C6A5!important}
-body.gz448 #sec [fill="url(#fxTile)"]{fill:#EAE5DB!important}
-body.gz448 #sec [fill="url(#fxWood)"]{fill:#D7B88A!important}
-body.gz448 #sec [fill="url(#fxPlank)"]{fill:#E8DCC4!important}
-body.gz448 #sec [fill="url(#fxShikkui)"]{fill:#ECE6D8!important}
-body.gz448 #sec [fill="url(#fxDot)"]{fill:#F4EEE2!important}
-body.gz448 #plan text,body.gz448 #iso text,body.gz448 #pvSvg text,body.gz448 #sec text{stroke:none!important;paint-order:normal!important}
-body.gz448 #plan *,body.gz448 #iso *,body.gz448 #pvSvg *,body.gz448 #sec *{shape-rendering:optimizeSpeed!important;text-rendering:optimizeSpeed!important}
-</style>
+
 <script id="gz448js">
 /* ===== CAD-448（2026-11-21・本人の実機動画と決定）：間取り編集画面で木目の図面を
    ピンチ・移動すると激しくカクつく件。実測と直しの考え方は build448.py の頭書き。
