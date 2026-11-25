@@ -43800,3 +43800,21 @@ body.hasAux632 #auxBtn632{display:inline-flex}
 #planBar #undoBtn:disabled, #planBar #redoBtn:disabled{opacity:.6}
 body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 </style>
+<style id="cad639css">
+.note639{font-size:11px;color:var(--sub);line-height:1.4;margin:2px 2px 0}
+</style>
+<script id="cad639note">
+(function(){
+  function add(){
+    try {
+      document.querySelectorAll(".modeSeg").forEach(function(seg){
+        if (seg.dataset.note639) return; seg.dataset.note639 = "1";
+        var d = document.createElement("div"); d.className = "note639";
+        d.textContent = "切り替えても、間取りや置いた物は消えません。見積の拾い方が変わります";
+        seg.insertAdjacentElement("afterend", d);
+      });
+    } catch(e){}
+  }
+  add(); setTimeout(add, 1500); setTimeout(add, 4000);
+})();
+</script>
