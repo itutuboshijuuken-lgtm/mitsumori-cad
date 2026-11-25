@@ -43652,3 +43652,126 @@ body #st6 #ctl530 #joyR532{order:4!important}
   }, 400);
 })();
 </script>
+<style id="cad632auxcss">
+body.auxOmakase #oak556 .omakaseBar629{display:none!important}
+body.auxShitae #planQuick33 [data-w="trace"],body.auxShitae #planQuick33 [data-w="tadj"]{display:none!important}
+#oak556 .omakaseBar629{position:relative}
+#planQuick33 [data-w="trace"],#planQuick33 [data-w="tadj"]{position:relative}
+.auxX{position:absolute;top:2px;right:3px;width:19px;height:19px;min-width:19px;min-height:19px;border-radius:50%;background:rgba(255,253,248,.95);border:1.5px solid #8a6d3f;color:#5a4632;font-size:12px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;z-index:6;cursor:pointer;padding:0}
+#auxBtn632{display:none;background:#FFD94A;border:1.5px solid #B08D4F;color:#5a4632;font-size:11px;font-weight:900;border-radius:8px;min-height:36px;padding:2px 9px;align-items:center}
+body.hasAux632 #auxBtn632{display:inline-flex}
+#auxMenu632{position:fixed;z-index:2147483200;background:#fffdf7;border:1.5px solid #B08D4F;border-radius:12px;padding:6px;box-shadow:0 6px 20px rgba(60,40,10,.3);min-width:180px}
+#auxMenu632 .auxRow632{display:block;width:100%;text-align:left;background:#FFF3D6;border:1px solid #B08D4F;border-radius:8px;min-height:40px;padding:6px 10px;font-size:13px;font-weight:800;color:#3A2A16;margin:2px 0}
+</style>
+<script id="cad632aux">
+(function () {
+  var KEY = "gosei-aux-v1", st = {};
+  try { st = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { st = {}; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+  function apply() {
+    document.body.classList.toggle("auxOmakase", !!st.omakase);
+    document.body.classList.toggle("auxShitae", !!st.shitae);
+    document.body.classList.toggle("hasAux632", !!(st.omakase || st.shitae));
+  }
+  var cmp = document.getElementById("planBarCmp");
+  var btn = document.createElement("button");
+  btn.type = "button"; btn.id = "auxBtn632"; btn.textContent = "補助";
+  if (cmp && cmp.parentNode) cmp.parentNode.insertBefore(btn, cmp.nextSibling);
+  var menu = null;
+  function closeMenu() { if (menu) { menu.remove(); menu = null; } }
+  function openMenu() {
+    closeMenu();
+    menu = document.createElement("div"); menu.id = "auxMenu632";
+    [["omakase", "おまかせ自動配置"], ["shitae", "下絵"]].forEach(function (it) {
+      if (!st[it[0]]) return;
+      var row = document.createElement("button");
+      row.type = "button"; row.className = "auxRow632";
+      row.textContent = it[1] + " を出す";
+      row.addEventListener("click", function () { delete st[it[0]]; save(); apply(); closeMenu(); });
+      menu.appendChild(row);
+    });
+    if (!menu.children.length) { menu = null; return; }
+    document.body.appendChild(menu);
+    var r = btn.getBoundingClientRect();
+    menu.style.top = (r.bottom + 6) + "px";
+    menu.style.left = Math.max(6, Math.min(r.left, window.innerWidth - 196)) + "px";
+  }
+  
+  function within(el, x, y) { if (!el || !el.offsetParent) return false; var r = el.getBoundingClientRect(); if (!(r.width > 0) || !(r.height > 0)) return false; return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; }
+  function auxHit(e) {
+    var xs = document.querySelectorAll(".auxX");
+    for (var i = 0; i < xs.length; i++) if (within(xs[i], e.clientX, e.clientY)) return xs[i];
+    return null;
+  }
+  ["pointerdown", "pointerup", "click"].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      var x = auxHit(e);
+      if (x) {
+        e.stopPropagation(); e.preventDefault();
+        if (type === "pointerdown") { var n = x.getAttribute("data-aux"); if (n) { st[n] = 1; save(); apply(); closeMenu(); } }
+        return;
+      }
+      if (type === "pointerdown") {
+        if (btn.offsetParent && within(btn, e.clientX, e.clientY)) { e.stopPropagation(); e.preventDefault(); if (menu) closeMenu(); else openMenu(); return; }
+        if (menu && !menu.contains(e.target)) closeMenu();
+      }
+    }, true);
+  });
+  function ensureX(host, name) {
+    if (!host || host.querySelector(".auxX")) return;
+    var x = document.createElement("span");
+    x.className = "auxX"; x.textContent = "×";
+    x.setAttribute("role", "button"); x.setAttribute("aria-label", "収納する");
+    x.setAttribute("data-aux", name);
+    host.appendChild(x);
+  }
+  function tick() {
+    ensureX(document.querySelector("#oak556 .omakaseBar629"), "omakase");
+    ensureX(document.querySelector('#planQuick33 [data-w="trace"], #planQuick33 [data-w="tadj"]'), "shitae");
+  }
+  apply();
+  tick();
+  setInterval(tick, 600);
+})();
+</script>
+
+<script id="cad632fit">
+(function () {
+  var appliedKey = "";
+  function key() {
+    try { return (S.id || "") + "/" + (S.fi || 0) + "/" + (S.edges || []).length + "/" + (S.parts2D || []).length + "/" + (S.tatami || []).length; }
+    catch (e) { return ""; }
+  }
+  function tryFit() {
+    try {
+      if (typeof HB === "undefined" || !HB.__pageM) return;
+      if (document.body.classList.contains("fsDraw")) return;
+      if (typeof PV === "undefined" || typeof applyPV !== "function") return;
+      var k = key(); if (!k) return;
+      if (k === appliedKey) return;
+      if (PV.z > 1.01) { appliedKey = k; return; }
+      var sv = document.getElementById("plan"); if (!sv) return;
+      var card = sv.parentNode; if (!card) return;
+      var r0 = sv.getBoundingClientRect(); if (!r0.width || !r0.height) return;
+      var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9, n = 0;
+      for (var i = 0; i < sv.children.length; i++) {
+        var c = sv.children[i]; if (!c.getBoundingClientRect) continue;
+        var b = c.getBoundingClientRect(); if (!(b.width > 0) || !(b.height > 0)) continue;
+        if (b.left < x0) x0 = b.left; if (b.top < y0) y0 = b.top;
+        if (b.right > x1) x1 = b.right; if (b.bottom > y1) y1 = b.bottom; n++;
+      }
+      if (!n || y1 <= y0) return;
+      if ((x1 - x0) > r0.width * 0.97 && (y1 - y0) > r0.height * 0.97) return;
+      var z = (card.clientHeight - 6) / (y1 - y0);
+      z = Math.max(1, Math.min(1.45, z));
+      if (z <= 1.01) return;
+      appliedKey = k;
+      PV.cx = ((x0 + x1) / 2 - r0.left) / r0.width * PV.W;
+      PV.cy = ((y0 + y1) / 2 - r0.top) / r0.height * PV.H;
+      PV.z = z;
+      applyPV();
+    } catch (e) {}
+  }
+  setInterval(tryFit, 800);
+})();
+</script>
