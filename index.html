@@ -42601,3 +42601,332 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{positio
   setTimeout(ensure, 600);
 })();
 </script>
+<style id="walk617css">
+ #sheet617{position:fixed;left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:2147483100;background:#FFFDF7;border:2px solid #7A5A2E;border-radius:14px;padding:10px;display:none;box-shadow:0 8px 28px rgba(0,0,0,.35)}
+ #sheet617 .t617{font-weight:900;font-size:15px;margin-bottom:6px;color:#3A2A16}
+ #sheet617 .row617{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+ #sheet617 .row617 button{flex:1 1 auto;min-height:44px;border-radius:10px;border:1.5px solid #B08D4F;background:#FFF3D6;font-weight:800;font-size:13.5px;color:#3A2A16;padding:4px 6px}
+ #sheet617 .row617 button.on617{background:#1F6FB5;border-color:#1F6FB5;color:#fff}
+ #sheet617 .row617 button.del617{background:#FDECEA;border-color:#C0392B;color:#C0392B}
+ #sheet617 .nudge617,#sheet565 .nudge617{display:flex;align-items:center;gap:14px;margin-top:10px}
+ #sheet617 .stick617,#sheet565 .stick617{position:relative;width:104px;height:104px;border-radius:50%;background:rgba(58,42,22,.10);border:2px solid #B08D4F;flex:0 0 auto;touch-action:none}
+ #sheet617 .knob617,#sheet565 .knob617{position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;background:#7A5A2E;transform:translate(-50%,-50%);pointer-events:none}
+ #sheet617 .pad617,#sheet565 .pad617{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,44px);gap:4px}
+ #sheet617 .pad617 button,#sheet565 .pad617 button{border-radius:9px;border:1.5px solid #B08D4F;background:#FFF3D6;font-weight:900;font-size:16px;color:#3A2A16;min-height:44px}
+ #sheet617 .pad617 .sp617,#sheet565 .pad617 .sp617{visibility:hidden}
+ #sheet617 .step617,#sheet565 .step617{font-size:12px;color:#7A5A2E;font-weight:800}
+ #sheet529 [data-lt617]{border-color:#1F6FB5 !important}
+ #sheet529 [data-lt617].on617{background:#1F6FB5 !important;color:#fff !important}
+ #sheet529 .ltlab617{flex:1 1 100%;font-size:12px;font-weight:900;color:#1F6FB5;margin-top:6px}
+</style>
+<script id="walk617">
+(function(){ "use strict";
+ /* ===== CAD-617：立体（歩く画面）でも編集できるようにする =====
+    ・天井タップ：照明があれば変更シート、無ければ（構え中なら）置く
+    ・床タップ：その部屋の床の仕上げ変更シート（612の一括変更と同じ書き方）
+    ・「器具を置く」シートに天井の照明（シーリング／ダウンライト）を追加
+    ・選んだ物の微調整：スティック（倒し具合で速さ）＋矢印ボタン（1タップ＝selStep）
+    ・壁の器具のシート（sheet565）にも微調整（壁沿い・高さ）を足す
+    ドアのタップ変更は既存（edit565→changeSheet）のまま。 */
+ if (window.__walk617) return; window.__walk617 = 1;
+ var LTNAME617 = { down: "ダウンライト", ceil: "シーリング", rail: "ライティングレール" };
+ function $(id){ return document.getElementById(id); }
+ function esc(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+ function hh(){ return window.__h3d254 || null; }
+ function inWalk(){ var c = $("h3d"); return !!(c && c.style.display !== "none" && c.offsetWidth > 0 && hh() && hh().fp); }
+ function redraw(){ try { if (window.__h3dRedraw525) window.__h3dRedraw525(); } catch(e){} }
+ function fxPend(){ try { return fxPending; } catch(e){ return null; } }
+ function clearFxPend(){ try { fxPending = null; if (typeof fxUI === "function") fxUI(); } catch(e){} }
+
+ /* ---------- シート本体 ---------- */
+ var sh = document.createElement("div"); sh.id = "sheet617"; document.body.appendChild(sh);
+ var cur617 = null;   /* {mode:"lt", i} | {mode:"fl", recs:[...], roomName} */
+ function close617(){ sh.style.display = "none"; cur617 = null; stopStick617(); }
+ sh.addEventListener("click", function(ev){ if (ev.target === sh) close617(); });
+
+ /* ---------- 微調整（スティック＋矢印） ---------- */
+ var stickVec = { x: 0, y: 0 }, stickOn = false, stickMoved = false, stickRaf = 0, stickLast = 0, nudgeFn = null;
+ function stickLoop(ts){
+   if (!stickOn) return;
+   var dt = Math.min(0.05, (ts - stickLast) / 1000 || 0.016); stickLast = ts;
+   if (nudgeFn && (Math.abs(stickVec.x) > 0.12 || Math.abs(stickVec.y) > 0.12)){ nudgeFn(stickVec.x, stickVec.y, dt); stickMoved = true; }
+   stickRaf = requestAnimationFrame(stickLoop);
+ }
+ function stopStick617(){ stickOn = false; stickVec.x = 0; stickVec.y = 0; if (stickRaf) cancelAnimationFrame(stickRaf); stickRaf = 0; var k = sh.querySelector(".knob617"); if (k) k.style.transform = "translate(-50%,-50%)"; }
+ function bindStick617(){
+   var st = sh.querySelector(".stick617"); if (!st) return;
+   var pid = null;
+   st.addEventListener("pointerdown", function(e){ pid = e.pointerId; st.setPointerCapture(pid); stickOn = true; stickMoved = false; stickLast = performance.now(); try { pushUndo(); } catch(er){} stickRaf = requestAnimationFrame(stickLoop); move(e); e.preventDefault(); });
+   function move(e){
+     if (e.pointerId !== pid) return;
+     var r = st.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+     var dx = (e.clientX - cx) / (r.width / 2), dy = (e.clientY - cy) / (r.height / 2);
+     var m = Math.hypot(dx, dy); if (m > 1){ dx /= m; dy /= m; }
+     stickVec.x = dx; stickVec.y = dy;
+     var k = st.querySelector(".knob617"); if (k) k.style.transform = "translate(calc(-50% + " + (dx * 28) + "px), calc(-50% + " + (dy * 28) + "px))";
+   }
+   st.addEventListener("pointermove", move);
+   function up(e){ if (e.pointerId !== pid) return; pid = null; var was = stickOn; stopStick617(); if (was && stickMoved){ try { save(); } catch(er){} } }
+   st.addEventListener("pointerup", up); st.addEventListener("pointercancel", up);
+ }
+ function nudgeHTML(stepLabel){
+   return '<div class="nudge617"><div class="stick617"><div class="knob617"></div></div>' +
+     '<div><div class="pad617">' +
+     '<span class="sp617"></span><button type="button" data-nv617="0,-1">▲</button><span class="sp617"></span>' +
+     '<button type="button" data-nv617="-1,0">◀</button><span class="sp617"></span><button type="button" data-nv617="1,0">▶</button>' +
+     '<span class="sp617"></span><button type="button" data-nv617="0,1">▼</button><span class="sp617"></span></div>' +
+     '<div class="step617">スティックで大きく／矢印は1回 ' + esc(stepLabel) + 'mm</div></div></div>';
+ }
+ function bindPad617(){
+   sh.querySelectorAll("[data-nv617]").forEach(function(b){
+     var parts = b.dataset.nv617.split(","), vx = +parts[0], vy = +parts[1], tm = null, iv = null;
+     function step(){ if (nudgeFn) nudgeFn(vx, vy, 0, true); }
+     b.addEventListener("pointerdown", function(e){ e.preventDefault(); try { pushUndo(); } catch(er){} step(); tm = setTimeout(function(){ iv = setInterval(step, 130); }, 380); });
+     function end(){ if (tm) clearTimeout(tm); if (iv) clearInterval(iv); tm = iv = null; try { save(); } catch(er){} }
+     b.addEventListener("pointerup", end); b.addEventListener("pointerleave", end); b.addEventListener("pointercancel", end);
+   });
+ }
+ function stepMM(){ try { return selStep || 50; } catch(e){ return 50; } }
+ /* ビュー相対の移動（スティック上＝視線の前方）。dx,dy は -1..1、stepOnly の時は1タップ分 */
+ function viewDelta(dx, dy, dt, stepOnly){
+   var h = hh(); var yaw = (h && h.fp && typeof h.fp.yaw === "number") ? h.fp.yaw : 0;
+   var f = -dy, sd = dx, amt;
+   if (stepOnly) amt = stepMM(); else amt = 1200 * dt * Math.max(Math.abs(dx), Math.abs(dy));
+   return [ (f * Math.sin(yaw) + sd * Math.cos(yaw)) * amt, (-f * Math.cos(yaw) + sd * Math.sin(yaw)) * amt ];
+ }
+
+ /* ---------- 照明シート ---------- */
+ function openLight617(i){
+   var l = (S.lights || [])[i]; if (!l) return;
+   cur617 = { mode: "lt", i: i };
+   var kinds = Object.keys(LTN).map(function(k){ return '<button type="button" data-lk617="' + k + '"' + (l.k === k ? ' class="on617"' : "") + ">" + esc(LTNAME617[k] || LTN[k]) + "</button>"; }).join("");
+   var actBtn = (S.mode !== "zo") ? '<button type="button" data-lact617>' + esc(LTA[l.act] || l.act) + "（押して切替）</button>" : "";
+   sh.innerHTML = '<div class="t617">💡 ' + esc(LTNAME617[l.k] || LTN[l.k] || "照明") + "（天井）</div>" +
+     '<div class="row617">' + kinds + "</div>" +
+     (actBtn ? '<div class="row617">' + actBtn + "</div>" : "") +
+     nudgeHTML(stepMM()) +
+     '<div class="row617"><button type="button" class="del617" data-ldel617>消す</button><button type="button" data-x617>閉じる</button></div>';
+   sh.style.display = "block";
+   nudgeFn = function(dx, dy, dt, stepOnly){
+     var l2 = (S.lights || [])[cur617.i]; if (!l2) return;
+     var d = viewDelta(dx, dy, dt, stepOnly);
+     l2.x = Math.round((+l2.x + d[0]) / 5) * 5; l2.y = Math.round((+l2.y + d[1]) / 5) * 5;
+   };
+   bindStick617(); bindPad617();
+ }
+ function placeLight617(x, y){
+   var k = window.__ltPend617; if (!k) return;
+   try { pushUndo(); } catch(e){}
+   S.lights = S.lights || [];
+   S.lights.push({ k: k, x: Math.round(x), y: Math.round(y), act: "new" });
+   window.__ltPend617 = null;
+   try { save(); } catch(e){}
+   try { toast((LTNAME617[k] || LTN[k] || "照明") + "を付けました"); } catch(e){}
+ }
+ /* ---------- 床シート（612の一括変更と同じ書き方） ---------- */
+ var FIN617 = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "クッションフロア"], ["flMuku", "無垢板15"], ["flMuku30", "無垢板30"]];
+ function finishKey617(r){ return r.fk || r.st || ""; }
+ function groupOf617(rec){
+   var fk = finishKey617(rec), cid = null;
+   try { var c = roomAt((rec.x0 + rec.x1) / 2, (rec.y0 + rec.y1) / 2); cid = c ? c.cid : null; } catch(e){}
+   return (S.tatami || []).filter(function(r){
+     if (!r || r.h || r.fk === "flAge" || finishKey617(r) !== fk) return false;
+     var cj = null; try { var c2 = roomAt((r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2); cj = c2 ? c2.cid : null; } catch(e){}
+     return cj === cid;
+   });
+ }
+ function floorRecAt617(x, y){
+   var arr = S.tatami || [];
+   for (var i = arr.length - 1; i >= 0; i--){ var r = arr[i]; if (r && x >= r.x0 && x <= r.x1 && y >= r.y0 && y <= r.y1) return r; }
+   return null;
+ }
+ function stdDet617(fk){
+   if (fk === "flComp") return { mat: "comp", paint: "uv" };
+   if (fk === "flCF") return { cf: "home" };
+   if (fk === "flMuku") return { t: 15, sp: "nara", fin: "none", color: "clear" };
+   return null;
+ }
+ function openFloor617(x, y){
+   var rec = floorRecAt617(x, y);
+   if (!rec){ try { toast("床が見つかりませんでした"); } catch(e){} return; }
+   if (rec.h || rec.fk === "flAge"){ try { toast("小上がりの床は②間取りで変えてね"); } catch(e){} return; }
+   var fk0 = finishKey617(rec).replace(/^fl:/, "");
+   if (["tatami", "flDoma"].indexOf(fk0) >= 0 || (rec.st || "").indexOf("tatami") >= 0){ try { toast("畳と土間は②間取りで変えてね"); } catch(e){} return; }
+   var rm = null; try { rm = roomAt(x, y); } catch(e){}
+   var rname = ""; try { rname = roomNm(rm) || ""; } catch(e){}
+   var curName = (FIN617.filter(function(f){ return f[0] === fk0; })[0] || [])[1] || fk0;
+   cur617 = { mode: "fl", recs: groupOf617(rec) };
+   if (!cur617.recs.length) cur617.recs = [rec];
+   sh.innerHTML = '<div class="t617">床の仕上げ' + (rname ? "（" + esc(rname) + "）" : "") + "：今は " + esc(curName) + "</div>" +
+     '<div class="row617">' + FIN617.map(function(f){ return '<button type="button" data-fl617="' + f[0] + '"' + (f[0] === fk0 ? ' class="on617"' : "") + ">" + f[1] + "</button>"; }).join("") + "</div>" +
+     '<div class="row617"><button type="button" data-x617>閉じる</button></div>';
+   sh.style.display = "block";
+   nudgeFn = null;
+ }
+ function applyFloor617(fk){
+   if (!cur617 || cur617.mode !== "fl") return;
+   var recs = cur617.recs; if (!recs.length) return;
+   try { pushUndo(); } catch(e){}
+   recs.forEach(function(r){
+     var useFk = fk === "flMuku30" ? "flMuku" : fk;
+     r.fk = useFk; r.st = "fl:" + useFk;
+     var d = stdDet617(useFk);
+     if (fk === "floorFin") delete r.det; else if (d) r.det = fk === "flMuku30" ? Object.assign({}, d, { t: 30 }) : d;
+     delete r.tk388;
+   });
+   try { save(); } catch(e){}
+   redraw();
+   var nm = (FIN617.filter(function(f){ return f[0] === fk; })[0] || [])[1] || fk;
+   try { toast("床を" + nm + "にしました"); } catch(e){}
+   close617();
+ }
+ /* シート内のボタン（委譲） */
+ sh.addEventListener("click", function(e){
+   var b = e.target.closest("button"); if (!b) return;
+   if (b.hasAttribute("data-x617")){ close617(); return; }
+   if (!cur617) return;
+   if (cur617.mode === "lt"){
+     var l = (S.lights || [])[cur617.i]; if (!l) return;
+     if (b.hasAttribute("data-lk617")){ try { pushUndo(); } catch(er){} l.k = b.dataset.lk617; try { save(); } catch(er){} openLight617(cur617.i); return; }
+     if (b.hasAttribute("data-lact617")){ var order = ["new", "swap", "remove"]; var nx = order[(order.indexOf(l.act) + 1) % order.length]; try { pushUndo(); } catch(er){} l.act = nx; try { save(); } catch(er){} openLight617(cur617.i); return; }
+     if (b.hasAttribute("data-ldel617")){ try { pushUndo(); } catch(er){} S.lights.splice(cur617.i, 1); try { save(); } catch(er){} close617(); try { toast("消しました"); } catch(er){} return; }
+   }
+   if (cur617.mode === "fl" && b.hasAttribute("data-fl617")){ applyFloor617(b.dataset.fl617); }
+ });
+
+ /* ---------- __edit565 の包み ---------- */
+ function wrapEdit(){
+   if (window.__editW617 || typeof window.__edit565 !== "function") return;
+   var orig = window.__edit565;
+   window.__edit565 = function(o){
+     if (o && o.t === "lt617") return openLight617(o.i);
+     if (o && o.t === "ltnew617") return placeLight617(o.x, o.y);
+     if (o && o.t === "fl617") return openFloor617(o.x, o.y);
+     return orig(o);
+   };
+   window.__editW617 = 1;
+ }
+ /* ---------- obj565 の包み（ハンドルが差し替わるたびに付け直す） ---------- */
+ function wrapHandle(){
+   var h = hh(); if (!h || h.__w617 || typeof h.obj565 !== "function" || typeof h.hit !== "function") return;
+   var origObj = h.obj565.bind(h);
+   h.obj565 = function(nx, ny){
+     var o = null; try { o = origObj(nx, ny); } catch(e){}
+     if (o) return o;
+     if (!inWalk()) return null;
+     try { if ((h.floorIdx || 0) !== (S.fi || 0)) return null; } catch(e){}
+     var r = null; try { r = h.hit(nx, ny); } catch(e){}
+     if (!r || !r.p) return null;
+     var B = null; try { B = bbox(); } catch(e){} if (!B) return null;
+     var X = r.p[0] * 1000 + B.x0, Y = r.p[2] * 1000 + B.y0, H = (r.p[1] - r.fy) * 1000;
+     var ch = 2400; try { ch = chEff(); } catch(e){}
+     if (window.__ltPend617){
+       if (H >= ch - 200) return { t: "ltnew617", x: X, y: Y };
+       return null;
+     }
+     if (H >= ch - 200){
+       var bi = -1, bd = 700;
+       (S.lights || []).forEach(function(l, i){ var d = Math.hypot(l.x - X, l.y - Y); if (d < bd){ bd = d; bi = i; } });
+       if (bi >= 0) return { t: "lt617", i: bi };
+       return null;
+     }
+     if (H <= 200){
+       if (floorRecAt617(X, Y)) return { t: "fl617", x: X, y: Y };
+       var rm = null; try { rm = roomAt(X, Y); } catch(e){}
+       if (rm) return { t: "fl617", x: X, y: Y };
+     }
+     return null;
+   };
+   h.__w617 = 1;
+ }
+ /* ---------- 「器具を置く」シートへ照明を追加 ---------- */
+ function enhancePutSheet(){
+   var s529 = $("sheet529"); if (!s529 || s529.style.display === "none") return;
+   if (s529.querySelector("[data-lt617]")) { syncLtBtns(); return; }
+   if (!s529.querySelector("[data-k529]")) return;
+   var lab = document.createElement("div"); lab.className = "ltlab617"; lab.textContent = "天井の照明（選んで天井をタップ）";
+   s529.appendChild(lab);
+   Object.keys(LTN).forEach(function(k){
+     var b = document.createElement("button"); b.type = "button"; b.dataset.lt617 = k;
+     b.textContent = LTNAME617[k] || LTN[k];
+     if (window.__ltPend617 === k) b.className = "on617";
+     s529.appendChild(b);
+   });
+ }
+ function syncLtBtns(){
+   var s529 = $("sheet529"); if (!s529) return;
+   s529.querySelectorAll("[data-lt617]").forEach(function(b){ b.classList.toggle("on617", window.__ltPend617 === b.dataset.lt617); });
+ }
+ document.addEventListener("click", function(e){
+   var b = e.target.closest && e.target.closest("[data-lt617]"); if (!b) return;
+   var k = b.dataset.lt617;
+   if (window.__ltPend617 === k){ window.__ltPend617 = null; try { toast("やめました"); } catch(er){} }
+   else {
+     window.__ltPend617 = k; clearFxPend();
+     try { toast((LTNAME617[k] || LTN[k]) + "：天井をタップして置きます"); } catch(er){}
+   }
+   var s529 = $("sheet529"); if (s529) s529.style.display = "none";
+ }, true);
+ /* ---------- 壁の器具シート（sheet565）へ微調整を足す ---------- */
+ var fxNudgeFor = -1;
+ function enhanceFxSheet(){
+   var s565 = $("sheet565"); if (!s565 || s565.style.display === "none") return;
+   var i = s565.__i; if (i == null || !S.fx || !S.fx[i]) return;
+   if (s565.querySelector("[data-n617]")) return;
+   var f = S.fx[i];
+   var div = document.createElement("div"); div.dataset.n617 = "1";
+   div.innerHTML = nudgeHTML(stepMM());
+   s565.appendChild(div);
+   fxNudgeFor = i;
+   var stEl = div.querySelector(".stick617"), knob = div.querySelector(".knob617");
+   var pid = null, vec = { x: 0, y: 0 }, on = false, moved = false, raf = 0, last = 0;
+   function applyFx(dx, dy, dt, stepOnly){
+     var f2 = S.fx[i]; if (!f2) return;
+     var su, sz;
+     if (stepOnly){ su = dx * stepMM(); sz = -dy * stepMM(); }
+     else { var m = Math.max(Math.abs(dx), Math.abs(dy)); su = dx * 700 * dt * m; sz = -dy * 700 * dt * m; }
+     f2.u = Math.round((+f2.u + su) / 5) * 5; f2.z = Math.round((+f2.z + sz) / 5) * 5;
+     try { fxClamp(f2); } catch(e){}
+     try { fxSel = i; fxBarSync(); } catch(e){}
+   }
+   function loop(ts){
+     if (!on) return;
+     var dt = Math.min(0.05, (ts - last) / 1000 || 0.016); last = ts;
+     if (Math.abs(vec.x) > 0.12 || Math.abs(vec.y) > 0.12){ applyFx(vec.x, vec.y, dt, false); moved = true; }
+     raf = requestAnimationFrame(loop);
+   }
+   stEl.addEventListener("pointerdown", function(e){ pid = e.pointerId; stEl.setPointerCapture(pid); on = true; moved = false; last = performance.now(); try { pushUndo(); } catch(er){} raf = requestAnimationFrame(loop); mv(e); e.preventDefault(); });
+   function mv(e){
+     if (e.pointerId !== pid) return;
+     var r = stEl.getBoundingClientRect(), dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2), dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+     var m = Math.hypot(dx, dy); if (m > 1){ dx /= m; dy /= m; }
+     vec.x = dx; vec.y = dy;
+     knob.style.transform = "translate(calc(-50% + " + (dx * 28) + "px), calc(-50% + " + (dy * 28) + "px))";
+   }
+   stEl.addEventListener("pointermove", mv);
+   function up(e){ if (e.pointerId !== pid) return; pid = null; on = false; cancelAnimationFrame(raf); knob.style.transform = "translate(-50%,-50%)"; if (moved){ try { save(); } catch(er){} } }
+   stEl.addEventListener("pointerup", up); stEl.addEventListener("pointercancel", up);
+   div.querySelectorAll("[data-nv617]").forEach(function(b){
+     var parts = b.dataset.nv617.split(","), vx = +parts[0], vy = +parts[1], tm = null, iv = null;
+     b.addEventListener("pointerdown", function(e){ e.preventDefault(); try { pushUndo(); } catch(er){} applyFx(vx, vy, 0, true); tm = setTimeout(function(){ iv = setInterval(function(){ applyFx(vx, vy, 0, true); }, 130); }, 380); });
+     function end(){ if (tm) clearTimeout(tm); if (iv) clearInterval(iv); tm = iv = null; try { save(); } catch(er){} }
+     b.addEventListener("pointerup", end); b.addEventListener("pointerleave", end); b.addEventListener("pointercancel", end);
+   });
+ }
+ /* sheet565 の中身は open565 のたびに作り直されるので見張る */
+ var mo565 = new MutationObserver(function(){ enhanceFxSheet(); });
+ var mo529 = new MutationObserver(function(){ enhancePutSheet(); });
+ function armObservers(){
+   var a = $("sheet565"), b = $("sheet529");
+   if (a && !a.__o617){ mo565.observe(a, { childList: true, attributes: true, attributeFilter: ["style"] }); a.__o617 = 1; }
+   if (b && !b.__o617){ mo529.observe(b, { childList: true, attributes: true, attributeFilter: ["style"] }); b.__o617 = 1; }
+ }
+ /* ハンドルは再構築のたびに差し替わるので、短い間隔＋タップ直前（pointerdown）で包み直す */
+ document.addEventListener("pointerdown", function(e){ if (e.target && e.target.id === "h3d"){ wrapHandle(); wrapEdit(); } }, true);
+ setInterval(function(){
+   wrapEdit(); wrapHandle(); armObservers();
+   if (fxPend() && window.__ltPend617) window.__ltPend617 = null;
+   if (sh.style.display !== "none" && !inWalk()) close617();
+ }, 150);
+})();
+</script>
