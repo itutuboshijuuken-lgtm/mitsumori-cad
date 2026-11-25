@@ -3492,7 +3492,7 @@ function alignSvg(P, sc){
    段の実体は各ブロックに登録として残す（blk07 は HB.__peStage07、blk14 は IIFE 局所 hgList を使うため HB.__peStage14）。登録が無い読み込み途中は本体だけが走り、元の連鎖の段階と一致する。段が例外を投げれば伝播する点も元のまま。 */
 function planExtras(P, sc){
   let h = roomLabelsSvg(P, "tint");
-  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + dimOverlay(P, sc) + (window.__hide369 ? "" : (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + stairBelowSvg578(P) + ltSvg(P, sc)) + selBlinkSvg(P) + alignSvg(P, sc);   /* CAD-369：物を隠すモードでは設備と照明を描かない */
+  h += (S.tatami || []).map(r => tatSvg(r, P)).join("") + (S.zones || []).map(z => zoneSvg(z, P)).join("") + tareSvg(P) + enclPrevSvg(P) + (document.body.classList.contains("v432") ? "" : dimOverlay(P, sc)) + /* CAD-648：view432 が隠す外周チェーンは描かない（同上） */ (window.__hide369 ? "" : (S.tenken || []).map((o, i) => tenkenSvg(o, i, P)).join("") + stairBelowSvg578(P) + ltSvg(P, sc)) + selBlinkSvg(P) + alignSvg(P, sc);   /* CAD-369：物を隠すモードでは設備と照明を描かない */
   (S.parts2D || []).forEach((q, i) => {
     const a = P([q.x1, q.y1]), c = P([q.x2, q.y2]), m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1);
     const isSel = sel && sel.t === "p" && sel.i === i;
@@ -36809,6 +36809,7 @@ nav.steps{padding:1px 6px 3px}
     try{
       if (typeof HB === "undefined" || !HB.__pageM) { lastKey = ""; return; }
       var svg = document.getElementById("plan");
+      if (document.body.classList.contains("v432")){ var o424 = svg && svg.querySelector("#dim424"); if (o424) o424.remove(); lastKey = ""; return; }   /* CAD-648：大きい寸法（view432）が出ている時は寸法列を描かない。隠す前提で描くのは下地の無駄（翔伍の指示で組み替え第1段） */
       if (!svg || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
       if (typeof bbox !== "function" || typeof gridLines345 !== "function") return;
       var grp = svg.querySelector('g[data-sno="grid345"]');
