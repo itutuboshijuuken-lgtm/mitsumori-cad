@@ -24996,7 +24996,7 @@ window.ASH230F = function(rows){
       const d = last ? Math.floor((now - last) / DAY) + "日前" : "まだ取っていません";
       const b = document.createElement("div"); b.id = "bkBan";
       b.style.cssText = "position:fixed;left:8px;right:8px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:60;background:#18202A;color:#fff;border:1px solid #E3C777;border-radius:10px;padding:5px 8px;display:flex;gap:6px;align-items:center;box-shadow:0 3px 12px rgba(0,0,0,.3);font-size:13px;line-height:1.3";
-      b.innerHTML = `<span style="flex:1">💾 バックアップ（最後：${d}）</span><button type="button" id="bkNow" style="min-height:36px;padding:0 12px;border:0;border-radius:8px;background:#E3C777;color:#18202A;font-weight:800">いま保存</button><button type="button" id="bkLater" style="min-height:36px;padding:0 8px;border:0;background:transparent;color:#cfd6df">あとで</button>`;
+      b.innerHTML = `<span style="flex:1">💾 バックアップ（最後：${d}）<br><span style="font-size:11px;opacity:.85">データは自動で保存されています。バックアップは、別の場所に控えを残すためのものです</span></span><button type="button" id="bkNow" style="min-height:36px;padding:0 12px;border:0;border-radius:8px;background:#E3C777;color:#18202A;font-weight:800">いま保存</button><button type="button" id="bkLater" style="min-height:36px;padding:0 8px;border:0;background:transparent;color:#cfd6df">あとで</button>`;
       document.body.appendChild(b);
       document.getElementById("bkNow").onclick = () => { hide(); try { bkExport(); } catch(e){} };
       document.getElementById("bkLater").onclick = () => { set(SK, Date.now()); hide(); };
@@ -25006,7 +25006,7 @@ window.ASH230F = function(rows){
     try {
       const mm = document.querySelector("details.mo .mm"); if (!mm || document.getElementById("bkMenuOut")) return;
       const mk = (id, t, fn) => { const x = document.createElement("button"); x.type = "button"; x.id = id; x.textContent = t; x.onclick = () => { try { document.querySelector("details.mo").open = false; } catch(e){} try { fn(); } catch(e){} }; mm.appendChild(x); };
-      mk("bkMenuOut", "バックアップ保存", () => bkExport()); mk("bkMenuIn", "バックアップを読み込む", () => bkImport());
+      mk("bkMenuOut", "バックアップ保存", () => bkExport()); mk("bkMenuIn", "バックアップを読み込む", () => bkImport()); const nt = document.createElement("div"); nt.id = "bkMenuNote"; nt.style.cssText = "font-size:11px;line-height:1.4;padding:2px 8px 6px;opacity:.75"; nt.textContent = "バックアップ＝全部のデータを1つのファイルに控えるもの。ふだんのデータは自動で保存されています。"; mm.appendChild(nt);
     } catch(e){}
   }
   setInterval(menu, 1500); menu();
