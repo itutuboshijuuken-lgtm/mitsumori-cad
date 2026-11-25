@@ -5522,46 +5522,20 @@ function contextPlaceVoice(text, outside){
 }
 function renderContextEdit24(){
   const bar=$("selBar");
-  if(!bar || bar.hidden || !sel){ if(bar) bar.classList.remove("contextCompact24"); HB.__contextDetails24=null; return; }
+  if(!bar) return;
+  bar.classList.remove("contextCompact24");
+  bar.querySelector(".contextEdit24")?.remove();
+  if(bar.hidden || !sel) return;
   closePlaceActions24();
-  const header=bar.querySelector(".r1");
-  const body=bar.querySelector(".sbw");
-  if(!header || !body || bar.querySelector(".contextEdit24")) return;
-  const actions=document.createElement("div");
-  actions.className="contextEdit24";
-  const add=(label,selector)=>{
-    const b=document.createElement("button");
-    b.type="button";
-    b.textContent=label;
-    b.onclick=()=>bar.querySelector(selector)?.click();
-    actions.append(b);
-  };
-  if(sel.t==="p") add("長さ","#sbLen");
-  if(sel.t==="o"){
-    if(bar.querySelector("#sbFlip") && typeOf(S.sashes[sel.i])==="door") add("開く向き","#sbFlip");
-    if(bar.querySelector("#sbTob308")) add("引く向き","#sbTob308");
-    if(bar.querySelector("#sbSize")) add("寸法・種類","#sbSize");
+  const header=bar.querySelector(".r1b"), row=bar.querySelector(".meetingStatus");
+  if(header && row){
+    const note=row.querySelector("button[data-cad606-note]");
+    if(note) header.prepend(note);
   }
-  if(sel.t==="k"){
-    if(bar.querySelector("#waterDirection")) add("向き","#waterDirection");
-    else if(bar.querySelector("#sbKK")) add("回転","#sbKK");
-    if(bar.querySelector("#sbKS") && !["wc","bath"].includes(S.tenken[sel.i]?.k)) add("設定","#sbKS");
+  const explanation=bar.querySelector("#selNote576");
+  if(header && explanation && !header.querySelector(".cad606help")){
+    const help=document.createElement("button"); help.type="button"; help.className="cad606help"; help.textContent="?"; help.setAttribute("aria-label","操作説明"); help.onclick=()=>alert(explanation.textContent); header.prepend(help);
   }
-  const toggle=document.createElement("button");
-  toggle.type="button";
-  toggle.textContent="移動・その他";
-  toggle.setAttribute("aria-expanded","false");
-  const key=sel.t+":"+sel.i;
-  const isOpen=()=>HB.__contextDetails24===key;
-  const setOpen=()=>{
-    bar.classList.toggle("contextCompact24",!isOpen());
-    toggle.setAttribute("aria-expanded",String(isOpen()));
-    toggle.textContent=isOpen() ? "操作を閉じる" : "移動・その他";
-  };
-  toggle.onclick=()=>{HB.__contextDetails24=isOpen() ? null : key;setOpen();};
-  actions.append(toggle);
-  header.after(actions);
-  setOpen();
 }
 
 function partitionDoorActions(){
@@ -8954,6 +8928,8 @@ function renderMeetingSelection(){
     save(); drawSelBar();
   };
   const note=document.createElement("button");note.type="button";note.textContent=item.meetingNote ? "メモを編集" : "メモを残す";
+  note.dataset.cad606Note="1"; note.setAttribute("aria-label",note.textContent); note.title=note.textContent;
+  note.innerHTML='<svg viewBox="0 0 32 32" width="25" height="25" aria-hidden="true"><rect x="4" y="3" width="19" height="25" rx="2" fill="#f4e8ce" stroke="#70563a" stroke-width="1.6"/><path d="M8 9h11M8 14h11M8 19h7" stroke="#9b8060" stroke-width="1.5"/><path d="M15 24l2-6L27 8l4 4-10 10z" fill="#b58b50" stroke="#634b30" stroke-width="1.4"/><path d="M15 24l2-6 4 4z" fill="#e7d4ad" stroke="#634b30"/></svg>';
   note.onclick=()=>editMeetingNote25(item);row.append(note);
   if(!old) header.after(row);
 }
@@ -39558,7 +39534,15 @@ function kozo478(C){
     b.onclick = function(){ armSame502(); };
     row.appendChild(b);
     var sbw = bar.querySelector(".sbw");
-    if (sbw) bar.insertBefore(row, sbw); else bar.appendChild(row);
+    var stepBtn = bar.querySelector("#sbStep");
+    if (stepBtn && stepBtn.parentNode) {
+      var pair = document.createElement("div"); pair.className = "cad606StepPair";
+      stepBtn.parentNode.insertBefore(pair, stepBtn); pair.appendChild(stepBtn); pair.appendChild(row);
+    } else var stepBtn = bar.querySelector("#fxStep");
+    if (stepBtn && stepBtn.parentNode) {
+      var pair = document.createElement("div"); pair.className = "cad606StepPair";
+      stepBtn.parentNode.insertBefore(pair, stepBtn); pair.appendChild(stepBtn); pair.appendChild(row);
+    } else if (sbw) bar.insertBefore(row, sbw); else bar.appendChild(row);
     try { if (HB.__bindBar157) HB.__bindBar157(bar); } catch(e){}
   }
   var origBar = window.drawSelBar;
@@ -42146,4 +42130,144 @@ body :is(input,textarea,select):not(#previewPanel *){background:#fffdf7!importan
   html body:has(#st6:not([hidden])) #pad .padgrid button.op{background:#e5d5bc!important}
   html body #st6 :is(#fxBar,#roomFixtureDrawer,#roomBar) button:focus-visible,html body #sheet529 button:focus-visible{outline:2px solid #916432!important;outline-offset:-2px}
 }
+</style>
+
+<style id="cad606-layout-only">/* 採用済み木目・生成り・真鍮の意匠は変更しない。配置のみ。 */
+body:not(.nbtutRun) #stM:has(#selBar:not([hidden])) #oak556,
+body:not(.nbtutRun) #stM:has(#selBar:not([hidden])) :is(#toolTabs,#toolCh,#toolCh2,#toolCh3,#grpSub,#partCh){display:none!important}
+body:not(.nbtutRun) #stM:has(#selBar:not([hidden])) #selBar{position:relative!important;inset:auto!important;order:98;flex:0 0 auto;max-height:52dvh!important;overflow-y:auto!important;margin:0!important;padding:6px!important;}
+body:not(.nbtutRun) #stM:has(#selBar:not([hidden])) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important;}
+body:not(.nbtutRun) #stM:has(#selBar:not([hidden])) #selHelp{display:none!important}
+body:not(.nbtutRun) #selBar .r1{flex-wrap:wrap;gap:3px!important}
+body:not(.nbtutRun) #selBar .r1>span:first-child{flex:1 0 100%;font-size:12px;line-height:1.3}
+body:not(.nbtutRun) #selBar .r1b{gap:4px!important;margin-left:auto}
+body:not(.nbtutRun) #stM #selBar .r1b button{min-width:36px!important;min-height:36px!important;width:36px;height:36px;padding:0!important}
+body:not(.nbtutRun) #stM #selBar .r1b #sbOk{width:44px}
+body:not(.nbtutRun) #selBar #selNote576{display:none!important}
+body:not(.nbtutRun) #selBar .meetingStatus{margin:2px 0;gap:4px}
+body:not(.nbtutRun) #stM #selBar .meetingStatus button{min-height:36px!important;padding:2px 7px!important;font-size:12px}
+body:not(.nbtutRun) #selBar .sbw{grid-template-columns:minmax(0,1fr) auto 44px!important;gap:4px!important}
+body:not(.nbtutRun) #selBar .sbL{grid-template-rows:none!important;grid-auto-rows:minmax(36px,auto)!important;gap:3px!important}
+body:not(.nbtutRun) #stM #selBar .sbL button{min-width:0!important;min-height:36px!important;white-space:normal!important;font-size:12px!important;padding:2px!important}
+body:not(.nbtutRun) #selBar .dpad{grid-template-columns:repeat(3,38px)!important;grid-template-rows:repeat(3,36px)!important;gap:3px!important}
+body:not(.nbtutRun) #stM #selBar .dpad button{min-width:0!important;min-height:0!important;width:38px;height:36px}
+body:not(.nbtutRun) #stM #selBar .sbR button{min-width:0!important;min-height:36px!important;font-size:12px!important;padding:2px!important}
+body:not(.nbtutRun) #selBar .sbR{row-gap:4px!important}
+body:not(.nbtutRun) #stM #selBar .partitionDoorRow button{min-height:36px!important}
+</style>
+
+<style id="cad1125-phase2">
+/* CAD1125 phase2: actual editing surfaces */
+html body #stM:has(>#chips434.furniture26) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important;height:auto!important;order:0}
+html body #stM #chips434.furniture26{position:relative!important;inset:auto!important;order:91;flex:0 0 auto!important;width:100%;box-sizing:border-box;grid-template-columns:136px minmax(0,1fr)!important;max-height:46vh;overflow:auto!important;background:#f7f1e5!important;color:#443523!important;border:1px solid #a78b61!important;padding:5px!important;gap:5px!important}
+html body #stM #chips434.furniture26 .factions26{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;align-content:start}
+html body #stM #chips434.furniture26 .dpad26{display:grid!important;grid-template:repeat(3,44px)/repeat(3,44px)!important;gap:2px!important}
+html body #st6 #fxBar:not([hidden]){position:relative!important;inset:auto!important;flex:0 0 auto!important;order:97;max-height:46vh;overflow:auto!important;margin:0!important;padding:5px!important;box-shadow:none!important}
+html body #st6.fsRm:has(#fxBar:not([hidden])) .fs419stage{min-height:0!important;flex:1 1 0!important;overflow:auto!important}
+html body #st6 #fxBar .r1{display:flex!important;flex-wrap:wrap;gap:4px!important}
+html body #st6 #fxBar .r1b{margin-left:auto;display:flex;gap:3px!important}
+html body #st6 #fxBar .sbw{display:grid!important;grid-template-columns:minmax(0,1fr) 136px!important;gap:4px!important;align-items:start!important}
+html body #st6 #fxBar .sbL{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none!important;grid-auto-rows:minmax(44px,auto);gap:3px!important}
+html body #st6 #fxBar .sbL.o{grid-template-columns:1fr}
+html body #st6 #fxBar .dpad{grid-column:2;grid-row:1/span 2;grid-template:repeat(3,44px)/repeat(3,44px)!important;gap:2px!important}
+html body #st6 #fxBar .sbR{display:flex!important;grid-column:1;grid-row:2;gap:3px!important;flex-wrap:wrap;justify-content:flex-end}
+html body #st6 #fxBar .sbR>span:empty{display:none}
+html body :is(#stM #chips434.furniture26,#st6 #fxBar) button:not([data-ar]):not([data-move-direction36]){min-height:44px!important;min-width:44px!important;height:auto!important;white-space:normal!important;line-height:1.15!important;padding:3px 5px!important;font-size:12px!important;background:linear-gradient(#fffaf1,#e9dcc6)!important;color:#443523!important;border:1px solid #a78b61!important;border-radius:6px!important;box-shadow:inset 0 1px #fff!important}
+html body #st6 #fxBar #fxOk,html body #stM #chips434.furniture26 button[data-cadnext-ok]{background:linear-gradient(#e8ce9b,#bf9559)!important;color:#382817!important}
+html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]{position:relative!important;font-size:0!important;color:transparent!important;min-width:44px!important;min-height:44px!important;}
+html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]>*{display:none!important}
+html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]::before{content:none!important}
+html body :is(#stM #chips434.furniture26,#st6 #fxBar,#stM #selBar) button[data-cadnext-icon]::after{content:""!important;position:absolute!important;inset:8px!important;background:var(--cadnext-art) center/contain no-repeat!important;pointer-events:none!important}
+html body #stM #selBar.cad1125.controller26 .sbL{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;grid-auto-rows:minmax(44px,auto)!important;grid-template-rows:none!important}
+html body #stM #selBar.cad1125.controller26 .sbw{grid-template-columns:minmax(0,1fr) 136px!important}
+html body #stM #selBar.cad1125.controller26 .r1{flex-wrap:wrap!important}
+html body #stM #selBar.cad1125.controller26 .r1b{flex-wrap:wrap!important}
+
+</style>
+<script id="cad1125-phase2-js">
+(function(){'use strict';
+const art={note:'<rect x="5" y="3" width="16" height="22" rx="2" fill="#f9edcf"/><path d="M9 8h8M9 12h7M9 16h4" stroke="#967b55"/><path d="m13 24 2-6L25 8l4 4-10 10z" fill="#c79b59"/><path d="m25 8 2-2 4 4-2 2M13 24l3-1-2-2" fill="#60462e"/>',trash:'<path d="M8 9h16l-2 19H10z" fill="#d2b58b"/><path d="M6 9h20M12 9V5h8v4M14 13v10M18 13v10"/>',close:'<path d="m8 8 16 16M24 8 8 24" stroke-width="3"/>',rotate:'<path d="M25 13A10 10 0 1 0 25 21" stroke-width="2.6"/><path d="M25 5v9h-9" stroke-width="2.6"/>',undo:'<path d="M13 7 5 15l8 7v-5h7q7 0 7 7v-5q0-8-8-8h-6z" fill="#c7a36a"/>',mic:'<rect x="11" y="3" width="10" height="17" rx="5" fill="#c7aa80"/><path d="M7 15v2a9 9 0 0 0 18 0v-2M16 26v4M11 30h10"/>',help:'<circle cx="16" cy="16" r="12" fill="#f3e6ce"/><path d="M12 12a4 4 0 1 1 6 3c-2 1-2 2-2 4M16 23h.1" stroke-width="2.5"/>'};
+function icon(b,k,label){if(!b||b.hasAttribute('data-cadnext-icon'))return; b.dataset.cadnextIcon=k;b.setAttribute('aria-label',label);b.title=label;const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none" stroke="#624b32" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">'+art[k]+'</svg>';b.style.setProperty('--cadnext-art','url("data:image/svg+xml,'+encodeURIComponent(svg)+'")');}
+function refresh(){const fx=document.getElementById('fxBar');if(fx&&!fx.hidden){for(const [id,k,l] of [['fxDel','trash','消す'],['fxClose','close','選択をやめる'],['fxUndo','undo','戻す']])icon(fx.querySelector('#'+id),k,l);const rot=fx.querySelector('#fxRot');if(rot)icon(rot,'rotate',rot.textContent.includes('90')?'90度回転':'向きを変更');}
+const f=document.querySelector('#chips434.furniture26');if(f){for(const b of f.querySelectorAll('button')){const t=b.textContent.trim();if(t==='回転')icon(b,'rotate','回転');else if(t==='消す')icon(b,'trash','消す');else if(t.includes('声で探す'))icon(b,'mic','声で探す');else if(t==='完了')b.dataset.cadnextOk='1';}}
+const bar=document.getElementById('selBar');if(bar&&!bar.hidden){for(const b of bar.querySelectorAll('.contextEdit24 button,.dpad button')){const t=b.textContent.trim();if(b.classList.contains('doorRotate29'))continue; /* preserve the directional door drawing */ if(t.includes('声で探す'))icon(b,'mic','声で探す');}}
+}
+let queued=false;function schedule(){if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;refresh()})};for(const id of ['stM','fxBar']){const e=document.getElementById(id);if(e)new MutationObserver(schedule).observe(e,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden','class']});}schedule();
+})();
+
+</script>
+
+<style id="cad606-exact-material">
+/* Same approved felt556 texture; no replacement artwork. */
+html body :is(#stM,#st6) :is(#fxBar,#enclBar,#roomBar176,#roomBar,#roomFixtureDrawer) button:not([data-ar]):not([data-move-direction36]){background:#e5ded4 var(--felt556) center/128px 42px!important;color:#302923!important;border:1px solid #aa9985!important;border-radius:5px!important;box-shadow:none!important;min-width:0!important;min-height:30px!important;height:auto!important;padding:2px 4px!important;font-size:12px!important}
+html body :is(#stM,#st6) :is(#fxBar,#enclBar,#roomBar176):not([hidden]){padding:3px 5px!important;background:#fff!important;border:1px solid var(--line)!important;border-radius:12px!important;max-height:30dvh!important;overflow-y:auto!important;box-shadow:0 3px 14px rgba(20,27,36,.20)!important}
+html body #st6 #fxBar .r1{background:transparent!important;color:#302923!important;padding:0!important;margin:0 0 3px!important;gap:3px!important;flex-wrap:nowrap!important}
+html body #st6 #fxBar .r1b{gap:3px!important;flex-shrink:0}
+html body #st6 #fxBar .r1b button{width:32px!important;height:32px!important;min-width:32px!important;padding:0!important}
+html body #st6 #fxBar #fxOk{width:39px!important;min-width:39px!important}
+html body #st6 #fxBar .sbw{display:grid!important;grid-template-columns:minmax(0,1fr) 112px 49px!important;gap:3px!important;margin:0!important;padding:0!important;align-items:start!important}
+html body #st6 #fxBar .sbL{grid-template-columns:1fr!important;grid-template-rows:none!important;grid-auto-rows:32px!important;gap:3px!important}
+html body #st6 #fxBar .sbL button{height:32px!important;min-height:32px!important;min-width:0!important}
+html body #st6 #fxBar .sbR{display:grid!important;grid-column:auto!important;grid-auto-flow:row!important;grid-template-rows:auto!important;gap:3px!important}
+html body #st6 #fxBar .sbR>span:empty{display:none!important}
+html body #st6 #fxBar .sbR button{width:49px!important;min-height:32px!important;padding:0!important}
+html body #st6 #fxBar #fxSame507{min-height:30px!important;height:30px!important}
+html body :is(#stM,#st6) :is(#fxBar,#enclBar,#roomBar176) :is(.dpad,.dpad26,.floorPad28){grid-template-columns:repeat(3,36px)!important;grid-template-rows:repeat(3,36px)!important;gap:2px!important}
+html body :is(#stM,#st6) :is(#fxBar,#enclBar,#roomBar176) :is(.dpad,.dpad26,.floorPad28) button{width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;padding:0!important}
+html body #stM :is(#enclBar,#roomBar176) :is(.r1,.ecd,.ect,.rmDims176,.rmFl176){gap:3px!important;margin:0 0 3px!important}
+html body #stM #roomBar176 .rmMulti375{margin-top:3px!important}
+html body #st6 #ctl530{gap:4px!important;padding:3px 5px!important;margin-top:3px!important;height:auto!important;min-height:0!important}
+html body #st6 #ctl530 :is(#put529,#tgl568){background:#e5ded4 var(--felt556) center/128px 42px!important;color:#302923!important;border:1px solid #aa9985!important;border-radius:5px!important;min-height:32px!important;height:32px!important;padding:0 4px!important;font-size:12px!important;min-width:0!important}
+html body #st6 #ctl530 :is(#joy525,#joyR532){width:52px!important;height:52px!important}
+html body #st6 #fxBar:not([hidden]){position:sticky!important;bottom:0!important;margin-top:auto!important;z-index:10!important}
+html body #st6 #fxBar :is(#fxOk,#fxStep,#fxDel,#fxZ){background:#e5ded4 var(--felt556) center/128px 42px!important;color:#302923!important;border:1px solid #aa9985!important;border-radius:5px!important;box-shadow:none!important}
+html body #st6 #fxBar .r1b #fxDel{width:40px!important;min-width:40px!important;height:32px!important;white-space:nowrap!important;padding:0!important}
+html body #st6 #fxBar:not([hidden]){position:relative!important;bottom:auto!important;margin:3px 0 0!important;max-height:30dvh!important}
+html body #st6:has(#fxBar:not([hidden])) .fs419stage{min-height:0!important;overflow:auto!important}
+/* Reserve a separate drawing area while fixture controls are open. */
+html body #st6.fsRoom:has(#fxBar:not([hidden])) .fs419stage{flex:1 1 0!important;min-height:0!important;overflow-y:auto!important}
+html body #st6.fsRoom:has(#fxBar:not([hidden])) #roomNote570{display:none!important}
+html body #st6.fsRoom:has(#fxBar:not([hidden])) #fxBar{flex:0 0 auto!important}
+
+</style>
+
+<style id="cad606-same-compact">
+
+html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair{display:grid!important;grid-column:1/-1!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:3px!important;margin:0!important;padding:0!important;min-width:0!important}
+html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair>div{display:contents!important}
+html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair button:is(#sbStep,#fxStep,#sbSame502,#fxSame507){grid-column:auto!important;width:100%!important;height:32px!important;min-height:32px!important;min-width:0!important;margin:0!important;padding:1px 2px!important;font-size:11px!important;line-height:1.1!important;white-space:normal!important;background:#e5ded4 var(--felt556) center/128px 42px!important;color:#302923!important;border:1px solid #aa9985!important;border-radius:5px!important;box-shadow:none!important}
+html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair button:is(#sbSame502,#fxSame507)[style*="rgb(255, 243, 214)"]{outline:2px solid #a37b37!important;outline-offset:-2px!important}
+
+</style>
+
+<style id="cad606-compact-final">
+
+/* CAD606 compact: existing finish and assets untouched */
+html body:not(.nbtutRun) #stM #selBar:not([hidden]){padding:3px 5px!important;max-height:45dvh!important;overflow-y:auto!important}
+html body #stM #selBar .r1{gap:2px!important;margin:0 0 3px!important;padding:0!important;min-height:0!important}
+html body #stM #selBar .r1b{gap:3px!important}
+html body #stM #selBar .r1b button{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;padding:0!important;font-size:12px!important}
+html body #stM #selBar .r1b #sbOk{width:39px!important}
+html body #stM #selBar .r1b [data-cad606-note] svg{width:23px;height:23px;display:block;margin:auto}
+html body #stM #selBar .meetingStatus:not(:has(span)){display:none!important}
+html body #stM #selBar .partitionDoorActions{margin:0!important;padding:0!important}
+html body #stM #selBar .partitionDoorRow:not([hidden]){display:grid!important;grid-template-columns:minmax(0,1fr) 46px 34px!important;gap:3px!important;margin:0 0 3px!important;padding:2px!important}
+html body #stM #selBar .partitionDoorRow[data-part-door-menu]:not([hidden]){grid-template-columns:1fr 1fr!important}
+html body #stM #selBar .partitionDoorRow button{min-height:32px!important;height:32px!important;min-width:0!important;padding:0 3px!important;font-size:12px!important}
+html body #stM #selBar .partitionDoorRow button[data-part-door="door"]{font-size:14px!important;font-weight:800!important}
+html body #stM #selBar .sbw{grid-template-columns:minmax(0,1fr) 112px 49px!important;gap:3px!important;padding:0!important;margin:0!important;align-items:start!important}
+html body #stM #selBar .sbL{grid-template-columns:1fr!important;grid-template-rows:none!important;grid-auto-rows:32px!important;gap:3px!important}
+html body #stM #selBar .sbL.o{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+html body #stM #selBar .sbL button{height:32px!important;min-height:32px!important;padding:1px 3px!important;font-size:12px!important}
+html body #stM #selBar .dpad{grid-template-columns:repeat(3,36px)!important;grid-template-rows:repeat(3,36px)!important;gap:2px!important}
+html body #stM #selBar .dpad button{width:36px!important;height:36px!important;min-width:0!important;min-height:0!important;padding:0!important}
+html body #stM #selBar .sbR:has(button:not([hidden]):not([style*="display: none"])){display:grid!important;grid-column:auto!important;grid-auto-flow:row!important;grid-template-rows:auto!important;gap:3px!important}
+html body #stM #selBar .sbR button{min-height:32px!important;min-width:0!important;padding:0!important;font-size:12px!important}
+html body #stM #selBar #sbSame502{min-height:30px!important;margin:0 0 3px!important}
+html body #stM #selBar #selNote576{display:none!important}
+
+html body:not(.nbtutRun) #stM #selBar[data-k] .dpad button:is(.ar,.rot){width:36px!important;height:36px!important;min-height:0!important;min-width:0!important}
+html body:not(.nbtutRun) #stM #selBar[data-k] :is(.r1b,.sbL,.sbR,.partitionDoorRow) button{min-height:32px!important;height:32px!important}
+html body:not(.nbtutRun) #stM #selBar[data-k] .r1b button{min-width:32px!important}
+
 </style>
