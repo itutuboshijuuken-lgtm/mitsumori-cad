@@ -704,7 +704,7 @@ document.querySelectorAll(".mo .mm button").forEach(function(b){b.addEventListen
       <div class="mrow" id="toolCh"></div>
       <p id="guideLine" hidden style="margin:6px 2px 0;font-size:13px;line-height:1.5;color:#5B4A00;background:#FFF8DC;border:1px solid #F0D48A;border-radius:8px;padding:6px 9px"></p>
     </div>
-    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1F</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="hideFxBtn369" type="button" aria-pressed="false" title="物を隠す：置いた物を隠して、間仕切りと床を確かめます">物を隠す</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
+    <div id="planBar"><div class="pbG"><button id="undoBtn" type="button" title="1つ戻す">↶</button><button id="redoBtn" type="button" title="1つ進める" disabled>↷</button></div><div id="planQuick33" class="pbG" role="group" aria-label="間取りの道具" hidden></div><div id="planBarCmp"></div><div class="pbG"><button id="listBtn" type="button" title="置いた物">置いた物</button><button id="flBtn" type="button" title="階の切り替え" style="font-size:12px;font-weight:800">1F</button><button id="delToolBtn" type="button" aria-pressed="false" title="消す道具：持っている間、置いた物をタップで消せます">消す</button><button id="eraToolBtn" type="button" aria-pressed="false" title="消しゴム：線をなぞると消えます">消しゴム</button><button id="hideFxBtn369" type="button" aria-pressed="false" title="物を隠す：置いた物を隠して、間仕切りと床を確かめます">物を隠す</button><button id="fsBtn" type="button" title="全画面：図面だけを大きく見ます">全画面</button></div></div>
     <div id="slotM">
     </div>
     <div id="selHelp" hidden style="margin:6px 2px 0;font-size:12.5px;line-height:1.6;color:#37474F;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 9px"></div>
@@ -1837,6 +1837,10 @@ function modeUI(){
   if (typeof rfSpecOrder === "function") rfSpecOrder();
 }
 function go(n){
+  const roomDrawer = $("roomFixtureDrawer");
+  if (roomDrawer) roomDrawer.hidden = true;
+  const modelDrawer = $("sheet529");
+  if (modelDrawer) modelDrawer.style.display = "none";
   /* ===== 段階1・心臓部一本化：go（旧連鎖 blk02本体 ← blk09 ← blk17 ← blk19 ← blk20 ← blk25 ← blk50 ← blk65 ← blk66 ← blk76 を畳み込み） =====
      実行順は元の連鎖通り：外側ラッパーの前段 → … → 本体 → … → 後段は巻き戻し順。本体の戻り値は元々 undefined で、全ラッパーがそれをそのまま伝播していたため、統合後も戻り値なしで一致する。
      前段・後段の相手は元の置き場所に残してある（rfSpecOrder 等は setInterval 等からも使われる独立関数のため）。IIFE 局所の相手は HB 経由で呼ぶ：closeRoom176 は blk76 が HB.__closeRoom176 に登録済み、fixFlow（blk50）・closeBar138（blk66）は今回 HB.__fixFlow / HB.__closeBar138 として各ブロックの旧ラッパー位置で登録する（どちらも window ミラーの94種には含めない HB 内部専用の口）。
@@ -4346,6 +4350,10 @@ function mergeFloorsInRoom587(){
   const groups = new Map();
   S.tatami.forEach((r, i) => {
     if (!r || !(r.x1 > r.x0) || !(r.y1 > r.y0)) return;
+    /* 床の作り直し（2026-11-24）：囲んで決めた記録（ec）は合体の対象から外す。
+       本人の確定仕様「囲んだ範囲は守る」に従い、囲んだ部分は同仕上げでも独立に残す
+       （従来は ec が混ざると全体へ合体し、囲んだ記録と rm の印が消えていた）。 */
+    if (r.ec) return;
     const cid = roomOf(r); if (cid === null) return;
     const k = cid + "|" + keyOf(r);
     if (!groups.has(k)) groups.set(k, []);
@@ -4462,7 +4470,7 @@ function fixAssign(){
   // CAD-141: 合体は st だけでなく fk・det・za・h・fin まで全部同じ時だけ。st だけで
   // 見ていた頃は、隣り合う「CF住宅用」と「CF土足OK」が合体して片方の det が消えた
   // （検査1110 指摘7）。
-  mergeAssign(S.tatami, (a, b) => (a.st || "new") === (b.st || "new") && (a.fk || "") === (b.fk || "") && !!a.za === !!b.za && (a.h || 0) === (b.h || 0) && (a.fin || "") === (b.fin || "") && JSON.stringify(a.det || null) === JSON.stringify(b.det || null));
+  mergeAssign(S.tatami, (a, b) => (a.st || "new") === (b.st || "new") && (a.fk || "") === (b.fk || "") && !!a.za === !!b.za && (a.h || 0) === (b.h || 0) && (a.fin || "") === (b.fin || "") && JSON.stringify(a.det || null) === JSON.stringify(b.det || null) && !!a.ec === !!b.ec);   /* 床の作り直し（2026-11-24）：囲んだ記録（ec）と通常の記録を辺の合体でも混ぜない（「囲んだ範囲は守る」） */
   } finally { if (unk187) S.zones = (S.zones || []).concat(unk187); }
 }
 // 同じ種類で、辺がぴったりつながる四角（間に壁が無いもの）を1つにまとめる
@@ -4485,7 +4493,7 @@ function placeAssign(type, rr, st, id){
   if (type === "tatami") S.tatami.push(Object.assign({}, rr, {st: st || "new"}));
   else S.zones.push(Object.assign({id: id || zid(), k: type}, rr));
 }
-function enclFinish(msg){ thinParts142(); fixAssign(); syncZoneExtras(); save(); encl = {r: null}; drawEnclBar(); drawPlan(); toast(msg + "　↶で戻す"); }
+function enclFinish(msg){ thinParts142(); fixAssign(); syncZoneExtras(); save(); encl = {r: null}; if (enclMode) enclReset(); drawEnclBar(); drawPlan(); toast(msg + "　↶で戻す"); }   /* 床の作り直し（2026-11-24）：決定したら囲みモードも終わる（従来は encl だけ空になり、モードと「×」だけの帯が残っていた） */
 // 置いてある畳・土間・水回り・収納を、囲んだ時と同じ画面で直す
 function enclStartEdit(kind, i){
   /* ===== 段階1・周辺一本化：enclStartEdit（旧連鎖 blk81 → blk50 → 本体 を畳み込み） =====
@@ -4685,7 +4693,11 @@ function drawEnclRow(){
     if (!enclMode || !HB.__pageM || (e.target.closest && e.target.closest("button"))) return;
     e.preventDefault(); e.stopPropagation();
     try { slot.setPointerCapture(e.pointerId); } catch(er){}
-    const p = planPt(e); enclInk = {id: e.pointerId, sv: [p], mm: [toMM(p)]};
+    /* 床の作り直し（2026-11-24）：flInk158 と同じく、開始時に変換を落ち着かせて
+       写し（T0）を取り、ストロークの間は写しだけで mm 化する（診断 D-1 の発生源対策）。 */
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(er){}
+    const T0e = HB.__planT ? {s: HB.__planT.s, ox: HB.__planT.ox, oy: HB.__planT.oy} : null;
+    const p = planPt(e); enclInk = {id: e.pointerId, sv: [p], mm: [T0e ? [(p[0] - T0e.ox) / T0e.s, (p[1] - T0e.oy) / T0e.s] : toMM(p)], T0: T0e};
     const pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline"); pl.id = "enclInk";
     pl.setAttribute("fill", "rgba(37,99,176,.10)"); pl.setAttribute("stroke", "#2563B0"); pl.setAttribute("stroke-width", "8"); pl.setAttribute("stroke-opacity", ".45"); pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round");
     $("plan").appendChild(pl); enclInk.el = pl;
@@ -4693,7 +4705,7 @@ function drawEnclRow(){
   slot.addEventListener("pointermove", e => {
     if (!enclInk || e.pointerId !== enclInk.id) return; e.preventDefault(); e.stopPropagation();
     const p = planPt(e), l = enclInk.sv[enclInk.sv.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
-    enclInk.sv.push(p); enclInk.mm.push(toMM(p)); enclInk.el.setAttribute("points", enclInk.sv.map(q => q.join(",")).join(" "));
+    enclInk.sv.push(p); enclInk.mm.push(enclInk.T0 ? [(p[0] - enclInk.T0.ox) / enclInk.T0.s, (p[1] - enclInk.T0.oy) / enclInk.T0.s] : toMM(p)); enclInk.el.setAttribute("points", enclInk.sv.map(q => q.join(",")).join(" "));
   }, true);
   const end = e => {
     if (!enclInk || e.pointerId !== enclInk.id) return; e.stopPropagation();
@@ -11578,7 +11590,8 @@ function openShorui(then){
     shoruiFrame.title = "見積書・請求書・領収書"; shoruiFrame.setAttribute("allow", "clipboard-write");
     shoruiFrame.addEventListener("load", () => { shoruiFrame.ready = true; goseiSyncLedger(shoruiFrame.contentWindow); if (shoruiFrame.then){ const f = shoruiFrame.then; shoruiFrame.then = null; f(shoruiFrame.contentWindow); } }, {once: true});
     shoruiFrame.then = then || null;
-    shoruiFrame.srcdoc = new TextDecoder().decode(u8);
+    const editorStyle = $("cadDocuments35").textContent;
+    shoruiFrame.srcdoc = new TextDecoder().decode(u8).replace("</head>", "<style media=\"screen\">" + editorStyle + "</style></head>");
     wrap.appendChild(shoruiFrame);
   } else {
     try { shoruiFrame.contentWindow.__goseiRefresh && shoruiFrame.contentWindow.__goseiRefresh(); } catch(e){}
@@ -11976,7 +11989,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
   const more = document.createElement("details"); more.id = "estMore";
   const sm = document.createElement("summary");
   sm.style.cssText = "min-height:50px;display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #C9D2DC;border-radius:12px;background:#fff;font-size:15px;font-weight:700;color:#2563B0;padding:0 12px";
-  sm.textContent = "くわしく（利益率・内訳・工程表など）";
+  sm.textContent = "見積の内訳・工程表を見る";
   more.appendChild(sm);
   const rest = [...s.children].filter(e => e !== top && e !== grp && !grp.contains(e) && e.previousElementSibling !== null && [...s.children].indexOf(e) > [...s.children].indexOf(top));
   top.after(grp);
@@ -15609,6 +15622,24 @@ document.addEventListener("click", function(e){
     if (HB.__floorArm && !sel && !(typeof enclMode !== "undefined" && enclMode) && !ltTool && !HB.__put){
       const r = roomAt(mm[0], mm[1]);
       if (r){
+        /* 床の作り直し（2026-11-24・承認された形1）：床の手順で部屋バーが開いている時、
+           構えた仕上げの適用先は「バーを開いている部屋」だけ。別の部屋をタップしたら
+           適用せず、その部屋の選択（バー）へ切り替える。タップは常に「選ぶ」だけ。
+           まとめて指定中（multi375）は従来どおり続けて付けられる。 */
+        try {
+          if (typeof HB !== "undefined" && HB.__step399 && HB.__step399() === "floor"
+              && HB.__roomPt433 && !(HB.__multi375 && HB.__multi375())){
+            const bp = HB.__roomPt433();
+            if (bp){
+              const brm = roomAt(bp[0], bp[1]);
+              if (brm && brm.cid !== r.cid && HB.__openRoomContext24){
+                HB.__tapSelectSwitch = mm;   /* CAD-397 の包みへ「適用ではなく選択の切り替え」と伝える印。床の作り直し（2026-11-25）：時刻ではなく、このタップの mm その物を印にする。openRoom176 の drawPlan が1秒を超える環境では時刻の窓が切れ、切り替えを適用と誤判定してバーを閉じてしまう事を実測で確認したため */
+                HB.__openRoomContext24(mm);
+                return true;
+              }
+            }
+          }
+        } catch(e){}
         const R = roomsCalc();
         // CAD-140: 部屋のセルを四角に分けて置く（横の連続ラン＋同じ横幅の行は縦に
         // つなぐ）。従来はセルの外接四角（bbox）で置いたため、L字型の部屋では
@@ -15727,38 +15758,122 @@ document.addEventListener("click", function(e){
   // 取り消されるため、当てにしない（従来と同じ理由）。
   let flInk158 = null;
   function flInkClear158(){ if (flInk158){ if (flInk158.el) try { flInk158.el.remove(); } catch(er){} flInk158 = null; } }
-  document.addEventListener("pointerdown", e => {
-    if (flInk158 && e.pointerId !== flInk158.id) flInkClear158();
-    if (!HB.__floorArm || sel || (typeof enclMode !== "undefined" && enclMode) || (typeof ltTool !== "undefined" && ltTool) || HB.__put) return;
-    if (!HB.__pageM) return;
-    const t = e.target;
-    if (!t || !t.closest || !t.closest("#plan") || t.closest("button")) return;
-    e.preventDefault(); e.stopPropagation();
-    const p = planPt(e);
-    flInk158 = {id: e.pointerId, sv: [p], mm: [toMM(p)]};
+  /* 床の作り直し（2026-11-24）：変換（HB.__planT）の写し（T0）で mm 化する。
+     バーを開いた直後は planT がまだ古い事があり（実測で oy が記録の途中に
+     98→165 へ動いた）、そのまま記録すると最初の辺だけずれた（診断 D-1）。
+     ただし落ち着かせ（drawPlan）を pointerdown で行うと、#plan の中身が
+     作り直されてタップの着地点（子要素）が外れ、後段の blk176／blk177 の
+     pointerdown が「#plan の中か」の判定で落ちて部屋タップが記録されなく
+     なる（実測：トイレ等のタップが無言で消えた）。そのため落ち着かせは
+     ストロークの終わり（flInkEnd158）まで遅らせ、貯めた sv（planPt の生
+     座標＝レイアウトに依らず正しい）から mm を作り直す。タップで終わる
+     ストロークでは再描画自体が起きず、部屋タップは従来どおり通る。 */
+  function flSettle158(){
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(er){}
+    const T = HB.__planT;
+    return T ? {s: T.s, ox: T.ox, oy: T.oy} : null;
+  }
+  function flMM158(T0, p){ return T0 ? [(p[0] - T0.ox) / T0.s, (p[1] - T0.oy) / T0.s] : toMM(p); }
+  function flInkGate158(){
+    try {
+      if (typeof sel !== "undefined" && sel) return false;
+      if (typeof enclMode !== "undefined" && enclMode) return false;
+      if (typeof ltTool !== "undefined" && ltTool) return false;
+      if (HB.__put || HB.__partDraw) return false;
+      if (HB.__eraTool && HB.__eraTool()) return false;
+      if (HB.__delMode && HB.__delMode()) return false;
+      if (HB.__zaActive138 && HB.__zaActive138()) return false;
+      if (document.body.classList.contains("nbtutRun")) return false;
+      return true;
+    } catch(er){ return false; }
+  }
+  function flInkLine158(){
     const pl = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
     pl.setAttribute("fill", "rgba(37,99,176,.10)"); pl.setAttribute("stroke", "#2563B0"); pl.setAttribute("stroke-width", "8"); pl.setAttribute("stroke-opacity", ".45"); pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round");
     const svg = document.getElementById("plan"); if (svg) svg.appendChild(pl);
-    flInk158.el = pl;
+    return pl;
+  }
+  document.addEventListener("pointerdown", e => {
+    if (flInk158 && e.pointerId !== flInk158.id) flInkClear158();
+    if (e.isPrimary === false) return;
+    if (!HB.__pageM) return;
+    const t = e.target;
+    if (!t || !t.closest || !t.closest("#plan") || t.closest("button")) return;
+    if (HB.__floorArm){
+      if (!flInkGate158()) return;
+      e.preventDefault(); e.stopPropagation();
+      const T0 = HB.__planT ? {s: HB.__planT.s, ox: HB.__planT.ox, oy: HB.__planT.oy} : null;   /* 仮の写し。確定は flInkEnd158 の落ち着かせで作り直す */
+      const p = planPt(e);
+      flInk158 = {id: e.pointerId, sv: [p], mm: [flMM158(T0, p)], T0: T0};
+      flInk158.el = flInkLine158();
+      return;
+    }
+    /* 構えなし（承認された形4）：床の手順では構えずにそのままなぞれば囲みが始まる。
+       ここでは記録だけ始め、イベントを止めるのは実際に動いてからにする
+       （タップは従来どおり blk176 の部屋選択に任せる）。 */
+    let floorStep = false;
+    try { floorStep = !!(HB.__step399 && HB.__step399() === "floor"); } catch(er){}
+    if (!floorStep || !flInkGate158()) return;
+    const T0u = HB.__planT ? {s: HB.__planT.s, ox: HB.__planT.ox, oy: HB.__planT.oy} : null;   /* 仮の写し（同上） */
+    const pu = planPt(e);
+    flInk158 = {id: e.pointerId, sv: [pu], mm: [flMM158(T0u, pu)], T0: T0u, unarm: true, took: false, cx: e.clientX, cy: e.clientY};
   }, true);
   document.addEventListener("pointermove", e => {
     if (!flInk158 || e.pointerId !== flInk158.id) return;
-    e.preventDefault(); e.stopPropagation();
     const p = planPt(e), l = flInk158.sv[flInk158.sv.length - 1];
+    if (flInk158.unarm && !flInk158.took){
+      /* 構えなし：タップの範囲（14px）を超えるまでは止めず、記録だけ続ける。
+         超えた時点で囲みとして引き受ける（線を出し、以降は従来のなぞりと同じ）。 */
+      if (Math.hypot(p[0] - l[0], p[1] - l[1]) >= 2){ flInk158.sv.push(p); flInk158.mm.push(flMM158(flInk158.T0, p)); }
+      if (Math.hypot(e.clientX - flInk158.cx, e.clientY - flInk158.cy) <= 14) return;
+      flInk158.took = true;
+      e.preventDefault(); e.stopPropagation();
+      flInk158.el = flInkLine158();
+      flInk158.el.setAttribute("points", flInk158.sv.map(q => q.join(",")).join(" "));
+      return;
+    }
+    e.preventDefault(); e.stopPropagation();
     if (Math.hypot(p[0] - l[0], p[1] - l[1]) < 2) return;
-    flInk158.sv.push(p); flInk158.mm.push(toMM(p));
+    flInk158.sv.push(p); flInk158.mm.push(flMM158(flInk158.T0, p));
     if (flInk158.el) flInk158.el.setAttribute("points", flInk158.sv.map(q => q.join(",")).join(" "));
   }, true);
   const flInkEnd158 = e => {
     if (!flInk158 || e.pointerId !== flInk158.id) return;
+    if (flInk158.unarm && !flInk158.took){ flInkClear158(); return; }   /* タップだった：何もせず、選択は blk176 に任せる */
     e.stopPropagation();
-    const mm = flInk158.mm, fk = HB.__floorArm;
+    /* ここで初めて落ち着かせ（drawPlan）を行い、貯めた sv から mm を全部
+       作り直す（D-1 のずれ対策はこの作り直しで効く。pointerdown では
+       再描画しない＝タップの着地点が外れない）。 */
+    { const T9 = flSettle158(); if (T9){ flInk158.T0 = T9; flInk158.mm = flInk158.sv.map(q => flMM158(T9, q)); } }
+    const mm = flInk158.mm, fk = HB.__floorArm, wasUnarm = !!flInk158.unarm;
     flInkClear158();
+    if (wasUnarm){
+      const xs = mm.map(q => q[0]), ys = mm.map(q => q[1]);
+      const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
+      if (w < 150 && h < 150) return;
+      const rect = floorRectFromStroke(mm);
+      if (!rect){ toast("もう少し大きくなぞってください"); return; }
+      /* 構えなしの囲みは範囲だけ確定し、仕上げは囲みバーで選ぶ（CAD-507 の
+         fl507 と同じ形）。開いていた部屋バーは閉じる。 */
+      try { if (HB.__closeRoom176) HB.__closeRoom176(); } catch(er){}
+      enclMode = true; HB.__flEncl507 = true; enclNew = S.mode === "zo"; tatMode = false; eraMode = false;
+      encl = {r: {x0: rect.x0, y0: rect.y0, x1: rect.x1, y1: rect.y1, ax0: false, ax1: false, ay0: false, ay1: false}, pick: "floor507", raw: rect, fl507: true};
+      document.body.classList.remove("tatmode", "eramode"); document.body.classList.add("enclmode");
+      try { drawToolsUI(); } catch(er){}
+      drawEnclBar(); drawPlan();
+      return;
+    }
     if (!fk) return;
     const xs = mm.map(q => q[0]), ys = mm.map(q => q[1]);
     const w = Math.max(...xs) - Math.min(...xs), h = Math.max(...ys) - Math.min(...ys);
     if (w < 150 && h < 150){ // タップ：従来通り、その部屋全体をその床にする
       try { ltPlanClick(mm[0]); } catch(er){}
+      /* 床の作り直し（2026-11-25）：このタップは pointerup で処理済み。続く click が
+         #plan の click ハンドラでもう一度 ltPlanClick を呼び、切り替え後の新しい
+         planT で座標を変換するため、タップ位置が部屋の外にずれて「何もない所の
+         タップ」としてバーが閉じていた（実測で特定）。CAD-399 の guardTap176 と
+         同じ形で、このタップの続きの click だけを止める。 */
+      flTapGuard158 = {x: e.clientX, y: e.clientY, ts: (typeof e.timeStamp === "number" ? e.timeStamp : Date.now())};   /* 床の作り直し（2026-11-25）：照合はイベントの timeStamp で行う。Date.now() だと、pointerup の後処理が重い環境で窓（800ms）が切れて click の二重処理を通してしまう事を実測で確認したため */
       return;
     }
     const rect = floorRectFromStroke(mm);
@@ -15789,6 +15904,17 @@ document.addEventListener("click", function(e){
     drawEnclBar(); drawPlan();
   };
   document.addEventListener("pointerup", flInkEnd158, true);
+  /* 上の flTapGuard158 の受け側：処理済みタップの続きの click を止める */
+  var flTapGuard158 = null;
+  document.addEventListener("click", function(e){
+    if (!flTapGuard158) return;
+    var g = flTapGuard158; flTapGuard158 = null;
+    if (typeof e.timeStamp === "number" && typeof g.ts === "number" && e.timeStamp - g.ts > 300) return;   /* 同じタップの click は timeStamp がほぼ同時。処理の遅さに左右されない */
+    if (Math.abs(e.clientX - g.x) > 8 || Math.abs(e.clientY - g.y) > 8) return;
+    var t = e.target, pl = document.getElementById("plan");
+    if (!t || !pl || !(t === pl || (t.closest && t.closest("#plan")))) return;   /* 止めるのは図面への click だけ（バーのボタン等は止めない） */
+    e.stopPropagation(); e.preventDefault();
+  }, true);
   document.addEventListener("pointercancel", e => { if (flInk158 && e.pointerId === flInk158.id) flInkClear158(); }, true);
 
   // ツールタブに「床」タブ＋仕上げチップのパネルを足す
@@ -20361,6 +20487,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   var spot176 = {x: 0, y: 0, sig: "", n: 0};
   var zaForRoom176 = false;   // 部屋の編集から座上げの選択欄を開いている
   var multi375 = false;        // CAD-375：まとめて指定中（同じ床を続けて部屋へ入れる状態）
+  HB.__multi375 = function(){ return multi375; };   /* 床の作り直し（2026-11-24）：構え中の別室タップの門番（blk50）が読む */
   var applying176 = false;    // 部屋の編集経由で床を適用している最中
   var barSig176 = "";
 
@@ -20465,10 +20592,32 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }
   /* CAD-399：今の手順（手順モジュールが無い時は従来どおり「床」＝全部入りで扱う） */
   function stepNow176(){ try { return HB.__step399 ? HB.__step399() : "floor"; } catch(e){ return "floor"; } }
+  /* 床の作り直し（2026-11-24）：床の手順で部屋バーが開いている間、図面の上端に
+     重なる段（#allFlRow401）はタップを通す。バーの分だけ図面を縮めると
+     （refit400）、上端の部屋（トイレ・UB）の中心が「囲んで一部だけ」ボタン等に
+     重なってタップが届かなくなる事を実測で確認したための手当て。
+     「全部の部屋の床」ボタンだけは押せるままにする（押せばバーは閉じて開く）。 */
+  function ovRowTapThru176(on){
+    try {
+      var row = document.getElementById("allFlRow401"); if (!row) return;
+      var encl = document.getElementById("encl430");
+      var all = document.getElementById("allFlBtn401");
+      if (on && stepNow176() === "floor"){
+        row.style.pointerEvents = "none";
+        if (encl) encl.style.display = "none";
+        if (all) all.style.pointerEvents = "auto";
+      } else {
+        row.style.pointerEvents = "";
+        if (encl) encl.style.display = "";
+        if (all) all.style.pointerEvents = "";
+      }
+    } catch(e){}
+  }
   function renderRoomBar176(){
     var bar = $("roomBar176"); if (!bar) return;
     parkFl367();   /* CAD-367：作り直す前に床パネルを元の場所へ戻す */
-    if (!roomSel176){ bar.hidden = true; bar.innerHTML = ""; barSig176 = ""; try { document.body.classList.remove("rmSel367"); } catch(e){} return; }
+    if (!roomSel176){ bar.hidden = true; bar.innerHTML = ""; barSig176 = ""; try { document.body.classList.remove("rmSel367"); } catch(e){} ovRowTapThru176(false); return; }
+    ovRowTapThru176(true);
     var rm = roomAtPt176(roomSel176.pt);
     if (!rm){ closeRoom176(); return; }
     var nm = roomLbl(rm);
@@ -20606,6 +20755,12 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try { drawSelBar(); } catch(e){}
     renderRoomBar176();
     try { drawPlan(); } catch(e){}
+    /* 床の作り直し（2026-11-24）：水色点滅の印は drawPlan の後段（__dpPost176）
+       が描くが、指が触れている間は drawPlan が静定後へ回されるため、選択と
+       同時に印が出なかった（実測）。選択を変えたこの場所で後段を直接呼び、
+       印を選択とそろえる（後段は冪等で、遅れて来た drawPlan が描き直しても
+       同じ物になる）。 */
+    try { if (HB.__dpPost176) HB.__dpPost176(); } catch(e){}
   }
   HB.__openRoomContext24=openRoom176;
   function closeRoom176(){
@@ -20618,6 +20773,8 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     try { document.body.classList.remove("rmSel367"); } catch(e){}
     var bar = $("roomBar176"); if (bar){ bar.hidden = true; bar.innerHTML = ""; }
     barSig176 = "";
+    ovRowTapThru176(false);   /* 床の作り直し（2026-11-24）：上の段のタップ通しを戻す */
+    try { if (HB.__dpPost176) HB.__dpPost176(); } catch(e){}   /* 印も選択と同時に消す（openRoom176 と対） */
   }
   HB.__closeRoom176 = closeRoom176;
 
@@ -20633,6 +20790,9 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var wrappedLt397 = function(mm){
       var r397 = origLt397.apply(this, arguments);
       try {
+        /* 床の作り直し（2026-11-24）：別室タップが「選択の切り替え」だった時は、
+           適用ではないので閉じない（切り替え先のバーを開いたままにする）。 */
+        if (HB.__tapSelectSwitch && HB.__tapSelectSwitch === mm){ HB.__tapSelectSwitch = 0; return r397; }   /* 床の作り直し（2026-11-25）：照合は mm の同一性で行う（時刻の窓は使わない） */
         if (r397 && roomSel176 && !multi375){
           var appliedRm397 = roomAtPt176(mm), barRm397 = roomAtPt176(roomSel176.pt);
           if (appliedRm397 && barRm397 && appliedRm397.cid === barRm397.cid) closeRoom176();
@@ -20748,9 +20908,18 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     if (!mm){ tapDown176 = null; return; }
     var cs = [];
     try { cs = pickCands(mm) || []; } catch(er){ cs = []; }
-    tapDown176 = {cx: e.clientX, cy: e.clientY, t: Date.now(), mm: mm,
+    tapDown176 = {cx: e.clientX, cy: e.clientY, t: Date.now(), mm: mm, maxDev: 0,
       selBefore: (typeof sel !== "undefined" && sel) ? sel.t + ":" + sel.i : null,
       cands: cs.map(function(c){ return c.t + ":" + c.i; })};
+  }, true);
+  /* 床の作り直し（2026-11-24）：タップ判定は「動きの量」だけで行う（時間制限は廃止）。
+     押している間の最大のずれを記録しておき、離した時にそれで判定する。
+     バーを開いた直後の重い瞬間（処理に数秒かかる事がある）でも、動いていなければ
+     タップとして扱い、捨てない。blk177 の tapRec177 と同じ型。 */
+  if (wrap176) wrap176.addEventListener("pointermove", function(e){
+    if (!tapDown176 || e.isPrimary === false) return;
+    var dev = Math.hypot(e.clientX - tapDown176.cx, e.clientY - tapDown176.cy);
+    if (dev > tapDown176.maxDev) tapDown176.maxDev = dev;
   }, true);
   if (wrap176) wrap176.addEventListener("pointercancel", function(){ tapDown176 = null; }, true);
   var plan176 = $("plan");
@@ -20758,11 +20927,17 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     var d = tapDown176; tapDown176 = null;
     if (!d || gatesOff176()) return;
     if (HB.__lockRoom443 && HB.__lockRoom443()) return;   /* CAD-443：部屋（床）は ②床 と ⑤見直し だけ */
-    if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || Date.now() - d.t > 700){ spot176.n = 0; return; }
+    /* 床の作り直し（2026-11-24）：700ms の時間制限を廃止。判定は動きの量だけ
+       （押した所からの最大のずれと、離した所のずれの両方が 14px 以内ならタップ）。
+       旧判定は、バーを開いた直後の重い処理で pointerdown→up の間隔が数秒に
+       なる事があり、一瞬のタップでも捨てられ「部屋が選べない」主因だった。 */
+    if (Math.hypot(e.clientX - d.cx, e.clientY - d.cy) > 14 || (d.maxDev || 0) > 14){ spot176.n = 0; return; }
     var mm = d.mm;
-    /* 照明は pickCands の対象外で別に選ぶ物なので、その近くは任せる */
+    /* 照明は pickCands の対象外で別に選ぶ物なので、その近くは任せる。
+       ただし床の手順では照明はタップ対象にしない（本人の指示・2026-11-24）：
+       照明の周り 260mm の無反応地帯を床の手順だけ外し、部屋を選べる様にする。 */
     var nearLight = false;
-    try { nearLight = !window.__hide369 && (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); } catch(er){}   /* CAD-369：物を隠している間は照明の近くの床も触れる */
+    try { nearLight = stepNow176() !== "floor" && !window.__hide369 && (S.lights || []).some(function(l){ return Math.hypot(l.x - mm[0], l.y - mm[1]) < 260; }); } catch(er){}   /* CAD-369：物を隠している間は照明の近くの床も触れる */
     if (nearLight) return;
     var rm = roomAtPt176(mm);
     if (!d.cands.length){
@@ -23229,7 +23404,7 @@ setInterval(gkSync208, 600);
     for (var i = 0; i < cards.length; i++) cards[i].classList.toggle("mfCard219", i === state.selFi);
     /* CAD-503：選んだ面のカードだけを平面図のすぐ下に出す（ほかの面のカードは隠す。同じ線をもう一度押すと全部に戻る） */
     box.classList.toggle("mf503sel", state.selFi >= 0 && !!cards[state.selFi]);
-    try { var cap = document.querySelector("#miniPlan219 .mpCap"); if (cap) cap.textContent = state.selFi >= 0 ? "選択中の壁を正面から表示中。別の壁をタップして切り替え" : "青い線（壁）を押すと、その壁を直せます。部屋を押すと部屋が変わります"; } catch(e){}
+    try { var cap = document.querySelector("#miniPlan219 .mpCap"); if (cap) cap.textContent = state.selFi >= 0 ? "選択中の壁を正面から表示中。別の壁をタップして切り替え" : "壁をタップすると、その壁を編集できます。部屋をタップすると部屋が切り替わります"; } catch(e){}
     try { var mpl = $219("miniPlan219"); if (mpl) mpl.classList.toggle("mf503sm", state.selFi >= 0); } catch(e){}
     if (scroll && state.selFi >= 0 && cards[state.selFi]){ try { var mp503 = $219("miniPlan219"); (mp503 || cards[state.selFi]).scrollIntoView({block: "start", behavior: "smooth"}); } catch(e){} }   /* CAD-503：図面を小さくして、図面と選んだ壁のカードが一緒に見えるようにする */
   }
@@ -31628,10 +31803,18 @@ window.__len309txt = function(){ return null; };
   function $$(s){ return Array.prototype.slice.call(document.querySelectorAll(s)); }
   function txt(el){ return (el.textContent || "").replace(/\s+/g, ""); }
   function C(k){ return function(){ return k; }; }
+  Object.assign(ICONS, {
+  "undo34": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJtZXRhbCIgeDI9Ii40NSIgeTI9IjEiIGdyYWRpZW50VW5pdHM9Im9iamVjdEJvdW5kaW5nQm94Ij48c3RvcCBzdG9wLWNvbG9yPSIjZjZlNWJhIi8+PHN0b3Agb2Zmc2V0PSIuNDIiIHN0b3AtY29sb3I9IiNkM2FmNzAiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjYTU3ODQzIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzc1MDMzIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZD0iTTIwIDcgNSAyMWwxNSAxM3YtOGg5YzUgMCA4IDMgOCA4IDAgNC0zIDctOCA3aC03djVoOGMxMCAwIDE2LTYgMTYtMTQgMC0xMC03LTE3LTE3LTE3aC05eiIgZmlsbD0iIzU4M2IyOSIgb3BhY2l0eT0iLjIzIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgwIDEpIi8+PHBhdGggZD0iTTE5IDUgNCAxOWwxNSAxM3YtOGgxMGM1IDAgOCAzIDggOCAwIDQtMyA3LTggN2gtN3Y1aDhjMTAgMCAxNS02IDE1LTE0IDAtOS03LTE2LTE2LTE2SDE5eiIgZmlsbD0idXJsKCNtZXRhbCkiIHN0cm9rZT0iIzYyNDMyYyIgc3Ryb2tlLXdpZHRoPSIxLjU1IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0ibTE3LjUgOC42LTExIDEwLjYgMTEtMi42bTItLjVoOWM3LjUgMCAxMyA0IDE0LjUgMTAuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmMGM5IiBzdHJva2Utb3BhY2l0eT0iLjg1IiBzdHJva2Utd2lkdGg9IjEuNDUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjxwYXRoIGQ9Ik0yMi43IDQxaDYuN2M3IDAgMTItMyAxNC42LTguMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZjBkN2E2IiBzdHJva2Utb3BhY2l0eT0iLjQ2IiBzdHJva2Utd2lkdGg9IjEuMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+",
+  "redo34": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJtZXRhbCIgeDI9Ii40NSIgeTI9IjEiIGdyYWRpZW50VW5pdHM9Im9iamVjdEJvdW5kaW5nQm94Ij48c3RvcCBzdG9wLWNvbG9yPSIjZjZlNWJhIi8+PHN0b3Agb2Zmc2V0PSIuNDIiIHN0b3AtY29sb3I9IiNkM2FmNzAiLz48c3RvcCBvZmZzZXQ9Ii43IiBzdG9wLWNvbG9yPSIjYTU3ODQzIi8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjNzc1MDMzIi8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDggMCkgc2NhbGUoLTEgMSkiPjxwYXRoIGQ9Ik0yMCA3IDUgMjFsMTUgMTN2LThoOWM1IDAgOCAzIDggOCAwIDQtMyA3LTggN2gtN3Y1aDhjMTAgMCAxNi02IDE2LTE0IDAtMTAtNy0xNy0xNy0xN2gtOXoiIGZpbGw9IiM1ODNiMjkiIG9wYWNpdHk9Ii4yMyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAxKSIvPjxwYXRoIGQ9Ik0xOSA1IDQgMTlsMTUgMTN2LThoMTBjNSAwIDggMyA4IDggMCA0LTMgNy04IDdoLTd2NWg4YzEwIDAgMTUtNiAxNS0xNCAwLTktNy0xNi0xNi0xNkgxOXoiIGZpbGw9InVybCgjbWV0YWwpIiBzdHJva2U9IiM2MjQzMmMiIHN0cm9rZS13aWR0aD0iMS41NSIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Im0xNy41IDguNi0xMSAxMC42IDExLTIuNm0yLS41aDljNy41IDAgMTMgNCAxNC41IDEwLjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZjBjOSIgc3Ryb2tlLW9wYWNpdHk9Ii44NSIgc3Ryb2tlLXdpZHRoPSIxLjQ1IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48cGF0aCBkPSJNMjIuNyA0MWg2LjdjNyAwIDEyLTMgMTQuNi04LjIiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2YwZDdhNiIgc3Ryb2tlLW9wYWNpdHk9Ii40NiIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvZz48L3N2Zz4=",
+  "eraser34": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0icnViIiB4Mj0iLjMiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjZmZmYmVjIi8+PHN0b3Agb2Zmc2V0PSIuNSIgc3RvcC1jb2xvcj0iI2YxZThkNiIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2NjYmFhMSIvPjwvbGluZWFyR3JhZGllbnQ+CjxsaW5lYXJHcmFkaWVudCBpZD0id29vZCIgeDI9Ii4xIiB5Mj0iMSI+PHN0b3Agc3RvcC1jb2xvcj0iIzkyNjk0YSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiM2MzQzMzEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMzZTJjMjQiLz48L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+PGcgdHJhbnNmb3JtPSJyb3RhdGUoLTM0IDI0IDI0KSI+CjxyZWN0IHg9IjMiIHk9IjE1IiB3aWR0aD0iNDIiIGhlaWdodD0iMjMiIHJ4PSI1IiBmaWxsPSIjNTEzNzJiIiBvcGFjaXR5PSIuMjIiLz4KPHJlY3QgeD0iMyIgeT0iMTIiIHdpZHRoPSI0MiIgaGVpZ2h0PSIyMiIgcng9IjUiIGZpbGw9InVybCgjcnViKSIgc3Ryb2tlPSIjNzI1YjQ5IiBzdHJva2Utd2lkdGg9IjEuNCIvPgo8cGF0aCBkPSJNNCAyOWgzOXYxYzAgMi0yIDQtNCA0SDhjLTIgMC00LTItNC00eiIgZmlsbD0iIzg2NmQ1NSIgb3BhY2l0eT0iLjMwIi8+CjxwYXRoIGQ9Ik0xNyAxMmgyMmE1IDUgMCAwIDEgNSA1djEyYTUgNSAwIDAgMS01IDVIMTd6IiBmaWxsPSJ1cmwoI3dvb2QpIiBzdHJva2U9IiM1NjNjMzEiIHN0cm9rZS13aWR0aD0iMSIvPgo8cGF0aCBkPSJNMTguNSAxNHYxOCIgc3Ryb2tlPSIjZDdhZDc0IiBzdHJva2Utd2lkdGg9IjIiLz4KPHBhdGggZD0iTTIyIDE3YzUtMiA5IDEgMjAtMW0tMjAgN2M1IDIgMTAtMSAyMCAwbS0yMCA1YzUtMiA5IDEgMjAtMiIgc3Ryb2tlPSIjZDlhOTg0IiBzdHJva2Utb3BhY2l0eT0iLjUyIiBzdHJva2Utd2lkdGg9Ii45IiBmaWxsPSJub25lIi8+CjxwYXRoIGQ9Ik03IDE3aDciIHN0cm9rZT0iI2ZmZmVmNyIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KPC9nPjwvc3ZnPg==",
+  "trace34": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJwYXBlciIgeDI9Ii43NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiNmZmY5ZTkiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNkMmJlYTEiLz48L2xpbmVhckdyYWRpZW50PjxsaW5lYXJHcmFkaWVudCBpZD0iY2FtIiB4Mj0iLjQiIHkyPSIxIj48c3RvcCBzdG9wLWNvbG9yPSIjYzdhYjg1Ii8+PHN0b3Agb2Zmc2V0PSIuNDciIHN0b3AtY29sb3I9IiM5MTcyNTMiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM1ODQzMzciLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KPGcgdHJhbnNmb3JtPSJyb3RhdGUoLTEzIDE5IDIwKSI+PHJlY3QgeD0iNSIgeT0iNiIgd2lkdGg9IjMwIiBoZWlnaHQ9IjMzIiByeD0iMiIgZmlsbD0iIzUzM2UyZCIgb3BhY2l0eT0iLjE4Ii8+PHBhdGggZD0iTTUgNGgyMWw3IDd2MjZINXoiIGZpbGw9InVybCgjcGFwZXIpIiBzdHJva2U9IiM3MjViNDgiIHN0cm9rZS13aWR0aD0iMS40IiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PHBhdGggZD0iTTI2IDR2OGg3IiBmaWxsPSIjYzViMjkyIiBzdHJva2U9IiM5MTc2NTYiIHN0cm9rZS13aWR0aD0iMS4xIi8+PHBhdGggZD0iTTEwIDExdjE5aDE2bS0xNS0xNmgxM3YxMkgxMW02LTEydjdoN20tNyAwdjVtLTctN2g0IiBzdHJva2U9IiM4YTY5NTAiIHN0cm9rZS13aWR0aD0iMS4yIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTTkgOGgxMyIgc3Ryb2tlPSIjZmZmZGY0IiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L2c+CjxnPjxwYXRoIGQ9Ik0yMCAyNGg0bDItM2gxMGwyIDNoNWEzIDMgMCAwIDEgMyAzdjEzYTMgMyAwIDAgMS0zIDNIMjBhMyAzIDAgMCAxLTMtM1YyN2EzIDMgMCAwIDEgMy0zeiIgZmlsbD0idXJsKCNjYW0pIiBzdHJva2U9IiM0YzM3MmMiIHN0cm9rZS13aWR0aD0iMS41Ii8+PHBhdGggZD0iTTE5IDI3aDI0IiBzdHJva2U9IiNlNmNmYTYiIHN0cm9rZS13aWR0aD0iMS4zIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48Y2lyY2xlIGN4PSIzMiIgY3k9IjM0IiByPSI2LjQiIGZpbGw9IiM0MjM1MzIiIHN0cm9rZT0iI2UwYmQ4NiIgc3Ryb2tlLXdpZHRoPSIxLjgiLz48Y2lyY2xlIGN4PSIzMSIgY3k9IjMzIiByPSIyLjgiIGZpbGw9IiM3ODY1NTMiLz48cGF0aCBkPSJNMzAuNSAzMi41aC4zIiBzdHJva2U9IiNmZmYxYzMiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PHBhdGggZD0iTTQwIDI5aDIiIHN0cm9rZT0iI2Y5ZTRiMyIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvZz48L3N2Zz4="
+});
   var RULES = [
-    ["#zUndoBtn", C("undo")], ["#zRedoBtn", C("redo")],
+    ["#zUndoBtn,#fxUndo,[data-f395=back1],#maskUndo35", C("undo34")], ["#zRedoBtn", C("redo34")],
     ["#zDel215", C("kesu")], ["#zEra215", C("era")],
-    ["#undoBtn", C("undo")], ["#redoBtn", C("redo")],
+    ["#undoBtn", C("undo34")], ["#redoBtn", C("redo34")],
+    ["#planQuick33 [data-w=erase460]", C("eraser34")],
+    ["#planQuick33 :is([data-w=trace],[data-w=tadj])", C("trace34")],
     ["#listBtn", C("list")],
     ["#newBtn", C("genba")],
     ["#saveBtn", C("hozon")], ["#photoBtn", C("photo")],
@@ -31684,42 +31867,42 @@ window.__len309txt = function(){ return null; };
     ["#fxBranch219 [data-br219='setsubi']", C("setsubi")],
     ["#fxBranch219 [data-br219='all']", C("all")],
     ["#fxBranch219 [data-slot220='panel']", C("panel")],
-    ["#fxMenu [data-fk='outlet']", C("outlet")],
-    ["#fxMenu [data-fk='doorphone']", C("phone")],
-    ["#fxMenu [data-fk='shelf']", C("shelf")],
-    ["#fxMenu [data-fk='switch']", C("switch")],
-    ["#fxMenu [data-fk='rail']", C("rail")],
-    ["#fxMenu [data-fk='under']", C("under")],
-    ["#fxMenu [data-fk='rod']", C("rod")],
-    ["#fxMenu [data-fk='accent']", C("accent")],
-    ["#fxMenu [data-fk='alarm']", C("alarm")],
-    ["#fxMenu [data-fk='hanger']", C("hanger")],
-    ["#fxMenu [data-fk='board']", C("board")],
-    ["#fxMenu [data-fk='tile']", C("tile")],
-    ["#fxMenu [data-fk='niche']", C("niche")],
-    ["#fxMenu [data-fk='indirect']", C("indirect")],
-    ["#fxMenu [data-fk='sconce']", C("sconce")],
-    ["#fxMenu [data-fk='curtbox']", C("curtbox")],
-    ["#fxMenu [data-fk='shikkui']", C("shikkui")],
-    ["#fxMenu [data-fk='waist']", C("waist")],
-    ["#fxMenu [data-fk='cshelf']", C("cshelf")],
-    ["#fxMenu [data-fk='kuri']", C("kuri")],
-    ["#fxMenu [data-fk='demo']", C("demo")],
-    ["#fxMenu [data-fk='paper']", C("paper")],
-    ["#fxMenu [data-fk='towel']", C("towel")],
-    ["#fxMenu [data-fk='mirror']", C("mirror")],
-    ["#fxMenu [data-fk='tvwall']", C("tvwall")],
-    ["#fxMenu [data-fk='dimmer']", C("dimmer")],
-    ["#fxMenu [data-fk='eco']", C("eco")],
-    ["#fxMenu [data-fk='pipe']", C("pipe")],
-    ["#fxMenu [data-fk='coat']", C("coat")],
-    ["#fxMenu [data-fk='panel']", C("panel")],
-    ["#fxMenu [data-fk='picrail']", C("picrail")],
-    ["#fxMenu [data-fk='roll']", C("roll")],
-    ["#fxMenu [data-fk='blind']", C("blind")],
-    ["#fxMenu [data-fk='duct']", C("duct")],
-    ["#fxMenu [data-fk='spot']", C("spot")],
-    ["#fxMenu [data-fk='pendant']", C("pendant")],
+    ["#fxMenu [data-fk='outlet'], #sheet529 [data-k529='outlet']", C("outlet")],
+    ["#fxMenu [data-fk='doorphone'], #sheet529 [data-k529='doorphone']", C("phone")],
+    ["#fxMenu [data-fk='shelf'], #sheet529 [data-k529='shelf']", C("shelf")],
+    ["#fxMenu [data-fk='switch'], #sheet529 [data-k529='switch']", C("switch")],
+    ["#fxMenu [data-fk='rail'], #sheet529 [data-k529='rail']", C("rail")],
+    ["#fxMenu [data-fk='under'], #sheet529 [data-k529='under']", C("under")],
+    ["#fxMenu [data-fk='rod'], #sheet529 [data-k529='rod']", C("rod")],
+    ["#fxMenu [data-fk='accent'], #sheet529 [data-k529='accent']", C("accent")],
+    ["#fxMenu [data-fk='alarm'], #sheet529 [data-k529='alarm']", C("alarm")],
+    ["#fxMenu [data-fk='hanger'], #sheet529 [data-k529='hanger']", C("hanger")],
+    ["#fxMenu [data-fk='board'], #sheet529 [data-k529='board']", C("board")],
+    ["#fxMenu [data-fk='tile'], #sheet529 [data-k529='tile']", C("tile")],
+    ["#fxMenu [data-fk='niche'], #sheet529 [data-k529='niche']", C("niche")],
+    ["#fxMenu [data-fk='indirect'], #sheet529 [data-k529='indirect']", C("indirect")],
+    ["#fxMenu [data-fk='sconce'], #sheet529 [data-k529='sconce']", C("sconce")],
+    ["#fxMenu [data-fk='curtbox'], #sheet529 [data-k529='curtbox']", C("curtbox")],
+    ["#fxMenu [data-fk='shikkui'], #sheet529 [data-k529='shikkui']", C("shikkui")],
+    ["#fxMenu [data-fk='waist'], #sheet529 [data-k529='waist']", C("waist")],
+    ["#fxMenu [data-fk='cshelf'], #sheet529 [data-k529='cshelf']", C("cshelf")],
+    ["#fxMenu [data-fk='kuri'], #sheet529 [data-k529='kuri']", C("kuri")],
+    ["#fxMenu [data-fk='demo'], #sheet529 [data-k529='demo']", C("demo")],
+    ["#fxMenu [data-fk='paper'], #sheet529 [data-k529='paper']", C("paper")],
+    ["#fxMenu [data-fk='towel'], #sheet529 [data-k529='towel']", C("towel")],
+    ["#fxMenu [data-fk='mirror'], #sheet529 [data-k529='mirror']", C("mirror")],
+    ["#fxMenu [data-fk='tvwall'], #sheet529 [data-k529='tvwall']", C("tvwall")],
+    ["#fxMenu [data-fk='dimmer'], #sheet529 [data-k529='dimmer']", C("dimmer")],
+    ["#fxMenu [data-fk='eco'], #sheet529 [data-k529='eco']", C("eco")],
+    ["#fxMenu [data-fk='pipe'], #sheet529 [data-k529='pipe']", C("pipe")],
+    ["#fxMenu [data-fk='coat'], #sheet529 [data-k529='coat']", C("coat")],
+    ["#fxMenu [data-fk='panel'], #sheet529 [data-k529='panel']", C("panel")],
+    ["#fxMenu [data-fk='picrail'], #sheet529 [data-k529='picrail']", C("picrail")],
+    ["#fxMenu [data-fk='roll'], #sheet529 [data-k529='roll']", C("roll")],
+    ["#fxMenu [data-fk='blind'], #sheet529 [data-k529='blind']", C("blind")],
+    ["#fxMenu [data-fk='duct'], #sheet529 [data-k529='duct']", C("duct")],
+    ["#fxMenu [data-fk='spot'], #sheet529 [data-k529='spot']", C("spot")],
+    ["#fxMenu [data-fk='pendant'], #sheet529 [data-k529='pendant']", C("pendant")],
     ["#fxList [data-fd]", C("del")],
     ["#trSeg [data-tr='menzai']", C("tairyoku")],
     ["#trSeg [data-tr='suji']", C("sujikai")],
@@ -31756,10 +31939,10 @@ window.__len309txt = function(){ return null; };
     ["#itemAdd", C("matadd")],
     ["#uxAddBtn", C("kouji")],
     ["#estJumpMat271", C("matnum")],
-    ["#fxMenu [data-fk='tv']", C("tv")],
-    ["#fxMenu [data-fk='lan']", C("lan")],
-    ["#fxMenu [data-fk='usb']", C("usb")],
-    ["#fxMenu [data-fk='sensor']", C("sensor")],
+    ["#fxMenu [data-fk='tv'], #sheet529 [data-k529='tv']", C("tv")],
+    ["#fxMenu [data-fk='lan'], #sheet529 [data-k529='lan']", C("lan")],
+    ["#fxMenu [data-fk='usb'], #sheet529 [data-k529='usb']", C("usb")],
+    ["#fxMenu [data-fk='sensor'], #sheet529 [data-k529='sensor']", C("sensor")],
     ["#shareBtn", C("send")], ["#copyBtn", C("genka")], ["#mapBtn", C("map")],
     [".modeSeg [data-mode='rf']", C("reform")], [".modeSeg [data-mode='pt']", C("bubun")],
     ["#zRow [data-go='1']", C("redraw")], ["#zKaki", C("kakitasu")],
@@ -31800,6 +31983,7 @@ window.__len309txt = function(){ return null; };
     el.classList.add("btn325i");
     var tmp = document.createElement("div"); tmp.innerHTML = el.__o325;
     var plain = (tmp.textContent || "").replace(/\s+/g, " ").trim().replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+    if (/^(undoBtn|redoBtn|zUndoBtn|zRedoBtn|fxUndo)$/.test(el.id)) plain = plain.replace(/^[↶↷]\s*/, "");
     if (el.id === "rotL" || el.id === "rotR") plain = plain.replace(/[↺↻]/g, "").replace(/\s+/g, " ").trim(); /* CAD-499：回すボタンは絵＋「回す」だけにする（矢印字は落とす） */
     el.innerHTML = '<span class="tx325">' + el.__o325 + '</span><span class="row325"><img class="ic325" alt="" src="' + ICONS[key] + '"><span class="lb325" data-lb="' + plain + '"></span></span>';
     var im326 = el.querySelector("img.ic325");
@@ -35582,7 +35766,8 @@ function daikuBaseRows391(nobeT){
     var sr = slot.getBoundingClientRect();
     var naturalBottom = sr.bottom + applied400;   /* 余白が無い時の slotM の下端 */
     var top = Infinity;
-    [].forEach(function(id){   /* CAD-521（作り直しT2）：一覧（grpSub・toolCh・toolCh2・toolCh3）が開いても図面を縮めない。一覧は図面の上に重ねて出す（CAD-508 の roomBar と同じ考え方）。元の4つは対象から外した */
+    ["roomBar176"].forEach(function(id){   /* CAD-521（作り直しT2）：一覧（grpSub・toolCh・toolCh2・toolCh3）が開いても図面を縮めない。一覧は図面の上に重ねて出す。元の4つは対象から外した。
+       床の作り直し（2026-11-24・本人の実機指摘で追加）：部屋バー（roomBar176）だけは対象に戻す。バーが下の部屋を覆ってタップが届かず「部屋が選べない」実害が出たため、バーが開いたら図面をバーの上端まで縮める（CAD-508 の重ねる考え方は部屋バーについては取りやめ）。 */
       var el = document.getElementById(id);
       if (!el || el.hidden) return;
       if (!el.getClientRects().length) return;   /* display:none（ux-sheet-off 含む）は数えない */
@@ -35867,7 +36052,13 @@ function daikuBaseRows391(nobeT){
   var lastSig401 = "";
   function sync401() {
     var st = stepNow(), on = onPlan();
-    var showRow = on && st === "floor" && sheet.hidden;
+    /* 床の作り直し（2026-11-24）：部屋バーが開いている間はこの行を隠す。
+       行は図面の上に浮いており、バーが開くと図面が縮んで上の段の部屋
+       （UB 等）が行の下に入り、その部屋のタップがボタンに当たって
+       バーが閉じてしまう（実測：elementFromPoint が allFlBtn401）。
+       バーを閉じれば行は戻る（sync401 が 250ms ごとに追随）。 */
+    var rb401 = document.getElementById("roomBar176");
+    var showRow = on && st === "floor" && sheet.hidden && !(rb401 && !rb401.hidden);
     row.hidden = !showRow;
     if (on && st === "floor" && !sheet.hidden) {
       var fp = document.getElementById("floorPanel");
@@ -36107,7 +36298,7 @@ nav.steps{padding:1px 6px 3px}
   st6.appendChild(d);
   /* 開閉バー */
   var bar = document.createElement("div"); bar.className = "fs419bar";
-  var tb = document.createElement("button"); tb.type = "button"; tb.className = "btn"; tb.textContent = "置く物・器具を選ぶ";
+  var tb = document.createElement("button"); tb.type = "button"; tb.className = "btn"; tb.textContent = "器具を置く";
   d.id = "roomFixtureDrawer";
   tb.setAttribute("aria-controls", d.id);
   const syncDrawerButton = () => tb.setAttribute("aria-expanded", String(!d.hidden));
@@ -36645,7 +36836,7 @@ nav.steps{padding:1px 6px 3px}
   };
   var css = document.createElement("style");
   css.textContent =
-    ".co430{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:7}"
+    ".co430{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;padding:7px 9px;box-sizing:border-box;pointer-events:none;z-index:7}"
   + ".co430[hidden]{display:none}"
   + ".co430 .cb{max-width:84%;background:rgba(255,255,255,.94);border:2px solid #1a73e8;border-radius:14px;padding:12px 14px;text-align:center;box-shadow:0 2px 10px rgba(0,0,0,.12)}"
   + ".co430 .ct{font-size:17px;font-weight:900;color:#0b3d91;line-height:1.45}"
@@ -37110,10 +37301,37 @@ nav.steps{padding:1px 6px 3px}
   function chips(){
     var m = stM(); if (!m) return; var box = document.getElementById("chips434");
     if (!box){ box = document.createElement("div"); box.id = "chips434"; m.appendChild(box); }
-    if (!onM()){ box.style.display = "none"; return; } box.style.display = "";
+    const quick = $("planQuick33");
+    if (!onM()){ box.style.display = "none"; if (quick) quick.hidden = true; return; } box.style.display = "";
     var s = step(), want = (s === "part" ? ["parts"] : s === "put" ? ["furn"] : s === "all" ? ["parts", "furn"] : []).concat(fsel >= 0 ? ["rot", "del", "done"] : ["check", "cust"]);
     try { if (HB.__extra437) want = HB.__extra437(s, fsel, want); } catch(e){}   /* CAD-437：下絵・ひな形・声のボタン */
     if (arm && arm.kind === "part" && want.indexOf("rotp") < 0) want.push("rotp");   /* CAD-476：定番の部屋は、置く前に向き（縦・横）を変えられる */
+    /* 間取り上段（ChatGPT 2026-11-25）：消しゴム・下絵は上段の planQuick33 へ移し、声・定番の部屋は下段から外す */
+    const quickKeys = want.filter(key => ["erase460","trace","tadj"].includes(key));
+    const erasing = String(HB.__lab437?.erase460 || "").includes("消しゴム中");
+    const quickSignature = quickKeys.join(",") + "|" + erasing;
+    if (quick){
+      quick.hidden = quickKeys.length === 0;
+      if (quick.dataset.sig !== quickSignature){
+        quick.dataset.sig = quickSignature;
+        quick.replaceChildren();
+        for (const key of quickKeys){
+          const button = document.createElement("button");
+          button.type = "button";
+          button.dataset.w = key;
+          button.textContent = key === "erase460" ? "消しゴム" : "下絵";
+          if (key === "erase460"){
+            button.setAttribute("aria-pressed", String(erasing));
+            button.title = erasing ? "消しゴムを終わる" : "なぞって間仕切りを消す";
+          } else {
+            button.title = key === "tadj" ? "下絵を合わせる" : "写真を下絵にする";
+          }
+          button.onclick = () => act(key);
+          quick.append(button);
+        }
+      }
+    }
+    want = want.filter(key => !["erase460","trace","tadj","mic","parts"].includes(key));
     var sig = want.join(",") + "|" + (arm ? arm.kind : "") + "|" + (HB.__sig437 ? HB.__sig437() : "");
     if (box.dataset.sig !== sig){
       box.dataset.sig = sig; box.innerHTML = "";
@@ -37700,7 +37918,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
     cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
     var mk = function(t, fn, pri){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; if (pri) b.className = "pri"; b.onclick = fn; ft.appendChild(b); return b; };
     mk("写真をえらぶ", function(){ var inp = document.createElement("input"); inp.type = "file"; inp.accept = "image/*"; inp.onchange = function(){ var f = inp.files && inp.files[0]; if (!f) return; name = (f.name || "図面").replace(/\.[^.]+$/, ""); var u = URL.createObjectURL(f), im = new Image(); im.onload = function(){ img = im; boxes = []; fit(); URL.revokeObjectURL(u); }; im.src = u; }; inp.click(); });
-    mk("1つ戻す", function(){ boxes.pop(); draw(); });
+    mk("1つ戻す", function(){ boxes.pop(); draw(); }).id = "maskUndo35";
     var out = function(cb){ if (!img){ toast("先に写真をえらんでください"); return; } draw(); cv.toBlob(cb, "image/jpeg", 0.9); };
     var fname = function(){ return (name + "_塗りつぶし済み.jpg").replace(/[\\/:*?"<>|]/g, ""); };
     var dl = function(bl){ var a = document.createElement("a"); a.href = URL.createObjectURL(bl); a.download = fname(); document.body.appendChild(a); a.click(); a.remove(); setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000); };
@@ -38490,7 +38708,7 @@ body.zo472 #sbSt,body.zo472 #gkN208{display:none!important}
         b.onclick = function(){ var c = document.querySelector('#chips434 [data-w="check"]'); if (c) c.click(); else toast("チェックは間取りの画面で使えます"); };
         lb.parentNode.insertBefore(b, lb); }
       var c = document.querySelector('#chips434 [data-w="check"]'), t = c ? c.textContent.replace(/\s+/g, " ").trim() : "✔ チェック";
-      var m = t.match(/(\d+)\s*$/), want = m ? "✔ チェック " + m[1] : "✔ チェック";
+      var m = t.match(/(\d+)\s*$/), want = m ? "✓ チェック " + m[1] : "✓ チェック";
       if (b.textContent !== want) b.textContent = want;
       b.classList.toggle("ok473", !m);
       b.style.display = c ? "" : "none";
@@ -40051,14 +40269,14 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   "use strict";
   var cnv = document.getElementById("h3d"); if (!cnv) return;
   var card = cnv.parentNode;
-  var btn = document.createElement("button"); btn.type = "button"; btn.id = "put529"; btn.innerHTML = "置く物"; card.appendChild(btn);
+  var btn = document.createElement("button"); btn.type = "button"; btn.id = "put529"; btn.textContent = "器具を置く"; card.appendChild(btn);
   var sh = document.createElement("div"); sh.id = "sheet529"; document.body.appendChild(sh);
   var ORDER = ["outlet", "switch", "sconce", "indirect", "alarm", "hanger", "rail", "rod", "counter", "cshelf", "niche", "tile", "board", "waist", "curtbox", "under", "shikkui"];
   function h(){ var x = window.__h3d254; return (x && typeof x.hit === "function" && x.fp) ? x : null; }
   function pend(){ try { return fxPending; } catch(e){ return null; } }
   function setPend(k){ try { fxPending = k; } catch(e){} try { fxUI(); } catch(e){} }
   function openSheet(){
-    var hd = '<div class="hd"><b>置く物を選ぶ（選んだら壁をタップ）</b><button type="button" class="btn" data-x529>閉じる</button></div><div class="gr">';
+    var hd = '<div class="hd"><b>置く物・器具</b><button type="button" class="btn" data-x529>× 閉じる</button></div><p class="hint">器具を選んで、置く壁をタップ。</p><div class="gr">';
     ORDER.forEach(function(k){ if (FK[k]) hd += '<button type="button" data-k529="' + k + '">' + FK[k][0] + '</button>'; });
     sh.innerHTML = hd + "</div>"; sh.style.display = "block";
   }
@@ -40074,7 +40292,7 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
     btn.style.display = vis ? "flex" : "none";
     if (!vis){ if (sh.style.display === "block") closeSheet(); return; }
     btn.style.left = (cnv.offsetLeft + cnv.offsetWidth - 72) + "px"; btn.style.top = (cnv.offsetTop + cnv.offsetHeight - 72) + "px";
-    var p = pend(); btn.classList.toggle("on529", !!p); btn.innerHTML = p ? (FK[p] ? FK[p][0] : "") + "<br>やめる" : "置く物";
+    var p = pend(); btn.classList.toggle("on529", !!p); btn.innerHTML = p ? (FK[p] ? FK[p][0] : "") + "<br>やめる" : "器具を置く";
     var hn = window.__hint529; if (hn){ var tx = p ? "「" + FK[p][0] + "」を置く壁をタップ" : "なぞって見回す・物やドアをタップで直す"; if (hn.textContent !== tx) hn.textContent = tx; }
   }
   setInterval(tick, 300);
@@ -40662,9 +40880,9 @@ function roofPaper556(){
  svg.setAttribute("viewBox","0 0 360 220");svg.innerHTML=shape;
 }
 (()=>{
- const roof = $("st3"), nav = document.createElement("div"), sec = $("sec");
+ const nav = document.createElement("div"), sec = $("sec");
  nav.id = "roofView556";
- roof.insertBefore(nav, roof.querySelector(".flowNext"));
+ sec.closest(".card").before(nav);
  for(const [mode,label] of [["plan","屋根伏図"],["section","断面・小屋束"]]){
  const b=document.createElement("button");b.type="button";b.textContent=label;b.dataset.view=mode;nav.append(b);
  b.onclick=()=>{roofView556=mode;drawSec();};
@@ -41775,4 +41993,157 @@ document.addEventListener("click",event=>{
 </style><script>
 window.addEventListener("scroll",()=>{if(document.getElementById("planControls25") && HB.__pageM) queuePlanControls25();},true);
 window.addEventListener("resize",queuePlanControls25);
+</script><style>
+html body #stM #planQuick33[hidden]{display:none!important}
+html body #stM #planBar:has(#planQuick33:not([hidden])){flex-wrap:wrap!important;gap:2px!important}
+html body #stM #planBar:has(#planQuick33:not([hidden])) #chk473{padding-inline:5px!important;font-size:12px!important}
+html body #stM #planBar:has(#planQuick33:not([hidden])) #planBarCmp{min-width:20px}
+html body #stM #planBar:has(#planQuick33:not([hidden])) :is(#undoBtn,#redoBtn){min-width:44px!important;max-width:44px!important;padding-inline:0!important}
+html body #stM #planQuick33{gap:3px;flex-shrink:0}
+html body #stM #planBar{
+  background:#f8f4eb;
+}
+html body #stM #planBar button{
+  background:#f4ecdc!important;
+  color:#49382a!important;
+  border:1px solid #ad987e!important;
+  border-radius:7px!important;
+  box-shadow:inset 0 1px 0 #fffc!important;
+}
+html body #stM #planBar :is(#undoBtn,#redoBtn,#planQuick33 button) img.ic325{
+  width:23px;height:23px;max-width:none;
+}
+html body #stM #planBar #planBarCmp{filter:saturate(.55)}
+html body #stM #planQuick33 button{
+  min-width:44px!important;min-height:44px!important;width:44px!important;height:auto;
+  white-space:nowrap;padding:0 2px!important;font-size:10px!important;font-weight:800;
+}
+html body #stM #planBar button[aria-pressed="true"]{
+  color:#fff8e8!important;background:#58412b!important;border-color:#aa8755!important;
+  box-shadow:inset 0 0 0 1px #c4a36c!important;
+}
+html body #stM #planBar button[aria-pressed="true"] img.ic325{
+  filter:brightness(1.12);
+}
+</style>
+<style id="cadToolFamily35">
+@media screen {
+  html body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn),
+  body #fxBar #fxUndo,
+  body #st1 #imp439btn,body #st4 #uxAddBtn,body #st5 #estMore>summary,
+  body #st6 #put529,body #sheet529 :is([data-k529],[data-x529]){
+    background:#f4ecdc!important;color:#49382a!important;
+    border:1px solid #ad987e!important;border-radius:7px!important;
+    box-shadow:inset 0 1px 0 #fffc!important;
+  }
+  html body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn){min-height:44px!important;height:44px!important;max-width:48px;flex:none}
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn)::before,
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn)::after{content:none!important}
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn)>.row325{visibility:visible!important}
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn).btn325i .ic325,
+  body #fxBar #fxUndo.btn325i .ic325{width:23px;height:23px;max-width:100%}
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled,#fxBar #fxUndo:disabled{opacity:.35}
+  body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):not(.btn325i) small{visibility:visible!important}
+  .co430 .cf,.co430 .cs{display:none!important}
+  .co430 .cb{max-width:100%!important;border:1px solid #b49b7a!important;background:#f9f3e8f5!important;border-radius:6px!important;padding:5px 9px!important;box-shadow:0 2px 5px #422c211f!important}
+  .co430 .ct{font-size:12px!important;color:#483628!important}
+  #stepGuide400::after{color:#654c34!important}
+  #st6 .roomPaper219,#st6 #miniPlan219 p{color:#594534}
+  body #st6 .fs419bar{justify-content:flex-end}
+  body #st3 #roofView556 button{min-height:44px}
+  body #st6 #put529{order:4!important}
+  body #st6 #joyR532{order:2!important}
+  body #st6 #joyR532 button,body #st6 #joyR532 .knob,body #st6 #joyR532{filter:sepia(.65) saturate(.65)}
+  body #st6 #put529.on529{background:#58412b!important;color:#fff8eb!important}
+  body #sheet529{background:#faf6ed;border-top-color:#9a7853}
+  body #sheet529 .hd{
+    margin:-10px -10px 8px;padding:6px 10px;
+    background:var(--finish-wood,#493426);color:#fff6e3;
+  }
+  body #sheet529 .hd [data-x529]{width:auto!important;flex:0 0 auto;min-height:40px;padding-inline:12px}
+  body #sheet529 .gr .btn325i .row325{justify-content:flex-start;gap:8px;left:8px;right:8px}
+  body #sheet529 .gr .btn325i img{width:30px;height:36px;max-width:none}
+  body #sheet529 .gr{grid-template-columns:repeat(2,minmax(0,1fr))}
+  body :is(#kdWrap,#phWrap){background:#faf6ed!important;color:#3e3024}
+  body :is(#kdWrap,#phWrap) .phHead{background:var(--finish-wood,#493426)!important;color:#fff3db}
+  body :is(#kdWrap,#phWrap) .phHead button,
+  body #kdWrap .kdTabs button{background:#f4ecdc;color:#49382a;border:1px solid #ad987e;border-radius:7px;min-height:42px}
+  body #kdWrap .kdTabs{background:#faf6ed}
+  body #kdWrap .kdTabs button[aria-pressed=true]{background:#58412b;color:#fff8e8;border-color:#ad987e}
+  body #kdWrap :is(.kdsec,.kdrow,input,textarea){border-color:#d4c3ad}
+  body #kdWrap :is(.kdadd,.kdexp){border-color:#ad987e;color:#49382a;background:#f8f0e3}
+  body #kdWrap .kdbig div:not(:last-child){background:#efe6d6}
+}
+</style>
+<script type="text/plain" id="cadDocuments35">
+body,body.theme-ink{
+  --bg:#faf6ed;--panel:#fffaf1;--skin:#faf6ed;--ink:#3d3025;--sub:#685747;
+  --line:#d3c2ab;--ai:#58412b;--on-ai:#fff8e8;--ai-soft:#efe4d3;--acc:#876641;
+  color-scheme:light;background:#faf6ed!important;color:#3d3025;
+}
+body :is(.top,.bar,.lsbar,#tabbar):not(#previewPanel *){background:linear-gradient(155deg,#654a33,#453225)!important;color:#fff6e3}
+body :is(.top b,.hhero h1,.camt,.ctitle,h2,.sumline strong,.gtop b,.hst b):not(#previewPanel *){background:none!important;color:#483728!important;-webkit-text-fill-color:currentColor!important}
+body :is(.top b,.bar .sumline strong,.lsbar .sumline strong):not(#previewPanel *){color:#fff6e3!important}
+body :is(.panel,section,.card,.doc,.tile,.trow,.gauge,.crow,.pform,.sheetbox):not(#previewPanel,#previewPanel *){background:#fffaf1!important;border-color:#d3c2ab!important;box-shadow:none}
+body :is(.btn,.tbtn,.chips button,.kdTabs button,#steps button):not(#previewPanel *){background:#f4ecdc!important;color:#49382a!important;border:1px solid #ad987e!important;border-radius:7px!important}
+body :is(.btn.solid,.chips button[aria-pressed=true],.kdTabs button[aria-pressed=true],#steps button[aria-pressed=true]):not(#previewPanel *){background:#58412b!important;color:#fff6e3!important;box-shadow:none!important}
+body :is(input,textarea,select):not(#previewPanel *){background:#fffdf7!important;color:#3d3025!important;border-color:#cdbba3!important}
 </script>
+<style id="brassMovement36">
+@media screen{
+  html body{--brass-move36:url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0NCA0NCI+CiAgPGRlZnM+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImJyYXNzIiB4MT0iMCIgeDI9IjEiIHkxPSIwIiB5Mj0iMSIgZ3JhZGllbnRVbml0cz0ib2JqZWN0Qm91bmRpbmdCb3giPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjZmZmMGI4Ii8+PHN0b3Agb2Zmc2V0PSIuMzUiIHN0b3AtY29sb3I9IiNlMWJmN2IiLz4KICAgICAgPHN0b3Agb2Zmc2V0PSIuNTgiIHN0b3AtY29sb3I9IiNiYzhjNTAiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM3OTUwMzEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9ImZhY2UiIHgxPSIwIiB4Mj0iMCIgeTE9IjAiIHkyPSIxIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iI2ZmZWJiYSIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iI2JhODk0YiIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICA8L2RlZnM+CiAgPHBhdGggZD0iTTIxIDQgNSAyMmEyIDIgMCAwIDAgMS42IDMuMkgxNVYzN2EzIDMgMCAwIDAgMyAzaDhhMyAzIDAgMCAwIDMtM1YyNS4yaDguNEEyIDIgMCAwIDAgMzkgMjJMMjMgNGExLjQgMS40IDAgMCAwLTIgMHoiIGZpbGw9IiMzZDI4MWQiIG9wYWNpdHk9Ii4yMyIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCAyKSIvPgogIDxwYXRoIGQ9Ik0yMSAzIDUuOCAyMGEyIDIgMCAwIDAgMS41IDMuM0gxNVYzNmEyLjUgMi41IDAgMCAwIDIuNSAyLjVoOUEyLjUgMi41IDAgMCAwIDI5IDM2VjIzLjNoNy43YTIgMiAwIDAgMCAxLjUtMy4zTDIzIDNhMS4zIDEuMyAwIDAgMC0yIDB6IiBmaWxsPSJ1cmwoI2JyYXNzKSIgc3Ryb2tlPSIjNjA0MDJhIiBzdHJva2Utd2lkdGg9IjEuNyIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yMiA2LjIgOS40IDIwLjNIMTh2MTUuMWg4VjIwLjNoOC42eiIgZmlsbD0idXJsKCNmYWNlKSIgb3BhY2l0eT0iLjcyIi8+CiAgPHBhdGggZD0ibTIxLjggNS42LTEzIDE0LjZtMS4yLjZoNy41djE0LjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZjNkNSIgc3Ryb2tlLXdpZHRoPSIxLjMiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgogIDxwYXRoIGQ9Ik0yNyAzNmgtNy40bTguOC0xNC4xaDcuOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNzA0ODI5IiBzdHJva2Utb3BhY2l0eT0iLjY1IiBzdHJva2Utd2lkdGg9IjEuMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg==")}
+  html body :is(#stM,#st6) :is(#selBar,#fxBar,#chips434,#enclBar) :is(.dpad,.dpad26,.floorPad28) button:is([data-ar],[data-move-direction36]){
+    position:relative;color:transparent!important;text-shadow:none!important;
+    background:linear-gradient(#fff9ed,#eee1cb)!important;
+    border:1px solid #a68c6a!important;border-radius:6px!important;
+    box-shadow:inset 0 1px #fffefa,inset 0 -2px #ddcdb2!important;
+  }
+  html body :is(#stM,#st6) :is(#selBar,#fxBar,#chips434,#enclBar) :is(.dpad,.dpad26,.floorPad28) button:is([data-ar],[data-move-direction36])::before{
+    content:"";position:absolute;width:66%;height:66%;left:17%;top:17%;
+    background:var(--brass-move36) center/contain no-repeat;
+    transform:rotate(var(--arrow-angle36,0deg));pointer-events:none;
+  }
+  [data-ar="0,1"],[data-move-direction36="0,1"]{--arrow-angle36:180deg}
+  [data-ar="-1,0"],[data-move-direction36="-1,0"]{--arrow-angle36:-90deg}
+  [data-ar="1,0"],[data-move-direction36="1,0"]{--arrow-angle36:90deg}
+  html body :is(#stM,#st6) :is(#selBar,#fxBar,#chips434,#enclBar) :is(.dpad,.dpad26,.floorPad28) button:is([data-ar],[data-move-direction36]):is(:active,.on){
+    background:#dbc6a5!important;border-color:#816040!important;
+    box-shadow:inset 0 2px 4px #62442c55!important;
+  }
+  html body :is(#stM,#st6) :is(#selBar,#fxBar,#chips434,#enclBar) :is(.dpad,.dpad26,.floorPad28) button:is([data-ar],[data-move-direction36]):focus-visible{
+    outline:2px solid #79583a;outline-offset:1px;
+  }
+}
+</style>
+<style id="room-finish-37">
+@media screen {
+  html body #st6 #fxBar:not([hidden]){background:#faf6ed!important;border:1px solid #ad987e!important;border-radius:8px!important;box-shadow:0 2px 8px #49342620!important;padding:6px!important;color:#49382a!important}
+  html body #st6 #fxBar .r1{background:var(--finish-wood,#493426)!important;color:#fff6e3!important;border-radius:5px;padding:5px 7px;gap:4px}
+  html body #st6 #fxBar .r1>span:first-child{font-size:13px;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+  html body #st6 #fxBar .r1b{gap:4px!important}
+  html body #st6 #fxBar button,html body #st6 #roomFixtureDrawer button,html body #st6 #roomBar button,html body #sheet529 button{background:linear-gradient(#fffaf0,#eee3d0)!important;color:#49382a!important;border:1px solid #ad987e!important;border-radius:6px!important;box-shadow:inset 0 1px #fffefa!important}
+  html body #st6 #fxBar .r1b button{min-height:36px!important;height:auto!important;min-width:36px!important;padding:0 7px!important;font-size:13px!important}
+  html body #st6 #fxBar #fxOk{background:linear-gradient(#e6cb95,#c6a16a)!important;color:#39291c!important;border-color:#ae854b!important;min-width:56px!important}
+  html body #st6 #fxBar #fxDel{color:#963b2e!important}
+  html body #st6 #fxBar #fxStep{background:#e5d5bc!important;color:#49382a!important}
+  html body #st6 #fxBar #fxZ{font-variant-numeric:tabular-nums;border-color:#987345!important}
+  html body #st6 #fxBar .rot{border-radius:50%!important;color:#79572e!important}
+  html body #st6 #fxBar button:disabled{opacity:.35!important}
+  html body #st6 #fxBar .dpad button[data-ar]{color:transparent!important}
+  html body #st6 #fxBar .dpad button[data-ar]:is(.on,:active){background:#dbc6a5!important;border-color:#816040!important}
+  html body #st6 #roomFixtureDrawer,html body #sheet529{background:#faf6ed!important;border-top:2px solid #aa844e!important;color:#49382a!important;box-shadow:0 -4px 18px #49342638!important}
+  html body #st6 #roomFixtureDrawer .fs418dh,html body #sheet529 .hd{background:var(--finish-wood,#493426)!important;color:#fff6e3!important;border-radius:5px;padding:6px 8px}
+  html body #st6 #roomFixtureDrawer .fs418dh button,html body #sheet529 [data-x529]{min-height:40px!important;font-weight:800}
+  html body #st6 #roomFixtureDrawer button[aria-pressed=true],html body #st6 #roomBar button[aria-pressed=true],html body #st6 .fs419bar button[aria-expanded=true]{background:#58412b!important;color:#fff8eb!important;border-color:#b38d58!important}
+  html body #st6 #roomFixtureDrawer .hint,html body #sheet529 .hint{color:#685747!important}
+  html body #st6 #fxHint{color:#685747!important}
+  html body #st6 #ctl530 :is(#joy525,#joyR532){background:radial-gradient(circle,#e9dac0,#a18a6c)!important;border:2px solid #c5a371!important;box-shadow:inset 0 2px 5px #49342665,0 1px 3px #33221744!important;filter:none!important}
+  html body #st6 #ctl530 :is(#joy525,#joyR532) i{background:radial-gradient(circle at 34% 25%,#f8e6b9,#bd9557 70%,#967044)!important;border:1px solid #80603d!important;color:#49382a!important}
+  html body #st6 #ctl530 :is(#joy525,#joyR532) b{color:#fff4e1!important}
+  html body:has(#st6:not([hidden])) #pad .padin{background:#efe4d3!important;color:#49382a!important;border:1px solid #ad987e!important}
+  html body:has(#st6:not([hidden])) #pad :is(.padhead button,.padval,.padgrid button,#padStd button,#padExtra button,#padNav316 button){background:#fffaf0!important;color:#49382a!important;border:1px solid #ad987e!important;box-shadow:inset 0 1px #fffefa!important}
+  html body:has(#st6:not([hidden])) #pad .padgrid button[data-k=ok]{background:#58412b!important;color:#fff8eb!important;border-color:#aa844e!important}
+  html body:has(#st6:not([hidden])) #pad .padgrid button.op{background:#e5d5bc!important}
+  html body #st6 :is(#fxBar,#roomFixtureDrawer,#roomBar) button:focus-visible,html body #sheet529 button:focus-visible{outline:2px solid #916432!important;outline-offset:-2px}
+}
+</style>
