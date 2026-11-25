@@ -42549,3 +42549,55 @@ body:not(.nbtutRun) #stM #roomBar176 [data-flgrp612]{min-height:38px!important}
 body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #enclBar{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;flex:0 0 auto;max-height:46dvh!important;overflow-y:auto!important;margin:0!important;z-index:auto!important}
 body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important}
 </style>
+
+<style id="cad615closecss">/* CAD-615: 道具の選択肢パネル（toolCh等）の「閉じる」ボタンの見た目。素材は既存チップに合わせる。 */
+#stM .chipClose615{min-height:44px;border:1px solid var(--line,#C9BFA9);border-radius:10px;background:#fff;font-size:14px;font-weight:800;color:#5B4A2A;padding:4px 6px}
+</style>
+<script id="cad615close">
+/* CAD-615: 開いた枠に「閉じる」が無い問題への対処。
+   道具の選択肢パネル（#toolCh / #toolCh2 / #toolCh3 / #partCh / #grpSub）は、道具を構えると
+   種類チップだけが出て閉じる手段が無かった。表示中なら末尾に「閉じる」を足し、
+   押したら構えを落として既定（手順all・なぞれる状態）へ戻す。パネル側が再描画したら付け直す。 */
+(function(){
+  if (window.__cad615close) return; window.__cad615close = true;
+  var PANELS = ["toolCh", "toolCh2", "toolCh3", "partCh", "grpSub"];
+  function disarm615(){
+    try { toolOpen = null; } catch(e){}
+    try { ltTool = null; } catch(e){}
+    try { window.grp136 = null; } catch(e){}
+    try { HB.__put = null; } catch(e){}
+    document.body.classList.remove("elecOn612");
+    document.body.classList.add("elecOff612");
+    try { HB.__setStep399("all"); } catch(e){}
+    try { if (!window.__flEdit612 && !HB.__floorArm && HB.__partDrawOn && !HB.__partDraw) HB.__partDrawOn(); } catch(e){}
+  }
+  function visible(el){
+    if (!el || el.hidden) return false;
+    var cs = getComputedStyle(el);
+    if (cs.display === "none" || cs.visibility === "hidden") return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+  function ensure(){
+    if (document.body.classList.contains("nbtutRun")) return;
+    PANELS.forEach(function(id){
+      var el = document.getElementById(id);
+      if (!visible(el)) return;
+      if (el.querySelector("[data-close615]")) return;
+      var hasOwn = [...el.querySelectorAll("button")].some(function(b){ return /^(閉じる|終了)$/.test(b.textContent.trim()); });
+      if (hasOwn) return;
+      if (!el.querySelector("button")) return;
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "chipClose615";
+      b.setAttribute("data-close615", "1");
+      b.textContent = "閉じる";
+      b.addEventListener("click", function(ev){ ev.stopPropagation(); disarm615(); setTimeout(ensure, 350); });
+      el.appendChild(b);
+    });
+  }
+  new MutationObserver(function(){ ensure(); }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "style", "class"] });
+  setInterval(ensure, 1200);
+  setTimeout(ensure, 600);
+})();
+</script>
