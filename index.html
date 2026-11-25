@@ -5557,7 +5557,12 @@ function renderContextEdit24(){
   const header=bar.querySelector(".r1b"), row=bar.querySelector(".meetingStatus");
   if(header && row){
     const note=row.querySelector("button[data-cad606-note]");
-    if(note) header.prepend(note);
+    if(note){
+      if(header.querySelector("button[data-cad606-note]")) note.remove();
+      else header.prepend(note);
+    }
+    const notes=header.querySelectorAll("button[data-cad606-note]");
+    for(let ni=1; ni<notes.length; ni++) notes[ni].remove();
   }
   const explanation=bar.querySelector("#selNote576");
   if(header && explanation && !header.querySelector(".cad606help")){
@@ -20802,6 +20807,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
   }, true);
 
   function openRoom176(pt){
+    if (document.getElementById("placeActions24")) return;
     roomSel176 = {pt: [pt[0], pt[1]]};
     spot176.n = 0;
     try { sel = null; } catch(e){}
@@ -40206,12 +40212,12 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
   function loop(ts){
     if (!jv){ raf = 0; return; }
     var dt = last ? Math.min(.05, (ts - last) / 1000) : 0; last = ts;
-    var hh = h(); if (hh && (jv.x || jv.y)) hh.move(-jv.y * 1.6 * dt, jv.x * 1.6 * dt);
+    var hh = h(); if (hh && (jv.x || jv.y) && !(joy.__lt && performance.now() - joy.__lt < 120)) hh.move(-jv.y * 2.2 * dt, jv.x * 2.2 * dt);
     raf = requestAnimationFrame(loop);
   }
   function setK(dx, dy){ var R = 34, d = Math.hypot(dx, dy); if (d > R){ dx *= R / d; dy *= R / d; } knob.style.transform = "translate(" + dx + "px," + dy + "px)"; jv = {x: dx / R, y: dy / R, id: jv && jv.id}; }
   joy.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); try { joy.setPointerCapture(e.pointerId); } catch(er){} var rc = joy.getBoundingClientRect(); jv = {x: 0, y: 0, id: e.pointerId, cx: rc.left + rc.width / 2, cy: rc.top + rc.height / 2}; var c = jv; setK(e.clientX - c.cx, e.clientY - c.cy); jv.cx = c.cx; jv.cy = c.cy; jv.id = c.id; last = 0; if (!raf) raf = requestAnimationFrame(loop); });
-  joy.addEventListener("pointermove", function(e){ if (!jv || e.pointerId !== jv.id) return; e.preventDefault(); var cx = jv.cx, cy = jv.cy, id = jv.id; setK(e.clientX - cx, e.clientY - cy); jv.cx = cx; jv.cy = cy; jv.id = id; });
+  joy.addEventListener("pointermove", function(e){ if (!jv || e.pointerId !== jv.id) return; e.preventDefault(); var cx = jv.cx, cy = jv.cy, id = jv.id; setK(e.clientX - cx, e.clientY - cy); jv.cx = cx; jv.cy = cy; jv.id = id; var now = performance.now(), dt = joy.__lt ? Math.min(.08, (now - joy.__lt) / 1000) : 0; joy.__lt = now; var hh = h(); if (hh && dt && (jv.x || jv.y)) hh.move(-jv.y * 2.2 * dt, jv.x * 2.2 * dt); });
   function jend(e){ if (!jv || e.pointerId !== jv.id) return; jv = null; knob.style.transform = ""; }
   joy.addEventListener("pointerup", jend); joy.addEventListener("pointercancel", jend);
   /* 図面をなぞる：見回す（景色をつかんで動かす向き）。2本指で広さ（画角） */
@@ -40424,12 +40430,12 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
     var dt = last ? Math.min(.05, (ts - last) / 1000) : 0; last = ts;
     var hh = h();
     if (hh){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y;
-      if (ax || ay) hh.look(ax * Math.abs(ax) * 1.26 * dt, -ay * Math.abs(ay) * .35 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横1.26（一周5秒、CAD-534）・縦0.35 rad/秒 */
+      if ((ax || ay) && !(j.__lt && performance.now() - j.__lt < 120)) hh.look(ax * Math.abs(ax) * 2.4 * dt, -ay * Math.abs(ay) * .8 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横1.26（一周5秒、CAD-534）・縦0.35 rad/秒 */
     raf = requestAnimationFrame(loop);
   }
   function setK(e){ var R = 34, dx = e.clientX - v.cx, dy = e.clientY - v.cy, d = Math.hypot(dx, dy); if (d > R){ dx *= R / d; dy *= R / d; } knob.style.transform = "translate(" + dx + "px," + dy + "px)"; v.x = dx / R; v.y = dy / R; }
   j.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); try { j.setPointerCapture(e.pointerId); } catch(er){} var rc = j.getBoundingClientRect(); v = {id: e.pointerId, cx: rc.left + rc.width / 2, cy: rc.top + rc.height / 2, x: 0, y: 0}; setK(e); last = 0; if (!raf) raf = requestAnimationFrame(loop); });
-  j.addEventListener("pointermove", function(e){ if (!v || e.pointerId !== v.id) return; e.preventDefault(); setK(e); });
+  j.addEventListener("pointermove", function(e){ if (!v || e.pointerId !== v.id) return; e.preventDefault(); setK(e); var now = performance.now(), dt = j.__lt ? Math.min(.08, (now - j.__lt) / 1000) : 0; j.__lt = now; var hh = h(); if (hh && dt){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y; if (ax || ay) hh.look(ax * Math.abs(ax) * 2.4 * dt, -ay * Math.abs(ay) * .8 * dt); } });
   function end(e){ if (!v || e.pointerId !== v.id) return; v = null; knob.style.transform = ""; }
   j.addEventListener("pointerup", end); j.addEventListener("pointercancel", end);
 })();
@@ -43534,5 +43540,115 @@ body #stM #toolCh button.btn325i, body #stM #toolCh2 button.btn325i, body #stM #
   function tick() { PANELS.forEach(function (id) { var p = document.getElementById(id); if (p) apply(p); }); }
   setInterval(tick, 900);
   try { new MutationObserver(tick).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] }); } catch (e) {}
+})();
+</script>
+
+<style id="cad631css">
+body.elecOff612 #stM #plan g[data-lt2]{opacity:.4}
+body.elecOff612 #stM #plan g[data-sno="ac"]{opacity:.4}
+body.elecFull631 #stM #plan g[data-lt2]{opacity:1!important}
+body.elecFull631 #stM #plan g[data-sno="ac"]{opacity:1!important}
+body #st6 #ctl530 #joy525{order:1!important}
+body #st6 #ctl530 #put529{order:2!important}
+body #st6 #ctl530 #tgl568{order:3!important}
+body #st6 #ctl530 #joyR532{order:4!important}
+</style>
+<script id="cad631dedupe">
+(function () {
+  try {
+    var orig = HB.__openRoomContext24;
+    if (typeof orig !== "function" || orig.__w631) return;
+    var w = function () {
+      if (document.getElementById("placeActions24")) return;
+      return orig.apply(this, arguments);
+    };
+    w.__w631 = true;
+    HB.__openRoomContext24 = w;
+  } catch (e) {}
+})();
+/* 部屋タップのパネルは「置く物」だけ＋×。タップした場所を覚えて、選んだらそこへ置く */
+(function () {
+  var ctxAt = null, ctxTime = 0, lastCatClick = 0, lastPut = null, prevLt = null, putAtMine = false;
+  function fresh() { return ctxAt && (Date.now() - ctxTime < 180000); }
+  function consume() { ctxAt = null; }
+  var pendingTap = null, pendingTime = 0;
+  document.addEventListener("pointerup", function (e) {
+    try {
+      if (!e.target || !e.target.closest || !e.target.closest("#planWrap")) return;
+      var t = HB.__planT; if (!t || !t.s) return;
+      var r = document.getElementById("planWrap").getBoundingClientRect();
+      pendingTap = [Math.round((e.clientX - r.left - t.ox) / t.s), Math.round((e.clientY - r.top - t.oy) / t.s)];
+      pendingTime = Date.now();
+    } catch (er) {}
+  }, true);
+  function fixPanel() {
+    try {
+      var p = document.getElementById("placeActions24");
+      if (!p) return;
+      p.querySelectorAll("button").forEach(function (b) {
+        var t = b.textContent.trim();
+        if (t === "床を選ぶ" || t === "部屋名") b.style.display = "none";
+        if (t === "この部屋に置く") b.textContent = "ここに置く";
+      });
+      if (!p.querySelector(".xClose631")) {
+        p.style.position = "relative";
+        var x = document.createElement("button");
+        x.type = "button"; x.className = "xClose631"; x.textContent = "×";
+        x.setAttribute("aria-label", "閉じる");
+        x.style.cssText = "position:absolute;top:5px;right:5px;width:30px;height:30px;min-width:30px;min-height:30px;border-radius:50%;background:#fffdf8;border:1.5px solid #8a6d4f;color:#5a4632;font-size:16px;line-height:1;padding:0;z-index:3";
+        x.addEventListener("click", function (ev) { ev.stopPropagation(); consume(); try { closePlaceActions24(); } catch (e) {} });
+        p.appendChild(x);
+      }
+    } catch (e) {}
+  }
+  document.addEventListener("click", function (e) {
+    try {
+      var b = e.target && e.target.closest && e.target.closest("#toolCh button, #toolCh2 button, #toolCh3 button, #partCh button");
+      if (b) { lastCatClick = Date.now(); if (fresh() && !HB.__putAt) { HB.__putAt = ctxAt; putAtMine = true; } }
+    } catch (er) {}
+  }, true);
+  document.addEventListener("click", function () {
+    setTimeout(function () { if (putAtMine) { HB.__putAt = null; putAtMine = false; } }, 60);
+  }, false);
+  document.addEventListener("pointerdown", function (e) {
+    try { if (e.target && e.target.closest && e.target.closest("#planWrap")) consume(); } catch (er) {}
+  }, true);
+  setInterval(function () {
+    if (!ctxAt && pendingTap && (Date.now() - pendingTime < 15000) && document.getElementById("placeActions24")) { ctxAt = pendingTap; ctxTime = Date.now(); }
+    fixPanel();
+    try {
+      var tc3 = document.getElementById("toolCh3");
+      var full = (typeof ltTool !== "undefined" && !!ltTool) || (HB.__put && HB.__put.g === "light") || (tc3 && !tc3.hidden);
+      document.body.classList.toggle("elecFull631", !!full);
+    } catch (e) {}
+    try {
+      if (!fresh()) { lastPut = HB.__put; prevLt = (typeof ltTool !== "undefined") ? ltTool : null; return; }
+      var put = HB.__put;
+      if (put && put.fn && put.g !== "light" && put !== lastPut && !put.autoArm && (Date.now() - lastCatClick < 1500)) {
+        lastPut = put;
+        HB.__putAt = ctxAt;
+        try { put.fn(); } catch (e) {}
+        HB.__putAt = null; putAtMine = false;
+        consume();
+        return;
+      }
+      lastPut = put;
+      var lt = (typeof ltTool !== "undefined") ? ltTool : null;
+      if (lt && lt !== prevLt && (Date.now() - lastCatClick < 1500)) {
+        prevLt = lt;
+        try { pushUndo(); } catch (e) {}
+        S.lights = S.lights || [];
+        var o = { k: lt, x: ctxAt[0], y: ctxAt[1], act: "new" };
+        if (lt === "rail") { o.len = 1500; o.dir = "h"; }
+        S.lights.push(o);
+        try { save(); } catch (e) {}
+        try { drawPlan(); } catch (e) {}
+        try { toast((LTN[lt] || "照明") + "を付けました"); } catch (e) {}
+        consume();
+        return;
+      }
+      prevLt = lt;
+    } catch (e) {}
+  }, 400);
 })();
 </script>
