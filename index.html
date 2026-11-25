@@ -16061,7 +16061,10 @@ document.addEventListener("click", function(e){
     if (!r.fk) return null;
     const a = P([r.x0, r.y0]), b = P([r.x1, r.y1]), c = P([(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2]);
     const area = (r.x1 - r.x0) * (r.y1 - r.y0) / 1e6;
-    return `<g pointer-events="none"><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="${FLCOL[r.fk] || "#DDD"}" fill-opacity=".8" stroke="#8A6D2F" stroke-width="1" stroke-dasharray="5 3"/><text x="${c[0]}" y="${c[1]}" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#5B4A1F">${r.fk === "flAge" ? "小上がり／FL+" + (r.h || 300) : "床 " + (FLN[r.fk] || "")}</text><text x="${c[0]}" y="${c[1] + 13}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:#5B4A1F">${r.fk === "flAge" ? (AGEFIN[r.fin] || "畳") + " " : ""}${fmt(area, 1)}㎡</text></g>`;
+    /* CAD-623：小上がりの仕上げが畳の時は、畳の割り付け（tatTile）も描く。
+       従来は色だけの四角で、畳の継ぎ目が一切出なかった（翔伍の実機指摘「畳の割り方もなおってない」）。 */
+    const ageMats = r.fk === "flAge" && (r.fin || "tatami") === "tatami" && typeof tatTile === "function" ? tatTile(r.x1 - r.x0, r.y1 - r.y0).map(m => { const p0 = P([r.x0 + m.x, r.y0 + m.y]), p1 = P([r.x0 + m.x + m.w, r.y0 + m.y + m.h]); return `<rect x="${p0[0] + 1}" y="${p0[1] + 1}" width="${Math.max(0, p1[0] - p0[0] - 2)}" height="${Math.max(0, p1[1] - p0[1] - 2)}" fill="${m.k === "f" ? "#DCE3B5" : "#D6DDAE"}" stroke="#7E8752" stroke-width=".7"/>`; }).join("") : "";
+    return `<g pointer-events="none"><rect x="${a[0]}" y="${a[1]}" width="${b[0] - a[0]}" height="${b[1] - a[1]}" fill="${FLCOL[r.fk] || "#DDD"}" fill-opacity=".8" stroke="#8A6D2F" stroke-width="1" stroke-dasharray="5 3"/>${ageMats}<text x="${c[0]}" y="${c[1]}" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#5B4A1F">${r.fk === "flAge" ? "小上がり／FL+" + (r.h || 300) : "床 " + (FLN[r.fk] || "")}</text><text x="${c[0]}" y="${c[1] + 13}" text-anchor="middle" style="font-size:9px;font-weight:700;fill:#5B4A1F">${r.fk === "flAge" ? (AGEFIN[r.fin] || "畳") + " " : ""}${fmt(area, 1)}㎡</text></g>`;
   };
 
   // 囲みの編集で床の範囲を開いた時、状態を引き継がない（畳に化けないように）
@@ -19078,7 +19081,11 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
         var col = r.za ? (r.det.m === "age" ? "#9DBE8C" : r.det.m === "pura" ? "#B8CCE4" : "#DCBE8C") : (r.det.t === 30 ? "#CE8F35" : "#DFA95E");
         var l1 = r.za ? recLabel138(r).split("・")[0] : "無垢板" + (r.det.t || 15) + "mm";
         var l2 = r.za ? finLabel(r.det.fin) : optLabel(SP, r.det.sp) + "・" + optLabel(MFIN, r.det.fin);
-        return "<g pointer-events='none'><rect x='" + a[0] + "' y='" + a[1] + "' width='" + (b[0] - a[0]) + "' height='" + (b[1] - a[1]) + "' fill='" + col + "' fill-opacity='.8' stroke='#8A6D2F' stroke-width='1' stroke-dasharray='5 3'/><text x='" + c[0] + "' y='" + c[1] + "' text-anchor='middle' style='font-size:11px;font-weight:800;fill:#5B4A1F'>" + l1 + "</text><text x='" + c[0] + "' y='" + (c[1] + 13) + "' text-anchor='middle' style='font-size:9px;font-weight:700;fill:#5B4A1F'>" + l2 + " " + fmt(A, 1) + "㎡</text></g>";
+        var mats66 = "";
+        if (r.za && r.det && r.det.m === "age" && r.det.fin === "tatami" && typeof tatTile === "function"){
+          mats66 = tatTile(r.x1 - r.x0, r.y1 - r.y0).map(function(m){ var p0 = P([r.x0 + m.x, r.y0 + m.y]), p1 = P([r.x0 + m.x + m.w, r.y0 + m.y + m.h]); return "<rect x='" + (p0[0] + 1) + "' y='" + (p0[1] + 1) + "' width='" + Math.max(0, p1[0] - p0[0] - 2) + "' height='" + Math.max(0, p1[1] - p0[1] - 2) + "' fill='" + (m.k === "f" ? "#DCE3B5" : "#D6DDAE") + "' stroke='#7E8752' stroke-width='.7'/>"; }).join("");
+        }
+        return "<g pointer-events='none'><rect x='" + a[0] + "' y='" + a[1] + "' width='" + (b[0] - a[0]) + "' height='" + (b[1] - a[1]) + "' fill='" + col + "' fill-opacity='.8' stroke='#8A6D2F' stroke-width='1' stroke-dasharray='5 3'/>" + mats66 + "<text x='" + c[0] + "' y='" + c[1] + "' text-anchor='middle' style='font-size:11px;font-weight:800;fill:#5B4A1F'>" + l1 + "</text><text x='" + c[0] + "' y='" + (c[1] + 13) + "' text-anchor='middle' style='font-size:9px;font-weight:700;fill:#5B4A1F'>" + l2 + " " + fmt(A, 1) + "㎡</text></g>";
       }
       return null;
     };
