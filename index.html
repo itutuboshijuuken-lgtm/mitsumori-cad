@@ -38517,7 +38517,8 @@ body.gz451z #plan *{shape-rendering:optimizeSpeed!important;text-rendering:optim
       var T = HB.__planT; if (!T) return;
       var P = function(x, y){ return [x * T.s + T.ox, y * T.s + T.oy]; }, g = "";
       if (r){ var A = axis(q), a = A.h ? P(r[0], A.c) : P(A.c, r[0]), b = A.h ? P(r[1], A.c) : P(A.c, r[1]);
-        g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#F28C28" stroke-width="7" stroke-linecap="butt" opacity=".85"/>'; }
+        g += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#FEFEFE" stroke-width="10" stroke-linecap="round" opacity="0.95"/>';
+        g += '<line class="segB630" x1="' + a[0] + '" y1="' + a[1] + '" x2="' + b[0] + '" y2="' + b[1] + '" stroke="#00B0F0" stroke-width="6" stroke-linecap="butt" opacity=".85"/>'; }
       if (drag && drag.q){ var a2 = P(drag.q[0], drag.q[1]), b2 = P(drag.q[2], drag.q[3]); g += '<line x1="' + a2[0] + '" y1="' + a2[1] + '" x2="' + b2[0] + '" y2="' + b2[1] + '" stroke="#D32F2F" stroke-width="8" stroke-linecap="butt" opacity=".7"/>'; }
       if (g){ var ns = "http://www.w3.org/2000/svg", el = document.createElementNS(ns, "g"); el.id = "seg460"; el.setAttribute("pointer-events", "none"); el.innerHTML = g; sv.appendChild(el); }
     } catch(e){}
@@ -43453,10 +43454,85 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{positio
 
 <style id="cad629css">
 /* CAD-629: 置く物のパネルは中でスクロール（はみ出し防止） */
-#stM #toolCh, #stM #toolCh2, #stM #toolCh3, #stM #partCh{overflow-y:auto!important;max-height:58vh;-webkit-overflow-scrolling:touch}
+#stM #toolCh, #stM #toolCh2, #stM #toolCh3, #stM #partCh{overflow:visible!important;max-height:none!important}
 /* CAD-629: 閉じるは右上の小さい×に統一（パネルの先頭に sticky で残す） */
 .xClose629{position:fixed;z-index:999;width:30px;height:30px;min-width:30px;min-height:30px;max-width:30px;border-radius:50%;border:1.5px solid #92754e;background:#fffaf0;color:#5B4A2A;font-size:16px;font-weight:900;line-height:1;padding:0;pointer-events:auto;box-shadow:0 1px 4px rgba(70,50,20,.3)}
 /* CAD-629: おまかせは棚の下の細い帯（でかい枠にしない） */
 #oak556 .omakaseBar629{display:block;width:calc(100% - 10px);margin:0 5px 5px;height:auto!important;min-height:38px!important;max-height:52px;border:1.5px solid #92754e;border-radius:9px;background:#60442b;color:#fff8ea;font-size:14px;font-weight:900;padding:5px 8px}
 #oak556 .omakaseBar629 small{display:block;font-size:10.5px;font-weight:700;color:#e8d9bd;margin-top:1px}
 </style>
+
+<style id="cad630css">
+#seg460 .segB630{animation:segBk630 .9s ease-in-out infinite}
+@keyframes segBk630{0%,100%{opacity:1}50%{opacity:.12}}
+#stM #toolCh:not([hidden]), #stM #toolCh2:not([hidden]), #stM #toolCh3:not([hidden]), #stM #partCh:not([hidden]){display:flex!important;flex-wrap:wrap!important;gap:6px!important;align-content:flex-start!important}
+#stM #toolCh>span, #stM #toolCh2>span, #stM #toolCh3>span, #stM #partCh>span{flex:0 0 100%!important}
+#stM #toolCh button.btn325i, #stM #toolCh2 button.btn325i, #stM #toolCh3 button.btn325i, #stM #partCh button.btn325i{flex:0 0 calc(25% - 5px)!important;width:calc(25% - 5px)!important;height:78px!important;min-height:78px!important;max-height:78px!important;padding:2px!important}
+#stM #toolCh button.btn325i .lb325, #stM #toolCh2 button.btn325i .lb325, #stM #toolCh3 button.btn325i .lb325, #stM #partCh button.btn325i .lb325{font-size:11px!important}
+.branch630{flex:0 0 100%;display:flex;gap:6px;flex-wrap:wrap}
+.branch630 button{flex:1 1 auto;height:36px;min-height:36px;border-radius:9px;border:1.5px solid #8a6d4f;background:#f3e8d5;color:#4a3826;font-size:12.5px;font-weight:700}
+.branch630 button.on630{background:#60442b;color:#ffe9bd;border-color:#60442b}
+body #stM #toolCh button.btn325i, body #stM #toolCh2 button.btn325i, body #stM #toolCh3 button.btn325i, body #stM #partCh button.btn325i{min-height:68px!important;height:68px!important;max-height:68px!important}
+#stM #toolCh>span, #stM #toolCh2>span, #stM #toolCh3>span, #stM #partCh>span{font-size:11.5px!important;line-height:1.25!important;padding:1px 2px!important;margin:0!important}
+</style>
+<script id="cad630branch">
+(function () {
+  var PANELS = ["toolCh", "toolCh2", "toolCh3", "partCh"];
+  function sections(p) {
+    var kids = Array.prototype.slice.call(p.children);
+    var secs = [], cur = null;
+    kids.forEach(function (el) {
+      if (el.tagName === "SPAN" && el.textContent.trim() && !el.querySelector("button")) {
+        cur = { name: el.textContent.trim(), head: el, items: [] };
+        secs.push(cur);
+      } else if (el.tagName === "BUTTON") {
+        if (!cur) { cur = { name: "", head: null, items: [] }; secs.push(cur); }
+        cur.items.push(el);
+      }
+    });
+    return secs.filter(function (x) { return x.items.length > 0; });
+  }
+  function apply(p) {
+    try {
+      if (p.hidden) return;
+      var btns = p.querySelectorAll("button.btn325i, button.chip, button");
+      var secs = sections(p);
+      var sig = secs.map(function (x) { return x.name + ":" + x.items.length; }).join("|") + "#" + btns.length;
+      if (p.dataset.sig630 === sig) return;
+      p.dataset.sig630 = sig;
+      var old = p.querySelector(".branch630");
+      if (old) old.remove();
+      secs.forEach(function (x) { x.items.forEach(function (b) { b.style.display = ""; }); if (x.head) x.head.style.display = ""; });
+      var named = secs.filter(function (x) { return x.name; });
+      if (btns.length > 12 && named.length >= 2) {
+        var bar = document.createElement("div");
+        bar.className = "branch630";
+        named.forEach(function (x, i) {
+          var c = document.createElement("button");
+          c.type = "button"; c.textContent = x.name;
+          if (i === 0) c.className = "on630";
+          c.addEventListener("click", function () {
+            bar.querySelectorAll("button").forEach(function (b2) { b2.classList.remove("on630"); });
+            c.classList.add("on630");
+            secs.forEach(function (y) {
+              var on = (y === x);
+              y.items.forEach(function (b) { b.style.display = on ? "" : "none"; });
+              if (y.head) y.head.style.display = "none";
+            });
+          });
+          bar.appendChild(c);
+        });
+        p.insertBefore(bar, p.firstChild);
+        secs.forEach(function (y, i) {
+          var on = (i === 0);
+          y.items.forEach(function (b) { b.style.display = on ? "" : "none"; });
+          if (y.head) y.head.style.display = "none";
+        });
+      }
+    } catch (e) {}
+  }
+  function tick() { PANELS.forEach(function (id) { var p = document.getElementById(id); if (p) apply(p); }); }
+  setInterval(tick, 900);
+  try { new MutationObserver(tick).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "class"] }); } catch (e) {}
+})();
+</script>
