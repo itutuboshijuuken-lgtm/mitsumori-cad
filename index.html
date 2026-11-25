@@ -5428,6 +5428,7 @@ function closePlaceActions24(){
   $("contextPoint24")?.remove();
 }
 function showPlaceActions(at,exactHost){
+  if (typeof enclMode !== "undefined" && enclMode && typeof encl !== "undefined" && encl && encl.r) return false;
   if (HB.__nbtut || !HB.__pageM || !S.edges || (!exactHost && HB.__armedAny?.())) return false;
   const near=exactHost ? {h:exactHost,...segDist(at,...hostSeg(exactHost))} : nearestHost(at);
   const distance=near && wallTapPx175(at,near.h,near.t);
@@ -21144,6 +21145,7 @@ if (typeof module !== "undefined" && module.exports) module.exports = {polyOf, a
     HB.__floorArm = null; HB.__zaActive138 = false; HB.__flBlinkChip140 = null;
     try { sel = null; drawSelBar(); } catch(e){}
     if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(e){} }
+    try { closePlaceActions24(); } catch(e){}
     enclMode = true;
     try { document.body.classList.add("enclmode"); } catch(e){}
     encl = { r: { x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, ax0: false, ax1: false, ay0: false, ay1: false },
@@ -21644,6 +21646,7 @@ CAD-176 が部屋バーを先に開き、CAD-177 の入口が「部屋バー表�
     HB.__floorArm = null; HB.__zaActive138 = false; HB.__flBlinkChip140 = null;
     try { sel = null; drawSelBar(); } catch(e){}
     if (HB.__closeRoom176){ try { HB.__closeRoom176(); } catch(e){} }
+    try { closePlaceActions24(); } catch(e){}
     enclMode = true;
     try { document.body.classList.add("enclmode"); } catch(e){}
     encl = { r: { x0: r.x0, y0: r.y0, x1: r.x1, y1: r.y1, ax0: false, ax1: false, ay0: false, ay1: false },
@@ -21721,8 +21724,6 @@ enclReset のラップと MutationObserver と保険タイマーで行い、切�
 (function(){
   "use strict";
   var css = [
-    "body.enclEdit185 header.top{display:none!important}",
-    "body.enclEdit185 #stM .mtools,body.enclEdit185 #stM #planBar{display:none!important}",
     "body.fsDraw.enclEdit185 #stM #enclBar{position:absolute;left:6px;right:6px;bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:30}"
   ].join("\n");
   var sty = document.createElement("style"); sty.id = "cad185Sty"; sty.textContent = css;
@@ -21759,7 +21760,8 @@ enclReset のラップと MutationObserver と保険タイマーで行い、切�
       document.body.classList.toggle("enclEdit185", on);
       try {
         if (on){
-          document.documentElement.style.setProperty("--hdrH", "0px");
+          var hd2 = document.querySelector("header.top");
+          document.documentElement.style.setProperty("--hdrH", (hd2 ? hd2.offsetHeight : 100) + "px");
         } else {
           var hd = document.querySelector("header.top");
           document.documentElement.style.setProperty("--hdrH", (hd ? hd.offsetHeight : 100) + "px");
@@ -43816,5 +43818,60 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } catch(e){}
   }
   add(); setTimeout(add, 1500); setTimeout(add, 4000);
+})();
+</script>
+
+<script id="cad641scroll">
+/* CAD-641: 選んだ時に道具棚(oak556)が隠れて図面の枠(slotM)が一瞬伸び、
+   その瞬間のレイアウトでブラウザが図面のスクロール位置を 0 に戻してしまう
+   （図面が上にビクッと跳ぶ）。チェック等の見張りが後から触っても同じ事が起きる。
+   棚や見張りの出し入れ自体は変えず、表示位置(PV)が変わっていないのに
+   スクロールだけ 0 へ飛んだ時だけ、直前の位置へ戻す。本物の指が図面に
+   触れている間と、PV（拡大・中心）が変わった時は一切触らない。 */
+(function(){
+  "use strict";
+  var fingers = 0, good = null, running = false;
+  function getCard(){ var pl = document.getElementById("plan"); return pl ? pl.parentNode : null; }
+  document.addEventListener("pointerdown", function(e){
+    if (e.pointerType === "touch" || e.pointerType === "pen") fingers++;
+  }, true);
+  ["pointerup", "pointercancel"].forEach(function(ev){
+    document.addEventListener(ev, function(e){
+      if ((e.pointerType === "touch" || e.pointerType === "pen") && fingers > 0) fingers--;
+    }, true);
+  });
+  function fp(){ try { return (typeof PV !== "undefined") ? (PV.z + "|" + PV.cx + "|" + PV.cy) : ""; } catch(e){ return ""; } }
+  function loop(){
+    if (!running) return;
+    try {
+      if (!(window.HB && HB.__pageM)){ running = false; good = null; return; }
+      if (fingers === 0){
+        var c = getCard();
+        if (c){
+          var f = fp(), st = c.scrollTop, sl = c.scrollLeft;
+          if (!good || good.f !== f){
+            good = { f: f, st: st, sl: sl };
+          } else if (st !== good.st || sl !== good.sl){
+            if (st === 0 && good.st > 0 && good.st <= c.scrollHeight - c.clientHeight + 2) c.scrollTop = good.st;
+            else if (st !== 0) good.st = st;
+            if (sl === 0 && good.sl > 0 && good.sl <= c.scrollWidth - c.clientWidth + 2) c.scrollLeft = good.sl;
+            else if (sl !== 0) good.sl = sl;
+          }
+        }
+      }
+    } catch(e){}
+    requestAnimationFrame(loop);
+  }
+  var orig = window.drawPlan;
+  if (typeof orig !== "function" || orig.__w641) return;
+  var wrapped = function(){
+    var r = orig.apply(this, arguments);
+    try {
+      if (window.HB && HB.__pageM && !running){ running = true; requestAnimationFrame(loop); }
+    } catch(e){}
+    return r;
+  };
+  wrapped.__w641 = true;
+  window.drawPlan = wrapped;
 })();
 </script>
