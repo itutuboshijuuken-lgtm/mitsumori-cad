@@ -1434,6 +1434,9 @@ const WORK = [
   ["ltCeilNew", "シーリングライト 新設（配線・引掛シーリング、器具別）", "円/か所", 0, 12000],
   ["ltCeilSwap", "シーリングライト 交換（取付のみ、器具別）", "円/か所", 0, 7000],
   ["ltCeilDel", "シーリングライト 撤去", "円/か所", 0, 3000],
+  ["ltRailNew", "ライティングレール 新設（レール1.5m・スポット3灯込み）", "円/か所", 0, 28000],
+  ["ltRailSwap", "ライティングレール 交換（レール・スポット3灯込み）", "円/か所", 0, 20000],
+  ["ltRailDel", "ライティングレール 撤去", "円/か所", 0, 3000],
   ["fxAcc_gray", "アクセントクロス（グレー系）差額", "円/㎡", 0, 1500],
   ["fxAcc_dark", "アクセントクロス（ダーク系）差額", "円/㎡", 0, 1500],
   ["fxAcc_tile", "アクセントクロス（タイル調）差額", "円/㎡", 0, 3000],
@@ -6903,7 +6906,7 @@ function drawTradeBox(){
   const b = $("tradeBox"); if (!b) return; const tr = HB.__trade;
   if (tr === "elec"){
     const L = S.lights || [], cnt = (k, a) => L.filter(l => l.k === k && (l.act || "new") === a).length;
-    const lt = [["down", "ダウンライト"], ["ceil", "シーリングライト"]].map(([k, n]) => { const ps = [["new", "新設"], ["swap", "交換"], ["remove", "撤去"]].filter(([a]) => cnt(k, a)).map(([a, an]) => `${an}${cnt(k, a)}`); return ps.length ? `<div>・${n}：${ps.join("・")}</div>` : ""; }).join("");
+    const lt = [["down", "ダウンライト"], ["ceil", "シーリングライト"], ["rail", "ライティングレール"]].map(([k, n]) => { const ps = [["new", "新設"], ["swap", "交換"], ["remove", "撤去"]].filter(([a]) => cnt(k, a)).map(([a, an]) => `${an}${cnt(k, a)}`); return ps.length ? `<div>・${n}：${ps.join("・")}</div>` : ""; }).join("");
     const ac = (S.tenken || []).filter(o => o.k === "acout").length, oc = (S.fx || []).filter(f => f.k === "outlet").length, sw = (S.fx || []).filter(f => f.k === "switch").length, den = (S.extras || []).find(e => e.k === "denki");
     b.innerHTML = `<div class="card" style="border:2px solid #FFD400;background:#FFFBE6"><b style="font-size:16px">⚡ 電気の工事（あなたの担当）</b><div style="font-size:14px;margin-top:6px;line-height:1.6">${lt}${ac ? `<div>・エアコン用コンセント（天井付け）：${ac}か所</div>` : ""}${oc ? `<div>・コンセント増設：${oc}か所</div>` : ""}${sw ? `<div>・スイッチ増設：${sw}か所</div>` : ""}${!lt && !ac && !oc && !sw ? "<div>図に置いた電気の工事は、まだありません。</div>" : ""}${den ? `<div>・電気工事（追加項目）：取替${den.kae || 0}・増設${den.zou || 0}・移設${den.iso || 0}・照明取付${den.light || 0}</div>` : `<button type="button" id="trAdd" class="btn" style="margin-top:6px;width:100%">＋ 電気工事（取替・移設・分電盤）を追加</button>`}</div></div>`;
     if ($("trAdd")) $("trAdd").onclick = () => { const e = {k: "denki"}; EXT.denki.f.forEach(([f, , , v]) => e[f] = v); Object.assign(e, JSON.parse(JSON.stringify(EXT.denki.d))); S.extras.push(e); save(); drawExtras(); drawTradeBox(); };
@@ -10618,12 +10621,24 @@ function fxPlace(hit){
 }
 // 天井の照明（平面図で置く）：ダウンライト・シーリングライト。新設・撤去・交換を選ぶ
 let ltTool = null;
-const LTN = {down: "DL", ceil: "CL"}, LTA = {new: "新設", remove: "撤去", swap: "交換"};
+const LTN = {down: "DL", ceil: "CL", rail: "レール"}, LTA = {new: "新設", remove: "撤去", swap: "交換"};
 const LTCOL = {new: "#1F2833", remove: "#C62828", swap: "#E8742C"};
 function ltSvg(P, sc){
   return (S.lights || []).map((l, i) => {
     const c = P([l.x, l.y]), r = l.k === "down" ? Math.max(5, 75 * sc) : Math.max(7, 200 * sc), col = LTCOL[l.act || "new"], sw = Math.max(1, 8 * sc);
     const isSel = sel && sel.t === "lt" && sel.i === i;
+    if (l.k === "rail"){
+      /* CAD-622：ライティングレールは実寸のバーで描く（長さ l.len・向き l.dir、無い記録は 1500・横） */
+      const len = (l.len || 1500) * sc, hw = len / 2, horiz = l.dir !== "v";
+      const x1 = horiz ? c[0] - hw : c[0], x2 = horiz ? c[0] + hw : c[0], y1 = horiz ? c[1] : c[1] - hw, y2 = horiz ? c[1] : c[1] + hw;
+      let h = `<g data-lt2="${i}">`;
+      if (isSel) h += `<rect x="${Math.min(x1, x2) - 7}" y="${Math.min(y1, y2) - 7}" width="${Math.abs(x2 - x1) + 14}" height="${Math.abs(y2 - y1) + 14}" fill="#FF00C8" fill-opacity=".07" stroke="#FF00C8" stroke-width="1.2" stroke-dasharray="4 3" pointer-events="none"/>`;
+      h += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${isSel ? "#FF00C8" : col}" stroke-width="${Math.max(3, 30 * sc)}" stroke-linecap="round" opacity=".92"/>`;
+      for (const f of [-0.32, 0, 0.32]){ const sx = c[0] + (horiz ? f * len : 0), sy = c[1] + (horiz ? 0 : f * len); h += `<circle cx="${sx}" cy="${sy}" r="${Math.max(2.5, 60 * sc)}" fill="#fff" stroke="${col}" stroke-width="1.5"/>`; }
+      if (l.act === "remove") h += `<path d="M${x1} ${y1}L${x2} ${y2}" stroke="#C62828" stroke-width="${sw}"/>`;
+      h += `<text x="${c[0]}" y="${horiz ? c[1] + 16 : c[1] + hw + 11}" text-anchor="middle" class="halo" style="font-size:8px;font-weight:800;fill:${col}">レール</text></g>`;
+      return h;
+    }
     let h = `<g data-lt2="${i}">${isSel ? `<circle class="selRingRev" cx="${c[0]}" cy="${c[1]}" r="${r + Math.max(sw * 2, 6)}" fill="#FF00C8" fill-opacity=".08" stroke="#FF00C8" stroke-width="1.2" stroke-dasharray="4 3" pointer-events="none"/>` : ""}<g data-sno="lt348"><circle cx="${c[0]}" cy="${c[1]}" r="${r}" fill="#fff" stroke="${isSel ? "#FF00C8" : col}" stroke-width="${sw}"${l.act === "remove" ? ' stroke-dasharray="' + sw * 2 + " " + sw + '"' : ""}/>`;
     if (l.k === "down") h += `<circle cx="${c[0]}" cy="${c[1]}" r="${r * 0.3}" fill="${col}"/>`;
     else h += `<path d="M${c[0] - r * 0.7} ${c[1]}H${c[0] + r * 0.7}M${c[0]} ${c[1] - r * 0.7}V${c[1] + r * 0.7}" stroke="${col}" stroke-width="${sw}"/>`;
@@ -10648,7 +10663,7 @@ function pickOne(title, opts, cb){
   $("mbox").querySelectorAll("[data-po]").forEach(b => b.onclick = () => { $("modal").hidden = true; cb(b.dataset.po); });
   $("poCan").onclick = () => { $("modal").hidden = true; };
 }
-function ltNear(mm){ let best = -1, bd = 260; (S.lights || []).forEach((l, i) => { const d = Math.hypot(l.x - mm[0], l.y - mm[1]); if (d < bd){ bd = d; best = i; } }); return best; }
+function ltNear(mm){ let best = -1, bd = 260; (S.lights || []).forEach((l, i) => { let d; if (l.k === "rail"){ const len = l.len || 1500, horiz = l.dir !== "v"; const u = horiz ? mm[0] - l.x : mm[1] - l.y, v = horiz ? mm[1] - l.y : mm[0] - l.x, cu = Math.max(-len / 2, Math.min(len / 2, u)); d = Math.hypot(u - cu, v); } else d = Math.hypot(l.x - mm[0], l.y - mm[1]); if (d < bd){ bd = d; best = i; } }); return best; }
 // CAD-147: 新築・増築では「撤去」「交換」を出さない（本人のルール 2026-11-10。新築に既存物はない）
 const ltOpts147 = erase => { const o = [["new", "新設"]]; if (S.mode !== "zo") o.push(["remove", "撤去", "#C62828"], ["swap", "交換", "#B5571A"]); if (erase) o.push(["erase", "消す", "#C62828"]); return o; };
 /* CAD-217：タップ点に一番近い建具（ドア・窓・玄関）の番号を返す。pickCands の建具の
@@ -10733,7 +10748,7 @@ function ltPlanClick(mm){
   if (ltTool && ltNear(mm) < 0){
     let x = Math.round(mm[0] / 5) * 5, y = Math.round(mm[1] / 5) * 5;
     if (HB.__snap207){ const s207 = HB.__snap207.lt(ltTool, mm); x = s207[0]; y = s207[1]; }   /* CAD-207：配置の吸着（並び＞227.5ピッチ＞5mm） */
-    const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push({k: ltTool, x, y, act}); sel = {t: "lt", i: S.lights.length - 1}; HB.__grab476 = "lt" + sel.i; save();   /* CAD-477：照明も置いた直後は選択＋つかめる状態にし、ドラッグ→コントローラーの流れへ統一 */ drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました`); };
+    const put = act => { if (S.mode === "zo" && act !== "new") act = "new"; pushUndo(); S.lights = S.lights || []; S.lights.push(ltTool === "rail" ? {k: ltTool, x, y, act, len: 1500, dir: "h"} : {k: ltTool, x, y, act}); sel = {t: "lt", i: S.lights.length - 1}; HB.__grab476 = "lt" + sel.i; save();   /* CAD-477：照明も置いた直後は選択＋つかめる状態にし、ドラッグ→コントローラーの流れへ統一 */ drawPlan(); toast(`${LTN[ltTool]}（${LTA[act]}）を置きました`); };
     if (HB.__ltAct && HB.__ltAct.k === ltTool){ put(HB.__ltAct.act); return true; }
     if (S.mode === "zo"){ put("new"); return true; } // CAD-164: 新築・増築では状態を聞かない（新設しかない。本人の指示 2026-11-11「DL・CL押したらもう置いたらいい」）
     pickOne(`${LTN[ltTool]}：どうしますか`, ltOpts147(false), act => { HB.__ltAct = {k: ltTool, act}; put(act); drawToolsUI(); });
@@ -10775,9 +10790,9 @@ function fxRows(work, sheet){
   if (areaM("waist")) work("fxWaist", "腰壁", areaM("waist"), "㎡");
   if (sumLen("counter")) work("fxCounter", "カウンター", sumLen("counter"), "m");
   if (sumLen("cshelf")) work("fxCShelf", "カウンター棚", sumLen("cshelf"), "m");
-  const LN = {down: ["ダウンライト", "lt-down"], ceil: ["シーリングライト", "lt-ceil"]};
+  const LN = {down: ["ダウンライト", "lt-down"], ceil: ["シーリングライト", "lt-ceil"], rail: ["ライティングレール", "lt-rail"]};
   (S.lights || []).forEach(l => {});
-  ["down", "ceil"].forEach(k => ["new", "swap", "remove"].forEach(a => { const n = (S.lights || []).filter(l => l.k === k && (l.act || "new") === a).length; if (n){ const key = {"down-new": "ltDownNew", "down-swap": "ltDownSwap", "down-remove": "ltDownDel", "ceil-new": "ltCeilNew", "ceil-swap": "ltCeilSwap", "ceil-remove": "ltCeilDel"}[k + "-" + a]; work(key, `${LTN[k]} ${LTA[a]}`, n, "か所"); } }));
+  ["down", "ceil", "rail"].forEach(k => ["new", "swap", "remove"].forEach(a => { const n = (S.lights || []).filter(l => l.k === k && (l.act || "new") === a).length; if (n){ const key = {"down-new": "ltDownNew", "down-swap": "ltDownSwap", "down-remove": "ltDownDel", "ceil-new": "ltCeilNew", "ceil-swap": "ltCeilSwap", "ceil-remove": "ltCeilDel", "rail-new": "ltRailNew", "rail-swap": "ltRailSwap", "rail-remove": "ltRailDel"}[k + "-" + a]; work(key, `${LTN[k]} ${LTA[a]}`, n, "か所"); } }));
   if (sumLen("rod")) work("fxRod", "カーテンレール", sumLen("rod"), "m");
   if (cnt("alarm")) work("fxAlarm", "住宅用火災警報器", cnt("alarm"), "か所");
   if (cnt("hanger")) work("fxHanger", "室内物干し", cnt("hanger"), "か所");
@@ -12565,16 +12580,18 @@ function drawSelBarL(bar){
   if (HOLD.dir && bar.dataset.k === sel.t + sel.i && bar.firstElementChild){ const t = bar.querySelector(".r1 > span"); if (t) t.textContent = title; return; }
   bar.dataset.k = sel.t + sel.i;
   bar.innerHTML = `<div class="r1"><span>${title}</span><span class="r1b"><button id="sbOk" type="button" style="background:#2563B0;color:#fff;border-color:#2563B0;min-width:72px;min-height:36px;font-size:15px">OK</button><button id="sbDel" class="del" type="button">消す</button><button id="sbClose" type="button" aria-label="選択をやめる">✕</button></span></div>
-    <div class="sbw"><div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbLS" type="button">${LTA[l.act || "new"]} ▸</button><button id="sbLK" type="button">${l.k === "down" ? "CLに変える" : "DLに変える"}</button></div>
+    <div class="sbw"><div class="sbL o"><button id="sbStep" class="stp" type="button">${selStep}mm</button><button id="sbLS" type="button">${LTA[l.act || "new"]} ▸</button><button id="sbLK" type="button">${l.k === "down" ? "CLに変える" : l.k === "ceil" ? "レールに変える" : "DLに変える"}</button></div>
     <div class="dpad"><button class="ar" data-ar="0,-1" type="button" aria-label="上へ" style="grid-area:1/2">▲</button><button class="ar" data-ar="-1,0" type="button" aria-label="左へ" style="grid-area:2/1">◀</button><button class="ar" data-ar="1,0" type="button" aria-label="右へ" style="grid-area:2/3">▶</button><button class="ar" data-ar="0,1" type="button" aria-label="下へ" style="grid-area:3/2">▼</button></div>
-    <div class="sbR"><span></span><button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
+    <div class="sbR">${l.k === "rail" ? `<button id="sbLRot" type="button">回転</button><button id="sbLLen" type="button">長さ${(l.len || 1500) / 1000}m</button>` : "<span></span>"}<button id="sbUndo" type="button">↶<small>戻す</small></button></div></div>`;
   $("sbClose").onclick = () => { sel = null; drawPlan(); };
   $("sbOk").onclick = () => { sel = null; HB.__put = null; HB.__sashAct = null; HB.__ltAct = null; try { ltTool = null; } catch(er){} try { drawToolsUI(); } catch(er){} drawPlan(); toast("決定しました"); };
   $("sbUndo").onclick = () => $("undoBtn").click();
   $("sbDel").onclick = () => { pushUndo(); S.lights.splice(sel.i, 1); sel = null; save(); drawPlan(); };
   $("sbStep").onclick = () => { selStep = selStep === 5 ? 10 : selStep === 10 ? 100 : selStep === 100 ? 222.5 : selStep === 222.5 ? 455 : 5; bar.dataset.k = ""; drawSelBar(); };
   $("sbLS").onclick = () => { pushUndo(); const A = S.mode === "zo" ? ["new"] : ["new", "remove", "swap"]; l.act = A[(A.indexOf(l.act || "new") + 1) % A.length]; save(); bar.dataset.k = ""; drawPlan(); };
-  $("sbLK").onclick = () => { pushUndo(); l.k = l.k === "down" ? "ceil" : "down"; save(); bar.dataset.k = ""; drawPlan(); };
+  $("sbLK").onclick = () => { pushUndo(); l.k = l.k === "down" ? "ceil" : l.k === "ceil" ? "rail" : "down"; if (l.k === "rail"){ if (!l.len) l.len = 1500; if (!l.dir) l.dir = "h"; } save(); bar.dataset.k = ""; drawPlan(); };
+  if ($("sbLRot")) $("sbLRot").onclick = () => { pushUndo(); l.dir = l.dir === "v" ? "h" : "v"; save(); bar.dataset.k = ""; drawPlan(); };
+  if ($("sbLLen")) $("sbLLen").onclick = () => { pushUndo(); const LS = [1000, 1500, 2000, 2500]; l.len = LS[(LS.indexOf(l.len || 1500) + 1) % LS.length]; save(); bar.dataset.k = ""; drawPlan(); };
   const nudge = (dir, first) => { if (first){ pushUndo(); HOLD.lock = false; } else if (HOLD.lock) return; const [ax, ay] = dir.split(",").map(Number); const nx = l.x + ax * selStep, ny = l.y + ay * selStep; if (!HB.__g148 || HB.__g148.in(nx, ny)){ l.x = nx; l.y = ny; } save(); drawPlan(); };
   bar.querySelectorAll("[data-ar]").forEach(b => {
     if (b.dataset.ar === HOLD.dir) b.classList.add("on");
