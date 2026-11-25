@@ -5919,9 +5919,9 @@ const top = (withPart ? [["part", "間仕切り", p.kind === "part"]] : []).conc
 let h = `<div class="sub2">① 種類</div><div class="chips">${top.map(([k, n, on]) => `<button data-pk="${k}" aria-pressed="${on}" type="button">${n}</button>`).join("")}</div>`;
 if (inTg) h += `<div class="sub2" style="margin-top:8px">建具の種類（ドア・引き戸・クローゼット）</div><div class="chips">${KINDS.filter(([k]) => TG.includes(k)).map(([k, n]) => `<button data-pk="${k}" aria-pressed="${p.kind === k}" type="button">${n}</button>`).join("")}</div>`;
   if (p.kind === "part") return h;
-  if (p.kind === "hiki") h += `<div class="sub2" style="margin-top:8px">② 形と枠</div>` + pkRow([["kata", "片引き"], ["chigai", "引違い"]], p.form, "pf") + pkRow([["fixed", "固定枠"], ["casing", "ケーシング枠"], ["outset", "アウトセット"]], p.frame, "pr");
-  else if (p.kind === "door") h += `<div class="sub2" style="margin-top:8px">② 枠</div>` + pkRow([["fixed", "固定枠"], ["casing", "ケーシング枠"]], p.frame === "casing" ? "casing" : "fixed", "pr");
-  else if (p.kind === "win") h += `<div class="sub2" style="margin-top:8px">② 窓の種類</div>` + pkRow(WIN_CATS.map(c => [c, c]), p.wcat, "pw");
+  if (p.kind === "hiki") h += `<div class="sub2" style="margin-top:8px">② 形と枠</div>` + pkRow([["kata", "片引き"], ["chigai", "引違い"]], p.form, "pf") + pkRow([["fixed", "固定枠"], ["casing", "ケーシング枠"], ["outset", "アウトセット"]], p.frame, "pr") + `<p style="margin:4px 2px 0;font-size:11.5px;color:var(--sub);line-height:1.45">固定枠＝枠が見える収まり。ケーシング枠＝枠と壁の境目に額縁が付く収まり。アウトセット＝壁の外側に戸を取り付ける形です</p>`;
+  else if (p.kind === "door") h += `<div class="sub2" style="margin-top:8px">② 枠</div>` + pkRow([["fixed", "固定枠"], ["casing", "ケーシング枠"]], p.frame === "casing" ? "casing" : "fixed", "pr") + `<p style="margin:4px 2px 0;font-size:11.5px;color:var(--sub);line-height:1.45">固定枠＝枠が見える収まり。ケーシング枠＝枠と壁の境目に額縁が付く収まりです</p>`;
+  else if (p.kind === "win") h += `<div class="sub2" style="margin-top:8px">② 窓の種類</div>` + pkRow(WIN_CATS.map(c => [c, c]), p.wcat, "pw") + `<p style="margin:4px 2px 0;font-size:11.5px;color:var(--sub);line-height:1.45">FIX＝開かない窓（はめ殺し）です</p>`;
   else if (p.kind === "shut") h += `<div class="sub2" style="margin-top:8px">② 駆動</div>` + pkRow([["手動", "手動"], ["電動", "電動"], ["オーバースライダー", "オーバースライダー"]], p.drive, "pd");
   h += `<div class="sub2" style="margin-top:8px">③ 大きさ</div>${["door", "hiki", "closet", "ext", "win"].includes(p.kind) ? `<p class="hint" style="margin:4px 2px 0">寸法は枠外寸法です（窓と同じ物差し）</p>` : ""}<div style="display:grid;gap:6px;margin-top:4px">${pickList(p).map(([x, j]) => `<button class="set" data-sz="${j}" type="button"><span style="display:flex;gap:8px;align-items:center">${sashIcon(x.cat, x.name)}<span>${x.cat === "室内ドア" ? x.name + (p.frame === "outset" && p.kind === "hiki" ? "（アウトセット）" : p.frame === "casing" ? "（ケーシング枠）" : "") : x.cat + " " + x.name}<small>${x.w}×${x.h}</small></span></span><b>選ぶ</b></button>`).join("")}<button class="set" data-szc="1" type="button"><span>寸法を入れる<small>幅と高さを数字で</small></span><b>入力</b></button></div>`;
   return h;
@@ -12072,7 +12072,7 @@ if (document.readyState === "loading") document.addEventListener("DOMContentLoad
     box.appendChild(b); box.style.gridTemplateRows = "repeat(4,34px)";
     b.onclick = () => {
       const set = v => { pushUndo(); if (v > 0) s.hisashi = v; else delete s.hisashi; save(); drawPlan(); toast(v > 0 ? `庇 出${v}mm を付けました` : "庇をなしにしました"); };
-      pickOne("庇の出幅（窓の上）", [["0", "なし", "#C62828"], ["300", "300"], ["450", "450"], ["600", "600"], ["900", "900"], ["pad", "数字で"]], v => {
+      pickOne("庇（窓の上の小さい屋根）の出幅", [["0", "なし", "#C62828"], ["300", "300"], ["450", "450"], ["600", "600"], ["900", "900"], ["pad", "数字で"]], v => {
         if (v === "pad"){ openPad({title: "庇の出幅", unit: "mm", value: s.hisashi || 600, done: x => { if (x != null) set(Math.max(0, x)); }}); return; }
         set(+v);
       });
@@ -43773,5 +43773,26 @@ body.hasAux632 #auxBtn632{display:inline-flex}
     } catch (e) {}
   }
   setInterval(tryFit, 800);
+})();
+</script>
+
+<style id="cad637css">
+#toolCh .grp253, #toolCh2 .grp253, #toolCh3 .grp253, #partCh .grp253, #grpSub .grp253{background:#2A1D11;color:#FFE9B8;border-radius:8px;padding:3px 10px;font-size:12px}
+.note637{flex:0 0 100%;background:rgba(36,26,18,.94);color:#FFE9B8;border-radius:8px;padding:3px 10px;font-size:11.5px;line-height:1.45}
+</style>
+<script id="cad637note">
+(function(){
+  function tick(){
+    try {
+      var tc = document.getElementById("toolCh");
+      if (!tc || tc.getBoundingClientRect().width <= 0 || tc.querySelector(".note637")) return;
+      var txt = null;
+      if (tc.querySelector('[data-tool="tsuri"]')) txt = "上吊り＝下にレールがなく、上から吊るす引き戸です";
+      else if (tc.querySelector('[data-tool="winF"]')) txt = "FIX＝開かない窓（はめ殺し）です";
+      if (!txt) return;
+      var d = document.createElement("div"); d.className = "note637"; d.textContent = txt; tc.appendChild(d);
+    } catch(e){}
+  }
+  setInterval(tick, 600); tick();
 })();
 </script>
