@@ -42534,3 +42534,13 @@ html body :is(#stM #selBar,#st6 #fxBar) .cad606StepPair button:is(#sbStep,#fxSte
     try { if (HB.__closeRoom176) HB.__closeRoom176(); } catch(err){}
   }, true);
 })();</script>
+
+<style id="cad613roombar">/* CAD-613: 部屋バーも図面に被せない。間仕切りパネル（selBar）と同じ型：フロー内配置＋圧縮。素材・色は変更しない。 */
+body:not(.nbtutRun) #stM:has(#roomBar176:not([hidden])) #roomBar176{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;bottom:auto!important;flex:0 0 auto;max-height:46dvh!important;overflow-y:auto!important;margin:0!important;padding:6px!important;z-index:auto!important}
+body:not(.nbtutRun) #stM:has(#roomBar176:not([hidden])) #slotM{position:relative!important;inset:auto!important;flex:1 1 0!important;min-height:0!important}
+body:not(.nbtutRun) #stM #roomBar176 .r1 button{min-height:36px!important}
+body:not(.nbtutRun) #stM #roomBar176 .rmDims176 button{min-height:38px!important}
+body:not(.nbtutRun) #stM #roomBar176 .rmFl176 button{min-height:36px!important}
+body:not(.nbtutRun) #stM #roomBar176 .rmMulti375>button{min-height:38px!important}
+body:not(.nbtutRun) #stM #roomBar176 [data-flgrp612]{min-height:38px!important}
+</style>
