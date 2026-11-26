@@ -47613,3 +47613,87 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.ZSYM = { v: VER, fill: fill, boxes: boxes };
 })();
 </script>
+<script>
+/* ---------- CAD-675：新しい図面の「印刷」（2026-11-27 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい図面（#zumenRoot）の下の列に［印刷］を足す。押すと、図面を紙の上で正しい縮尺（1/100）で印刷する。
+     紙はA4（横長の家は横、縦長の家は縦）。A4に入らない時はA3、それでも入らない時は1/200にして、図面枠の「S=1:100」の字も合わせて変える。
+   ・線の太さは紙の上の太さで決め直す（壁0.4mm前後・寸法線や細い線0.1mm前後。画面の拡大率に関係なく同じ）。字は図面と同じ大きさのまま（1/100で約2mm）。
+   ・印刷するのは図面の絵だけ（ボタン・案内・選んだ印は入れない）。保存データには触らない。保存キーは増やさない。
+   ・⋯の「新しい歩く画面（試験中）」が「入」の時だけ。切なら何も足さない。 */
+(function(){
+  "use strict";
+  if (window.ZPRINT) return;
+  var VER = 1, NS = "http://www.w3.org/2000/svg", PX = 18;   /* 画面の1px ＝ 紙の0.18mm（1/100の時、図面の18mm） */
+  var PAPERS = [["A4", 297, 210], ["A3", 420, 297]], MARGIN = 12;
+  function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
+  function zumen(){ var z = window.ZUMEN; return (z && typeof z.isOpen === "function") ? z : null; }
+  function warn(m, e){ try { console.warn("[ZPRINT] " + m, e || ""); } catch(x){} }
+  var css = document.createElement("style"); css.id = "zPrintCss";
+  css.textContent = "#zPrint{display:none}@media print{html,body{background:#fff!important}body>*:not(#zPrint){display:none!important}#zPrint{display:block!important;position:static!important}#zPrint svg{display:block}}";
+  document.head.appendChild(css);
+  var page = document.createElement("style"); page.id = "zPrintPage"; document.head.appendChild(page);
+
+  /* 紙と縮尺を決める。ext＝図面の範囲（mm）[x0,y0,x1,y1] */
+  function plan(ext){
+    var w = ext[2] - ext[0], h = ext[3] - ext[1], land = w >= h, scales = [100, 200], i, j;
+    for (j = 0; j < scales.length; j++) for (i = 0; i < PAPERS.length; i++){
+      var P = PAPERS[i], pw = land ? P[1] : P[2], ph = land ? P[2] : P[1];
+      if (w / scales[j] <= pw - 2 * MARGIN && h / scales[j] <= ph - 2 * MARGIN) return { paper: P[0], land: land, pw: pw, ph: ph, scale: scales[j] };
+    }
+    var Q = PAPERS[1]; return { paper: "A3", land: land, pw: land ? Q[1] : Q[2], ph: land ? Q[2] : Q[1], scale: Math.ceil(Math.max(w / (Q[1] - 2 * MARGIN), h / (Q[2] - 2 * MARGIN)) / 50) * 50 };
+  }
+  function build(){
+    var root = document.getElementById("zumenRoot"), src = root && root.querySelector('svg[aria-label="平面図"]'), z = zumen();
+    if (!src || !z) return null;
+    var L = null; try { L = z.layout(); } catch(e){ L = null; }
+    if (!L || !L.ok || L.empty || !L.ext) return null;
+    var ext = L.ext, pp = plan(ext), k = pp.scale / 100;
+    var vb = (src.getAttribute("viewBox") || "").split(/[\s,]+/).map(Number), r = src.getBoundingClientRect();
+    var kNow = (vb.length === 4 && r.width > 0 && r.height > 0) ? Math.max(vb[2] / r.width, vb[3] / r.height) : 20;
+    var svg = src.cloneNode(true);
+    svg.removeAttribute("style"); svg.setAttribute("xmlns", NS);
+    svg.setAttribute("viewBox", [ext[0], ext[1], ext[2] - ext[0], ext[3] - ext[1]].join(" "));
+    svg.setAttribute("width", ((ext[2] - ext[0]) / pp.scale).toFixed(2) + "mm"); svg.setAttribute("height", ((ext[3] - ext[1]) / pp.scale).toFixed(2) + "mm");
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    var f = PX * k / kNow;
+    Array.prototype.forEach.call(svg.querySelectorAll("[stroke-width]"), function(el){
+      var w = parseFloat(el.getAttribute("stroke-width")); if (!(w > 0)) return;
+      var inSym = el.closest && el.closest(".zsym"), isText = el.tagName.toLowerCase() === "text";
+      if (isText) return;                                                   /* 字の白抜きは字の大きさに付いているので、そのまま */
+      el.setAttribute("stroke-width", (inSym ? w * PX * k : w * f).toFixed(2));   /* 記号は「画面のpx」で持っているので、紙の太さへ直す */
+      if (el.getAttribute("stroke-dasharray")){ var dv = el.getAttribute("stroke-dasharray").split(/[\s,]+/).map(Number); el.setAttribute("stroke-dasharray", dv.map(function(v){ return (inSym ? v * PX * k : v * f).toFixed(1); }).join(" ")); }
+    });
+    var sym = svg.querySelector(".zsym"); if (sym) sym.setAttribute("class", "zsymP");   /* 印刷では線の太さを図面の単位で持つ（画面用の決まりを外す） */
+    if (pp.scale !== 100) Array.prototype.forEach.call(svg.querySelectorAll("text"), function(t){ if (/S=1:100/.test(t.textContent)) t.textContent = t.textContent.replace("S=1:100", "S=1:" + pp.scale); });
+    return { svg: svg, pp: pp };
+  }
+  function print(){
+    var b = build(); if (!b){ try { if (typeof toast === "function") toast("印刷できる図面がありません"); } catch(e){} return { ok: false }; }
+    var box = document.getElementById("zPrint"); if (box) box.remove();
+    box = document.createElement("div"); box.id = "zPrint";
+    var pp = b.pp, wrap = document.createElement("div");
+    wrap.style.cssText = "width:" + pp.pw + "mm;height:" + (pp.ph - 0.5) + "mm;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:" + MARGIN + "mm;overflow:hidden;background:#fff";
+    wrap.appendChild(b.svg); box.appendChild(wrap); document.body.appendChild(box);
+    page.textContent = "@page{size:" + pp.paper + " " + (pp.land ? "landscape" : "portrait") + ";margin:0}";
+    var done = function(){ try { box.remove(); page.textContent = ""; } catch(e){} window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    setTimeout(function(){ try { window.print(); } catch(e){ warn("print", e); } }, 60);   /* 印刷の画面を閉じたら afterprint で片付ける（次に押した時も、前の物は作り直す） */
+    return { ok: true, paper: pp.paper, land: pp.land, scale: pp.scale };
+  }
+  /* 下の列に［印刷］を足す（とじる・全体 の並び） */
+  function attach(){
+    var root = document.getElementById("zumenRoot"); if (!root || !sw()) return;
+    if (document.getElementById("zPrintBtn")) return;
+    var bot = root.lastElementChild; if (!bot) return;
+    var home = Array.prototype.filter.call(bot.querySelectorAll("button"), function(x){ return x.textContent === "全体"; })[0]; if (!home) return;
+    var b = document.createElement("button"); b.type = "button"; b.id = "zPrintBtn"; b.textContent = "印刷";
+    b.style.cssText = home.style.cssText; b.onclick = function(){ print(); };
+    home.parentNode.insertBefore(b, home.nextSibling);
+  }
+  function detach(){ var b = document.getElementById("zPrintBtn"); if (b) b.remove(); }
+  window.addEventListener("walk2-switch", function(e){ if (e && e.detail && e.detail.on) setTimeout(attach, 0); else detach(); });
+  setInterval(function(){ if (sw()) attach(); else detach(); }, 700);
+  window.ZPRINT = { v: VER, build: build, print: print, plan: plan };
+})();
+</script>
