@@ -44400,3 +44400,693 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   try { afterLoad(); } catch(e){ C = null; warn("起動", e); }
 })();
 </script>
+<script>
+/* ---------- CAD-660：窓口（まどぐち）段階2 ＝ 読む窓口と書く窓口（2026-11-26 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・前提：CAD-659（名札）が先に入っている事。無い時は、この部品は何もしない（read も write も「no-nafuda」を返す）。
+   ・やること
+     1) 読む窓口 MADO.read()：今の階の 壁・面・部屋・物 を「名札つきの一覧」で返す。
+        読むだけ。S も保存データも1文字も書き換えない。返すのは写しなので、受け取った側が書き換えてもアプリのデータは変わらない。
+        部屋の分け方・名前・仕上げ・天井高は、アプリの今の関数（roomsCalc・roomNm・roomFinOf・roomChOf）をそのまま呼ぶ。
+     2) 書く窓口 MADO.write(命令)：物を名札で指して、置く・動かす・消す。毎回、同じ順で行う。
+        下調べ（書き換えない）→ 戻す用の控え（pushUndo）→ 書く → 番号の付け直しと保存（save。中で名札の部品が付け直す）→ 画面へ知らせる。
+        通らない命令が1つでもあれば、何も書かずに理由を返す。
+        段階2で受ける命令：壁の物（置く・動かす・消す）、照明（置く・動かす・消す）、建具（動かす・消す）、設備（動かす・消す）。
+        作る記録は、今の画面（平面図・室内図）で置いた時と同じ形（同じ項目・同じ並び・同じ丸め・同じ初期値）。
+     3) 変わった知らせ：window に "mado-change" を出す。MADO.rev() は保存のたびに1つ増える。
+   ・画面は変えない。ボタンも足さない。誰も呼ばなければ、今までと同じ動き。
+   ・保存キーは増やさない。S に項目を足さない。見積・数量・耐力壁の計算には触れない。
+   ・接点：save と loadProject の後ろに「変わった知らせ」を足すだけ（元の動きと戻り値は変えない）。
+   ・戻し方：この <script> を消すだけ。 */
+(function(){
+  "use strict";
+  if (window.MADO) return;
+  var VER = 1, REV = 1, busy = 0, inWrite = 0, GEO = null, lastRes = null, pend = null;
+  var TH_E = 150, TH_P = 120;            /* 壁の厚み。芯から外周75・間仕切り60（今のアプリの吸い付きと同じ数字） */
+  var PROBE = [40, 90, 160];             /* 面がどの部屋の物かを見る時の、壁の芯からの離れ（mm） */
+  var LISTS = ["parts2D", "sashes", "fx", "tenken", "lights", "tatami"];
+  var SELKEY = { fx: "fx", lt: "lights", o: "sashes", k: "tenken", p: "parts2D" };
+  var WH = ["tile", "shikkui", "curtbox", "waist"];   /* 室内図で置くと、まず「壁の端から端まで」になる種類（アプリの中の同じ名前の表と同じ顔ぶれ。表は外から読めないので写してある） */
+
+  function st(){ try { return (typeof S !== "undefined" && S && typeof S === "object") ? S : null; } catch(e){ return null; } }
+  function pid(){ try { return (typeof PJ !== "undefined" && PJ) ? String(PJ.cur) : ""; } catch(e){ return ""; } }
+  function nf(){ var n = window.NAFUDA; return (n && typeof n.check === "function") ? n : null; }
+  function warn(m, e){ try { console.warn("[MADO] " + m, e || ""); } catch(x){} }
+  function isObj(o){ return !!o && typeof o === "object" && !Array.isArray(o); }
+  function arr(a){ return Array.isArray(a) ? a : []; }
+  function fin(v){ return typeof v === "number" && isFinite(v); }
+  function clone(o){ try { return o === undefined ? null : JSON.parse(JSON.stringify(o)); } catch(e){ return null; } }
+  function r5(v){ return Math.round(v / 5) * 5; }
+  function rh(v){ return Math.round(v * 2) / 2; }
+  function bad(why, more){ var r = { ok: false, why: why }; if (more) for (var k in more) r[k] = more[k]; return r; }
+  function eidsOf(c){ var v = c && c.eids; return (typeof v === "string" && v) ? v.split(",") : []; }
+  function emit(d){ try { window.dispatchEvent(new CustomEvent("mado-change", { detail: d })); } catch(e){} }
+
+  /* ================= 形（今の階） ================= */
+  function ptsNow(s){                     /* 外周の点。アプリの pts() と同じ出し方 */
+    try { if (typeof pts === "function" && st() === s) return pts().map(function(p){ return [p[0], p[1]]; }); } catch(e){}
+    var x = s.po ? +s.po[0] || 0 : 0, y = s.po ? +s.po[1] || 0 : 0, p = [[x, y]];
+    s.edges.forEach(function(e){ if (e.d === "R") x += e.v; if (e.d === "L") x -= e.v; if (e.d === "D") y += e.v; if (e.d === "U") y -= e.v; p.push([x, y]); });
+    p.pop(); return p;
+  }
+  function boxOf(P){ var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity; P.forEach(function(p){ if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }); return { x0: x0, y0: y0, x1: x1, y1: y1 }; }
+  function insidePoly(p, poly){ var c = false; for (var i = 0, j = poly.length - 1; i < poly.length; j = i++){ var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
+  function inOrOn(p, poly){                /* 外周の中、または外周の線の真上 */
+    if (insidePoly(p, poly)) return true;
+    for (var i = 0; i < poly.length; i++){ var a = poly[i], c = poly[(i + 1) % poly.length], dx = c[0] - a[0], dy = c[1] - a[1], L2 = dx * dx + dy * dy || 1, t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2)); if (Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy) <= 0.6) return true; }
+    return false;
+  }
+  function chOf(s){ return +s.ch || 2400; }
+  function partSt(q){ try { if (typeof pState === "function") return pState(q); } catch(e){} return q.state || (q.isNew ? "new" : "keep"); }
+  function partForm(q){ try { if (typeof partForm292 === "function") return partForm292(q); } catch(e){} return (q.wf === "open" || q.wf === "tare" || q.wf === "koshi" || q.wf === "fuka") ? q.wf : (q.top ? "koshi" : "full"); }
+
+  /* 壁：外周の辺（t:"e"）と間仕切り（t:"p"）。面は「壁の名札＋side」。side=1 は、a→b に進んで (-uy, ux) の側 */
+  function wallsOf(s, P, ch){
+    var out = [], eids = eidsOf(s), n = P.length, hs = (typeof s.house === "number") ? s.house : -1, nw = (typeof s.noWall === "number") ? s.noWall : -1;
+    function mk(t, i, id, a, b){
+      var L = Math.hypot(b[0] - a[0], b[1] - a[1]), ux = L > 0 ? (b[0] - a[0]) / L : 1, uy = L > 0 ? (b[1] - a[1]) / L : 0;
+      return { id: id || null, t: t, i: i, key: t === "e" ? i : 100 + i, a: [a[0], a[1]], b: [b[0], b[1]], len: L, ux: ux, uy: uy, th: t === "e" ? TH_E : TH_P, state: "new", form: "full", z0: 0, z1: ch, inner: 0 };
+    }
+    for (var i = 0; i < n; i++){
+      var e = s.edges[i] || {}, w = mk("e", i, eids[i], P[i], P[(i + 1) % n]);
+      w.state = (e.hg && e.hgD === "rem") ? "remove" : (s.mode === "rf" || i === hs) ? "exist" : "new";
+      w.form = i === nw ? "open" : "full"; w.house = i === hs;
+      if (w.len > 0) w.inner = insidePoly([(w.a[0] + w.b[0]) / 2 - w.uy * 10, (w.a[1] + w.b[1]) / 2 + w.ux * 10], P) ? 1 : -1;
+      out.push(w);
+    }
+    arr(s.parts2D).forEach(function(q, i){
+      if (!isObj(q)) return;
+      var w = mk("p", i, q.nid, [+q.x1, +q.y1], [+q.x2, +q.y2]), ps = partSt(q), f = partForm(q);
+      w.state = (ps === "remove" || (q.hg && q.hgD === "rem")) ? "remove" : ps === "keep" ? "exist" : "new";
+      w.form = f;
+      if (f === "open"){ w.z0 = 0; w.z1 = 0; }
+      else if (f === "tare"){ w.z0 = Math.max(0, ch - (q.wfh || 600)); w.z1 = ch; }
+      else if (f === "koshi"){ w.z0 = 0; w.z1 = Math.min(q.top || q.wfh || ch, ch); }
+      if (q.rid) w.rid = q.rid;
+      out.push(w);
+    });
+    /* 浴室・トイレの範囲のふちで、壁が無い所。アプリの部屋分けが壁として扱う線（保存はされていない。物は付けられない） */
+    try { if (typeof zoneWallSegs === "function" && st() === s) zoneWallSegs().forEach(function(q, i){
+      if (!(Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100)) return;
+      var w = mk("z", i, "zw:" + [q.x1, q.y1, q.x2, q.y2].map(Math.round).join(","), [q.x1, q.y1], [q.x2, q.y2]);
+      w.key = null; w.th = TH_P; w.virtual = true; out.push(w);
+    }); } catch(e){}
+    /* 壁の端が、ほかの壁の手前300mm以内で止まっている時の、すき間の長さ（アプリの部屋分けは「届いている」とみなす） */
+    out.forEach(function(x){
+      if (x.t === "e" || x.state === "remove" || !(x.len >= 100)) return;
+      var r = [0, 0];
+      [[x.a, -1], [x.b, 1]].forEach(function(e, n){
+        var best = -1;
+        out.forEach(function(w){ if (w === x || !(w.len > 1)) return; var t = rayHit(e[0][0], e[0][1], x.ux * e[1], x.uy * e[1], w); if (t >= 0 && t <= 300 && (best < 0 || t < best)) best = t; });
+        if (best > 2) r[n] = best;
+      });
+      if (r[0] || r[1]) x.reach = r;
+    });
+    return out;
+  }
+  function rayHit(px, py, dx, dy, w){      /* 点から向き(dx,dy)へ進んで、壁 w に当たるまでの距離。当たらなければ -1 */
+    var den = dx * w.uy - dy * w.ux; if (Math.abs(den) < 1e-6) return -1;
+    var qx = w.a[0] - px, qy = w.a[1] - py, t = (qx * w.uy - qy * w.ux) / den, s2 = (qx * dy - qy * dx) / den;
+    return (t >= 0 && s2 >= -2 && s2 <= w.len + 2) ? t : -1;
+  }
+
+  /* ---- 部屋の形：アプリの部屋分け（50mmのマス）のふちをなぞり、すぐ外の壁の芯に合わせる ---- */
+  function axisLines(s, P){
+    var h = [], v = [];
+    function add(x1, y1, x2, y2, ext){
+      if (Math.abs(y1 - y2) < 1) h.push({ at: (y1 + y2) / 2, s0: Math.min(x1, x2) - ext, s1: Math.max(x1, x2) + ext });
+      else if (Math.abs(x1 - x2) < 1) v.push({ at: (x1 + x2) / 2, s0: Math.min(y1, y2) - ext, s1: Math.max(y1, y2) + ext });
+    }
+    P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; add(a[0], a[1], c[0], c[1], 60); });
+    arr(s.parts2D).forEach(function(q){ if (!isObj(q) || partSt(q) === "remove" || Math.hypot(q.x2 - q.x1, q.y2 - q.y1) < 100) return; add(+q.x1, +q.y1, +q.x2, +q.y2, 300); });   /* 300：部屋分けが「届いている」とみなす、端のすき間 */
+    try { if (typeof zoneWallSegs === "function") zoneWallSegs().forEach(function(q){ if (Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100) add(q.x1, q.y1, q.x2, q.y2, 300); }); } catch(e){}
+    return { h: h, v: v };
+  }
+  function snapTo(list, c, lo, hi){       /* マスのふち（50mm刻み）を、すぐそばの壁の芯に合わせる。ふちは芯から25mm以内に来る */
+    var need = Math.min(100, (hi - lo) * 0.5), best = null;
+    for (var i = 0; i < list.length; i++){
+      var w = list[i]; if (Math.min(w.s1, hi) - Math.max(w.s0, lo) < need) continue;
+      if (Math.abs(w.at - c) > 32) continue;
+      if (!best || Math.abs(w.at - c) < Math.abs(best.at - c)) best = w;
+    }
+    return best ? best.at : c;
+  }
+  function tidy(P){                       /* 重なった点と、一直線の途中の点を外す */
+    var ch = true, guard = 0;
+    while (ch && P.length >= 3 && guard++ < 50){
+      ch = false;
+      for (var i = 0; i < P.length && P.length >= 3; i++){
+        var a = P[(i + P.length - 1) % P.length], b = P[i], c = P[(i + 1) % P.length];
+        if ((Math.abs(a[0] - b[0]) < 0.01 && Math.abs(a[1] - b[1]) < 0.01) || Math.abs((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])) < 0.01){ P.splice(i, 1); i--; ch = true; }
+      }
+    }
+    return P.length >= 4 ? P : null;
+  }
+  function areaOf(P){ var a = 0; for (var i = 0; i < P.length; i++){ var q = P[i], r = P[(i + 1) % P.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; }
+  /* アプリの部屋分けは、壁の芯から60mm以内のマスをどの部屋にも入れない（壁の帯）。帯のマスを「壁をまたがずに届く部屋」へ入れて、
+     部屋のふちが壁の芯に来るようにする。壁の端を300mm伸ばして区切る決まり（部屋分けと同じ）も、ここで同じに扱う */
+  function blockSegs(s){
+    var out = [];
+    function add(x1, y1, x2, y2){ var L = Math.hypot(x2 - x1, y2 - y1); if (!(L >= 100)) return; var ux = (x2 - x1) / L, uy = (y2 - y1) / L; out.push([x1 - ux * 300, y1 - uy * 300, x2 + ux * 300, y2 + uy * 300]); }
+    arr(s.parts2D).forEach(function(q){ if (isObj(q) && partSt(q) !== "remove") add(+q.x1, +q.y1, +q.x2, +q.y2); });
+    try { if (typeof zoneWallSegs === "function") zoneWallSegs().forEach(function(q){ add(q.x1, q.y1, q.x2, q.y2); }); } catch(e){}
+    return out;
+  }
+  function sideOf(g, x, y){ return ((g[2] - g[0]) * (y - g[1]) - (g[3] - g[1]) * (x - g[0])) >= 0 ? 1 : -1; }   /* 線の真上は、いつも同じ側に数える */
+  function crosses(ax, ay, bx, by, g){
+    if (sideOf(g, ax, ay) === sideOf(g, bx, by)) return false;
+    var d1x = bx - ax, d1y = by - ay, den = d1x * (g[3] - g[1]) - d1y * (g[2] - g[0]);
+    if (Math.abs(den) < 1e-9) return false;
+    var u = ((g[0] - ax) * d1y - (g[1] - ay) * d1x) / den;
+    return u >= -1e-9 && u <= 1 + 1e-9;
+  }
+  function fillDead(R, segs, P){
+    var NX = R.NX, NY = R.NY, sz = R.st, b = R.b, comp = new Int32Array(R.comp.length), dead = [], i, j, k;
+    comp.set(R.comp);
+    if (!segs.length) return comp;
+    for (j = 0; j < NY; j++) for (i = 0; i < NX; i++){ k = j * NX + i; if (comp[k] < 0 && insidePoly([b.x0 + (i + 0.5) * sz, b.y0 + (j + 0.5) * sz], P)) dead.push(k); }
+    var D = [[1, 0], [-1, 0], [0, 1], [0, -1]], ch = true, pass = 0;
+    while (ch && pass++ < 10){
+      var set = [];
+      for (var n = 0; n < dead.length; n++){
+        k = dead[n]; if (comp[k] >= 0) continue;
+        i = k % NX; j = (k - i) / NX;
+        var cx = b.x0 + (i + 0.5) * sz, cy = b.y0 + (j + 0.5) * sz;
+        for (var d = 0; d < 4; d++){
+          var a = i + D[d][0], c = j + D[d][1]; if (a < 0 || c < 0 || a >= NX || c >= NY) continue;
+          var v = comp[c * NX + a]; if (v < 0) continue;
+          var ax = cx + D[d][0] * sz, ay = cy + D[d][1] * sz, hit = false;
+          for (var q = 0; q < segs.length && !hit; q++){ var g = segs[q]; if (Math.min(g[0], g[2]) > Math.max(ax, cx) + 1 || Math.max(g[0], g[2]) < Math.min(ax, cx) - 1 || Math.min(g[1], g[3]) > Math.max(ay, cy) + 1 || Math.max(g[1], g[3]) < Math.min(ay, cy) - 1) continue; hit = crosses(ax, ay, cx, cy, g); }
+          if (!hit){ set.push(k, v); break; }
+        }
+      }
+      for (var m = 0; m < set.length; m += 2) comp[set[m]] = set[m + 1];
+      ch = set.length > 0;
+    }
+    return comp;
+  }
+  function traceRooms(R, comp, lines){
+    var NX = R.NX, NY = R.NY, sz = R.st, b = R.b, W = NX + 1, E = Object.create(null), out = Object.create(null);
+    function put(c, x0, y0, x1, y1){ (E[c] || (E[c] = [])).push(x0, y0, x1, y1); }
+    for (var j = 0; j < NY; j++) for (var i = 0; i < NX; i++){            /* 部屋を右手に見て進む向きに、ふちの線を集める */
+      var c = comp[j * NX + i]; if (c < 0) continue;
+      if (j === 0 || comp[(j - 1) * NX + i] !== c) put(c, i, j, i + 1, j);
+      if (i === NX - 1 || comp[j * NX + i + 1] !== c) put(c, i + 1, j, i + 1, j + 1);
+      if (j === NY - 1 || comp[(j + 1) * NX + i] !== c) put(c, i + 1, j + 1, i, j + 1);
+      if (i === 0 || comp[j * NX + i - 1] !== c) put(c, i, j + 1, i, j);
+    }
+    Object.keys(E).forEach(function(cid){
+      var e = E[cid], n = e.length / 4, from = Object.create(null), used = new Uint8Array(n), k, loops = [];
+      for (k = 0; k < n; k++){ var key = e[4 * k] + e[4 * k + 1] * W; (from[key] || (from[key] = [])).push(k); }
+      for (k = 0; k < n; k++){
+        if (used[k]) continue;
+        var g = [], cur = k, guard = 0, pdx = 0, pdy = 0;
+        while (cur >= 0 && !used[cur] && guard++ <= n){
+          used[cur] = 1;
+          var x0 = e[4 * cur], y0 = e[4 * cur + 1], x1 = e[4 * cur + 2], y1 = e[4 * cur + 3], dx = x1 - x0, dy = y1 - y0;
+          if (dx !== pdx || dy !== pdy) g.push(x0, y0);                      /* 角だけ残す */
+          pdx = dx; pdy = dy;
+          var cand = from[x1 + y1 * W] || [], next = -1, rank = 9;
+          for (var q = 0; q < cand.length; q++){ var c2 = cand[q]; if (used[c2]) continue;
+            var ex = e[4 * c2 + 2] - e[4 * c2], ey = e[4 * c2 + 3] - e[4 * c2 + 1], rk = (ex === -dy && ey === dx) ? 0 : (ex === dx && ey === dy) ? 1 : 2;   /* 角で分かれる時は、右へ曲がる（同じマスに沿う） */
+            if (rk < rank){ rank = rk; next = c2; } }
+          cur = next;
+        }
+        if (g.length >= 8){                                                  /* 始点が一直線の途中なら外す */
+          var m0 = g.length / 2, lx = g[2 * (m0 - 1)], ly = g[2 * (m0 - 1) + 1];
+          if ((g[0] - lx) * (g[3] - g[1]) - (g[1] - ly) * (g[2] - g[0]) === 0){ g.splice(0, 2); }
+          loops.push(g);
+        }
+      }
+      var polys = [];
+      loops.forEach(function(g){
+        var m = g.length / 2, runs = [], k2;
+        for (k2 = 0; k2 < m; k2++){
+          var ax = g[2 * k2], ay = g[2 * k2 + 1], bx = g[2 * ((k2 + 1) % m)], by = g[2 * ((k2 + 1) % m) + 1];
+          if (ay === by) runs.push({ h: 1, c: snapTo(lines.h, b.y0 + ay * sz, b.x0 + Math.min(ax, bx) * sz, b.x0 + Math.max(ax, bx) * sz) });
+          else runs.push({ h: 0, c: snapTo(lines.v, b.x0 + ax * sz, b.y0 + Math.min(ay, by) * sz, b.y0 + Math.max(ay, by) * sz) });
+        }
+        var Pg = [];
+        for (k2 = 0; k2 < m; k2++){
+          var r0 = runs[(k2 + m - 1) % m], r1 = runs[k2];
+          if (r0.h === r1.h) Pg.push([b.x0 + g[2 * k2] * sz, b.y0 + g[2 * k2 + 1] * sz]);
+          else Pg.push(r1.h ? [r0.c, r1.c] : [r1.c, r0.c]);
+        }
+        Pg = tidy(Pg); if (!Pg) return;
+        var a = areaOf(Pg); if (Math.abs(a) < 10000) return;                 /* 0.01㎡未満の切れ端は捨てる */
+        polys.push({ p: Pg, a: a });
+      });
+      polys.sort(function(x, y){ return y.a - x.a; });
+      var outer = polys.length && polys[0].a > 0 ? polys[0] : null;
+      out[cid] = { poly: outer ? outer.p : null, holes: polys.filter(function(x){ return x !== outer && x.a < 0; }).map(function(x){ return x.p; }), more: polys.filter(function(x){ return x !== outer && x.a > 0; }).map(function(x){ return x.p; }), box: outer ? boxOf(outer.p) : null };
+    });
+    return out;
+  }
+
+  /* ---- 面：壁を、ほかの壁が当たる所で区切り、表と裏がそれぞれどの部屋の物かを見る ---- */
+  function probe(w, sAt, side, P, at2){
+    var nx = -w.uy * side, ny = w.ux * side, bx = w.a[0] + w.ux * sAt, by = w.a[1] + w.uy * sAt;
+    for (var k = 0; k < PROBE.length; k++){ var c = at2(bx + nx * PROBE[k], by + ny * PROBE[k]); if (c >= 0) return { room: "r" + c, out: false }; }
+    return { room: null, out: !insidePoly([bx + nx * PROBE[0], by + ny * PROBE[0]], P) };
+  }
+  function facesOf(walls, P, at2){
+    var out = [];
+    walls.forEach(function(w){
+      if (!(w.len > 1)) return;
+      var cuts = [0, w.len];
+      walls.forEach(function(x){
+        if (x === w || !(x.len > 1)) return;
+        [x.a, x.b].forEach(function(p){ var dx = p[0] - w.a[0], dy = p[1] - w.a[1], s0 = dx * w.ux + dy * w.uy, d = Math.abs(dx * w.uy - dy * w.ux); if (d <= 2 && s0 > 1 && s0 < w.len - 1) cuts.push(s0); });
+        var den = w.ux * x.uy - w.uy * x.ux; if (Math.abs(den) < 1e-6) return;
+        var qx = x.a[0] - w.a[0], qy = x.a[1] - w.a[1], sc = (qx * x.uy - qy * x.ux) / den, tc = (qx * w.uy - qy * w.ux) / den;
+        var ext = (x.t !== "e" && x.state !== "remove" && x.len >= 100) ? 300 : 0;                    /* 手前300mm以内で止まる壁は「届いている」とみなす（部屋分けと同じ） */
+        if (sc > 1 && sc < w.len - 1 && tc > -ext - 2 && tc < x.len + ext + 2) cuts.push(sc);
+      });
+      cuts.sort(function(a, b){ return a - b; });
+      var uq = [cuts[0]]; cuts.forEach(function(c){ if (c - uq[uq.length - 1] > 1) uq.push(c); });
+      [1, -1].forEach(function(side){
+        var cur = null;
+        for (var k = 0; k < uq.length - 1; k++){
+          var pr = probe(w, (uq[k] + uq[k + 1]) / 2, side, P, at2);
+          if (cur && cur.room === pr.room && cur.out === pr.out) cur.s1 = uq[k + 1];
+          else { cur = { wall: w.id, key: w.key, side: side, s0: uq[k], s1: uq[k + 1], room: pr.room, out: pr.out }; out.push(cur); }
+        }
+      });
+    });
+    return out;
+  }
+  function geoOf(s, P, walls){
+    var R = null; try { if (typeof roomsCalc === "function") R = roomsCalc(); } catch(e){ warn("部屋分け", e); }
+    var sig = walls.map(function(w){ return w.key + ":" + w.a + ":" + w.b + ":" + w.state + ":" + w.form; }).join(";");
+    if (GEO && GEO.R === R && GEO.sig === sig) return GEO;
+    var g = { R: R, sig: sig, tr: Object.create(null), faces: [], comp: null };
+    if (R){
+      try { g.comp = fillDead(R, blockSegs(s), P); } catch(e){ warn("壁の帯", e); g.comp = R.comp; }
+      try { g.tr = traceRooms(R, g.comp, axisLines(s, P)); } catch(e1){ warn("部屋の形", e1); }
+    }
+    g.at = function(x, y){               /* その点の部屋（壁の帯の中も、同じ側の部屋として答える）。無ければ -1 */
+      if (!R || !g.comp) return -1;
+      var i = Math.floor((x - R.b.x0) / R.st), j = Math.floor((y - R.b.y0) / R.st);
+      return (i < 0 || j < 0 || i >= R.NX || j >= R.NY) ? -1 : g.comp[j * R.NX + i];
+    };
+    try { g.faces = facesOf(walls, P, g.at); } catch(e2){ warn("面", e2); }
+    GEO = g; return g;
+  }
+  function faceAt(faces, w, side, sAt){
+    for (var i = 0; i < faces.length; i++){ var f = faces[i]; if (f.wall === w.id && f.side === side && sAt >= f.s0 - 1 && sAt <= f.s1 + 1) return f; }
+    return null;
+  }
+
+  /* ================= 読む窓口 ================= */
+  var SA_ST = { "new": "new", keep: "exist", remove: "remove" };
+  function sillOf(cat, h){ return (/玄関|勝手口|室内ドア|クローゼット|開口/.test(cat || "") || /掃き出し/.test(cat || "")) ? 0 : Math.max(0, 2030 - (+h || 0)); }   /* アプリの窓の下端の決まりと同じ */
+  function readNow(s){
+    var ch = chOf(s), out = { ok: true, v: VER, rev: REV, pid: pid(), mode: String(s.mode || ""), view: String(s.__view208 || ""), fi: s.fi || 0, floors: [], ch: ch, base: {}, outline: [], box: null, walls: [], faces: [], rooms: [], things: [] };
+    arr(s.fl).forEach(function(f, i){ out.floors.push({ i: i, name: (f && f.name) || "", cur: i === (s.fi || 0) }); });
+    if (!out.floors.length) out.floors.push({ i: 0, name: "1階", cur: true });
+    ["rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType"].forEach(function(k){ if (s[k] !== undefined) out.base[k] = clone(s[k]); });
+    if (!Array.isArray(s.edges) || !s.edges.length){ out.empty = true; return out; }
+    var P = ptsNow(s), walls = wallsOf(s, P, ch), G = geoOf(s, P, walls), R = G.R, byKey = Object.create(null), roomIdx = Object.create(null);
+    out.outline = P.map(function(p){ return [p[0], p[1]]; }); out.box = boxOf(P);
+    walls.forEach(function(w){
+      if (w.t !== "z") byKey[w.key] = w;
+      var src = w.t === "e" ? s.edges[w.i] : w.t === "p" ? s.parts2D[w.i] : null, c = {}; for (var k in w) c[k] = Array.isArray(w[k]) ? w[k].slice() : w[k];
+      c.raw = clone(src); out.walls.push(c);
+    });
+    if (R) R.rooms.forEach(function(r){
+      var tr = G.tr[r.cid] || {}, fe = null, nm = null, disp = null, chR = 0;
+      try { fe = roomFinOf(r); } catch(e){}
+      try { nm = roomNm(r); } catch(e){}
+      try { if (typeof roomDispNm366 === "function") disp = roomDispNm366(r); } catch(e){}
+      try { chR = roomChOf(r) || 0; } catch(e){}
+      roomIdx["r" + r.cid] = out.rooms.length;
+      out.rooms.push({ id: "r" + r.cid, cid: r.cid, label: r.label || "", name: nm || null, disp: disp || nm || null, p: [r.p[0], r.p[1]], c: [r.cxm, r.cym], area: r.area,
+        box: tr.box ? clone(tr.box) : null, poly: tr.poly ? clone(tr.poly) : null, holes: clone(tr.holes || []), ch: chR || ch, chOwn: chR > 0, slope: (fe && fe.sl) ? clone(fe.sl) : null, fin: clone(fe), faces: [] });
+    });
+    G.faces.forEach(function(f, i){
+      out.faces.push({ wall: f.wall, side: f.side, s0: f.s0, s1: f.s1, room: f.room, out: f.out });
+      if (f.room && roomIdx[f.room] !== undefined) out.rooms[roomIdx[f.room]].faces.push(i);
+    });
+    function roomOfPt(x, y){ try { var r = (typeof roomAt === "function") ? roomAt(x, y) : null; if (r) return "r" + r.cid; var c = G.at(x, y); return c >= 0 ? "r" + c : null; } catch(e){ return null; } }
+    function faceRoom(w, side, sAt){ var f = w ? faceAt(G.faces, w, side, sAt) : null; return f ? f.room : null; }
+    arr(s.fx).forEach(function(f, i){
+      if (!isObj(f)) return;
+      var w = (typeof f.w === "number") ? byKey[f.w] : null, side = w ? (w.t === "p" ? (f.sd === -1 ? -1 : f.sd === 1 ? 1 : 0) : w.inner) : 0, shape = null;
+      try { shape = (typeof FK !== "undefined" && FK[f.k]) ? FK[f.k][1] : null; } catch(e){}
+      var mid = fin(f.u) ? f.u + ((fin(f.len) && !f.v) ? f.len / 2 : 0) : (w ? w.len / 2 : 0);
+      out.things.push({ id: f.nid || null, list: "fx", i: i, kind: f.k, shape: shape, state: f.k === "demo" ? "remove" : "new", wall: w ? w.id : null, side: side, room: side ? faceRoom(w, side, mid) : null,
+        u: fin(f.u) ? f.u : null, z: fin(f.z) ? f.z : null, len: fin(f.len) ? f.len : null, hgt: fin(f.hgt) ? f.hgt : null, v: f.v ? 1 : 0, raw: clone(f) });
+    });
+    arr(s.sashes).forEach(function(sa, i){
+      if (!isObj(sa)) return;
+      var h = isObj(sa.host) ? sa.host : null, w = (h && sa.drawn && typeof h.i === "number") ? byKey[h.t === "p" ? 100 + h.i : h.i] : null, raw = "new";
+      if (w && ((h.t === "p") !== (w.t === "p"))) w = null;
+      try { raw = (typeof sState === "function") ? sState(sa) : (sa.st || "new"); } catch(e){}
+      out.things.push({ id: sa.nid || null, list: "sashes", i: i, kind: sa.cat, name: sa.name, state: SA_ST[raw] || "exist", work: SA_ST[raw] ? null : raw, wall: w ? w.id : null, drawn: !!sa.drawn,
+        u: fin(sa.pos) ? sa.pos : null, w: sa.w, h: sa.h, sill: sillOf(sa.cat, sa.h), flip: sa.flip || 0, n: sa.n, raw: clone(sa) });
+    });
+    arr(s.lights).forEach(function(l, i){
+      if (!isObj(l)) return;
+      out.things.push({ id: l.nid || null, list: "lights", i: i, kind: l.k, state: l.act === "keep" ? "exist" : (l.act || "new"), x: l.x, y: l.y, len: l.k === "rail" ? (l.len || 1500) : null, dir: l.k === "rail" ? (l.dir || "h") : null, room: roomOfPt(l.x, l.y), raw: clone(l) });
+    });
+    arr(s.tenken).forEach(function(o, i){
+      if (!isObj(o)) return;
+      var ext = null; try { if (typeof tkExt === "function") ext = tkExt(o); } catch(e){}
+      out.things.push({ id: o.nid || null, list: "tenken", i: i, kind: o.k, state: o.state || "new", x: o.x, y: o.y, w: o.w, d: fin(o.d) ? o.d : null, dir: o.dir || null, h: fin(o.h) ? o.h : null, ext: ext ? [ext[0], ext[1]] : null, room: roomOfPt(o.x, o.y), raw: clone(o) });
+    });
+    arr(s.tatami).forEach(function(t, i){
+      if (!isObj(t)) return;
+      var s0 = typeof t.st === "string" ? t.st : "new", isFl = s0.indexOf("fl:") === 0;                 /* st："new"新調／"omote"表替え／"keep"既存／"fl:種類"＝床の種類の範囲 */
+      out.things.push({ id: t.nid || null, list: "tatami", i: i, kind: t.fk || (isFl ? s0.slice(3) : "tatami"), state: (s0 === "keep" || s0 === "omote") ? "exist" : "new", work: s0 === "omote" ? "omote" : null, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1, room: roomOfPt((t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2), raw: clone(t) });
+    });
+    arr(s.zones).forEach(function(z, i){
+      if (!isObj(z)) return;
+      out.things.push({ id: z.id || null, list: "zones", i: i, kind: z.k, state: "new", x0: z.x0, y0: z.y0, x1: z.x1, y1: z.y1, raw: clone(z) });
+    });
+    return out;
+  }
+  function read(){
+    var s = st();
+    if (!s) return bad("no-data");
+    if (!nf()) return bad("no-nafuda");
+    try { return readNow(s); } catch(e){ warn("読む窓口", e); return bad("error", { msg: String((e && e.message) || e) }); }
+  }
+
+  /* 名札 → 今どこにあるか（一覧の名前と番号。別の階にしまってある時は here:false） */
+  function findIn(c, id){
+    for (var k = 0; k < LISTS.length; k++){ var a = arr(c[LISTS[k]]); for (var i = 0; i < a.length; i++) if (isObj(a[i]) && a[i].nid === id) return { list: LISTS[k], i: i, o: a[i] }; }
+    var j = eidsOf(c).indexOf(id); if (j >= 0) return { list: "edges", i: j, o: arr(c.edges)[j] || null };
+    return null;
+  }
+  function where(id){
+    var s = st(); if (!s || typeof id !== "string" || !id) return null;
+    var h = findIn(s, id); if (h) return { list: h.list, i: h.i, floor: s.fi || 0, here: true };
+    var fl = arr(s.fl);
+    for (var k = 0; k < fl.length; k++){ if (k === (s.fi || 0)) continue; var sn = fl[k] && fl[k].snap; if (isObj(sn)){ h = findIn(sn, id); if (h) return { list: h.list, i: h.i, floor: k, here: false }; } }
+    return null;
+  }
+
+  /* ================= 書く窓口 ================= */
+  function makeCtx(s){
+    var P = ptsNow(s), ch = chOf(s), walls = wallsOf(s, P, ch), byId = Object.create(null), byKey = Object.create(null), faces = null;
+    walls.forEach(function(w){ if (w.t === "z") return; if (w.id) byId[w.id] = w; byKey[w.key] = w; });
+    var ctx = {
+      s: s, P: P, bb: boxOf(P), mode: String(s.mode || ""), work: [], gone: [], adds: [],
+      wall: function(id){ return (typeof id === "string" && byId[id]) || null; },
+      wallByKey: function(k){ return (typeof k === "number" && byKey[k]) || null; },
+      wallByHost: function(h){ if (!isObj(h) || typeof h.i !== "number") return null; var w = byKey[h.t === "p" ? 100 + h.i : h.i] || null; return (w && w.t === h.t) ? w : null; },
+      roomAtFace: function(w, side, sAt){
+        if (!faces) faces = geoOf(s, P, walls).faces;
+        var f = faceAt(faces, w, side, sAt); if (!f || !f.room) return null;
+        try { var R = roomsCalc(); return R.byCid[+f.room.slice(1)] || null; } catch(e){ return null; }
+      },
+      workOf: function(o){ for (var i = 0; i < ctx.work.length; i++) if (ctx.work[i].o === o) return ctx.work[i].wk; var wk = clone(o); ctx.work.push({ o: o, wk: wk }); return wk; }
+    };
+    return ctx;
+  }
+  /* その面の天井高。室内図の chEff() と同じ決まり：リフォームで、その面の部屋に天井高が決めてあればそれ。無ければ家の天井高 */
+  function ceilAt(ctx, w, side, sAt){
+    if (ctx.mode === "rf"){ try { var r = ctx.roomAtFace(w, side || w.inner || 1, sAt), c = (r && typeof roomChOf === "function") ? roomChOf(r) : 0; if (c) return c; } catch(e){} }
+    return ctx.s.ch;
+  }
+  function wallTop(ctx, w, ce){            /* 室内図の fxClamp() と同じ：壁の物を置ける高さの上限 */
+    var H = ce;
+    if (w.t === "p"){ try { H = (typeof partHq292 === "function" ? partHq292(ctx.s.parts2D[w.i], ce) : ce) || ce; } catch(e){ H = ce; } }
+    return Math.min(ce, H);
+  }
+  function clampFx(f, L, H){               /* 室内図の fxClamp() と同じ収め方 */
+    var typ = FK[f.k][1];
+    if (typ === "wall") return;
+    if (typ === "pt"){ f.u = Math.max(0, Math.min(L, f.u)); f.z = Math.max(0, Math.min(H, f.z)); return; }
+    if (AREA.indexOf(f.k) >= 0){ f.len = Math.max(100, Math.min(L, f.len)); f.hgt = Math.max(100, Math.min(H, f.hgt)); f.u = Math.max(0, Math.min(L - f.len, f.u)); f.z = Math.max(0, Math.min(H - f.hgt, f.z)); return; }
+    if (f.v){ f.len = Math.max(100, Math.min(H, f.len)); f.u = Math.max(0, Math.min(L, f.u)); f.z = Math.max(0, Math.min(H - f.len, f.z)); }
+    else { f.len = Math.max(100, Math.min(L, f.len)); f.u = Math.max(0, Math.min(L - f.len, f.u)); f.z = Math.max(0, Math.min(H, f.z)); }
+  }
+  function wallOk(w){ return !w ? "no-wall" : w.state === "remove" ? "wall-removed" : w.form === "open" ? "wall-open" : !(w.len > 0) ? "no-wall" : null; }
+  function sameNum(a, b){ return (a == null && b == null) || (fin(a) && fin(b) && Math.abs(a - b) < 1); }
+  /* ほかの物の「今の姿」（同じまとめ書きの中で動かした物は動かした後・消した物は除く・これから置く物も入れる） */
+  function others(ctx, key, self){
+    return arr(ctx.s[key]).filter(function(o){ return isObj(o) && o !== self && ctx.gone.indexOf(o) < 0; }).map(function(o){ for (var i = 0; i < ctx.work.length; i++) if (ctx.work[i].o === o) return ctx.work[i].wk; return o; })
+      .concat(ctx.adds.filter(function(a){ return a.key === key; }).map(function(a){ return a.rec; }));
+  }
+  function accentTaken(ctx, key, side, self){
+    return others(ctx, "fx", self).some(function(o){ return o.k === "accent" && o.w === key && (!o.sd || !side || o.sd === side); });
+  }
+
+  /* --- 壁の物（S.fx）--- 置く：室内図の fxPlace() と同じ決まり。at:{u,z}＝触った所。u・z・len・hgt を渡すと、その値で置く */
+  function fxAdd(ctx, c){
+    if (typeof FK === "undefined" || typeof AREA === "undefined" || typeof FKDEF === "undefined") return bad("no-app");
+    if (typeof c.k !== "string" || !FK[c.k]) return bad("bad-kind");
+    var w = ctx.wall(c.wall), ng = wallOk(w); if (ng) return bad(ng);
+    var typ = FK[c.k][1], isArea = AREA.indexOf(c.k) >= 0, L = w.len || 1, at = isObj(c.at) ? c.at : null, f = { k: c.k, w: w.key }, side = 0;
+    if (w.t === "p"){ side = (c.side === 1 || c.side === -1) ? c.side : 0; if (!side) return bad("need-side"); f.sd = side; }
+    var uTouch = (at && fin(at.u)) ? at.u : fin(c.u) ? c.u : L / 2, ce = ceilAt(ctx, w, side, Math.max(0, Math.min(L, uTouch))), H = wallTop(ctx, w, ce);
+    if (typ === "pt"){
+      var u0 = fin(c.u) ? c.u : (at && fin(at.u)) ? at.u : null; if (u0 === null) return bad("need-u");
+      f.u = r5(u0);
+      if (fin(c.z)) f.z = r5(c.z);
+      else if (c.k === "alarm") f.z = ce - 150; else if (c.k === "hanger") f.z = ce - 300; else if (c.k === "outlet") f.z = 300; else if (c.k === "switch") f.z = 1200;
+      else if (at && fin(at.z)) f.z = r5(at.z); else return bad("need-z");
+      clampFx(f, L, H);
+    } else if (typ === "wall"){
+      if (accentTaken(ctx, w.key, side, null)) return bad("dup");
+      f.pat = (typeof c.pat === "string" && c.pat && c.pat.length <= 24) ? c.pat : "gray";
+      if (c.room != null){ var rc = roomCid(c.room); if (rc === null) return bad("no-room"); f.rm = rc; }   /* 置いた部屋（室内図で部屋を選んで置いた時と同じ印） */
+    } else if (c.k === "board" && !fin(c.len) && !fin(c.hgt)){
+      f.len = L; f.u = 0; f.z = 0; f.hgt = H; clampFx(f, L, H);
+    } else if (typ === "seg" || isArea){
+      var d = FKDEF[c.k]; if (!d || !fin(d.len)) return bad("kind-later");
+      var len = Math.min(fin(c.len) ? r5(c.len) : d.len, L);
+      f.len = len;
+      if (fin(c.u)) f.u = r5(c.u); else if (at && fin(at.u)) f.u = r5(Math.max(0, Math.min(L - len, at.u - len / 2))); else return bad("need-u");
+      f.z = fin(c.z) ? r5(c.z) : d.z;
+      if (d.hgt) f.hgt = fin(c.hgt) ? r5(c.hgt) : (c.k === "demo" ? ctx.s.ch : d.hgt);
+      clampFx(f, L, H);
+      if (WH.indexOf(c.k) >= 0 && !fin(c.len) && !fin(c.u)){                   /* 大きさを渡さなければ、室内図と同じく壁の端から端まで（タイル・漆喰は床から天井まで） */
+        f.len = L; f.u = 0;
+        if ((c.k === "tile" || c.k === "shikkui") && !fin(c.z) && !fin(c.hgt)){ f.z = 0; f.hgt = H; }
+        clampFx(f, L, H);
+      }
+    } else return bad("kind-later");
+    if (typ !== "wall" && others(ctx, "fx", null).some(function(o){ return fxTwin(o, f); })) return bad("dup");   /* 同じ場所に同じ物は置かない（二重に数えない） */
+    return { ok: true, rec: f };
+  }
+  function roomCid(id){                    /* "r3" → 3（今の部屋分けにある時だけ） */
+    try { if (typeof id !== "string" || !/^r\d+$/.test(id)) return null; var c = +id.slice(1), R = roomsCalc(); return (R && R.byCid && R.byCid[c]) ? c : null; } catch(e){ return null; }
+  }
+  function fxTwin(a, b){ return a.k === b.k && a.w === b.w && (a.sd || 0) === (b.sd || 0) && sameNum(a.u, b.u) && sameNum(a.z, b.z) && sameNum(a.len, b.len) && sameNum(a.hgt, b.hgt); }
+  function fxSet(ctx, wk, c, o){
+    if (typeof FK === "undefined" || typeof AREA === "undefined" || !FK[wk.k]) return bad("bad-kind");
+    var typ = FK[wk.k][1], w = ctx.wallByKey(wk.w), moved = false;
+    if (c.wall != null){ var w2 = ctx.wall(c.wall); if (!w2) return bad("no-wall"); if (w2 !== w){ var ng = wallOk(w2); if (ng) return bad(ng); w = w2; moved = true; } }
+    if (!w) return bad("no-wall");
+    if (moved){ wk.w = w.key; if (w.t === "p"){ var sd = (c.side === 1 || c.side === -1) ? c.side : 0; if (!sd) return bad("need-side"); wk.sd = sd; } else delete wk.sd; }
+    else if (w.t === "p" && (c.side === 1 || c.side === -1)){ if (wk.sd !== c.side){ wk.sd = c.side; moved = true; } }
+    if (typ === "wall"){
+      if (moved && accentTaken(ctx, w.key, wk.sd || 0, o)) return bad("dup");
+      if (c.pat != null){ if (typeof c.pat !== "string" || !c.pat || c.pat.length > 24) return bad("bad-value"); wk.pat = c.pat; }
+      if (c.room != null){ var rc = roomCid(c.room); if (rc === null) return bad("no-room"); wk.rm = rc; }
+      else if (moved) delete wk.rm;                                           /* 別の面へ移したら、前の部屋の印は外す */
+      return { ok: true };
+    }
+    if (fin(c.u)) wk.u = rh(c.u);
+    if (fin(c.z)) wk.z = rh(c.z);
+    if (typ !== "pt"){ if (fin(c.len)) wk.len = rh(c.len); if (fin(c.hgt) && fin(wk.hgt)) wk.hgt = rh(c.hgt); }
+    if (!fin(wk.u) || !fin(wk.z) || (typ !== "pt" && !fin(wk.len))) return bad("bad-record");
+    var L = w.len || 1, ce = ceilAt(ctx, w, w.t === "p" ? (wk.sd || 0) : 0, Math.max(0, Math.min(L, wk.u + ((typ !== "pt" && !wk.v) ? wk.len / 2 : 0))));
+    clampFx(wk, L, wallTop(ctx, w, ce));
+    if (others(ctx, "fx", o).some(function(q){ return fxTwin(q, wk); })) return bad("dup");
+    return { ok: true };
+  }
+
+  /* --- 照明（S.lights）--- 置く：平面図の ltPlanClick() と同じ記録 */
+  function ltAdd(ctx, c){
+    if (typeof LTN === "undefined" || typeof LTA === "undefined") return bad("no-app");
+    if (typeof c.k !== "string" || !LTN[c.k]) return bad("bad-kind");
+    if (!fin(c.x) || !fin(c.y)) return bad("need-xy");
+    var x = Math.round(c.x / 2.5) * 2.5, y = Math.round(c.y / 2.5) * 2.5, act = c.act == null ? "new" : c.act;   /* 2.5mm刻み（平面図の吸い付きが出す値は、そのまま通る） */
+    if (typeof act !== "string" || !LTA[act]) return bad("bad-value");
+    if (ctx.mode === "zo") act = "new";                                       /* 新築・増築は新設だけ（平面図と同じ） */
+    if (!inOrOn([x, y], ctx.P)) return bad("outside");
+    if (others(ctx, "lights", null).some(function(l){ return l.k === c.k && sameNum(l.x, x) && sameNum(l.y, y); })) return bad("dup");
+    return { ok: true, rec: c.k === "rail" ? { k: c.k, x: x, y: y, act: act, len: 1500, dir: "h" } : { k: c.k, x: x, y: y, act: act } };
+  }
+  function ltSet(ctx, wk, c, o){
+    if (fin(c.x) || fin(c.y)){                                                /* 平面図の moveLight476() と同じ：外形の四角の中に収める */
+      wk.x = Math.max(ctx.bb.x0, Math.min(ctx.bb.x1, rh(fin(c.x) ? c.x : wk.x)));
+      wk.y = Math.max(ctx.bb.y0, Math.min(ctx.bb.y1, rh(fin(c.y) ? c.y : wk.y)));
+      if (!inOrOn([wk.x, wk.y], ctx.P)) return bad("outside");                 /* L字の欠けた所など、建物の外へは出さない */
+    }
+    if (c.act != null){
+      if (typeof LTA === "undefined" || typeof c.act !== "string" || !LTA[c.act]) return bad("bad-value");
+      if (ctx.mode === "zo" && c.act !== "new") return bad("bad-value");
+      wk.act = c.act;
+    }
+    if (others(ctx, "lights", o).some(function(l){ return l.k === wk.k && sameNum(l.x, wk.x) && sameNum(l.y, wk.y); })) return bad("dup");
+    return { ok: true };
+  }
+
+  /* --- 建具・サッシ（S.sashes）--- 動かす：平面図の moveOpening() と同じ記録（host・wall・pos） */
+  function saSet(ctx, wk, c, o){
+    if (!wk.drawn || !isObj(wk.host)) return bad("not-drawn");
+    var w = ctx.wallByHost(wk.host);
+    if (c.wall != null){
+      var w2 = ctx.wall(c.wall); if (!w2) return bad("no-wall");
+      if (w2 !== w){ var ng = wallOk(w2); if (ng && ng !== "wall-open") return bad(ng); if (w2.len < wk.w) return bad("too-short"); w = w2; wk.host = { t: w.t, i: w.i }; wk.wall = w.t === "e" ? w.i : -1; }
+    }
+    if (!w) return bad("no-wall");
+    var pos = fin(c.pos) ? c.pos : wk.pos; if (!fin(pos)) return bad("bad-record");
+    pos = Math.max(0, Math.min(w.len - wk.w, pos));
+    var r25 = Math.round(pos / 2.5) * 2.5;                                    /* アプリが保存のたびに行う「2.5mmにそろえる」決まり（snap5All）と同じ式。書いた値が、保存で動かないようにする */
+    wk.pos = Math.max(0, (r25 + (wk.w || 0) > w.len + 0.5) ? Math.floor(pos / 2.5) * 2.5 : r25);
+    if (others(ctx, "sashes", o).some(function(a){ return a.drawn && isObj(a.host) && a.host.t === wk.host.t && a.host.i === wk.host.i && sameNum(a.pos, wk.pos) && a.w === wk.w && a.cat === wk.cat; })) return bad("dup");
+    return { ok: true };
+  }
+
+  /* --- 設備・造作・階段（S.tenken）--- 動かす：アプリの moveTenken() をそのまま呼ぶ（2.5mmの目・外形の中に収める） */
+  function tkSet(ctx, wk, c, o){
+    if (typeof moveTenken !== "function") return bad("no-app");
+    if (!fin(wk.x) || !fin(wk.y)) return bad("bad-record");
+    var nx = fin(c.x) ? c.x : wk.x, ny = fin(c.y) ? c.y : wk.y;
+    if (nx !== wk.x || ny !== wk.y) moveTenken(wk, nx - wk.x, ny - wk.y);
+    if (others(ctx, "tenken", o).some(function(q){ return q.k === wk.k && sameNum(q.x, wk.x) && sameNum(q.y, wk.y) && (q.dir || "") === (wk.dir || ""); })) return bad("dup");
+    return { ok: true };
+  }
+  var DEFS = {
+    fx:     { add: fxAdd, set: fxSet, keys: ["wall", "side", "u", "z", "len", "hgt", "pat", "room"] },
+    lights: { add: ltAdd, set: ltSet, keys: ["x", "y", "act"] },
+    sashes: { set: saSet, keys: ["wall", "pos"] },
+    tenken: { set: tkSet, keys: ["x", "y"] }
+  };
+
+  function planOne(ctx, c){
+    if (!isObj(c)) return bad("bad-command");
+    var d, r;
+    if (c.op === "add"){
+      d = DEFS[c.list]; if (!d || !d.add) return bad("unsupported");
+      r = d.add(ctx, c); if (!r.ok) return r;
+      ctx.adds.push({ key: c.list, rec: r.rec });
+      return { ok: true, op: "add", list: c.list, rec: r.rec };
+    }
+    if (c.op === "set" || c.op === "remove"){
+      if (typeof c.id !== "string" || !c.id) return bad("bad-command");
+      var hit = findIn(ctx.s, c.id);
+      if (!hit){ var wq = where(c.id); return bad(wq && !wq.here ? "other-floor" : "not-found"); }
+      d = DEFS[hit.list]; if (!d) return bad("unsupported", { list: hit.list });
+      if (ctx.gone.indexOf(hit.o) >= 0) return bad("not-found");
+      if (c.op === "remove"){ ctx.gone.push(hit.o); ctx.goneKey = ctx.goneKey || []; ctx.goneKey.push(hit.list); return { ok: true, op: "remove", list: hit.list, id: c.id, o: hit.o }; }
+      if (!d.set) return bad("unsupported", { list: hit.list });
+      for (var k in c){ if (k !== "op" && k !== "id" && d.keys.indexOf(k) < 0) return bad("bad-field", { field: k }); }
+      r = d.set(ctx, ctx.workOf(hit.o), c, hit.o); if (!r.ok) return r;
+      return { ok: true, op: "set", list: hit.list, id: c.id, o: hit.o };
+    }
+    return bad("bad-op");
+  }
+  function copyOnto(o, wk){ var k; for (k in o) if (Object.prototype.hasOwnProperty.call(o, k) && !(k in wk)) delete o[k]; for (k in wk) o[k] = wk[k]; }
+  function selGet(s){ try { if (typeof sel === "undefined" || !sel || !SELKEY[sel.t]) return null; return { t: sel.t, o: arr(s[SELKEY[sel.t]])[sel.i] || null }; } catch(e){ return null; } }
+  function selPut(s, g){ try { if (!g || typeof sel === "undefined" || !sel || sel.t !== g.t) return; var i = g.o ? arr(s[SELKEY[g.t]]).indexOf(g.o) : -1; if (i < 0) sel = null; else if (i !== sel.i) sel.i = i; } catch(e){} }
+  function refresh(){                      /* 今までの画面を描き直す（「戻す」と同じ呼び方） */
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("描き直し（平面図）", e); }
+    try { var iso = document.getElementById("iso"); if (iso && iso.getClientRects().length && typeof drawRoom === "function") drawRoom(); } catch(e2){ warn("描き直し（室内図）", e2); }
+    try { if (typeof undoUi === "function") undoUi(); } catch(e3){}
+  }
+  function writeNow(cmds, opt){
+    var s = st(); if (!s) return bad("no-data");
+    if (!nf()) return bad("no-nafuda");
+    if (busy) return bad("busy");
+    if (typeof pushUndo !== "function" || typeof save !== "function" || typeof undoSnap !== "function" || typeof undoRestore !== "function") return bad("no-app");
+    var list = Array.isArray(cmds) ? cmds : [cmds];
+    if (!list.length) return bad("empty");
+    if (!Array.isArray(s.edges) || !s.edges.length) return bad("no-outline");
+    busy = 1;
+    try {
+      /* 1) 下調べ：何も書き換えない（物は写しの上で動かしてみる） */
+      var ctx = makeCtx(s), plans = [], k, p;
+      for (k = 0; k < list.length; k++){ p = planOne(ctx, list[k]); if (!p.ok){ p.at = k; return p; } plans.push(p); }
+      var sets = ctx.work.filter(function(x){ return ctx.gone.indexOf(x.o) < 0 && JSON.stringify(x.o) !== JSON.stringify(x.wk); });
+      var eff = plans.filter(function(q){ return q.op !== "set" || sets.some(function(x){ return x.o === q.o; }); });
+      if (opt.dry) return { ok: true, dry: true, rev: REV, would: plans.map(function(q){ var x = null; if (q.op === "set") ctx.work.forEach(function(y){ if (y.o === q.o) x = y.wk; }); return { op: q.op, list: q.list, id: q.id || null, rec: clone(q.op === "add" ? q.rec : q.op === "set" ? x : q.o) }; }) };
+      if (!eff.length) return { ok: true, same: true, rev: REV, ops: [] };
+      /* 2) 戻す用の控え */
+      var u0 = undoSnap(), pushed = false;
+      if (opt.undo !== false){ pushUndo(); pushed = true; }
+      /* 3) 書く → 4) 番号の付け直しと保存（save の中で、名札の部品が付け直して名札を付ける） */
+      var sg = selGet(s);
+      try {
+        sets.forEach(function(x){ copyOnto(x.o, x.wk); });
+        ctx.gone.forEach(function(o, i){ var a = s[ctx.goneKey[i]], j = arr(a).indexOf(o); if (j >= 0) a.splice(j, 1); });
+        ctx.adds.forEach(function(a){ if (!Array.isArray(s[a.key])) s[a.key] = []; s[a.key].push(a.rec); });
+        selPut(s, sg);
+        inWrite = 1; save(); inWrite = 0;
+      } catch(e){
+        inWrite = 0; warn("書く窓口", e);
+        try { if (pushed && typeof undoStack !== "undefined" && undoStack.length) undoStack.pop(); undoRestore(u0); } catch(e2){ warn("書く前へ戻す", e2); }
+        return bad("error", { msg: String((e && e.message) || e) });
+      }
+      /* 5) 知らせる */
+      var ops = eff.map(function(q){ return { op: q.op, list: q.list, id: q.op === "add" ? (q.rec.nid || null) : q.id }; });
+      if (opt.redraw !== false) refresh();
+      pend = { rev: REV, src: typeof opt.src === "string" ? opt.src : "mado", ops: ops };
+      return { ok: true, rev: REV, ops: ops, ids: ops.map(function(x){ return x.id; }) };
+    } finally { busy = 0; }
+  }
+  function write(cmds, opt){
+    var r; pend = null;
+    try { r = writeNow(cmds, isObj(opt) ? opt : {}); } catch(e){ busy = 0; inWrite = 0; warn("書く窓口", e); r = bad("error", { msg: String((e && e.message) || e) }); }
+    lastRes = r;
+    var ev = pend; pend = null; if (ev) emit(ev);       /* 知らせは、書き終わってから（受け取った側が、続けて書ける） */
+    return r;
+  }
+
+  /* ================= 健康診断（確かめ用。何も書き換えない） ================= */
+  function check(){
+    var s = st(), n = nf(), out = { ok: false, nafuda: n ? n.check() : null, twins: 0 };
+    if (!s || !n) return out;
+    function cnt(a, key){ var seen = Object.create(null); arr(a).forEach(function(o){ if (!isObj(o)) return; var k = key(o); if (k == null) return; if (seen[k]) out.twins++; else seen[k] = 1; }); }
+    function one(c){
+      cnt(c.fx, function(f){ return [f.k, f.w, f.sd || 0, f.u, f.z, f.len, f.hgt].join("|"); });
+      cnt(c.lights, function(l){ return [l.k, l.x, l.y].join("|"); });
+      cnt(c.sashes, function(a){ return (a.drawn && isObj(a.host)) ? [a.host.t, a.host.i, a.pos, a.w, a.cat].join("|") : null; });
+      cnt(c.tenken, function(o){ return [o.k, o.x, o.y, o.dir || ""].join("|"); });
+    }
+    one(s);
+    arr(s.fl).forEach(function(f, k){ if (k !== (s.fi || 0) && f && isObj(f.snap)) one(f.snap); });
+    out.ok = !!(out.nafuda && out.nafuda.ok) && out.twins === 0;
+    return out;
+  }
+
+  /* ================= 接点（2つだけ）：保存の後・現場を開いた後に「変わった」を知らせる ================= */
+  try {
+    if (typeof save === "function"){
+      var _save = save;
+      save = function(){
+        var r = _save.apply(this, arguments);
+        REV++;
+        if (!inWrite) emit({ rev: REV, src: "app", ops: null });
+        return r;
+      };
+    }
+    if (typeof loadProject === "function"){
+      var _lp = loadProject;
+      loadProject = function(){
+        var r = _lp.apply(this, arguments);
+        GEO = null; REV++;
+        emit({ rev: REV, src: "load", ops: null });
+        return r;
+      };
+    }
+  } catch(e){ warn("接点", e); }
+
+  window.MADO = {
+    v: VER, stage: 2,
+    ready: function(){ return !!st() && !!nf(); },
+    rev: function(){ return REV; },
+    read: read,
+    write: write,
+    where: where,
+    check: check,
+    refresh: refresh,
+    last: function(){ return lastRes; }
+  };
+})();
+</script>
