@@ -47130,6 +47130,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      名前は今の roomNameSheet、仕上げは今の roomFinSheet をそのまま呼ぶ（候補・予想・自分で入力・予想に戻す も同じ）。
    CAD-677（2026-11-27 Claude）：道具を持たずにドア・窓をタップ→「種類 大きさ・［変える］・［向き］（ドア）・［状態］（新設／既存の確認がある物）」の帯。
      変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。
+   CAD-679：照明の当たり方を今の ltNear（260mm）にそろえた（照明の近くの部屋のタップが照明に取られないように）。
    CAD-678（2026-11-27 Claude）：照明をタップ→帯（リフォームは［新設］［撤去］［交換］＝書く窓口 MADO.write の act、レールは［縦横］）。
      階段をタップ→［回す］（上る向きを90°ずつ。今の moveTenken で外形の中に収める）。 */
 (function(){
@@ -47242,7 +47243,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   /* ===== 3e. 照明・階段の帯 ===== */
   var thBar = null, thObj = null, thKind = "";
-  function ltAt(p){ var best = -1, bd = 26 * pxmm(); (S.lights || []).forEach(function(l, i){ var d; if (l.k === "rail"){ var L = l.len || 1500, hz = l.dir !== "v"; d = segD(p[0], p[1], hz ? [l.x - L / 2, l.y] : [l.x, l.y - L / 2], hz ? [l.x + L / 2, l.y] : [l.x, l.y + L / 2]); } else d = Math.max(0, Math.hypot(p[0] - l.x, p[1] - l.y) - (l.k === "down" ? 85 : 190)); if (d < bd){ bd = d; best = i; } }); return best; }
+  /* 照明の当たり方は今の ltNear と同じ（中心・レールの線から260mm以内）。小さく見えている時も指で押せるよう、最低12px */
+  function ltAt(p){ var best = -1, bd = Math.max(260, 12 * pxmm()); (S.lights || []).forEach(function(l, i){ var d; if (l.k === "rail"){ var L = l.len || 1500, hz = l.dir !== "v"; d = segD(p[0], p[1], hz ? [l.x - L / 2, l.y] : [l.x, l.y - L / 2], hz ? [l.x + L / 2, l.y] : [l.x, l.y + L / 2]); } else d = Math.hypot(p[0] - l.x, p[1] - l.y); if (d < bd){ bd = d; best = i; } }); return best; }
   function stairAt(p){ var best = -1; (S.tenken || []).forEach(function(o, i){ if (o.k !== "stair" || typeof tkExt !== "function") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1]) best = i; }); return best; }
   var ACT = { "new": "新設", remove: "撤去", swap: "交換" };
   function thLab(){ if (!thObj) return ""; if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : ""); return "階段　上り：" + ({ n: "上", e: "右", s: "下", w: "左" }[thObj.dir || "n"] || ""); }
