@@ -46043,6 +46043,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var top = side(xs, true), left = side(ys, false);
 
     /* 部屋名と面積：部屋のいちばん広い所に置く。建具の記号（開く軌跡など）にかかる所は避ける */
+    try { if (window.ZSYM && window.ZSYM.boxes) window.ZSYM.boxes(rd, f).forEach(function(b){ avoid.push(b); }); } catch(eZ){ warn("記号の範囲", eZ); }   /* CAD-669：部屋名は設備・照明・コンセントの記号も避ける */
     arr(rd.rooms).forEach(function(r){
       if (!Array.isArray(r.poly) || r.poly.length < 3) return;
       var P2 = r.poly, a = Math.abs(polyArea(P2)), xs2 = P2.map(function(q){ return q[0]; }), ys2 = P2.map(function(q){ return q[1]; }), x0 = Math.min.apply(null, xs2), x1 = Math.max.apply(null, xs2), y0 = Math.min.apply(null, ys2), y1 = Math.max.apply(null, ys2), best = null, i, j;
@@ -46110,8 +46111,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (L.empty){ say("まだ外枠がありません。①描く で外枠をなぞってください。"); return; }
     say("");
     var e = L.ext; S("rect", { x: e[0] - 30000, y: e[1] - 30000, width: e[2] - e[0] + 60000, height: e[3] - e[1] + 60000, fill: "#fff" }, svg);
-    var gSel = S("g", {}, svg), g = S("g", {}, svg), dC = "", dW = { "new": "", ex: "", low: "", hang: "" }, dD = "", dGh = "", by = { thin: {}, bold: {}, dash: {} };
+    var gSel = S("g", {}, svg), gSym = S("g", {}, svg), g = S("g", {}, svg), dC = "", dW = { "new": "", ex: "", low: "", hang: "" }, dD = "", dGh = "", by = { thin: {}, bold: {}, dash: {} };
     V.gSel = gSel;
+    try { if (window.ZSYM) window.ZSYM.fill(gSym, L); } catch(eS){ warn("記号", eS); }   /* CAD-669：設備・電気の記号の段（壁と文字の下、選んだ部屋の色の上） */
     L.chains.forEach(function(c){ dC += "M" + c[0].toFixed(1) + " " + c[1].toFixed(1) + "L" + c[2].toFixed(1) + " " + c[3].toFixed(1); });
     line(g, dC, SUB, .6, [10, 3, 2, 3]);
     L.walls.forEach(function(w){ dW[w.st] += pts(w.p); });
@@ -47059,5 +47061,205 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }
   };
+})();
+</script>
+<script>
+/* ---------- CAD-669：新しい図面の「設備・電気の記号」（2026-11-27 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい図面（ZUMEN）に、設備・照明・コンセントなどの記号を描く。読むのは窓口（MADO.read）だけ。保存データには触らない。
+   ・描き方は「細い線で統一・そのまま印刷できる施工図」（翔伍基準）。線の太さは画面で何pxで決め、拡大しても細いまま。
+     設備：キッチン（シンク・コンロ）・洗面化粧台・便器・浴槽・手洗い・下駄箱・洗濯機パン・点検口・床下収納・独立柱は、線画の記号で描く
+           （今のアプリの水まわりは写真のような絵なので、印刷の図面には使わない）。
+           階段・段差・枕棚・中段は、今のアプリの描き方（tenkenSvg。線画）をそのまま縮尺を合わせて使う。
+     照明：DL＝小さい丸に黒丸、CL＝丸に十字、レール＝実寸の線（今のアプリと同じ形）。横に略号（DL・CL）。
+     電気：コンセント＝丸に平行線2本、スイッチ＝黒丸、壁付け照明＝壁側を塗った丸、火災警報器＝丸に「警」、間接照明＝壁ぎわの破線。
+           壁の部屋側の面に付けて描く（窓口の「面」の向きを使う）。
+     撤去は赤、既存は灰色、新設は黒（図面の他の記号と同じ決まり）。
+   ・ZUMEN の描き直しのたびに呼ばれる（ZUMEN.draw の中に、記号の段を1つだけ足した）。この部品が無ければ何も描かない。 */
+(function(){
+  "use strict";
+  if (window.ZSYM) return;
+  var VER = 1, NS = "http://www.w3.org/2000/svg", INK = "#18202A", SUB = "#7A8591", RED = "#C62828";
+  (function(){ var c = document.createElement("style"); c.textContent = "#zumenRoot .zsym *{vector-effect:non-scaling-stroke}#zumenRoot .zsym text{vector-effect:none}"; document.head.appendChild(c); })();
+  function warn(m, e){ try { console.warn("[ZSYM] " + m, e || ""); } catch(x){} }
+  function fin(v){ return typeof v === "number" && isFinite(v); }
+  function E(tag, at, par){ var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (par) par.appendChild(e); return e; }
+  function colOf(st){ return st === "remove" ? RED : st === "exist" ? SUB : INK; }
+
+  /* 設備1つの、壁を背にした向きの座標変換。dir：n＝北（上）の壁を背に、s＝南、e＝東、w＝西 */
+  function frame(o){
+    var dir = o.dir || "n", w = o.w || 600, d = fin(o.d) ? o.d : w, cx = o.x, cy = o.y;
+    var T = function(x, y){   /* x：壁に沿って（-w/2〜w/2）、y：壁からの離れ（0〜d） */
+      if (dir === "s") return [cx - x, cy + d / 2 - y];
+      if (dir === "e") return [cx + d / 2 - y, cy + x];
+      if (dir === "w") return [cx - d / 2 + y, cy - x];
+      return [cx + x, cy - d / 2 + y];
+    };
+    return { T: T, w: w, d: d };
+  }
+  function poly(F, pts, at, g){ return E("path", Object.assign({ d: "M" + pts.map(function(p){ var q = F.T(p[0], p[1]); return q[0].toFixed(1) + " " + q[1].toFixed(1); }).join("L") + "Z", fill: "#fff", "stroke-width": .8 }, at), g); }
+  function rectL(F, x0, y0, x1, y1, at, g){ return poly(F, [[x0, y0], [x1, y0], [x1, y1], [x0, y1]], at, g); }
+  function ellL(F, x, y, rx, ry, at, g){   /* 楕円は、向きに合わせて rx／ry を入れ替える */
+    var c = F.T(x, y), sw = /^[ew]$/.test(F.dir || ""); return E("ellipse", Object.assign({ cx: c[0].toFixed(1), cy: c[1].toFixed(1), rx: (sw ? ry : rx).toFixed(1), ry: (sw ? rx : ry).toFixed(1), fill: "#fff", "stroke-width": .8 }, at), g);
+  }
+  function lineL(F, a, b, at, g){ var p = F.T(a[0], a[1]), q = F.T(b[0], b[1]); return E("line", Object.assign({ x1: p[0].toFixed(1), y1: p[1].toFixed(1), x2: q[0].toFixed(1), y2: q[1].toFixed(1), "stroke-width": .7 }, at), g); }
+  function text(g, x, y, s, size, col){ var t = E("text", { x: x.toFixed(1), y: (y + size * .36).toFixed(1), "font-size": size.toFixed(1), "text-anchor": "middle", fill: col, stroke: "#fff", "stroke-width": (size * .16).toFixed(1), "stroke-linejoin": "round", "paint-order": "stroke" }, g); t.style.paintOrder = "stroke"; t.textContent = s; return t; }
+
+  /* 箱の中に名前を収める：細長い箱は長い方向に字を回し、字の大きさは箱に合わせて小さくする */
+  function boxText(g, F, str, lab, col){
+    var c = F.T(0, F.d / 2), ew = /^[ew]$/.test(F.dir || ""), bw = ew ? F.d : F.w, bh = ew ? F.w : F.d, rot = bh > bw * 1.15, lng = rot ? bh : bw, sht = rot ? bw : bh;
+    var size = Math.min(lab, lng * .82 / Math.max(1, str.length), sht * .62), t = text(g, c[0], c[1], str, size, col);
+    if (rot) t.setAttribute("transform", "rotate(-90 " + c[0].toFixed(1) + " " + c[1].toFixed(1) + ")");
+    return t;
+  }
+  function tkOne(o, g, f){
+    var col = colOf(o.state), at = { stroke: col }, F = frame(o), w = F.w, d = F.d, k = o.kind; F.dir = o.dir || "n";
+    var lab = 150 * f;
+    if (k === "kitchen"){
+      rectL(F, -w / 2, 0, w / 2, d, at, g);
+      lineL(F, [-w / 2, d - 40], [w / 2, d - 40], at, g);                                         /* 天板の前の縁 */
+      var sw = Math.min(800, w * .32), sx = -w / 2 + Math.min(450, w * .12);
+      rectL(F, sx, d * .18, sx + sw, d * .78, Object.assign({ rx: 40 }, at), g);                    /* シンク */
+      E("circle", { cx: F.T(sx + sw / 2, d * .1)[0].toFixed(1), cy: F.T(sx + sw / 2, d * .1)[1].toFixed(1), r: 30, fill: "#fff", stroke: col, "stroke-width": .7 }, g);
+      var cxk = w / 2 - Math.min(450, w * .18);                                                   /* コンロ（3口） */
+      [[cxk - 130, d * .3], [cxk + 130, d * .3], [cxk, d * .66]].forEach(function(p){ var c = F.T(p[0], p[1]); E("circle", { cx: c[0].toFixed(1), cy: c[1].toFixed(1), r: Math.min(95, d * .14), fill: "none", stroke: col, "stroke-width": .7 }, g); });
+    } else if (k === "senmen" || k === "tearai"){
+      rectL(F, -w / 2, 0, w / 2, d, at, g);
+      ellL(F, 0, d * .56, w * (k === "tearai" ? .32 : .3), d * .28, at, g);
+      E("circle", { cx: F.T(0, d * .14)[0].toFixed(1), cy: F.T(0, d * .14)[1].toFixed(1), r: 22, fill: "#fff", stroke: col, "stroke-width": .7 }, g);
+    } else if (k === "wc"){
+      rectL(F, -w * .45, 0, w * .45, d * .27, Object.assign({ rx: 30 }, at), g);                  /* タンク */
+      ellL(F, 0, d * .62, w * .4, d * .36, at, g);                                                /* 便座 */
+      ellL(F, 0, d * .64, w * .25, d * .23, at, g);
+    } else if (k === "bath"){
+      rectL(F, -w / 2, 0, w / 2, d, at, g);
+      rectL(F, -w / 2 + 90, 90, w / 2 - 90, d - 90, Object.assign({ rx: 110 }, at), g);
+      var dc = F.T(-w / 2 + 230, d / 2); E("circle", { cx: dc[0].toFixed(1), cy: dc[1].toFixed(1), r: 35, fill: "none", stroke: col, "stroke-width": .7 }, g);
+    } else if (k === "geta"){
+      rectL(F, -w / 2, 0, w / 2, d, at, g);
+      lineL(F, [-w / 2, 0], [w / 2, d], at, g);
+      boxText(g, F, "下駄箱", lab, col);
+    } else if (k === "senpan"){
+      rectL(F, -w / 2, 0, w / 2, d, Object.assign({ rx: 60 }, at), g);
+      var pc = F.T(w * .3, d * .7); E("circle", { cx: pc[0].toFixed(1), cy: pc[1].toFixed(1), r: 45, fill: "none", stroke: col, "stroke-width": .7 }, g);
+      boxText(g, F, "洗濯機", lab, col);
+    } else return false;
+    return true;
+  }
+  /* 正方形の物（向きなし）：点検口・床下収納・独立柱 */
+  function sqOne(o, g, f){
+    var col = colOf(o.state), h = (o.ext && fin(o.ext[0])) ? o.ext[0] : (o.w || 600) / 2, hy = (o.ext && fin(o.ext[1])) ? o.ext[1] : h, x0 = o.x - h, y0 = o.y - hy, k = o.kind, lab = 140 * f;
+    if (k === "pillar"){ E("rect", { x: x0, y: y0, width: 2 * h, height: 2 * hy, fill: col, stroke: col, "stroke-width": .8 }, g); return true; }
+    if (k === "floor" || k === "ceil" || k === "yukaten" || k === "yukashu"){
+      var dash = k === "ceil" ? "4 3" : null, at = { x: x0, y: y0, width: 2 * h, height: 2 * hy, fill: "#fff", stroke: col, "stroke-width": .8 }; if (dash) at["stroke-dasharray"] = dash;
+      E("rect", at, g);
+      var la = { stroke: col, "stroke-width": .6 }; if (dash) la["stroke-dasharray"] = dash;
+      E("line", Object.assign({ x1: x0, y1: y0, x2: x0 + 2 * h, y2: y0 + 2 * hy }, la), g); E("line", Object.assign({ x1: x0 + 2 * h, y1: y0, x2: x0, y2: y0 + 2 * hy }, la), g);
+      text(g, o.x, y0 + 2 * hy + lab * 1.1, k === "ceil" ? "天井点検口" : k === "yukashu" ? "床下収納" : "床下点検口", lab, col);
+      return true;
+    }
+    return false;
+  }
+  /* 今のアプリの線画（tenkenSvg）を、図面の縮尺に合わせて載せる：階段・段差・枕棚・中段・エアコン用コンセント ほか */
+  function appOne(o, g, f){
+    if (typeof tenkenSvg !== "function" || !o.raw) return false;
+    var k = 22 * f, P = function(q){ return [q[0] / k, q[1] / k]; }, s = "";
+    try { s = tenkenSvg(Object.assign({}, o.raw), -1, P); } catch(e){ warn("tenkenSvg " + o.kind, e); return false; }
+    if (!s || /<image|url\(#/.test(s)) return false;   /* 絵（画像）を使う描き方は、印刷の図面には載せない */
+    var wrap = E("g", { transform: "scale(" + k + ")" }, g);
+    try { wrap.innerHTML = s; } catch(e){ wrap.remove(); return false; }
+    return true;
+  }
+  function boxOne(o, g, f){   /* どの描き方も無い物：外形の四角と名前だけ */
+    var col = colOf(o.state), h = (o.ext && fin(o.ext[0])) ? o.ext[0] : (o.w || 600) / 2, hy = (o.ext && fin(o.ext[1])) ? o.ext[1] : h;
+    E("rect", { x: o.x - h, y: o.y - hy, width: 2 * h, height: 2 * hy, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+    var nm = ""; try { nm = (typeof TKN !== "undefined" && TKN[o.kind]) ? TKN[o.kind] : o.kind; } catch(e){ nm = o.kind; }
+    text(g, o.x, o.y, String(nm).slice(0, 8), 130 * f, col);
+  }
+
+  /* 照明 */
+  function ltOne(t, g, f){
+    var col = colOf(t.state === "swap" ? "new" : t.state), lab = 150 * f;
+    if (t.kind === "rail"){
+      var len = t.len || 1500, hz = t.dir !== "v", x1 = hz ? t.x - len / 2 : t.x, x2 = hz ? t.x + len / 2 : t.x, y1 = hz ? t.y : t.y - len / 2, y2 = hz ? t.y : t.y + len / 2;
+      E("line", { x1: x1, y1: y1, x2: x2, y2: y2, stroke: col, "stroke-width": 2.2 }, g);
+      [-.32, 0, .32].forEach(function(q){ E("circle", { cx: t.x + (hz ? q * len : 0), cy: t.y + (hz ? 0 : q * len), r: 55, fill: "#fff", stroke: col, "stroke-width": .8 }, g); });
+      text(g, t.x, (hz ? t.y : y2) + lab * 1.4, "レール", lab, col);
+    } else {
+      var dl = t.kind === "down", r = dl ? 85 : 190;
+      E("circle", { cx: t.x, cy: t.y, r: r, fill: "#fff", stroke: col, "stroke-width": .9 }, g);
+      if (dl) E("circle", { cx: t.x, cy: t.y, r: r * .38, fill: col }, g);
+      else E("path", { d: "M" + (t.x - r * .7) + " " + t.y + "H" + (t.x + r * .7) + "M" + t.x + " " + (t.y - r * .7) + "V" + (t.y + r * .7), stroke: col, "stroke-width": .8, fill: "none" }, g);
+      text(g, t.x, t.y + r + lab * .9, dl ? "DL" : "CL", lab, col);
+    }
+    if (t.state === "remove"){ var rr = t.kind === "rail" ? 160 : 210; E("path", { d: "M" + (t.x - rr) + " " + (t.y - rr) + "L" + (t.x + rr) + " " + (t.y + rr) + "M" + (t.x + rr) + " " + (t.y - rr) + "L" + (t.x - rr) + " " + (t.y + rr), stroke: RED, "stroke-width": 1, fill: "none" }, g); }
+  }
+
+  /* 電気（壁の物）：壁の部屋側の面に付ける */
+  function fxOne(t, W, g, f){
+    var w = W[t.wall]; if (!w || !fin(t.u)) return;
+    var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, th = (w.th || 120) / 2, col = colOf(t.state);
+    var at = function(u, off){ return [w.a[0] + w.ux * u + nx * (th + off), w.a[1] + w.uy * u + ny * (th + off)]; };
+    var k = t.kind, c;
+    if (k === "outlet"){
+      var r = 80; c = at(t.u, r + 15);
+      E("circle", { cx: c[0], cy: c[1], r: r, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+      [-28, 28].forEach(function(s){ E("line", { x1: c[0] + w.ux * s - nx * r * .55, y1: c[1] + w.uy * s - ny * r * .55, x2: c[0] + w.ux * s + nx * r * .55, y2: c[1] + w.uy * s + ny * r * .55, stroke: col, "stroke-width": .7 }, g); });
+    } else if (k === "switch"){
+      c = at(t.u, 70); E("circle", { cx: c[0], cy: c[1], r: 55, fill: col }, g);
+    } else if (k === "sconce"){
+      var rs = 95; c = at(t.u, rs + 10);
+      E("circle", { cx: c[0], cy: c[1], r: rs, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+      var a0 = [c[0] - w.ux * rs, c[1] - w.uy * rs], a1 = [c[0] + w.ux * rs, c[1] + w.uy * rs], sw = (side > 0) ? 0 : 1;
+      E("path", { d: "M" + a0[0] + " " + a0[1] + "A" + rs + " " + rs + " 0 0 " + sw + " " + a1[0] + " " + a1[1] + "Z", fill: col }, g);   /* 壁側の半分を塗る */
+    } else if (k === "alarm"){
+      c = at(t.u, 130); E("circle", { cx: c[0], cy: c[1], r: 120, fill: "#fff", stroke: col, "stroke-width": .8 }, g); text(g, c[0], c[1], "警", 150 * f, col);
+    } else if (k === "indirect" && fin(t.len)){
+      var p0 = at(t.u, 60), p1 = at(t.u + t.len, 60); E("line", { x1: p0[0], y1: p0[1], x2: p1[0], y2: p1[1], stroke: col, "stroke-width": 1.4, "stroke-dasharray": "6 4" }, g);
+    }
+  }
+
+  function fill(g, L){
+    if (!g || !L || !L.ok || L.empty) return 0;
+    var m = window.MADO, rd = null; try { rd = m && m.read(); } catch(e){ rd = null; }
+    if (!rd || !rd.ok || rd.empty) return 0;
+    var f = L.f || 1, W = Object.create(null), n = 0;
+    g.setAttribute("class", "zsym");
+    (rd.walls || []).forEach(function(w){ if (w.id) W[w.id] = w; });
+    ["tenken", "lights", "fx"].forEach(function(li){   /* 重ね順：設備 → 照明 → 電気（小さい記号を上に） */
+      (rd.things || []).forEach(function(t){
+        if (t.list !== li) return;
+        try {
+          if (li === "tenken"){ if (!(tkOne(t, g, f) || sqOne(t, g, f) || appOne(t, g, f))) boxOne(t, g, f); n++; }
+          else if (li === "lights"){ ltOne(t, g, f); n++; }
+          else if (FXK.test(t.kind)){ fxOne(t, W, g, f); n++; }
+        } catch(e){ warn("記号 " + t.list + ":" + t.kind, e); }
+      });
+    });
+    return n;
+  }
+  var FXK = /^(outlet|switch|sconce|alarm|indirect)$/;
+  /* 記号が占める範囲（図面のmm）。部屋名の置き場所を決める時に避けてもらう */
+  function boxes(rd, f){
+    var out = [], W = Object.create(null), lab = 150 * (f || 1);
+    (rd.walls || []).forEach(function(w){ if (w.id) W[w.id] = w; });
+    (rd.things || []).forEach(function(t){
+      try {
+        if (t.list === "tenken" && fin(t.x) && fin(t.y)){
+          var h = (t.ext && fin(t.ext[0])) ? t.ext[0] : (t.w || 600) / 2, hy = (t.ext && fin(t.ext[1])) ? t.ext[1] : h, under = /^(floor|ceil|yukaten|yukashu|stair)$/.test(t.kind) ? lab * 1.8 : 0;
+          out.push([t.x - h, t.y - hy, t.x + h, t.y + hy + under]);
+        } else if (t.list === "lights" && fin(t.x) && fin(t.y)){
+          if (t.kind === "rail"){ var L = t.len || 1500, hz = t.dir !== "v"; out.push(hz ? [t.x - L / 2, t.y - 70, t.x + L / 2, t.y + lab * 2] : [t.x - 70, t.y - L / 2, t.x + 70, t.y + L / 2 + lab * 2]); }
+          else { var r = t.kind === "down" ? 85 : 190; out.push([t.x - r, t.y - r, t.x + r, t.y + r + lab * 1.5]); }
+        } else if (t.list === "fx" && FXK.test(t.kind) && t.kind !== "indirect"){
+          var w = W[t.wall]; if (!w || !fin(t.u)) return;
+          var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, off = (w.th || 120) / 2 + 130, cx = w.a[0] + w.ux * t.u + nx * off, cy = w.a[1] + w.uy * t.u + ny * off;
+          out.push([cx - 130, cy - 130, cx + 130, cy + 130]);
+        }
+      } catch(e){}
+    });
+    return out;
+  }
+  window.ZSYM = { v: VER, fill: fill, boxes: boxes };
 })();
 </script>
