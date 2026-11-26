@@ -47132,6 +47132,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-677（2026-11-27 Claude）：道具を持たずにドア・窓をタップ→「種類 大きさ・［変える］・［向き］（ドア）・［状態］（新設／既存の確認がある物）」の帯。
      変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。
    CAD-679：照明の当たり方を今の ltNear（260mm）にそろえた（照明の近くの部屋のタップが照明に取られないように）。
+   CAD-681：新しい図面を初めて開いた時に1回だけ、短い案内を出す（覚えるのは walk2-v1 の中の hint681 だけ。保存キーは増やさない）。
    CAD-678（2026-11-27 Claude）：照明をタップ→帯（リフォームは［新設］［撤去］［交換］＝書く窓口 MADO.write の act、レールは［縦横］）。
      階段をタップ→［回す］（上る向きを90°ずつ。今の moveTenken で外形の中に収める）。 */
 (function(){
@@ -47483,6 +47484,16 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     obsPad.observe(p, { attributes: true, attributeFilter: ["hidden"] });
   }
 
+  /* 初めて開いた時の案内（1回だけ） */
+  function firstHint(){
+    try {
+      if (!A || !usable() || busy() || !window.WALK2 || window.WALK2.get("hint681")) return false;
+      window.WALK2.set("hint681", 1);
+      clearTimeout(tmMsg); A.msg.textContent = "部屋・ドア・間仕切り・照明をタップすると、名前や向きを変えられます。物を足すのは［置く］、線を引くのは［間仕切り］"; A.msg.style.display = "block";
+      tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 6000);
+      return true;
+    } catch(e){ return false; }
+  }
   /* ===== 4. 案内（寸法の決まっていない辺がある時だけ、1回） ===== */
   function unk(){ try { return typeof unknown === "function" ? unknown() : 0; } catch(e){ return 0; } }
   function hint(after){
@@ -47510,7 +47521,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       else if (roomBar && roomBar.dataset.nm !== roomNm(roomObj(roomCid))) openRoom(roomCid);   /* 名前を変えたら、帯の名前も変える */
     }
     watchPad();
-    if (attach()){ if (!wasOpen){ wasOpen = true; hinted = false; setTimeout(function(){ hint(false); }, 400); } }
+    if (attach()){ if (!wasOpen){ wasOpen = true; hinted = false; setTimeout(function(){ if (!firstHint()) hint(false); }, 400); } }
   }
   window.addEventListener("walk2-switch", function(e){ if (!(e && e.detail && e.detail.on)) detach(); setTimeout(sync, 0); });
   setInterval(function(){ if (sw()) sync(); else if (A) detach(); }, 500);
