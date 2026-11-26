@@ -47026,11 +47026,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      パッドの上の空いた所に家全体が見えるよう図面を寄せ、選んだ辺を今と同じピンクで点滅させる。閉じたら元の見え方に戻す。
    ・道具（描き足す・消す・消しゴム）を持っている時と、外形をなぞっている時は、パッドを出さない（その道具のタップが優先）。
    ・寸法の決まっていない辺がある時は、図面を開いた時に「外壁の線をタップ」の案内を1回出す。
-   ・今回は1階だけ。⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない。保存キーは増やさない。 */
+   ・今回は1階だけ。⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない。保存キーは増やさない。
+   CAD-671（2026-11-27 Claude）：リフォームの時、道具を持たずに間仕切りをタップ→図面の下に「既存・新設・撤去」の帯。
+     今のアプリの setPState をそのまま呼ぶ（戻す1回で戻る）。選んだ間仕切りはピンクで点滅。新築は全部新設なので出さない。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
-  var VER = 1, NS = "http://www.w3.org/2000/svg";
+  var VER = 2, NS = "http://www.w3.org/2000/svg";
   var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -47079,7 +47081,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!A) return;
     if (editing) endEdit(true);
     try { A.obs.disconnect(); A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); A.ov.remove(); A.msg.remove(); } catch(e){}
-    A = null; down = null; nDown = 0;
+    closePart(); A = null; down = null; nDown = 0;
   }
   function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
   function say(t){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t) tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 3200); }
@@ -47092,6 +47094,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function selNow(){ try { var z = zumen(); return z ? z.selected() : null; } catch(e){ return null; } }
   function onDown(e){
     nDown++;
+    if (partObj && busy()) closePart();
     down = (nDown === 1 && !busy() && !editing) ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null;
   }
   function onMove(e){ if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down = null; }
@@ -47100,10 +47103,60 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var d = down; if (!d || e.pointerId !== d.id) return; down = null;
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
-    var i = edgeAt(p); if (i < 0) return;
+    var i = edgeAt(p);
+    if (i < 0){ var pi = partAt(p); if (pi >= 0){ setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else closePart(); return; }
+    closePart();
     setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0);   /* 図面の「部屋を選ぶ」タップは打ち消す */
     tapT = Date.now(); open(i);
   }
+  /* ===== 3b. リフォームの間仕切り：既存・新設・撤去（今の setPState） ===== */
+  var partSel = -1, partObj = null, partBar = null;   /* 選んだ間仕切りは、物そのもので覚える（戻す・足す・消すで番号がずれても取り違えない） */
+  function partIdx(){ var i = partObj ? (S.parts2D || []).indexOf(partObj) : -1; partSel = i; return i; }
+  function isRf(){ try { return S.mode === "rf"; } catch(e){ return false; } }
+  function partAt(p){
+    if (!isRf()) return -1;
+    var best = -1, bd = 16 * pxmm();
+    (S.parts2D || []).forEach(function(q, i){ var d = segD(p[0], p[1], [q.x1, q.y1], [q.x2, q.y2]); if (d < bd){ bd = d; best = i; } });
+    return best;
+  }
+  function stName(st){ return st === "new" ? "新設" : st === "remove" ? "撤去" : "既存"; }
+  function openPart(i){
+    if (!A || typeof setPState !== "function" || typeof pState !== "function") return { ok: false };
+    var q = (S.parts2D || [])[i]; if (!q) return { ok: false };
+    partSel = i; partObj = q;
+    if (!partBar){
+      partBar = document.createElement("div"); partBar.id = "k3PartBar";
+      partBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)";
+    }
+    if (!A.mid.contains(partBar)) A.mid.appendChild(partBar);
+    var L = Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)), cur = pState(q), B = "flex:1 1 0;min-width:0;min-height:44px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    partBar.innerHTML = '<div style="flex:0 0 auto;font-size:12px;font-weight:700;color:var(--sub,#5B6673);line-height:1.3">間仕切り<br>' + L.toLocaleString("ja-JP") + "mm</div>";
+    [["keep", "既存"], ["new", "新設"], ["remove", "撤去"]].forEach(function(o){
+      var b = document.createElement("button"); b.type = "button"; b.textContent = o[1]; b.style.cssText = B;
+      if (o[0] === cur){ b.style.background = o[0] === "remove" ? "#FDECEC" : "#E6EFFA"; b.style.borderColor = o[0] === "remove" ? "#C62828" : "var(--ai,#2563B0)"; b.style.color = o[0] === "remove" ? "#C62828" : "var(--ai,#2563B0)"; }
+      b.onclick = function(){ setSt(o[0]); }; partBar.appendChild(b);
+    });
+    var x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "閉じる"); x.style.cssText = B + ";flex:0 0 44px"; x.onclick = closePart; partBar.appendChild(x);
+    markPart();
+    return { ok: true, i: i, state: cur };
+  }
+  function setSt(st){
+    var pi0 = partIdx(), q = pi0 >= 0 ? S.parts2D[pi0] : null; if (!q) { closePart(); return { ok: false }; }
+    if (pState(q) === st) return { ok: true, same: true };
+    try { pushUndo(); setPState(q, st); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("間仕切りの状態", e); return { ok: false }; }
+    say("間仕切りを「" + stName(st) + "」にしました（戻すで戻せます）");
+    var qq = q; setTimeout(function(){ if (partObj === qq){ var j = partIdx(); if (j >= 0) openPart(j); else closePart(); } }, 60);
+    return { ok: true, state: st };
+  }
+  function markPart(){
+    if (!A) return; while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
+    var pi1 = partIdx(), q = pi1 >= 0 ? S.parts2D[pi1] : null; if (!q) return;
+    var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
+    l.setAttribute("x1", q.x1); l.setAttribute("y1", q.y1); l.setAttribute("x2", q.x2); l.setAttribute("y2", q.y2);
+    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    A.ov.appendChild(l);
+  }
+  function closePart(){ partSel = -1; partObj = null; if (partBar && partBar.parentNode) partBar.parentNode.removeChild(partBar); if (A && !editing) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
   /* 指を離した直後、同じ場所に「クリック」が届く。開いたばかりのパッドのボタン（×など）に当たって閉じないよう、それだけ捨てる */
   var tapT = 0;
   document.addEventListener("click", function(e){
@@ -47181,7 +47234,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function sync(){
     if (!sw()){ detach(); wasOpen = false; return; }
     var o = zopen();
-    if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } wasOpen = false; return; }
+    if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } closePart(); wasOpen = false; return; }
+    if (partObj && (busy() || partIdx() < 0 || !isRf())) closePart();
     watchPad();
     if (attach()){ if (!wasOpen){ wasOpen = true; hinted = false; setTimeout(function(){ hint(false); }, 400); } }
   }
@@ -47191,7 +47245,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.KAKU3 = {
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
-    open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }
+    open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; },
+    part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
   };
 })();
 </script>
