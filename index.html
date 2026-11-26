@@ -47125,11 +47125,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      今のアプリの setPState をそのまま呼ぶ（戻す1回で戻る）。選んだ間仕切りはピンクで点滅。新築は全部新設なので出さない。
    CAD-672（2026-11-27 Claude）：外側の「寸法の数字」をタップしても、その辺の数字パッドが出る（Fable の案を取り込み）。
      結びつけるのは「外形の1辺とちょうど同じ長さの数字」だけ。向き（横の数字＝横の辺、縦の数字＝縦の辺）が同じで、一番近い辺。
-     間仕切りで割れた途中の数字は辺ではないので、何もしない。 */
+     間仕切りで割れた途中の数字は辺ではないので、何もしない。
+   CAD-674（2026-11-27 Claude）：道具を持たずに部屋をタップして選ぶと、図面の下に「部屋名・広さ・［名前］（リフォームは［仕上げ］も）」の帯。
+     名前は今の roomNameSheet、仕上げは今の roomFinSheet をそのまま呼ぶ（候補・予想・自分で入力・予想に戻す も同じ）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
-  var VER = 3, NS = "http://www.w3.org/2000/svg";
+  var VER = 4, NS = "http://www.w3.org/2000/svg";
   var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -47178,7 +47180,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!A) return;
     if (editing) endEdit(true);
     try { A.obs.disconnect(); A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); A.ov.remove(); A.msg.remove(); } catch(e){}
-    closePart(); A = null; down = null; nDown = 0;
+    closePart(); closeRoom(); A = null; down = null; nDown = 0;
   }
   function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
   function say(t){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t) tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 3200); }
@@ -47192,6 +47194,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function onDown(e){
     nDown++;
     if (partObj && busy()) closePart();
+    if (roomCid != null && busy()) closeRoom();
     down = (nDown === 1 && !busy() && !editing) ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null;
   }
   function onMove(e){ if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down = null; }
@@ -47202,7 +47205,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
     var i = edgeAt(p);
     if (i < 0) i = dimEdgeAt(p);
-    if (i < 0){ var pi = partAt(p); if (pi >= 0){ setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else closePart(); return; }
+    if (i < 0){ var pi = partAt(p); if (pi >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else { closePart(); setTimeout(roomAfterTap, 0); } return; }
+    closeRoom();
     closePart();
     setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0);   /* 図面の「部屋を選ぶ」タップは打ち消す */
     tapT = Date.now(); open(i);
@@ -47224,6 +47228,44 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     }
     return best;
   }
+  /* ===== 3c. 選んだ部屋の帯（名前・仕上げ） ===== */
+  var roomBar = null, roomCid = null;
+  function roomAfterTap(){   /* 図面が部屋を選んだ後で見る（図面のタップの処理が先に走る） */
+    var z = zumen(), id = null; try { id = z ? z.selected() : null; } catch(e){}
+    if (!id || !/^r\d+$/.test(id)){ closeRoom(); return; }
+    openRoom(+id.slice(1));
+  }
+  /* 広さは図面の部屋名と同じ出し方（部屋の形の面積−穴）。同じ画面で数字が食い違わないように */
+  function areaOf(cid, r){
+    try {
+      var rd2 = window.MADO.read(), q = null; (rd2.rooms || []).forEach(function(x){ if (x.id === "r" + cid) q = x; });
+      if (q && Array.isArray(q.poly) && q.poly.length >= 3){
+        var pa = function(P){ var a = 0; for (var k = 0; k < P.length; k++){ var u = P[k], v = P[(k + 1) % P.length]; a += u[0] * v[1] - v[0] * u[1]; } return Math.abs(a / 2); };
+        var a = pa(q.poly); (q.holes || []).forEach(function(hh){ if (Array.isArray(hh) && hh.length >= 3) a -= pa(hh); });
+        return a / 1e6;
+      }
+    } catch(e){}
+    return (r && r.area) || 0;
+  }
+  function roomNm(r){ try { return (typeof roomDispNm366 === "function" ? roomDispNm366(r) : "") || (typeof roomLbl === "function" ? roomLbl(r) : "") || r.label || "部屋"; } catch(e){ return (r && r.label) || "部屋"; } }
+  function roomObj(cid){ try { var R = roomsCalc(); return (R && R.byCid) ? R.byCid[cid] || null : null; } catch(e){ return null; } }
+  function openRoom(cid){
+    if (!A || busy() || editing) return { ok: false };
+    var r = roomObj(cid); if (!r){ closeRoom(); return { ok: false }; }
+    roomCid = cid;
+    if (!roomBar){ roomBar = document.createElement("div"); roomBar.id = "k3RoomBar"; roomBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
+    if (!A.mid.contains(roomBar)) A.mid.appendChild(roomBar);
+    var nm = roomNm(r); roomBar.dataset.nm = nm;
+    var B = "flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    roomBar.innerHTML = '<div style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800">' + String(nm).replace(/[<&]/g, "") + '<span style="font-weight:600;font-size:12px;color:var(--sub,#5B6673)">　' + areaOf(cid, r).toFixed(1) + "㎡</span></div>";
+    var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; roomBar.appendChild(b); return b; };
+    mk("名前", function(){ var rr = roomObj(roomCid); if (rr && typeof roomNameSheet === "function") roomNameSheet(rr); });
+    if (isRf() && typeof roomFinSheet === "function") mk("仕上げ", function(){ var rr = roomObj(roomCid); if (rr) roomFinSheet(rr); });
+    var x = mk("×", function(){ closeRoom(); try { var z = zumen(); if (z) z.select(null); } catch(e){} }); x.style.padding = "0"; x.style.width = "44px";
+    return { ok: true, cid: cid, name: nm };
+  }
+  function closeRoom(){ roomCid = null; if (roomBar && roomBar.parentNode) roomBar.parentNode.removeChild(roomBar); }
+
   /* ===== 3b. リフォームの間仕切り：既存・新設・撤去（今の setPState） ===== */
   var partSel = -1, partObj = null, partBar = null;   /* 選んだ間仕切りは、物そのもので覚える（戻す・足す・消すで番号がずれても取り違えない） */
   function partIdx(){ var i = partObj ? (S.parts2D || []).indexOf(partObj) : -1; partSel = i; return i; }
@@ -47351,6 +47393,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var o = zopen();
     if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } closePart(); wasOpen = false; return; }
     if (partObj && (busy() || partIdx() < 0 || !isRf())) closePart();
+    if (roomCid != null){
+      var zs = null; try { zs = zumen().selected(); } catch(e){}
+      if (busy() || zs !== "r" + roomCid || !roomObj(roomCid)) closeRoom();
+      else if (roomBar && roomBar.dataset.nm !== roomNm(roomObj(roomCid))) openRoom(roomCid);   /* 名前を変えたら、帯の名前も変える */
+    }
     watchPad();
     if (attach()){ if (!wasOpen){ wasOpen = true; hinted = false; setTimeout(function(){ hint(false); }, 400); } }
   }
@@ -47361,6 +47408,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
+    room: function(cid){ return openRoom(cid); }, roomClose: closeRoom,
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
   };
 })();
