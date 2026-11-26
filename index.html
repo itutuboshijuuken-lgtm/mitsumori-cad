@@ -47127,11 +47127,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      結びつけるのは「外形の1辺とちょうど同じ長さの数字」だけ。向き（横の数字＝横の辺、縦の数字＝縦の辺）が同じで、一番近い辺。
      間仕切りで割れた途中の数字は辺ではないので、何もしない。
    CAD-674（2026-11-27 Claude）：道具を持たずに部屋をタップして選ぶと、図面の下に「部屋名・広さ・［名前］（リフォームは［仕上げ］も）」の帯。
-     名前は今の roomNameSheet、仕上げは今の roomFinSheet をそのまま呼ぶ（候補・予想・自分で入力・予想に戻す も同じ）。 */
+     名前は今の roomNameSheet、仕上げは今の roomFinSheet をそのまま呼ぶ（候補・予想・自分で入力・予想に戻す も同じ）。
+   CAD-677（2026-11-27 Claude）：道具を持たずにドア・窓をタップ→「種類 大きさ・［変える］・［向き］（ドア）・［状態］（新設／既存の確認がある物）」の帯。
+     変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
-  var VER = 4, NS = "http://www.w3.org/2000/svg";
+  var VER = 5, NS = "http://www.w3.org/2000/svg";
   var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -47180,7 +47182,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!A) return;
     if (editing) endEdit(true);
     try { A.obs.disconnect(); A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); A.ov.remove(); A.msg.remove(); } catch(e){}
-    closePart(); closeRoom(); A = null; down = null; nDown = 0;
+    closePart(); closeRoom(); closeSash(); A = null; down = null; nDown = 0;
   }
   function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
   function say(t){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t) tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 3200); }
@@ -47195,6 +47197,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     nDown++;
     if (partObj && busy()) closePart();
     if (roomCid != null && busy()) closeRoom();
+    if (sashObj && busy()) closeSash();
     down = (nDown === 1 && !busy() && !editing) ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null;
   }
   function onMove(e){ if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down = null; }
@@ -47203,6 +47206,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var d = down; if (!d || e.pointerId !== d.id) return; down = null;
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
+    var si = sashAt(p);
+    if (si >= 0){ closePart(); closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openSash(si); return; }
+    closeSash();
     var i = edgeAt(p);
     if (i < 0) i = dimEdgeAt(p);
     if (i < 0){ var pi = partAt(p); if (pi >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else { closePart(); setTimeout(roomAfterTap, 0); } return; }
@@ -47228,6 +47234,51 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     }
     return best;
   }
+  /* ===== 3d. ドア・窓の帯（変える・向き・状態） ===== */
+  var sashBar = null, sashObj = null;
+  function sashAt(p){   /* 今の pickCands の建具と同じ近さ（26px・ドアは中心も見る）を、新しい図面の大きさで */
+    if (typeof hostSeg !== "function") return -1;
+    var rad = 26 * pxmm(), best = -1, bd = Infinity;
+    (S.sashes || []).forEach(function(sa, i){
+      if (!sa.drawn || !sa.host) return; var sg = hostSeg(sa.host); if (!sg) return;
+      var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L];
+      var a = [sg[0][0] + u[0] * sa.pos, sg[0][1] + u[1] * sa.pos], b = [a[0] + u[0] * sa.w, a[1] + u[1] * sa.w], dd = segD(p[0], p[1], a, b);
+      if (typeof typeOf === "function" && typeOf(sa) === "door"){ var m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; dd = Math.min(dd, Math.max(0, Math.hypot(p[0] - m[0], p[1] - m[1]) - sa.w * 0.45)); }
+      if (dd < rad && dd < bd){ bd = dd; best = i; }
+    });
+    return best;
+  }
+  function sashLab(sa){ try { return (typeof sashLabel === "function" ? sashLabel(sa) : (sa.name || sa.cat)) + "　" + sa.w + "×" + sa.h; } catch(e){ return sa.cat + " " + sa.w; } }
+  function openSash(i){
+    if (!A || busy() || editing) return { ok: false };
+    var sa = (S.sashes || [])[i]; if (!sa) return { ok: false };
+    sashObj = sa;
+    if (!sashBar){ sashBar = document.createElement("div"); sashBar.id = "k3SashBar"; sashBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
+    if (!A.mid.contains(sashBar)) A.mid.appendChild(sashBar);
+    var lab = sashLab(sa); sashBar.dataset.lab = lab + "|" + (sa.flip || 0);
+    var B = "flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    sashBar.innerHTML = '<div style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:800">' + String(lab).replace(/[<&]/g, "") + "</div>";
+    var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; sashBar.appendChild(b); return b; };
+    var idx = function(){ return (S.sashes || []).indexOf(sashObj); };
+    mk("変える", function(){ var j = idx(); if (j >= 0 && typeof changeSheet === "function") changeSheet(j); });
+    var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
+    if ((ty === "door" || ty === "hiki" || ty === "closet") && window.KAKU2 && window.KAKU2.flip) mk("向き", function(){ var j = idx(); if (j >= 0) window.KAKU2.flip(j); });
+    try { if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(sa)) mk("状態", function(){ var j = idx(); if (j >= 0) sashAskState(j); }); } catch(e){}
+    var x = mk("×", closeSash); x.style.padding = "0"; x.style.width = "44px";
+    markSash();
+    return { ok: true, i: i, label: lab };
+  }
+  function markSash(){
+    if (!A) return; while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
+    var sa = sashObj; if (!sa || typeof hostSeg !== "function") return; var sg = hostSeg(sa.host); if (!sg) return;
+    var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L];
+    var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
+    l.setAttribute("x1", sg[0][0] + u[0] * sa.pos); l.setAttribute("y1", sg[0][1] + u[1] * sa.pos); l.setAttribute("x2", sg[0][0] + u[0] * (sa.pos + sa.w)); l.setAttribute("y2", sg[0][1] + u[1] * (sa.pos + sa.w));
+    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "butt"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    A.ov.appendChild(l);
+  }
+  function closeSash(){ sashObj = null; if (sashBar && sashBar.parentNode) sashBar.parentNode.removeChild(sashBar); if (A && !editing && !partObj) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
+
   /* ===== 3c. 選んだ部屋の帯（名前・仕上げ） ===== */
   var roomBar = null, roomCid = null;
   function roomAfterTap(){   /* 図面が部屋を選んだ後で見る（図面のタップの処理が先に走る） */
@@ -47393,6 +47444,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var o = zopen();
     if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } closePart(); wasOpen = false; return; }
     if (partObj && (busy() || partIdx() < 0 || !isRf())) closePart();
+    if (sashObj){
+      var sj = (S.sashes || []).indexOf(sashObj);
+      if (busy() || sj < 0) closeSash();
+      else if (sashBar && sashBar.dataset.lab !== sashLab(sashObj) + "|" + (sashObj.flip || 0)) openSash(sj);   /* 変えたら帯も変える */
+    }
     if (roomCid != null){
       var zs = null; try { zs = zumen().selected(); } catch(e){}
       if (busy() || zs !== "r" + roomCid || !roomObj(roomCid)) closeRoom();
@@ -47408,7 +47464,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
-    room: function(cid){ return openRoom(cid); }, roomClose: closeRoom,
+    room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
   };
 })();
