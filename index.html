@@ -46251,3 +46251,186 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
 })();
 </script>
+<script>
+/* ---------- CAD-663：描く（kaku）1回目 ＝ 新しい図面の上で外形をなぞる（2026-11-26 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい図面（CAD-662 の画面枠 #zumenRoot）の上で、指で外形をなぞれるようにする。
+   ・直線に整える所と記録は、今のアプリの fixInk() をそのまま呼ぶ（なぞった点を strokes に入れてから）。
+     写して作り直さない。同じ道を通るので、今の①描くと同じ記録になる。なぞった後に寸法の画面（go(2)）へ進むのも同じ。
+   ・指を離した時の決まりも今と同じ：閉じたらすぐ整える。閉じていなければ1.3秒待って整える。「整える」「クリア」も同じ言葉。
+   ・点は、今の白い紙（幅360）と同じ物差しに直して渡す。
+   ・「戻す」「進める」は、本体のボタン（#undoBtn・#redoBtn）を押す（今の寸法画面と同じやり方）。
+   ・外形が無い時は、図面を開いたらすぐ、なぞる状態になる。外形がある時は「描き直す」から。
+   ・今回は1階だけ。寸法の数字入れ、描き足す・消す、母屋側、2階の外形は次の回から。
+   ・⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない・何も変わらない。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.KAKU) return;
+  var VER = 1, NS = "http://www.w3.org/2000/svg", ACC = "#2563B0";
+  var A = null, tracing = false, mine = [], cur = null, curEl = null, pid = null, tmFix = 0, tmMsg = 0, tmRef = 0, pend = false, obsRoot = null, obsBody = null;
+
+  function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
+  function mado(){ var m = window.MADO; return (m && typeof m.read === "function") ? m : null; }
+  function zumen(){ var z = window.ZUMEN; return (z && typeof z.isOpen === "function") ? z : null; }
+  function zopen(){ var z = zumen(); try { return !!(z && z.isOpen()); } catch(e){ return false; } }
+  function warn(m, e){ try { console.warn("[KAKU] " + m, e || ""); } catch(x){} }
+  function rd(){ try { var m = mado(); return m ? m.read() : null; } catch(e){ return null; } }
+  /* アプリ側の部品がそろっているか。チュートリアルの最中は使わない（記録の決まりが違うため） */
+  function appOk(){
+    try { if (typeof HB !== "undefined" && HB && HB.__nbtut === 1) return false; } catch(e){}
+    try { return typeof fixInk === "function" && typeof clearInk === "function" && Array.isArray(strokes); } catch(e){ return false; }
+  }
+  function stacks(){ var u = 0, r = 0; try { u = undoStack.length; r = redoStack.length; } catch(e){} return [u, r]; }
+  function boxKey(){ var r = rd(); return (r && r.ok && !r.empty) ? JSON.stringify([r.box, r.outline ? r.outline.length : 0, r.fi || 0]) : "none"; }
+  function el(tag, css, text){ var e = document.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
+  var BTN = "min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:var(--panel,#fff);color:var(--ink,#18202A);font:inherit;font-size:14px;font-weight:700;flex:0 0 auto;white-space:nowrap";
+  function btn(id, text, fn, main){ var b = el("button", BTN + (main ? ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : ""), text); b.type = "button"; b.id = id; b.onclick = fn; return b; }
+
+  /* ===== 1. 新しい図面の枠に取り付ける ===== */
+  function attach(){
+    var root = document.getElementById("zumenRoot"); if (!root || !sw()) return null;
+    if (A && A.root === root && root.contains(A.row) && root.contains(A.layer)) return A;
+    var svg = root.querySelector("svg"), mid = svg ? svg.parentNode : null, bot = root.lastElementChild, top = root.firstElementChild;
+    if (!mid || !bot || bot === mid || mid.parentNode !== root) return null;
+    var row = el("div", "display:flex;gap:8px;align-items:center;padding:6px 8px;background:var(--panel,#fff);border-top:1px solid var(--line,#DCE3EB);overflow-x:auto");
+    row.id = "kakuRow";
+    var layer = el("div", "position:absolute;left:0;top:0;right:0;bottom:0;display:none;touch-action:none;background:rgba(255,255,255,.9);z-index:2");
+    layer.id = "kakuLayer";
+    var ink = document.createElementNS(NS, "svg"); ink.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none";
+    var hint = el("div", "position:absolute;left:12px;right:12px;top:34%;text-align:center;pointer-events:none;color:#8A96A3");
+    hint.appendChild(el("div", "font-size:16px;font-weight:700", "指で外形をなぞってください"));
+    hint.appendChild(el("div", "font-size:12px;margin-top:6px", "だいたいの形で大丈夫です。まっすぐに直します"));
+    layer.appendChild(ink); layer.appendChild(hint);
+    var msg = el("div", "position:absolute;left:50%;bottom:10px;transform:translateX(-50%);max-width:88%;padding:8px 14px;border-radius:999px;background:rgba(24,32,42,.88);color:#fff;font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;display:none;z-index:3");
+    msg.id = "kakuMsg";
+    var b = { undo: btn("kakuUndo", "戻す", undo), redo: btn("kakuRedo", "進める", redo), clear: btn("kakuClear", "クリア", clear), fix: btn("kakuFix", "整える", function(){ fix(true); }, 1),
+              redraw: btn("kakuRedraw", "描き直す", start, 1), cancel: btn("kakuCancel", "やめる", cancel) };
+    [b.undo, b.redo, b.clear, b.fix, el("span", "flex:1"), b.redraw, b.cancel].forEach(function(x){ row.appendChild(x); });
+    mid.appendChild(layer); mid.appendChild(msg); root.insertBefore(row, bot);
+    A = { root: root, mid: mid, row: row, layer: layer, ink: ink, hint: hint, msg: msg, b: b, top: top, top0: top ? top.textContent : "" };
+    if (top) top.textContent = "試験中　新しい図面（外形をなぞれます）";
+    bind(layer);
+    if (obsRoot) obsRoot.disconnect();
+    obsRoot = new MutationObserver(function(){ onState(); }); obsRoot.observe(root, { attributes: true, attributeFilter: ["style"] });
+    try { var z = zumen(); if (z) z.home(); } catch(e){}   /* 道具の列を足したぶん図面の高さが変わるので、全体を出し直す */
+    return A;
+  }
+  function detach(){
+    leave();
+    if (obsRoot){ obsRoot.disconnect(); obsRoot = null; }
+    if (!A) return;
+    try { if (A.top && A.top0) A.top.textContent = A.top0; A.row.remove(); A.layer.remove(); A.msg.remove(); } catch(e){}
+    A = null;
+  }
+  function say(t){ if (!A || !t) return; A.msg.textContent = t; A.msg.style.display = "block"; clearTimeout(tmMsg); tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 1800); }
+  function show(e, on){ e.style.display = on ? "" : "none"; }
+  function able(e, on){ e.disabled = !on; e.style.opacity = on ? "" : ".4"; }
+  function refresh(){
+    if (!A) return;
+    var r = rd(), good = !!(r && r.ok), empty = good && !!r.empty, f1 = !good || empty || !(r.fi > 0), ok = appOk(), st = stacks();
+    if (empty && ok && !tracing && zopen()){ tracing = true; mine = []; ink(); }   /* 外形が無い時は、開いたらすぐなぞる状態 */
+    if (tracing && (!ok || !f1)) leave();
+    show(A.b.undo, !tracing); show(A.b.redo, !tracing); show(A.b.redraw, !tracing && ok && f1);
+    show(A.b.clear, tracing); show(A.b.fix, tracing); show(A.b.cancel, tracing && !empty);
+    able(A.b.undo, st[0] > 0); able(A.b.redo, st[1] > 0); able(A.b.clear, mine.length > 0); able(A.b.fix, mine.length > 0);
+    A.layer.style.display = tracing ? "block" : "none";
+    A.layer.style.background = empty ? "#fff" : "rgba(255,255,255,.9)";
+    show(A.hint, tracing && !mine.length);
+  }
+
+  /* ===== 2. なぞる ===== */
+  function unit(){ var w = A ? A.layer.getBoundingClientRect().width : 0; return w > 0 ? 360 / w : 1; }   /* 今の白い紙（幅360）と同じ物差し */
+  function at(e){ var r = A.layer.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  function line(){ var pl = document.createElementNS(NS, "polyline"); pl.setAttribute("fill", "none"); pl.setAttribute("stroke", ACC); pl.setAttribute("stroke-width", "2.5"); pl.setAttribute("stroke-linecap", "round"); pl.setAttribute("stroke-linejoin", "round"); A.ink.appendChild(pl); return pl; }
+  function put(pl, s){ pl.setAttribute("points", s.map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ")); }
+  function ink(){ if (!A) return; while (A.ink.firstChild) A.ink.removeChild(A.ink.firstChild); mine.forEach(function(s){ put(line(), s); }); }
+  function queue(){ if (pend) return; pend = true; requestAnimationFrame(function(){ pend = false; if (cur && curEl) put(curEl, cur); }); }
+  function bind(layer){
+    layer.addEventListener("pointerdown", function(e){
+      if (!tracing) return; e.preventDefault();
+      if (cur){ var i = mine.indexOf(cur); if (i >= 0) mine.splice(i, 1); if (curEl) curEl.remove(); cur = null; curEl = null; pid = null; refresh(); return; }   /* 2本目の指が来たら、描きかけの線をやめる */
+      clearTimeout(tmFix); pid = e.pointerId; try { layer.setPointerCapture(pid); } catch(x){}
+      cur = [at(e)]; mine.push(cur); curEl = line(); put(curEl, cur); refresh();
+    });
+    layer.addEventListener("pointermove", function(e){
+      if (!cur || e.pointerId !== pid) return;
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null, k = unit(), i, p, l; if (!evs || !evs.length) evs = [e];
+      for (i = 0; i < evs.length; i++){ p = at(evs[i]); l = cur[cur.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) * k > 2) cur.push(p); }
+      queue();
+    });
+    var up = function(e){ if (!cur || e.pointerId !== pid) return; endStroke(); };
+    layer.addEventListener("pointerup", up); layer.addEventListener("pointercancel", up);
+  }
+  function units(){ var k = unit(); return mine.map(function(s){ return s.map(function(p){ return [p[0] * k, p[1] * k]; }); }).filter(function(s){ return s.length > 0; }); }
+  /* 指を離した時。今のアプリの endStroke と同じ決まり（数字は幅360の物差しで） */
+  function endStroke(){
+    if (curEl && cur) put(curEl, cur); cur = null; curEl = null; pid = null;
+    var all = []; units().forEach(function(s){ s.forEach(function(p){ all.push(p); }); });
+    if (all.length < 8) return;
+    var xs = all.map(function(p){ return p[0]; }), ys = all.map(function(p){ return p[1]; });
+    var diag = Math.hypot(Math.max.apply(null, xs) - Math.min.apply(null, xs), Math.max.apply(null, ys) - Math.min.apply(null, ys)), a = all[0], b = all[all.length - 1];
+    clearTimeout(tmFix);
+    if (diag > 60 && Math.hypot(a[0] - b[0], a[1] - b[1]) < diag * 0.15) fix(false);
+    else if (diag > 90) tmFix = setTimeout(function(){ if (cur || !mine.length || !tracing) return; fix(false); }, 1300);
+  }
+  /* 整える：なぞった点をアプリに渡して、アプリの fixInk() を呼ぶ */
+  function fix(byButton){
+    clearTimeout(tmFix);
+    if (!A || !tracing) return { ok: false, why: "not-tracing" };
+    if (!appOk()) return { ok: false, why: "no-app" };
+    var m = mado(), r0 = m ? m.rev() : 0, done = false;
+    try { strokes = units(); fixInk(); done = !m || m.rev() !== r0; }
+    catch(e){ warn("整える", e); say("直線に整えられませんでした"); }
+    if (!done){ try { clearInk(); } catch(x){} refresh(); return { ok: false, why: "small" }; }   /* 読めなかった時：アプリ側の線だけ片付ける。こちらの線は残す */
+    mine = []; tracing = false; ink(); refresh();
+    try { var z = zumen(); if (z) z.open(); } catch(e2){}   /* 新しい外形に合わせて、図面を描き直して全体を出す */
+    refresh();
+    return { ok: true, byButton: !!byButton };
+  }
+  function start(){ if (!A || !appOk()) return false; var r = rd(); if (r && r.ok && !r.empty && r.fi > 0) return false; tracing = true; mine = []; ink(); refresh(); return true; }
+  function leave(){ clearTimeout(tmFix); tracing = false; mine = []; cur = null; curEl = null; pid = null; if (A){ ink(); A.layer.style.display = "none"; } }
+  function cancel(){ leave(); refresh(); return true; }
+  function clear(){ clearTimeout(tmFix); mine = []; cur = null; curEl = null; pid = null; ink(); refresh(); return true; }
+
+  /* ===== 3. 戻す・進める（本体のボタンを押す） ===== */
+  function press(id){
+    var b = document.getElementById(id); if (!b) return false;
+    try { if (typeof undoUi === "function") undoUi(); } catch(e){}
+    if (b.disabled) return false;
+    var k0 = boxKey(); b.click(); refresh();
+    if (boxKey() !== k0){ try { var z = zumen(); if (z) z.open(); } catch(e2){} refresh(); }   /* 外形が変わったら、全体を出し直す */
+    return true;
+  }
+  function undo(){ return press("undoBtn"); }
+  function redo(){ return press("redoBtn"); }
+
+  /* ===== 4. 見張り（図面が開いた・とじた、アプリのお知らせ、切り替え） ===== */
+  function onState(){
+    if (!sw()){ detach(); return; }
+    if (zopen()){ if (attach()) refresh(); }
+    else if (A){ leave(); refresh(); }
+  }
+  function watchOn(){
+    if (obsBody || !document.body) return;
+    obsBody = new MutationObserver(function(list){
+      var i, j, n;
+      for (i = 0; i < list.length; i++) for (j = 0; j < list[i].addedNodes.length; j++){
+        n = list[i].addedNodes[j]; if (!n || n.nodeType !== 1) continue;
+        if (n.id === "zumenRoot") setTimeout(onState, 0);
+        else if (A && n.classList && n.classList.contains("toast") && zopen()) say(n.textContent);   /* アプリのお知らせ（同じ言葉）を、この画面にも出す */
+      }
+    });
+    obsBody.observe(document.body, { childList: true });
+  }
+  function watchOff(){ if (obsBody){ obsBody.disconnect(); obsBody = null; } }
+  window.addEventListener("walk2-switch", function(e){ if (e && e.detail && e.detail.on){ watchOn(); setTimeout(onState, 0); } else { watchOff(); detach(); } });
+  window.addEventListener("mado-change", function(){ if (!A) return; clearTimeout(tmRef); tmRef = setTimeout(function(){ if (A && zopen()) refresh(); }, 30); });
+  if (sw()){ watchOn(); onState(); }
+
+  window.KAKU = {
+    v: VER, stage: "描く1",
+    state: function(){ var r = rd(), st = stacks(), good = !!(r && r.ok); return { attached: !!A, tracing: tracing, strokes: mine.length, points: mine.reduce(function(n, s){ return n + s.length; }, 0), empty: good && !!r.empty, floor: good && !r.empty ? (r.fi || 0) : 0, undo: st[0], redo: st[1], app: appOk() }; },
+    start: start, cancel: cancel, clear: clear, fix: function(){ return fix(true); }, undo: undo, redo: redo
+  };
+})();
+</script>
