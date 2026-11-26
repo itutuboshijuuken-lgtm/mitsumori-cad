@@ -4778,12 +4778,21 @@ function tidyShrink342(){
      描いた直後にここで縮小まで済ませ、字は最初から最終の大きさで出す。 */
   const svg = $("plan"); if (!svg) return null;
   const texts = [...svg.querySelectorAll("text")].filter(t => !t.closest("#planInk") && !t.closest("[data-sno]"));
+  /* CAD-652（公開しない・作業中）：読みと書きを分ける。元の形は「1つの字の
+     computed style を読む→その字に書く」を字ごとに繰り返し、書くたびに
+     スタイル再計算が無効化されて次の読みで払い直していた（実測：タップの
+     流れで約550ms）。先に全部読んでから全部書けば、払うのは1回になる。
+     読みの値も書きの内容も元のまま。 */
+  const rd652 = [];
   texts.forEach(t => {
     if (t.__tidy342) return;   /* CAD-342：同じ DOM に tidy をかけ直しても、縮小は1回だけ */
     t.__tidy342 = 1;
-    const cs = getComputedStyle(t), fs = parseFloat(cs.fontSize);
-    if (fs && !((cs.fill === "rgb(37, 99, 176)" || cs.fill === "rgb(29, 42, 58)") && fs >= 10 && /^(\u5168\u9577\s*)?[\d,]+$/.test((t.textContent || "").trim()))) t.style.fontSize = (fs * PLAN_FONT_K) + "px";   /* CAD-642：寸法の数字（青→濃色に直された物も含む）は view432 が画面で一定の大きさに決めるので、ここでは縮めない（縮める側と決める側が交互に勝って数字の大きさが揺れるのを止める） */
-    if (t.classList.contains("halo")){ const sw = parseFloat(cs.strokeWidth); if (sw) t.style.strokeWidth = (sw * PLAN_FONT_K) + "px"; }
+    const cs = getComputedStyle(t);
+    rd652.push({ t: t, fs: parseFloat(cs.fontSize), fill: cs.fill, sw: parseFloat(cs.strokeWidth), halo: t.classList.contains("halo") });
+  });
+  rd652.forEach(r => {
+    if (r.fs && !((r.fill === "rgb(37, 99, 176)" || r.fill === "rgb(29, 42, 58)") && r.fs >= 10 && /^(\u5168\u9577\s*)?[\d,]+$/.test((r.t.textContent || "").trim()))) r.t.style.fontSize = (r.fs * PLAN_FONT_K) + "px";   /* CAD-642：寸法の数字（青→濃色に直された物も含む）は view432 が画面で一定の大きさに決めるので、ここでは縮めない（縮める側と決める側が交互に勝って数字の大きさが揺れるのを止める） */
+    if (r.halo){ if (r.sw) r.t.style.strokeWidth = (r.sw * PLAN_FONT_K) + "px"; }
   });
   return texts;
 }
@@ -32019,13 +32028,20 @@ window.__len309txt = function(){ return null; };
     el.classList.remove("btn325i"); el.classList.remove("col325"); el.classList.remove("nlb325"); el.classList.remove("big376");
     el.__b325 = null;
   }
+  function setCls325(el, col, nlb){
+    /* CAD-652（公開しない・作業中）：最終形が同じ時は何も書かない。
+       元は毎回 remove してから読み直し、付け直していたため、ボタン
+       1つごとにスタイル再計算が無効化され、次のボタンの読みで
+       払い直していた。先に読んで、変わる時だけ書く。 */
+    if (el.classList.contains("col325") !== col) el.classList.toggle("col325", col);
+    if (el.classList.contains("nlb325") !== nlb) el.classList.toggle("nlb325", nlb);
+  }
   function layout325(el){
     var w = el.clientWidth, h = el.clientHeight;
-    el.classList.remove("col325"); el.classList.remove("nlb325");
-    if (!w || !h) return;
-    if (w >= 100 && w >= h * 1.6) return;                /* 横長：絵が左＋文字が右 */
-    if (h < 34) { el.classList.add("nlb325"); return; }  /* 低い：絵だけ */
-    el.classList.add("col325");                          /* 四角：絵が上＋小さい文字が下 */
+    if (!w || !h) { setCls325(el, false, false); return; }
+    if (w >= 100 && w >= h * 1.6) { setCls325(el, false, false); return; }  /* 横長：絵が左＋文字が右 */
+    if (h < 34) { setCls325(el, false, true); return; }  /* 低い：絵だけ */
+    setCls325(el, true, false);                          /* 四角：絵が上＋小さい文字が下 */
   }
   function swap325(el, key){
     var has = !!el.querySelector("img.ic325");
@@ -32044,6 +32060,7 @@ window.__len309txt = function(){ return null; };
     layout325(el);
   }
   function apply325(){
+    window.__dirty325 = false;
     var on = mode325() === "icon";
     if (document.body) document.body.classList.toggle("btn325icon", on);
     for (var i = 0; i < RULES.length; i++){
@@ -32080,10 +32097,14 @@ window.__len309txt = function(){ return null; };
   var t325 = null;
   function sched325(){ if (t325) return; t325 = setTimeout(function(){ t325 = null; apply325(); }, 120); }
   try {
-    var mo325 = new MutationObserver(sched325);
+    var mo325 = new MutationObserver(function(){ window.__dirty325 = true; sched325(); });
     if (document.body) mo325.observe(document.body, { childList: true, subtree: true });
   } catch(e){}
-  setInterval(apply325, 1500);
+  /* CAD-652（公開しない・作業中）：1.5秒ごとの見回りは、MutationObserver が
+     変化を拾った時だけ走らせる。拾い漏らし対策として10回に1回は従来通り
+     全点検する。apply325 が走ったら借りは返す。 */
+  var tick325 = 0;
+  setInterval(function(){ tick325++; if (window.__dirty325 || tick325 % 10 === 0) apply325(); }, 1500);
   window.__btn325 = { mode: mode325, apply: apply325 };
 })();
 </script>
