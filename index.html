@@ -46434,3 +46434,249 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
 })();
 </script>
+<script>
+/* ---------- CAD-665：描く2回目 ＝ 新しい図面の上で「描き足す・消す・消しゴム」（2026-11-27 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい図面（#zumenRoot）の道具の列（CAD-664 の #kakuRow）に、今の②寸法と同じ名前・同じ働きの
+     「描き足す」「消す」「消しゴム」を足す（11/13 の決定：外形の道具は 描き直す・描き足す・消す・消しゴム の4つ）。
+   ・計算は今のアプリの部品をそのまま呼ぶ。写して作り直さない（見積・保存データは今の②寸法と同じになる）。
+       描き足す … HB.__kt120 の analyze → applyShape → remap97（今の描き足すのOKと同じ手順）
+       消す     … S.noWall を切り替える（今の「消す」と同じ。もう一度タップで戻る）
+       消しゴム … eraFromStroke → eraseRect（今の消しゴムと同じ）
+   ・違うのは場所だけ：別ページを開かず、新しい図面の上で直接なぞる。描き足すは予告（緑＝増える／赤＝切り取る）を見てOK。
+   ・道具を持っている間：1本指＝なぞる、2本指＝拡大・移動。なぞっている途中で2本目の指が来たら、描きかけをやめる。
+     「消す」は1本指の移動もそのまま使える（タップだけ拾う）。
+   ・今回は1階だけ。⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.KAKU2) return;
+  var VER = 1, NS = "http://www.w3.org/2000/svg", ADD = "29,122,70", CUT = "192,57,43";
+  var A = null, tool = "", ink = null, prev = null, prevRev = -1, downs = Object.create(null), tapK = null, tmMsg = 0, obsVb = null;
+
+  function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
+  function zumen(){ var z = window.ZUMEN; return (z && typeof z.isOpen === "function") ? z : null; }
+  function zopen(){ var z = zumen(); try { return !!(z && z.isOpen()); } catch(e){ return false; } }
+  function mado(){ var m = window.MADO; return (m && typeof m.read === "function") ? m : null; }
+  function rd(){ try { var m = mado(); return m ? m.read() : null; } catch(e){ return null; } }
+  function rev(){ try { var m = mado(); return m ? m.rev() : 0; } catch(e){ return 0; } }
+  function kt(){ try { return HB.__kt120 || null; } catch(e){ return null; } }
+  function warn(m, e){ try { console.warn("[KAKU2] " + m, e || ""); } catch(x){} }
+  function tracingK(){ try { return !!(window.KAKU && window.KAKU.state().tracing); } catch(e){ return false; } }
+  function appOk(){
+    try { if (typeof HB !== "undefined" && HB && HB.__nbtut) return false; } catch(e){}
+    try { return typeof S !== "undefined" && S && Array.isArray(S.edges) && S.edges.length >= 4 && typeof pushUndo === "function" && typeof eraseRect === "function" && typeof eraFromStroke === "function" && typeof pts === "function" && !!kt(); } catch(e){ return false; }
+  }
+  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty && !(r.fi > 0)); }
+  function usable(){ return sw() && zopen() && appOk() && f1() && !tracingK(); }
+  function plan(){ return A ? A.root.querySelector('svg[aria-label="平面図"]') : null; }
+  function el(tag, css, text){ var e = document.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
+  function fmtN(v){ return (Math.round(v * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }); }   /* 2,047.5 のような尺の半端も、そのまま出す */
+  var BTN = "min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:var(--panel,#fff);color:var(--ink,#18202A);font:inherit;font-size:14px;font-weight:700;flex:0 0 auto;white-space:nowrap";
+  function btn(id, text, fn){ var b = el("button", BTN, text); b.type = "button"; b.id = id; b.onclick = fn; return b; }
+
+  /* ===== 1. 道具の列に取り付ける ===== */
+  function attach(){
+    var root = document.getElementById("zumenRoot"), row = document.getElementById("kakuRow");
+    if (!root || !row || !root.contains(row)) return null;
+    if (A && A.root === root && row.contains(A.b.add) && root.contains(A.row2) && A.mid.contains(A.ov)) return A;
+    detach();
+    var svg = root.querySelector('svg[aria-label="平面図"]'), mid = svg ? svg.parentNode : null; if (!mid) return null;
+    var b = { add: btn("k2Add", "描き足す", function(){ pick("add"); }), del: btn("k2Del", "消す", function(){ pick("del"); }), era: btn("k2Era", "消しゴム", function(){ pick("era"); }),
+              stop: btn("k2Stop", "やめる", function(){ off(); }), ok: btn("k2Ok", "OK", ok) };
+    b.ok.style.cssText += ";background:#1d7a46;border-color:#1d7a46;color:#fff;flex:1"; b.stop.style.flex = "1";
+    var at = document.getElementById("kakuRedraw"); [b.add, b.del, b.era].forEach(function(x){ row.insertBefore(x, at && at.parentNode === row ? at : null); });
+    /* 道具が7つになったので、幅390の画面でも横に押し出されないよう、列を少し詰める（どの道具も画面の外に出さない） */
+    row.style.gap = "6px"; Array.prototype.forEach.call(row.querySelectorAll("button"), function(x){ x.style.padding = "0 6px"; x.style.fontSize = "13px"; x.style.flex = "1 1 auto"; x.style.minWidth = "0"; });
+    var row2 = el("div", "display:none;gap:8px;padding:0 8px 6px;background:var(--panel,#fff)"); row2.id = "k2Row";
+    row2.appendChild(b.stop); row2.appendChild(b.ok); row.parentNode.insertBefore(row2, row.nextSibling);
+    var ov = document.createElementNS(NS, "svg"); ov.id = "k2Ov"; ov.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    ov.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1";
+    var msg = el("div", "position:absolute;left:10px;right:10px;top:10px;padding:8px 12px;border-radius:12px;background:rgba(24,32,42,.88);color:#fff;font-size:13px;font-weight:700;line-height:1.45;text-align:center;pointer-events:none;display:none;z-index:3");
+    msg.id = "k2Msg";
+    mid.appendChild(ov); mid.appendChild(msg);
+    A = { root: root, row: row, row2: row2, mid: mid, ov: ov, msg: msg, b: b };
+    mid.addEventListener("pointerdown", onDown, true); mid.addEventListener("pointermove", onMove, true);
+    mid.addEventListener("pointerup", onUp, true); mid.addEventListener("pointercancel", onUp, true);
+    obsVb = new MutationObserver(syncVb); obsVb.observe(svg, { attributes: true, attributeFilter: ["viewBox"] }); syncVb();
+    return A;
+  }
+  function detach(){
+    if (!A) return;
+    tool = ""; ink = null; prev = null; tapK = null; downs = Object.create(null);
+    try { A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); } catch(e){}
+    if (obsVb){ obsVb.disconnect(); obsVb = null; }
+    try { [A.b.add, A.b.del, A.b.era, A.row2, A.ov, A.msg].forEach(function(x){ x.remove(); }); } catch(e){}
+    A = null;
+  }
+  function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
+  function say(t, keep){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t && !keep) tmMsg = setTimeout(function(){ if (A && !(tool === "add" && prev)) A.msg.style.display = "none"; }, 2600); }
+  function show(e, on){ e.style.display = on ? "" : "none"; }
+  function refresh(){
+    if (!A) return;
+    var ok = usable();
+    if (tool && !ok) off(true);
+    [A.b.add, A.b.del, A.b.era].forEach(function(x){ show(x, ok); });
+    var map = { add: A.b.add, del: A.b.del, era: A.b.era };
+    Object.keys(map).forEach(function(k){ var x = map[k], on = tool === k; x.setAttribute("aria-pressed", on ? "true" : "false"); x.style.background = on ? "#E6EFFA" : "var(--panel,#fff)"; x.style.borderColor = on ? "var(--ai,#2563B0)" : "var(--line,#DCE3EB)"; x.style.color = on ? "var(--ai,#2563B0)" : "var(--ink,#18202A)"; });
+    A.row2.style.display = tool ? "flex" : "none";
+    show(A.b.ok, tool === "add"); A.b.ok.disabled = !prev; A.b.ok.style.opacity = prev ? "" : ".4";
+    if (prev && prevRev !== rev()) dropPrev();   /* 外形が変わったら（戻す・進めるなど）、予告は捨てる */
+  }
+
+  /* ===== 2. 道具を持つ・置く ===== */
+  function pick(k){
+    if (!A || !usable()) return false;
+    if (tool === k){ off(); return true; }
+    if (k === "add"){ var pp = null; try { pp = kt().polyOf(S.edges); } catch(e){} if (!pp || pp.gap > 1){ say("図面が閉じていません"); return false; } }
+    off(true); tool = k; refresh();
+    if (k !== "del") roomy();
+    say(k === "add" ? "描き足す：外に描くと増える・中に描くと切り取る（コの字は3辺でOK）" : k === "del" ? "消す：壁を消したい辺をタップしてください（もう一度タップで壁が戻ります）" : "消しゴム：消したい所を、外形にそってなぞってください");
+    return true;
+  }
+  /* なぞる道具を持ったら、家のまわりに描ける余白を出す（今の描き足すと同じ：家の大きさの3割＋600mm）。今より狭くはしない */
+  function roomy(){
+    try {
+      var z = zumen(), P = pts(), xs = P.map(function(p){ return p[0]; }), ys = P.map(function(p){ return p[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), m = Math.max(x1 - x0, y1 - y0) * 0.3 + 600;
+      var cur = z.view(), want = [x0 - m, y0 - m, x1 - x0 + 2 * m, y1 - y0 + 2 * m];
+      if (cur && cur[0] <= want[0] && cur[1] <= want[1] && cur[0] + cur[2] >= want[0] + want[2] && cur[1] + cur[3] >= want[1] + want[3]) return;
+      z.view(want);
+    } catch(e){ warn("余白", e); }
+  }
+  function off(quiet){ tool = ""; ink = null; tapK = null; dropPrev(); if (A){ clearOv(); if (!quiet) say(""); } refresh(); return true; }
+  function clearOv(){ if (A) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
+  function dropPrev(){ prev = null; prevRev = -1; if (A){ clearOv(); if (tool === "add") say(""); A.b.ok.disabled = true; A.b.ok.style.opacity = ".4"; } }
+  function S2(tag, at, parent){ var e = document.createElementNS(NS, tag); Object.keys(at).forEach(function(k){ e.setAttribute(k, at[k]); }); (parent || A.ov).appendChild(e); return e; }
+
+  /* ===== 3. 指の扱い（図面の外枠で、図面より先に受ける） ===== */
+  function toPlan(e){ var s = plan(), m = s && s.getScreenCTM(); if (!m) return null; var p = s.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; p = p.matrixTransform(m.inverse()); return [p.x, p.y]; }
+  function pxmm(){ var s = plan(), m = s && s.getScreenCTM(); return (m && m.a) ? 1 / m.a : 1; }
+  function onPlanTarget(t){ var s = plan(); return !!(s && t && (t === s || s.contains(t) || t === A.mid)); }
+  function onDown(e){
+    var n = Object.keys(downs).length; downs[e.pointerId] = 1;
+    if (!tool || !onPlanTarget(e.target)) return;
+    if (tool === "del"){ tapK = n === 0 ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null; return; }
+    if (ink){ cancelInk(); return; }          /* 2本目の指：描きかけをやめて、拡大・移動に渡す */
+    if (n > 0) return;                         /* もう別の指が図面を動かしている */
+    var p = toPlan(e); if (!p) return;
+    e.preventDefault(); e.stopPropagation();
+    try { A.mid.setPointerCapture(e.pointerId); } catch(x){}
+    if (tool === "add") dropPrev();
+    var red = tool === "era";
+    ink = { id: e.pointerId, pts: [p], el: S2("polyline", { fill: red ? "rgba(198,40,40,.12)" : "none", stroke: red ? "#C62828" : "#1565c0", "stroke-width": red ? 10 : 4, "stroke-opacity": red ? ".45" : "1", "stroke-linecap": "round", "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }) };
+    putInk();
+  }
+  function onMove(e){
+    if (tapK && e.pointerId === tapK.id && Math.hypot(e.clientX - tapK.x, e.clientY - tapK.y) > 8) tapK = null;
+    if (!ink || e.pointerId !== ink.id) return;
+    e.preventDefault(); e.stopPropagation();
+    var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : null, step = 2 * pxmm(), i, p, l; if (!evs || !evs.length) evs = [e];
+    for (i = 0; i < evs.length; i++){ p = toPlan(evs[i]); if (!p) continue; l = ink.pts[ink.pts.length - 1]; if (Math.hypot(p[0] - l[0], p[1] - l[1]) > step) ink.pts.push(p); }
+    putInk();
+  }
+  function onUp(e){
+    delete downs[e.pointerId];
+    if (tapK && e.pointerId === tapK.id){ var k = tapK; tapK = null; if (e.type === "pointerup" && Date.now() - k.t < 500) tapEdge(e, k.sel); return; }
+    if (!ink || e.pointerId !== ink.id) return;
+    e.stopPropagation();
+    var P = ink.pts; try { ink.el.remove(); } catch(x){} ink = null;
+    if (e.type !== "pointerup") return;
+    if (tool === "add") finishAdd(P); else if (tool === "era") finishEra(P);
+  }
+  function putInk(){ if (ink) ink.el.setAttribute("points", ink.pts.map(function(p){ return p[0].toFixed(1) + "," + p[1].toFixed(1); }).join(" ")); }
+  function cancelInk(){ if (!ink) return; try { ink.el.remove(); } catch(x){} ink = null; }
+  function selNow(){ try { var z = zumen(); return z ? z.selected() : null; } catch(e){ return null; } }
+
+  /* ===== 4. 描き足す（今の描き足すと同じ計算） ===== */
+  function po(){ try { return S.po ? [+S.po[0] || 0, +S.po[1] || 0] : [0, 0]; } catch(e){ return [0, 0]; } }
+  function finishAdd(P){
+    if (!appOk()) return { ok: false, why: "no-app" };
+    var K = kt(), o = po(), q = P.map(function(p){ return [p[0] - o[0], p[1] - o[1]]; }), mm = pxmm(), a, r;
+    try { a = K.analyze(q, 24 * mm); } catch(e){ warn("analyze", e); a = null; }
+    if (!a) return { ok: false, why: "small" };
+    if (a.bad){ say("コの字か四角で描いてください"); return { ok: false, why: "bad" }; }
+    try { r = K.applyShape(S.edges.map(function(x){ return Object.assign({}, x); }), a, 28 * mm); } catch(e){ warn("applyShape", e); r = { ok: false, msg: "形をうまく作れませんでした" }; }
+    if (!r || !r.ok){ say((r && r.msg) || "形をうまく作れませんでした"); return { ok: false, why: "shape" }; }
+    prev = r; prevRev = rev(); drawPrev(); refresh();
+    say((r.mode === "add" ? "増える " : "切り取る ") + fmtN(r.w) + " × " + fmtN(r.h) + "　よければ OK", true);
+    return { ok: true, mode: r.mode, w: r.w, h: r.h };
+  }
+  function drawPrev(){
+    if (!A || !prev) return; clearOv();
+    var o = po(), R = prev.rect, col = prev.mode === "add" ? ADD : CUT;
+    S2("rect", { x: R.x0 + o[0], y: R.y0 + o[1], width: R.x1 - R.x0, height: R.y1 - R.y0, fill: "rgba(" + col + ",.35)" });
+    S2("polygon", { points: prev.loop.map(function(p){ return (p[0] + o[0]) + "," + (p[1] + o[1]); }).join(" "), fill: "none", stroke: "#111", "stroke-width": 2, "stroke-linejoin": "miter", "vector-effect": "non-scaling-stroke" });
+  }
+  function ok(){   /* 今の描き足すの OK と同じ手順 */
+    if (!prev || !appOk() || prevRev !== rev()) { dropPrev(); refresh(); return { ok: false }; }
+    var r = prev, dr = 0; prev = null;
+    try {
+      pushUndo();
+      dr = kt().remap97(S.edges, r);
+      S.edges = r.edges;
+      if (typeof resetPV === "function") resetPV();
+      if (typeof solve === "function") solve();
+      if (typeof save === "function") save();
+      if (typeof go === "function") go(2);
+    } catch(e){ warn("描き足すOK", e); say("描き足せませんでした。戻すで元に戻せます"); return { ok: false }; }
+    var keep = tool; tool = ""; dropPrev(); refresh();
+    try { var z = zumen(); if (z) z.open(); } catch(e2){}
+    tool = keep; refresh();
+    say(dr ? "描き足しました（なくなった壁の建具 " + dr + " 件は外しました）" : "描き足しました");
+    return { ok: true, dropped: dr };
+  }
+
+  /* ===== 5. 消しゴム（今の消しゴムと同じ計算） ===== */
+  function finishEra(P){
+    if (!appOk()) return { ok: false, why: "no-app" };
+    if (P.length < 6){ say("消したい所を、指でなぞってください"); return { ok: false, why: "short" }; }
+    var r = null; try { r = eraFromStroke(P); } catch(e){ warn("eraFromStroke", e); }
+    if (!r){ say("もう少し大きくなぞってください"); return { ok: false, why: "small" }; }
+    var b0 = bbox(), w = Math.min(r.x1, b0.x1) - Math.max(r.x0, b0.x0), h = Math.min(r.y1, b0.y1) - Math.max(r.y0, b0.y0), res;
+    try { res = eraseRect(r); } catch(e){ warn("eraseRect", e); res = "消せませんでした"; }
+    if (typeof res === "string"){ say(res); return { ok: false, why: "msg", msg: res }; }
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    try { var z = zumen(); if (z) z.open(); } catch(e2){}
+    refresh();
+    say(fmtN(w) + "×" + fmtN(h) + " を消しました。違ったら戻すで戻せます" + (res && res.dropped ? "（消えた壁の窓・ドア " + res.dropped + "個は外しました）" : ""));
+    return { ok: true, w: w, h: h, dropped: (res && res.dropped) || 0 };
+  }
+
+  /* ===== 6. 消す（今の「消す」と同じ：S.noWall を切り替える） ===== */
+  function segD(x, y, a, b){ var ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey, t = L2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / L2)) : 0; return Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t); }
+  function edgeAt(p){ var P = pts(), n = P.length, best = -1, bd = 16 * pxmm(), i, d; for (i = 0; i < n; i++){ d = segD(p[0], p[1], P[i], P[(i + 1) % n]); if (d < bd){ bd = d; best = i; } } return best; }
+  function tapEdge(e, sel0){
+    if (!appOk()) return { ok: false };
+    var p = toPlan(e); if (!p) return { ok: false };
+    var i = edgeAt(p); if (i < 0) return { ok: false, why: "no-edge" };
+    setTimeout(function(){ try { var z = zumen(); if (z) z.select(sel0); } catch(x){} }, 0);   /* 図面の「部屋を選ぶ」タップは打ち消す */
+    return toggle(i);
+  }
+  function toggle(i){
+    if (!appOk() || !(i >= 0) || !S.edges[i]) return { ok: false };
+    try { pushUndo(); S.noWall = (S.noWall === i) ? -1 : i; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("消す", e); return { ok: false }; }
+    say(S.noWall >= 0 ? "辺" + (i + 1) + "の壁を消しました（開放）" : "壁を戻しました");
+    return { ok: true, noWall: S.noWall };
+  }
+
+  /* ===== 7. 見張り ===== */
+  function sync(){
+    if (!sw()){ detach(); return; }
+    if (!zopen()){ if (A && tool) off(true); return; }
+    if (attach()) refresh();
+  }
+  document.addEventListener("click", function(e){ var t = e.target; if (A && tool && t && t.closest && t.closest("#kakuRedraw")) off(true); }, true);   /* 描き直すを押したら道具を置く */
+  window.addEventListener("walk2-switch", function(e){ if (!(e && e.detail && e.detail.on)) detach(); setTimeout(sync, 0); });
+  window.addEventListener("mado-change", function(){ if (A) setTimeout(function(){ if (A && zopen()) refresh(); }, 40); });
+  setInterval(function(){ if (sw()) sync(); else if (A) detach(); }, 500);
+
+  window.KAKU2 = {
+    v: VER, stage: "描く2",
+    state: function(){ return { attached: !!A, usable: usable(), tool: tool, preview: prev ? { mode: prev.mode, w: prev.w, h: prev.h } : null, noWall: (typeof S !== "undefined" && S) ? S.noWall : null }; },
+    pick: pick, off: function(){ return off(); }, ok: ok,
+    /* 検査用：図面の座標（mm）で、なぞった線・タップを渡す */
+    trace: function(P){ if (!A || !tool || tool === "del" || !Array.isArray(P)) return { ok: false }; return tool === "add" ? finishAdd(P) : finishEra(P); },
+    tapEdge: function(i){ if (!A || tool !== "del") return { ok: false }; return toggle(i); }
+  };
+})();
+</script>
