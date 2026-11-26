@@ -45092,9 +45092,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-685（Fable の CAD-669 版）：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し（2026-11-27 Claude）----------
-   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
-   ・CAD-661（段階3-1）・CAD-667（段階4）・CAD-668（器具の形）の部品を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
+/* ---------- CAD-692（Fable の CAD-686 版）：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し（2026-11-27 Claude Fable）----------
+   この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
+   ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
+     main の CAD-667〜669（新しい図面の物）とは別物。main では、この3つをまとめて CAD-685。
+   ・CAD-686 の直し：立体の［図面］で図面へ移る時、先に立体をとじてから図面を開く（図面に「立っていた所」の印が出るように）。RITTAI.v は 5。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45111,7 +45114,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 4, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 5, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null;   /* 描く仕組み（起動中1つを使い続ける） */
@@ -46441,10 +46444,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       fpRoom = r.id; fpPid = MODEL.pid; return true;
     } catch(x){ return false; }
   }
-  function toPlan(){   /* 図面へ。立体はとじる（立っていた所は覚えておき、戻ると同じ場所・同じ向き） */
+  function toPlan(){   /* 図面へ。立体はとじる（立っていた所は覚えておき、戻ると同じ場所・同じ向き）。先にとじてから図面を開く＝図面が、立っていた所の印を描けるように */
     var z = window.ZUMEN; posSave(true);
-    try { if (z && typeof z.open === "function" && !z.isOpen()) z.open(); } catch(e){ warn("図面を開けませんでした", e); }
     close();
+    try { if (z && typeof z.open === "function" && !z.isOpen()) z.open(); } catch(e){ warn("図面を開けませんでした", e); }
   }
   /* 部屋の中の立ち位置：いちばん遠い角の少し内側に立ち、部屋の奥を向く */
   function stand(id){
