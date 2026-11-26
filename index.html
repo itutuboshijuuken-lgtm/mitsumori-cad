@@ -44035,3 +44035,42 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
 })();
 </script>
+<script>
+/* ---------- CAD-658：新しい歩く画面（walk2）段階0 ＝ 新旧スイッチの窓口だけ（2026-11-26 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい立体用の保存キー walk2-v1 を、読む／書く窓口 window.WALK2 を作る。「⋯」メニューに切／入のスイッチを置く。
+   ・段階0では、スイッチを入れても何も変わらない（新しい立体はまだ無い。段階3から中身が入る）。
+   ・保存キーは、スイッチを触った時にだけ作る（開くだけでは増えない）。既存の保存キーは読まない・書かない・消さない。
+   ・見積・数量・耐力壁の計算、描画、既存の部品には触れない。 */
+(function(){
+  "use strict";
+  var KEY = "walk2-v1";
+  function read(){ try { var o = JSON.parse(localStorage.getItem(KEY) || "null"); return (o && typeof o === "object") ? o : {}; } catch(e){ return {}; } }
+  function write(o){ try { localStorage.setItem(KEY, JSON.stringify(o)); return true; } catch(e){ return false; } }
+  window.WALK2 = {
+    key: KEY,
+    stage: 0,
+    isOn: function(){ return read().on === 1; },
+    setOn: function(v){ var o = read(); o.v = 1; o.on = v ? 1 : 0; write(o); try { window.dispatchEvent(new CustomEvent("walk2-switch", { detail: { on: !!v } })); } catch(e){} },
+    get: function(name){ return read()[name]; },
+    set: function(name, val){ var o = read(); o.v = 1; o[name] = val; write(o); }
+  };
+  function label(){ return "新しい歩く画面（試験中）：" + (window.WALK2.isOn() ? "入" : "切"); }
+  function menu(){
+    try {
+      var mm = document.querySelector("details.mo .mm"); if (!mm || document.getElementById("walk2Menu")) return;
+      var b = document.createElement("button"); b.type = "button"; b.id = "walk2Menu"; b.textContent = label();
+      b.onclick = function(){
+        window.WALK2.setOn(!window.WALK2.isOn());
+        b.textContent = label();
+        try { if (typeof toast === "function") toast(window.WALK2.isOn() ? "新しい歩く画面：入（いまは中身が未完成です）" : "新しい歩く画面：切（今までどおり）"); } catch(e){}
+      };
+      mm.appendChild(b);
+      var nt = document.createElement("div"); nt.id = "walk2Note"; nt.style.cssText = "font-size:11px;line-height:1.4;padding:2px 8px 6px;opacity:.75";
+      nt.textContent = "切のままなら、今までと同じです。いまは準備だけで、入れても何も変わりません。";
+      mm.appendChild(nt);
+    } catch(e){}
+  }
+  setInterval(menu, 1500); menu();
+})();
+</script>
