@@ -46470,12 +46470,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・置き方：ドア・窓＝上と同じ。照明・電気＝書く窓口 MADO.write の「置く」（記録は平面図・室内図で置いた時と同じ）。
      電気は一番近い壁（25px以内）の、タップした側の面に付く。高さは今の決まり（コンセント300・スイッチ1200・警報器は天井-150・壁付け照明1800）。
      設備＝今の addTenken を、置く場所（HB.__putAt）だけ渡してそのまま呼ぶ（壁にくっつける・外なら寄せる・向きも今と同じ）。
-   ・置いた物（ドア・窓・照明・設備・電気）はつかんで動かせる＝MADO.write の「動かす」。消すは「消す」の道具で（電気も消せるようにした＝MADO.write の「消す」）。 */
+   ・置いた物（ドア・窓・照明・設備・電気）はつかんで動かせる＝MADO.write の「動かす」。消すは「消す」の道具で（電気も消せるようにした＝MADO.write の「消す」）。
+   CAD-673（2026-11-27 Claude）：つかみ方を 11/21 の翔伍の決めにそろえた。
+   ・置いた直後と、動かして直した直後（最後に触ってから3秒）は、長押しなしですぐつかめる。それより前の物は長押し（0.45秒）でつかむ。
+     ちょっと当たって動くのを防ぐため。長押しの前に指が動いたら、図面を動かす方になる。
+   ・「間仕切り」の道具で、描いた間仕切りも同じ決まりで動かせる（壁に直角の向きだけ・227.5mmの目に吸い付く）。
+     動かし方は今の movePart（L字の凹みの外へは出さない）をそのまま呼ぶ。描き始めが間仕切りの上でも、すぐ指を動かせば新しい間仕切りを描ける。
+     動かした間仕切りにT字でつながっている間仕切りは、端を一緒に伸び縮みさせる（すき間を作らない）。その壁に付いたドア・窓は、元の場所に残るよう位置を直す。 */
 (function(){
   "use strict";
   if (window.KAKU2) return;
-  var VER = 4, NS = "http://www.w3.org/2000/svg", ADD = "29,122,70", CUT = "192,57,43";
-  var A = null, tool = "", open3 = false, spec = null, drag = null, tapP = null, ink = null, prev = null, prevRev = -1, downs = Object.create(null), tapK = null, tmMsg = 0, obsVb = null;
+  var VER = 5, NS = "http://www.w3.org/2000/svg", ADD = "29,122,70", CUT = "192,57,43";
+  var A = null, tool = "", open3 = false, spec = null, drag = null, tapP = null, hold = null, holdTm = 0, pdrag = null, recent = Object.create(null), ink = null, prev = null, prevRev = -1, downs = Object.create(null), tapK = null, tmMsg = 0, obsVb = null;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
   function zumen(){ var z = window.ZUMEN; return (z && typeof z.isOpen === "function") ? z : null; }
@@ -46579,7 +46585,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       z.view(want);
     } catch(e){ warn("余白", e); }
   }
-  function off(quiet){ tool = ""; ink = null; tapK = null; drag = null; tapP = null; dropPrev(); if (A){ clearOv(); if (!quiet) say(""); } refresh(); return true; }
+  function touch(nid){ if (nid) recent[nid] = Date.now(); }   /* 最後に触った時刻（3秒はすぐつかめる） */
+  function fresh(nid){ return !!nid && Date.now() - (recent[nid] || 0) < 3000; }
+  function off(quiet){ tool = ""; ink = null; tapK = null; drag = null; tapP = null; endHold(); pdrag = null; dropPrev(); if (A){ clearOv(); if (!quiet) say(""); } refresh(); return true; }
   function clearOv(){ if (A) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
   function dropPrev(){ prev = null; prevRev = -1; if (A){ clearOv(); if (tool === "add") say(""); A.b.ok.disabled = true; A.b.ok.style.opacity = ".4"; } }
   function S2(tag, at, parent){ var e = document.createElementNS(NS, tag); Object.keys(at).forEach(function(k){ e.setAttribute(k, at[k]); }); (parent || A.ov).appendChild(e); return e; }
@@ -46599,11 +46607,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     e.preventDefault(); e.stopPropagation();
     try { A.mid.setPointerCapture(e.pointerId); } catch(x){}
     if (tool === "add") dropPrev();
+    if (tool === "part"){
+      var qi = partNear(p);
+      if (qi >= 0 && fresh(S.parts2D[qi].nid)){ startPdrag(qi, p, e.pointerId); return; }   /* 描いた直後・動かした直後の間仕切りは、すぐつかむ */
+      if (qi >= 0){ var pid0 = e.pointerId; endHold(); hold = { part: qi, id: pid0, x: e.clientX, y: e.clientY, p: p }; holdTm = setTimeout(function(){ if (!hold || hold.part == null || !ink || ink.id !== pid0) return; var h = hold; hold = null; cancelInk(); startPdrag(h.part, h.p, pid0); try { if (navigator.vibrate) navigator.vibrate(15); } catch(x){} say("つかみました。指を動かすと動きます（壁に直角の向きだけ）"); }, 450); }
+    }
     var red = tool === "era";
     ink = { id: e.pointerId, pts: [p], el: S2("polyline", { fill: red ? "rgba(198,40,40,.12)" : "none", stroke: red ? "#C62828" : "#1565c0", "stroke-width": red ? 10 : 4, "stroke-opacity": red ? ".45" : "1", "stroke-linecap": "round", "stroke-linejoin": "round", "vector-effect": "non-scaling-stroke" }) };
     putInk();
   }
   function onMove(e){
+    if (pdrag && e.pointerId === pdrag.id){ e.preventDefault(); e.stopPropagation(); movePdrag(e); return; }
+    if (hold && hold.part != null && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 8) endHold();   /* すぐ動かした＝新しい間仕切りを描く */
     if (tapK && e.pointerId === tapK.id && Math.hypot(e.clientX - tapK.x, e.clientY - tapK.y) > 8) tapK = null;
     if (tool === "put"){ putMove(e); return; }
     if (!ink || e.pointerId !== ink.id) return;
@@ -46614,6 +46629,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function onUp(e){
     delete downs[e.pointerId];
+    if (pdrag && e.pointerId === pdrag.id){ e.stopPropagation(); endPdrag(e.type === "pointerup"); return; }
+    if (hold && hold.part != null && e.pointerId === hold.id) endHold();
     if (tapK && e.pointerId === tapK.id){ var k = tapK; tapK = null; if (e.type === "pointerup" && Date.now() - k.t < 500) tapEdge(e, k.sel); return; }
     if (tool === "put"){ putUp(e); return; }
     if (!ink || e.pointerId !== ink.id) return;
@@ -46746,14 +46763,29 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var p = toPlan(e); if (!p) return;
     var pk = grabAt(p);
     if (pk){
-      e.preventDefault(); e.stopPropagation(); try { A.mid.setPointerCapture(e.pointerId); } catch(x){}
-      drag = { id: e.pointerId, t0: pk.t, i: pk.i, x: e.clientX, y: e.clientY, t: Date.now(), moved: false, W: wallsNow(), to: null, p0: p };
+      var ro = pk.t === "o" ? S.sashes[pk.i] : recOf(pk.t, pk.i), nid = ro && ro.nid;
+      if (fresh(nid)){   /* 置いた直後・直した直後：すぐつかむ */
+        e.preventDefault(); e.stopPropagation(); try { A.mid.setPointerCapture(e.pointerId); } catch(x){}
+        drag = { id: e.pointerId, t0: pk.t, i: pk.i, nid: nid, x: e.clientX, y: e.clientY, t: Date.now(), moved: false, W: wallsNow(), to: null, p0: p };
+        return;
+      }
+      /* それより前の物：長押しでつかむ。指が先に動いたら、図面を動かす方（ここでは止めない） */
+      endHold();
+      hold = { id: e.pointerId, pk: pk, nid: nid, x: e.clientX, y: e.clientY, t: Date.now(), p: p };
+      holdTm = setTimeout(function(){
+        if (!hold) return; var h = hold; hold = null;
+        drag = { id: h.id, t0: h.pk.t, i: h.pk.i, nid: h.nid, x: h.x, y: h.y, t: h.t, moved: false, W: wallsNow(), to: null, p0: h.p, fromHold: true };
+        try { if (navigator.vibrate) navigator.vibrate(15); } catch(x){}
+        say("つかみました。指を動かすと動きます");
+      }, 450);
       return;
     }
     tapP = { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() };   /* 図面は動かせるまま（タップだけ拾う） */
   }
+  function endHold(){ clearTimeout(holdTm); hold = null; }
   function putMove(e){
     if (tapP && e.pointerId === tapP.id && Math.hypot(e.clientX - tapP.x, e.clientY - tapP.y) > 8) tapP = null;
+    if (hold && e.pointerId === hold.id && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 8) endHold();   /* 長押しの前に動いた＝図面を動かす */
     if (!drag || e.pointerId !== drag.id) return;
     e.preventDefault(); e.stopPropagation();
     if (!drag.moved && Math.hypot(e.clientX - drag.x, e.clientY - drag.y) <= 8) return;
@@ -46769,13 +46801,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     S2("line", { x1: nw.w.a[0] + u[0] * pos, y1: nw.w.a[1] + u[1] * pos, x2: nw.w.a[0] + u[0] * (pos + sa.w), y2: nw.w.a[1] + u[1] * (pos + sa.w), stroke: "#2563B0", "stroke-width": 6, "stroke-opacity": ".55", "stroke-linecap": "butt", "vector-effect": "non-scaling-stroke" });
   }
   function putUp(e){
+    if (hold && e.pointerId === hold.id){   /* 長押しになる前に離した＝タップ。ドアは向きを変える（置く道具でドア窓を持っている時だけ）。他の物の上には置かない */
+      var hh = hold; endHold();
+      if (e.type === "pointerup" && hh.pk.t === "o" && !spec.put && Date.now() - hh.t < 450){ flipAt(hh.pk.i); setTimeout(function(){ try { var z = zumen(); if (z) z.select(selNow()); } catch(x){} }, 0); }
+      return;
+    }
     if (drag && e.pointerId === drag.id){
-      e.stopPropagation();
+      if (!drag.fromHold) e.stopPropagation();   /* 長押しでつかんだ時は、図面にも指が離れたことを知らせる（図面の指の数がずれないように） */
       var d = drag; drag = null; clearOv();
       if (e.type !== "pointerup") return;
-      if (!d.moved){ if (d.t0 === "o" && Date.now() - d.t < 600) flipAt(d.i); return; }
-      if (d.t0 !== "o"){ if (d.to) moveOther(d); return; }
-      if (d.to) moveTo(d.i, d.to);
+      if (!d.moved){ if (d.t0 === "o" && !d.fromHold && Date.now() - d.t < 600) flipAt(d.i); return; }
+      var res = d.t0 !== "o" ? (d.to ? moveOther(d) : null) : (d.to ? moveTo(d.i, d.to) : null);
+      if (res && res.ok) touch(d.nid);
       return;
     }
     if (tapP && e.pointerId === tapP.id){
@@ -46812,6 +46849,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       S.sashes.push(rec); i = S.sashes.length - 1;
       try { sel = { t: "o", i: i }; flashAt = Date.now(); } catch(x2){}
       save(); if (typeof drawPlan === "function") drawPlan();
+      touch(rec.nid);
       if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(rec)) sashAskState(i);
     } catch(e){ warn("置く", e); say("置けませんでした。戻すで元に戻せます"); return { ok: false, why: "error" }; }
     return { ok: true, i: i, pos: pos, host: h };
@@ -46830,6 +46868,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var r = m.write(cmds);
     if (!r || !r.ok){ var why = r && r.why; say(why === "dup" ? "同じ所に同じ物があります" : why === "outside" ? "家の外には置けません" : why === "wall-open" || why === "wall-removed" ? "その壁には付けられません" : "そこには置けません"); return { ok: false, why: why }; }
     try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    try { (r.ids || []).forEach(touch); } catch(e){}
     if (okMsg) say(okMsg);
     return { ok: true, r: r };
   }
@@ -46853,6 +46892,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var n0 = (S.tenken || []).length;
     try { HB.__putAt = [p[0], p[1]]; addTenken(spec.k); } catch(e){ warn("addTenken", e); } finally { try { HB.__putAt = null; } catch(x){} }
     var ok = (S.tenken || []).length > n0;
+    if (ok) touch(S.tenken[S.tenken.length - 1].nid);
     return ok ? { ok: true, i: S.tenken.length - 1 } : { ok: false, why: "none" };
   }
   function recOf(t0, i){ return t0 === "lt" ? (S.lights || [])[i] : t0 === "k" ? (S.tenken || [])[i] : t0 === "fx" ? (S.fx || [])[i] : null; }
@@ -46892,7 +46932,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         try {
           pushUndo(); o.dir = nb.dir; o.x = nb.x; o.y = nb.y;
           if (typeof moveTenken === "function") moveTenken(o, 0, 0);
-          save(); if (typeof drawPlan === "function") drawPlan();
+          save(); if (typeof drawPlan === "function") drawPlan(); touch(o.nid);
         } catch(e){ warn("設備を動かす", e); return { ok: false }; }
         return { ok: true, dir: o.dir };
       }
@@ -46908,9 +46948,62 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     if (ty !== "door" && ty !== "hiki" && ty !== "closet"){ say("窓の向きは変わりません（つかむと動かせます）"); return { ok: false, why: "win" }; }
     var k = FLIPS.indexOf((sa.flip || 0) & 3), nf = FLIPS[(k + 1) % 4];
-    try { pushUndo(); sa.flip = ((sa.flip || 0) & ~3) | nf; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("向き", e); return { ok: false }; }
+    try { pushUndo(); sa.flip = ((sa.flip || 0) & ~3) | nf; save(); if (typeof drawPlan === "function") drawPlan(); touch(sa.nid); } catch(e){ warn("向き", e); return { ok: false }; }
     say("向きを変えました（タップするたびに4通り）");
     return { ok: true, flip: sa.flip };
+  }
+
+  /* ===== 5a. 間仕切りを動かす（今の movePart。壁に直角の向きだけ、227.5mmの目） ===== */
+  function partNear(p){ var best = -1, bd = 16 * pxmm(); (S.parts2D || []).forEach(function(q, i){ var d = segD(p[0], p[1], [q.x1, q.y1], [q.x2, q.y2]); if (d < bd){ bd = d; best = i; } }); return best; }
+  function startPdrag(i, p, pid){
+    var q = S.parts2D[i]; if (!q) return;
+    var id = pid; if (id == null){ var ks = Object.keys(downs); id = ks.length ? +ks[ks.length - 1] : null; }
+    try { if (id != null) A.mid.setPointerCapture(id); } catch(x){}
+    pdrag = { id: id, q: q, p0: p, horiz: Math.abs(q.y1 - q.y2) < 1, d: 0 };
+  }
+  function movePdrag(e){
+    var p = toPlan(e); if (!p || !pdrag) return; var q = pdrag.q, b = bbox();
+    var raw = pdrag.horiz ? p[1] - pdrag.p0[1] : p[0] - pdrag.p0[0], base = pdrag.horiz ? q.y1 : q.x1;
+    var to = (typeof gSnap === "function") ? gSnap(base + raw, pdrag.horiz ? b.y0 : b.x0) : Math.round((base + raw) / 227.5) * 227.5;
+    pdrag.d = to - base; clearOv();
+    if (Math.abs(pdrag.d) < 1) return;
+    var dx = pdrag.horiz ? 0 : pdrag.d, dy = pdrag.horiz ? pdrag.d : 0;
+    S2("line", { x1: q.x1 + dx, y1: q.y1 + dy, x2: q.x2 + dx, y2: q.y2 + dy, stroke: "#2563B0", "stroke-width": 5, "stroke-opacity": ".55", "vector-effect": "non-scaling-stroke" });
+  }
+  /* T字でつながった間仕切りの端を一緒に動かす。horiz＝動かした壁が横向き、c0→c1＝壁の線の位置、span＝動かす前の壁の範囲 */
+  function followEnds(q, horiz, c0, c1, span){
+    var moved = 0;
+    (S.parts2D || []).forEach(function(r, j){
+      if (r === q) return;
+      var rh = Math.abs(r.y1 - r.y2) < 1; if (rh === horiz) return;   /* 直角の壁だけ */
+      ["1", "2"].forEach(function(k){
+        var ex = r["x" + k], ey = r["y" + k], on = horiz ? (Math.abs(ey - c0) < 1 && ex >= span[0] - 1 && ex <= span[1] + 1) : (Math.abs(ex - c0) < 1 && ey >= span[0] - 1 && ey <= span[1] + 1);
+        if (!on) return;
+        var o = k === "1" ? "2" : "1", nl = horiz ? Math.abs(r["y" + o] - c1) : Math.abs(r["x" + o] - c1);
+        var crosses = horiz ? ((r["y" + o] - c0) * (r["y" + o] - c1) < 0) : ((r["x" + o] - c0) * (r["x" + o] - c1) < 0);
+        if (nl < 100 || crosses) return;                                  /* 向こう側の端を越える・短くなりすぎる時は、伸び縮みさせない */
+        var sx = r.x1, sy = r.y1, L0 = Math.hypot(r.x2 - r.x1, r.y2 - r.y1) || 1, ux = (r.x2 - r.x1) / L0, uy = (r.y2 - r.y1) / L0;
+        var keep = (S.sashes || []).filter(function(sa){ return sa.host && sa.host.t === "p" && sa.host.i === j && typeof sa.pos === "number"; }).map(function(sa){ return [sa, sx + ux * sa.pos, sy + uy * sa.pos]; });
+        if (horiz) r["y" + k] = c1; else r["x" + k] = c1;
+        var L1 = Math.hypot(r.x2 - r.x1, r.y2 - r.y1) || 1, vx = (r.x2 - r.x1) / L1, vy = (r.y2 - r.y1) / L1;
+        keep.forEach(function(t){ var np = (t[1] - r.x1) * vx + (t[2] - r.y1) * vy; t[0].pos = Math.max(0, Math.min(L1 - (t[0].w || 0), Math.round(np / 2.5) * 2.5)); });   /* ドア・窓は元の場所に */
+        moved++;
+      });
+    });
+    return moved;
+  }
+  function endPdrag(commit){
+    var d = pdrag; pdrag = null; clearOv(); if (!d || !commit || Math.abs(d.d) < 1) return { ok: false };
+    var q = d.q; if ((S.parts2D || []).indexOf(q) < 0) return { ok: false };
+    try {
+      pushUndo(); var x1 = q.x1, y1 = q.y1;
+      if (typeof movePart === "function") movePart(q, d.horiz ? 0 : d.d, d.horiz ? d.d : 0); else { if (d.horiz){ q.y1 += d.d; q.y2 += d.d; } else { q.x1 += d.d; q.x2 += d.d; } }
+      if (q.x1 === x1 && q.y1 === y1){ undoStack.pop(); say("そこへは動かせません"); return { ok: false }; }
+      followEnds(q, d.horiz, d.horiz ? y1 : x1, d.horiz ? q.y1 : q.x1, [Math.min(d.horiz ? x1 : y1, d.horiz ? x1 + (q.x2 - q.x1) : y1 + (q.y2 - q.y1)), Math.max(d.horiz ? x1 : y1, d.horiz ? x1 + (q.x2 - q.x1) : y1 + (q.y2 - q.y1))]);
+      save(); if (typeof drawPlan === "function") drawPlan(); touch(q.nid);
+    } catch(e){ warn("間仕切りを動かす", e); return { ok: false }; }
+    say("間仕切りを動かしました（戻すで戻せます）");
+    return { ok: true };
   }
 
   /* ===== 5b. 間仕切り（今の②間取りの pdFinish と同じ計算） ===== */
@@ -46922,6 +47015,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { f(P); } catch(e){ warn("pdFinish", e); say("間仕切りを入れられませんでした"); return { ok: false, why: "error" }; }
     var n1 = (S.parts2D || []).length;
     if (n1 <= n0 && rev() === r0) return { ok: false, why: "none" };   /* 短すぎる・外だけ等。理由はアプリのお知らせ（同じ言葉）がこの画面にも出る */
+    S.parts2D.slice(n0).forEach(function(q){ touch(q.nid); });
     refresh();
     return { ok: true, added: n1 - n0 };
   }
