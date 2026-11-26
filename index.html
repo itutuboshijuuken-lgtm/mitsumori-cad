@@ -45090,3 +45090,768 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
 })();
 </script>
+<script>
+/* ---------- CAD-661：新しい立体（rittai）段階3-1 ＝ 見るだけの骨組み（2026-11-26 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井と開口を立体にして見せる（見るだけ）。
+   ・⋯の「新しい歩く画面（試験中）」が「入」の時だけ、⋯に「新しい立体を見る」が出る。切なら何も足さない・何も変わらない。
+   ・リフォームの現場でも出る（既存と新設は工事後の姿。撤去は赤い半透明の印）。
+   ・直した所だけ作り直す（壁・部屋・物ごとに「中身の印」を比べ、変わった物だけ差し替える）。
+   ・1つの画面枠（#rittaiRoot）の中だけで動く。外の画面は動かさない・見張らない。
+   ・保存データは読まない・書かない。保存キーは増やさない。見積・数量・耐力壁の計算には触れない。
+   ・今回は骨組み。建具と器具の形の作り込み、階段、勾配天井、2階、歩く操作は次の回から。 */
+(function(){
+  "use strict";
+  if (window.RITTAI) return;
+  var VER = 1, STAGE = 3, K = .001, EYE = 1500;
+  var T = null, threeP = null;
+  var V = null;                          /* 画面枠（1つだけ作って使い回す） */
+  var R = null, scene = null, cam = null, root = null;   /* 描く仕組み（起動中1つを使い続ける） */
+  var UNITS = Object.create(null);       /* 今ある立体の部品：名前 → { sig, obj } */
+  var MATS = Object.create(null), TEXS = Object.create(null);
+  var MODEL = null, fp = null, fpPid = null, fpRoom = null, fovUser = false;
+  var last = { rev: -1, built: 0, kept: 0, removed: 0, ms: 0, renderMs: 0, fps: 0 };
+  var QUAL = "hq", QAUTO = false, BENCH = null, SLOW = 33, hemi = null, sun = null, ENV = null, tmSay = 0;   /* 画質：hq＝きれい（標準）／lt＝軽い（スマホ用） */
+  var need = false, raf = 0, tmSync = 0, times = [], isMoving = false, speedAt = 0, noteOrg = null;
+
+  function mado(){ var m = window.MADO; return (m && typeof m.read === "function") ? m : null; }
+  function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
+  function fin(v){ return typeof v === "number" && isFinite(v); }
+  function arr(a){ return Array.isArray(a) ? a : []; }
+  function clamp(v, a, b){ return v < a ? a : v > b ? b : v; }
+  function warn(m, e){ try { console.warn("[RITTAI] " + m, e || ""); } catch(x){} }
+  function polyArea(P){ var a = 0; for (var i = 0; i < P.length; i++){ var q = P[i], r = P[(i + 1) % P.length]; a += q[0] * r[1] - r[0] * q[1]; } return a / 2; }
+  function inPoly(x, y, P){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) c = !c; } return c; }
+  function inRoom(x, y, r){ if (!inPoly(x, y, r.poly)) return false; for (var i = 0; i < r.holes.length; i++) if (inPoly(x, y, r.holes[i])) return false; return true; }
+
+  /* ===== 1. 家のデータ → 立体の部品の一覧（three.js を使わない。検査でそのまま見られる） ===== */
+
+  /* 床の種類。アプリの決め方（部屋の決め直し ＞ 名前からの標準 ＞ 全体の床仕様）と同じ順 */
+  function nameMat(nm){
+    nm = nm || "";
+    if (/浴/.test(nm)) return "Bt";
+    if (/トイレ|便所|WC/.test(nm)) return "Ti";
+    if (/洗面|脱衣|サニタリー/.test(nm)) return "Cf";
+    if (/玄関|土間|ポーチ/.test(nm)) return "Do";
+    if (/和|畳/.test(nm)) return "Ta";
+    if (/収納|クローゼット|物入|押入|納戸|C$/.test(nm)) return "Ply";
+    return "Fl";
+  }
+  function floorKind(room, base){
+    var f = room.fin || null;
+    if (f && f.f === "none") return "none";
+    if (f && f.t) return f.t === "flSheet" ? "flComp" : f.t;
+    var m = nameMat(room.name || room.label || "");
+    if (m === "Bt") return "ub";
+    if (m === "Ti") return "wcF";
+    if (m === "Ply") return "ply";
+    if (m === "Ta") return "tatami";
+    if (m === "Cf") return "flCF";
+    if (m === "Do") return "flDoma";
+    var t = (base && base.flType) || "floorFin";
+    return t === "flSheet" ? "flComp" : t;
+  }
+  var ZK = { ub: "ub", toilet: "wcF", doma: "flDoma", closet: "ply" };
+
+  function model(rd){
+    var M = { rev: rd.rev, pid: rd.pid, mode: rd.mode, ch: rd.ch, box: rd.box, units: [], rooms: [], segs: [], blocks: [], warn: [], note: [], n: { walls: 0, ghosts: 0, ops: 0, things: 0 } };
+    var roomBy = Object.create(null), wallBy = Object.create(null), facesBy = Object.create(null), used = Object.create(null);
+    function unit(key, kind, d){ while (used[key]){ M.warn.push("同じ名前の部品：" + key); key += "~"; } used[key] = 1; M.units.push({ key: key, kind: kind, d: d, sig: kind + JSON.stringify(d) }); }
+    function roomCh(id){ var r = id ? roomBy[id] : null; return (r && r.ch) || rd.ch; }
+    arr(rd.rooms).forEach(function(r){ roomBy[r.id] = r; });
+    arr(rd.walls).forEach(function(w){ if (w.id) wallBy[w.id] = w; });
+    arr(rd.faces).forEach(function(f){ (facesBy[f.wall] = facesBy[f.wall] || []).push(f); });
+
+    /* 部屋：床と天井 */
+    arr(rd.rooms).forEach(function(r){
+      var ok = Array.isArray(r.poly) && r.poly.length >= 3 && r.poly.every(function(p){ return fin(p[0]) && fin(p[1]); });
+      if (!ok){ M.warn.push("部屋の形が取れない：" + r.id); return; }
+      var holes = arr(r.holes).filter(function(h){ return Array.isArray(h) && h.length >= 3; }), fk = floorKind(r, rd.base), a = Math.abs(polyArea(r.poly));
+      holes.forEach(function(h){ a -= Math.abs(polyArea(h)); });
+      var d = { id: r.id, poly: r.poly, holes: holes, ch: r.ch || rd.ch, fk: fk, cf: (r.fin && r.fin.c === "none") ? "bare" : "ceil" };
+      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
+      unit("r:" + r.id, "room", d);
+    });
+
+    /* 壁：芯と厚みの箱。角とT字は、すき間も重なりも出ないように端の長さを決める */
+    var real = arr(rd.walls).filter(function(w){ return w.t !== "z" && w.id && w.len > 1 && fin(w.a[0]) && fin(w.a[1]) && fin(w.ux) && fin(w.uy); });
+    var solid = real.filter(function(w){ return w.state !== "remove" && w.form !== "open"; });
+    function endAdj(w, atB){
+      var p = atB ? w.b : w.a, dx, dy, s, d, x, k, lowTh = -1, lowKey = Infinity, maxTh = 0, corner = false;
+      for (k = 0; k < solid.length; k++){
+        x = solid[k]; if (x === w) continue;
+        if (Math.abs(w.ux * x.uy - w.uy * x.ux) < .02) continue;                 /* 一直線の続き：伸ばさない */
+        dx = p[0] - x.a[0]; dy = p[1] - x.a[1]; s = dx * x.ux + dy * x.uy; d = Math.abs(dx * x.uy - dy * x.ux);
+        if (d > 3 || s < -3 || s > x.len + 3) continue;
+        if (s > 3 && s < x.len - 3) return -x.th / 2;                             /* 相手の途中に当たる（T字）：相手の面で止める */
+        corner = true; if (x.th > maxTh) maxTh = x.th;
+        if (x.key < lowKey){ lowKey = x.key; lowTh = x.th; }
+      }
+      if (corner) return (w.key < lowKey) ? maxTh / 2 : -lowTh / 2;               /* 角：番号の若い壁が角を埋め、ほかは相手の面で止める */
+      if (w.t === "e") return 0;
+      var dir = atB ? 1 : -1, best = -1, bth = 0;                                 /* 手前300mm以内で止まる壁は、相手の面まで届かせる */
+      for (k = 0; k < solid.length; k++){
+        x = solid[k]; if (x === w) continue;
+        var den = (w.ux * dir) * x.uy - (w.uy * dir) * x.ux; if (Math.abs(den) < 1e-6) continue;
+        var qx = x.a[0] - p[0], qy = x.a[1] - p[1], t = (qx * x.uy - qy * x.ux) / den, u = (qx * (w.uy * dir) - qy * (w.ux * dir)) / den;
+        if (t > 3 && t <= 300 && u >= -2 && u <= x.len + 2 && (best < 0 || t < best)){ best = t; bth = x.th; }
+      }
+      return best > 0 ? best - bth / 2 : 0;
+    }
+    var cornerBy = Object.create(null);
+    function corners(r){   /* 部屋のふちの角ごとに、入隅（部屋から見てへこんだ角）かどうか */
+      if (cornerBy[r.id]) return cornerBy[r.id];
+      var out = [];
+      [r.poly].concat(arr(r.holes)).forEach(function(Q, qi){
+        if (!Array.isArray(Q) || Q.length < 3) return; var A = polyArea(Q), n = Q.length;
+        for (var i = 0; i < n; i++){ var a = Q[(i + n - 1) % n], b = Q[i], c = Q[(i + 1) % n], cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); out.push([b[0], b[1], qi === 0 ? cr * A > 0 : cr * A < 0]); }
+      });
+      return (cornerBy[r.id] = out);
+    }
+    function isIn(rm, w, s){ var x = w.a[0] + w.ux * s, y = w.a[1] + w.uy * s; return corners(rm).some(function(c){ return c[2] && Math.abs(c[0] - x) < 8 && Math.abs(c[1] - y) < 8; }); }
+    function sideSegs(w, side){
+      var out = arr(facesBy[w.id]).filter(function(f){ return f.side === side; }).sort(function(a, b){ return a.s0 - b.s0; }).map(function(f){
+        var rm = f.room ? roomBy[f.room] : null, bare = !!(rm && rm.fin && rm.fin.w === "none"), inr = !!rm && !f.out && Array.isArray(rm.poly);
+        return { s0: f.s0, s1: f.s1, q0: f.s0, q1: f.s1, room: f.room || null, m: f.out ? "ext" : bare ? "bare" : "cloth", ch: inr ? (rm.ch || rd.ch) : 0, c0: inr && isIn(rm, w, f.s0) ? 1 : 0, c1: inr && isIn(rm, w, f.s1) ? 1 : 0, tr: inr && !bare ? 1 : 0 };
+      });
+      if (!out.length) out.push({ s0: 0, s1: w.len, q0: 0, q1: w.len, room: null, m: "cloth", ch: 0, c0: 0, c1: 0, tr: 0 });
+      out[0].s0 = -1e7; out[out.length - 1].s1 = 1e7;
+      return out;
+    }
+    var sashBy = Object.create(null);
+    arr(rd.things).forEach(function(t){ if (t.list === "sashes" && t.wall && t.drawn && fin(t.u) && t.w > 0 && t.h > 0) (sashBy[t.wall] = sashBy[t.wall] || []).push(t); });
+    real.forEach(function(w){
+      if (w.form === "open") return;
+      if (w.state === "remove"){ M.n.ghosts++; unit("w:" + w.id, "wall", { id: w.id, ghost: 1, a: w.a, ux: w.ux, uy: w.uy, th: w.th, len: w.len, top: rd.ch }); return; }
+      var low = w.form === "tare" || w.form === "koshi", top = low ? w.z1 : rd.ch;
+      if (!low) arr(facesBy[w.id]).forEach(function(f){ var c = f.room ? roomCh(f.room) : 0; if (c > top) top = c; });
+      var e0 = endAdj(w, false), e1 = endAdj(w, true), ops = [];
+      arr(sashBy[w.id]).slice().sort(function(a, b){ return a.u - b.u; }).forEach(function(t){
+        var s0 = Math.max(t.u, -e0), s1 = Math.min(t.u + t.w, w.len + e1), z0 = Math.max(low ? w.z0 : 0, t.sill || 0), z1 = Math.min(top, (t.sill || 0) + t.h), gone = t.state === "remove" ? 1 : 0;
+        if (s1 - s0 < 50 || z1 - z0 < 50){ M.note.push("開口が壁に収まらない：" + (t.id || t.i)); return; }
+        if (!gone && ops.some(function(o){ return !o.gone && o.s0 < s1 - 1 && o.s1 > s0 + 1 && o.z0 < z1 - 1 && o.z1 > z0 + 1; })){ M.note.push("開口が重なっている（後の1つは抜かない）：" + (t.id || t.i)); return; }
+        if (!gone) M.n.ops++;
+        ops.push({ id: t.id || ("sashes#" + t.i), cat: String(t.kind || ""), s0: s0, s1: s1, z0: z0, z1: z1, flip: t.flip || 0, gone: gone });
+      });
+      M.n.walls++;
+      if ((low ? w.z0 : 0) < EYE && top > EYE) M.segs.push([w.a[0] - w.ux * e0, w.a[1] - w.uy * e0, w.b[0] + w.ux * e1, w.b[1] + w.uy * e1, w.th / 2]);   /* 目の高さで視界をふさぐ壁 */
+      unit("w:" + w.id, "wall", { id: w.id, a: w.a, ux: w.ux, uy: w.uy, th: w.th, len: w.len, e0: e0, e1: e1, z0: low ? w.z0 : 0, top: top, form: w.form, sp: sideSegs(w, 1), sm: sideSegs(w, -1), ops: ops });
+    });
+
+    /* 物：壁の物・照明・設備・床の範囲 */
+    arr(rd.things).forEach(function(t){
+      var id = t.id || (t.list + "#" + t.i), w, d = null;
+      if (t.list === "fx"){
+        w = t.wall ? wallBy[t.wall] : null;
+        if (!w || w.state === "remove" || !t.side || !fin(t.u)) return;
+        d = { id: id, list: "fx", k: t.kind, shape: t.shape || "pt", state: t.state, a: w.a, ux: w.ux, uy: w.uy, th: w.th, wlen: w.len, side: t.side, u: t.u, z: t.z || 0, len: t.len, hgt: t.hgt, v: t.v, top: roomCh(t.room) };
+      } else if (t.list === "lights"){
+        if (!fin(t.x) || !fin(t.y)) return;
+        var lr = t.room ? roomBy[t.room] : null, rb = null;
+        if (lr && Array.isArray(lr.poly) && lr.poly.length >= 3){ var lx = lr.poly.map(function(q){ return q[0]; }), ly = lr.poly.map(function(q){ return q[1]; }); rb = [Math.min.apply(null, lx), Math.min.apply(null, ly), Math.max.apply(null, lx), Math.max.apply(null, ly)]; }
+        d = { id: id, list: "lights", k: t.kind, state: t.state, x: t.x, y: t.y, len: t.len, dir: t.dir, ch: roomCh(t.room), rb: rb };
+      } else if (t.list === "tenken"){
+        if (!fin(t.x) || !fin(t.y)) return;
+        var hx = t.ext ? t.ext[0] : (t.w || 600) / 2, hy = t.ext ? t.ext[1] : (t.d || t.w || 600) / 2;
+        if (!(hx > 0) || !(hy > 0)) return;
+        d = { id: id, list: "tenken", k: t.kind, state: t.state, x: t.x, y: t.y, hx: hx, hy: hy, ch: roomCh(t.room) };
+        var tz = TKH[t.kind] || [0, 500]; if (t.state !== "remove" && tz[0] >= 0 && tz[0] < EYE && (tz[1] < 0 || tz[1] > 300)) M.blocks.push([t.x - hx - 120, t.y - hy - 120, t.x + hx + 120, t.y + hy + 120]);
+      } else if (t.list === "tatami"){
+        if (![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
+        d = { id: id, list: "tatami", k: t.kind, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };
+      } else if (t.list === "zones"){
+        if (!ZK[t.kind] || ![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
+        d = { id: id, list: "zones", k: ZK[t.kind], x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };
+      }
+      if (d){ M.n.things++; unit((t.list === "fx" ? "f:" : "t:") + id, "thing", d); }
+    });
+    return M;
+  }
+
+  /* ===== 2. 材料と柄（起動中に1回だけ作って使い回す） ===== */
+  function rng(seed){ var s = seed >>> 0; return function(){ s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  function shade(c, t){ return "rgb(" + c.map(function(v){ return clamp(Math.round(v + t), 0, 255); }).join(",") + ")"; }
+  function speck(g, n, r, count, amp){ for (var i = 0; i < count; i++){ g.fillStyle = (r() < .5 ? "rgba(0,0,0," : "rgba(255,255,255,") + (r() * amp).toFixed(3) + ")"; g.fillRect(Math.floor(r() * n), Math.floor(r() * n), 1 + Math.floor(r() * 2), 1 + Math.floor(r() * 2)); } }
+  function grid(g, n, step, col){ g.fillStyle = col; for (var i = 0; i < n; i += step){ g.fillRect(i, 0, 1, n); g.fillRect(0, i, n, 1); } }
+  function wood(g, n, r, base, vary){
+    var rows = 8, h = n / rows;
+    for (var j = 0; j < rows; j++){
+      var x = -Math.floor(r() * n);
+      while (x < n){
+        var len = n * (.55 + r() * .5);
+        g.fillStyle = shade(base, (r() - .5) * vary); g.fillRect(x, j * h, len, h);
+        for (var k = 0; k < 7; k++){ g.fillStyle = "rgba(70,40,10," + (.03 + r() * .05).toFixed(3) + ")"; g.fillRect(x, j * h + r() * h, len, 1); }
+        g.fillStyle = "rgba(50,30,10,.35)"; g.fillRect(x, j * h, 1, h);
+        x += len;
+      }
+      g.fillStyle = "rgba(50,30,10,.3)"; g.fillRect(0, j * h, n, 1);
+    }
+  }
+  var TEXDEF = {   /* 名前：[絵の大きさpx, 実物の大きさm, 描き方] */
+    cloth: [256, .6, function(g, n, r){ g.fillStyle = "#f4f1ea"; g.fillRect(0, 0, n, n); speck(g, n, r, 5200, .035); }],
+    woodA: [512, .91, function(g, n, r){ wood(g, n, r, [198, 160, 114], 17); }],
+    woodB: [512, .91, function(g, n, r){ wood(g, n, r, [168, 120, 76], 34); }],
+    ply: [256, .91, function(g, n, r){ g.fillStyle = "#dcc7a0"; g.fillRect(0, 0, n, n); for (var i = 0; i < 90; i++){ g.fillStyle = "rgba(110,75,30," + (.03 + r() * .05).toFixed(3) + ")"; g.fillRect(0, Math.floor(r() * n), n, 1); } }],
+    plyV: [256, .91, function(g, n, r){ g.fillStyle = "#dcc7a0"; g.fillRect(0, 0, n, n); for (var i = 0; i < 90; i++){ g.fillStyle = "rgba(110,75,30," + (.03 + r() * .05).toFixed(3) + ")"; g.fillRect(Math.floor(r() * n), 0, 1, n); } }],
+    tatami: [256, .25, function(g, n, r){ g.fillStyle = "#c9c98f"; g.fillRect(0, 0, n, n); for (var i = 0; i < n; i += 2){ g.fillStyle = "rgba(90,95,40," + (.08 + r() * .1).toFixed(3) + ")"; g.fillRect(i, 0, 1, n); } speck(g, n, r, 1800, .05); }],
+    cf: [256, .6, function(g, n, r){ g.fillStyle = "#d8d5cd"; g.fillRect(0, 0, n, n); speck(g, n, r, 4200, .05); grid(g, n, 128, "rgba(110,105,95,.32)"); }],
+    conc: [256, 1.2, function(g, n, r){ g.fillStyle = "#b6b4ad"; g.fillRect(0, 0, n, n); speck(g, n, r, 9000, .07); }],
+    carpet: [256, .5, function(g, n, r){ g.fillStyle = "#b9ac96"; g.fillRect(0, 0, n, n); speck(g, n, r, 14000, .09); }],
+    tileS: [256, .4, function(g, n, r){ g.fillStyle = "#c7ccd0"; g.fillRect(0, 0, n, n); speck(g, n, r, 2600, .04); grid(g, n, 64, "rgba(90,96,102,.45)"); }],
+    siding: [256, .9, function(g, n, r){ g.fillStyle = "#d4d8db"; g.fillRect(0, 0, n, n); speck(g, n, r, 2600, .03); g.fillStyle = "rgba(80,86,92,.4)"; for (var i = 0; i < n; i += 32) g.fillRect(0, i, n, 2); }]
+  };
+  function tex(name){
+    if (TEXS[name]) return TEXS[name];
+    var d = TEXDEF[name]; if (!d) return null;
+    var c = document.createElement("canvas"); c.width = c.height = d[0];
+    d[2](c.getContext("2d"), d[0], rng(d[0] * 31 + name.length * 977 + name.charCodeAt(0) * 13));
+    var t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(1 / d[1], 1 / d[1]); t.anisotropy = 4;
+    if ("colorSpace" in t) t.colorSpace = T.SRGBColorSpace;
+    return (TEXS[name] = t);
+  }
+  var FLOORS = { flComp: ["woodA", .55], floorFin: ["woodA", .55], flMuku: ["woodB", .6], flMuku30: ["woodB", .6], flCF: ["cf", .5], flDoma: ["conc", .9], tatami: ["tatami", .95], carpet: ["carpet", 1], flCarpet: ["carpet", 1], ub: ["tileS", .6], wcF: ["cf", .5], ply: ["ply", .8], none: [null, .9] };
+  var SOLID = {   /* 名前：[色, ざらつき, 柄] */
+    cloth: [0xffffff, .96, "cloth"], ceil: [0xffffff, 1, "cloth"], bare: [0xdedad1, .9], cap: [0xf0ece3, .9], ext: [0xffffff, .85, "siding"],
+    alu: [0x555a60, .5], wframe: [0xcdb089, .6], door: [0xf2e2c6, .6, "plyV"], doorE: [0x5c4838, .55], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5],
+    porc: [0xfafafa, .25], cab: [0xece7dc, .6], wood: [0xffffff, .65, "ply"], tile: [0xffffff, .35, "tileS"], accent: [0x7d8a96, .95, "cloth"],
+    shikkui: [0xf2eee4, 1], under: [0xd8c9a8, .9], mark: [0x8a9099, .7], base: [0xf2efe8, .55], crown: [0xf5f3ee, .8]
+  };
+  var HQM = { ao: 1, pool: 1, base: 1, crown: 1 };   /* 「きれい」の時だけ見せる材料 */
+  function mat(mk){
+    if (MATS[mk]) return MATS[mk];
+    var m, k;
+    if (mk.indexOf("fl:") === 0){ k = FLOORS[mk.slice(3)] || FLOORS.floorFin; m = new T.MeshStandardMaterial({ color: k[0] ? 0xffffff : 0xcfc9bd, map: k[0] ? tex(k[0]) : null, roughness: k[1], metalness: 0 }); }
+    else if (mk === "ghost") m = new T.MeshBasicMaterial({ color: 0xd9412b, transparent: true, opacity: .13, depthWrite: false, side: T.DoubleSide });
+    else if (mk === "glass") m = new T.MeshStandardMaterial({ color: 0xbcd6e4, transparent: true, opacity: .3, roughness: .05, metalness: 0, depthWrite: false, side: T.DoubleSide });
+    else if (mk === "lamp") m = new T.MeshBasicMaterial({ color: 0xfff3d2 });
+    else if (mk === "ao"){   /* 隅の陰：ふちが濃く、離れると消える帯 */
+      var c1 = document.createElement("canvas"); c1.width = 4; c1.height = 64; var g1 = c1.getContext("2d");
+      for (var y = 0; y < 64; y++){ g1.fillStyle = "rgba(0,0,0," + Math.pow((y + .5) / 64, 1.7).toFixed(3) + ")"; g1.fillRect(0, y, 4, 1); }
+      var t1 = new T.CanvasTexture(c1); t1.wrapS = t1.wrapT = T.ClampToEdgeWrapping;
+      m = new T.MeshBasicMaterial({ color: 0x1c140a, map: t1, transparent: true, opacity: .3, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    } else if (mk === "pool"){   /* 光の輪 */
+      var c2 = document.createElement("canvas"); c2.width = c2.height = 128; var g2 = c2.getContext("2d"), rg = g2.createRadialGradient(64, 64, 2, 64, 64, 64);
+      rg.addColorStop(0, "rgba(255,255,255,1)"); rg.addColorStop(.35, "rgba(255,255,255,.45)"); rg.addColorStop(1, "rgba(255,255,255,0)"); g2.fillStyle = rg; g2.fillRect(0, 0, 128, 128);
+      var t2 = new T.CanvasTexture(c2); t2.wrapS = t2.wrapT = T.ClampToEdgeWrapping;
+      m = new T.MeshBasicMaterial({ color: 0xffe0ae, map: t2, transparent: true, opacity: .3, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+    }
+    else { k = SOLID[mk] || [0xcccccc, .8]; m = new T.MeshStandardMaterial({ color: k[0], roughness: k[1], metalness: 0, map: k[2] ? tex(k[2]) : null }); }
+    m.name = mk; if (HQM[mk]) m.visible = QUAL === "hq";
+    return (MATS[mk] = m);
+  }
+
+  /* ===== 3. 形を組み立てる ===== */
+  /* 面をためて、材料ごとにまとめた1つの形にする。三角ごとに札（どの面・どの部屋・どの物か）を持つ */
+  function Acc(){ this.b = Object.create(null); this.keys = []; }
+  Acc.prototype.tri = function(mk, a, b, c, n, ua, ub, uc, tag){
+    var g = this.b[mk]; if (!g){ g = this.b[mk] = { p: [], n: [], u: [], t: [] }; this.keys.push(mk); }
+    var ex = b[0] - a[0], ey = b[1] - a[1], ez = b[2] - a[2], fx = c[0] - a[0], fy = c[1] - a[1], fz = c[2] - a[2], q;
+    if (((ey * fz - ez * fy) * n[0] + (ez * fx - ex * fz) * n[1] + (ex * fy - ey * fx) * n[2]) < 0){ q = b; b = c; c = q; q = ub; ub = uc; uc = q; }   /* 表が n の側を向く並びにそろえる */
+    g.p.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+    g.n.push(n[0], n[1], n[2], n[0], n[1], n[2], n[0], n[1], n[2]);
+    g.u.push(ua[0], ua[1], ub[0], ub[1], uc[0], uc[1]);
+    g.t.push(tag || null);
+  };
+  Acc.prototype.quad = function(mk, p, n, uv, tag){ this.tri(mk, p[0], p[1], p[2], n, uv[0], uv[1], uv[2], tag); this.tri(mk, p[0], p[2], p[3], n, uv[0], uv[2], uv[3], tag); };
+  var NOCAST = { glass: 1, ghost: 1, lamp: 1, ao: 1, pool: 1 };   /* 影を落とさない材料（ガラス・印・陰の帯など） */
+  Acc.prototype.mesh = function(){
+    var self = this, grp = new T.Group(), tris = 0;
+    [0, 1].forEach(function(nc){
+      var keys = self.keys.filter(function(k){ return (NOCAST[k] ? 1 : 0) === nc; }), nv = 0;
+      keys.forEach(function(k){ nv += self.b[k].p.length / 3; });
+      if (!nv) return;
+      var P = new Float32Array(nv * 3), N = new Float32Array(nv * 3), U = new Float32Array(nv * 2), geo = new T.BufferGeometry(), mats = [], tags = [], at = 0;
+      keys.forEach(function(k, gi){ var g = self.b[k], c = g.p.length / 3; P.set(g.p, at * 3); N.set(g.n, at * 3); U.set(g.u, at * 2); geo.addGroup(at, c, gi); mats.push(mat(k)); tags = tags.concat(g.t); at += c; });
+      geo.setAttribute("position", new T.BufferAttribute(P, 3)); geo.setAttribute("normal", new T.BufferAttribute(N, 3)); geo.setAttribute("uv", new T.BufferAttribute(U, 2));
+      var m = new T.Mesh(geo, mats); m.userData.tags = tags; m.castShadow = !nc; m.receiveShadow = !nc; if (nc) m.renderOrder = 2;
+      grp.add(m); tris += nv / 3;
+    });
+    if (!grp.children.length) return null;
+    grp.userData.tris = tris;
+    return grp;
+  };
+  var FR0 = { a: [0, 0], ux: 1, uy: 0 };   /* 図面の向きそのまま（s＝x、t＝y） */
+  function fpt(fr, s, t, z){ return [(fr.a[0] + fr.ux * s - fr.uy * t) * K, z * K, (fr.a[1] + fr.uy * s + fr.ux * t) * K]; }
+  /* 箱。ms＝[＋t側, −t側, s0の端, s1の端, 上, 下] の材料（null の面は作らない）。文字1つなら全部の面 */
+  function fbox(acc, fr, s0, s1, t0, t1, z0, z1, ms, tag){
+    if (!(s1 - s0 > .5) || !(t1 - t0 > .05) || !(z1 - z0 > .5)) return;
+    if (typeof ms === "string") ms = [ms, ms, ms, ms, ms, ms];
+    var uS = [[s0 * K, z0 * K], [s1 * K, z0 * K], [s1 * K, z1 * K], [s0 * K, z1 * K]], uT = [[t0 * K, z0 * K], [t1 * K, z0 * K], [t1 * K, z1 * K], [t0 * K, z1 * K]], uF = [[s0 * K, t0 * K], [s1 * K, t0 * K], [s1 * K, t1 * K], [s0 * K, t1 * K]];
+    if (ms[0]) acc.quad(ms[0], [fpt(fr, s0, t1, z0), fpt(fr, s1, t1, z0), fpt(fr, s1, t1, z1), fpt(fr, s0, t1, z1)], [-fr.uy, 0, fr.ux], uS, tag);
+    if (ms[1]) acc.quad(ms[1], [fpt(fr, s0, t0, z0), fpt(fr, s1, t0, z0), fpt(fr, s1, t0, z1), fpt(fr, s0, t0, z1)], [fr.uy, 0, -fr.ux], uS, tag);
+    if (ms[2]) acc.quad(ms[2], [fpt(fr, s0, t0, z0), fpt(fr, s0, t1, z0), fpt(fr, s0, t1, z1), fpt(fr, s0, t0, z1)], [-fr.ux, 0, -fr.uy], uT, tag);
+    if (ms[3]) acc.quad(ms[3], [fpt(fr, s1, t0, z0), fpt(fr, s1, t1, z0), fpt(fr, s1, t1, z1), fpt(fr, s1, t0, z1)], [fr.ux, 0, fr.uy], uT, tag);
+    if (ms[4]) acc.quad(ms[4], [fpt(fr, s0, t0, z1), fpt(fr, s1, t0, z1), fpt(fr, s1, t1, z1), fpt(fr, s0, t1, z1)], [0, 1, 0], uF, tag);
+    if (ms[5]) acc.quad(ms[5], [fpt(fr, s0, t0, z0), fpt(fr, s1, t0, z0), fpt(fr, s1, t1, z0), fpt(fr, s0, t1, z0)], [0, -1, 0], uF, tag);
+  }
+
+  /* 開口の中身（今回は簡単な形。作り込みは次の回） */
+  function fitting(acc, fr, d, o){
+    var h = d.th / 2, tag = { k: "sash", id: o.id }, s0 = o.s0, s1 = o.s1, z0 = o.z0, z1 = o.z1, w = s1 - s0, mid = (s0 + s1) / 2, f;
+    if (/開口/.test(o.cat)){
+      f = 25; fbox(acc, fr, s0, s0 + f, -h - 6, h + 6, z0, z1, "wframe", tag); fbox(acc, fr, s1 - f, s1, -h - 6, h + 6, z0, z1, "wframe", tag); fbox(acc, fr, s0 + f, s1 - f, -h - 6, h + 6, z1 - f, z1, "wframe", tag);
+    } else if (/玄関|勝手口|室内ドア|クローゼット/.test(o.cat)){
+      f = 30; var leaf = /玄関|勝手口/.test(o.cat) ? "doorE" : "door";
+      fbox(acc, fr, s0, s0 + f, -h - 8, h + 8, z0, z1, "wframe", tag); fbox(acc, fr, s1 - f, s1, -h - 8, h + 8, z0, z1, "wframe", tag); fbox(acc, fr, s0 + f, s1 - f, -h - 8, h + 8, z1 - f, z1, "wframe", tag);
+      fbox(acc, fr, s0 + f, s1 - f, -18, 18, z0 + 8, z1 - f, leaf, tag);
+      if (w >= 1300) fbox(acc, fr, mid - 2, mid + 2, -19.5, 19.5, z0 + 8, z1 - f, "alu", tag);
+      else fbox(acc, fr, (o.flip ? s0 + f + 60 : s1 - f - 90), (o.flip ? s0 + f + 90 : s1 - f - 60), -42, 42, Math.min(z1 - 200, z0 + 950), Math.min(z1 - 100, z0 + 1050), "steel", tag);
+    } else {
+      f = 40;
+      fbox(acc, fr, s0, s0 + f, -h - 10, h + 10, z0, z1, "alu", tag); fbox(acc, fr, s1 - f, s1, -h - 10, h + 10, z0, z1, "alu", tag);
+      fbox(acc, fr, s0 + f, s1 - f, -h - 10, h + 10, z1 - f, z1, "alu", tag); fbox(acc, fr, s0 + f, s1 - f, -h - 10, h + 10, z0, z0 + f, "alu", tag);
+      if (w >= 1200) fbox(acc, fr, mid - 20, mid + 20, -22, 22, z0 + f, z1 - f, "alu", tag);
+      fbox(acc, fr, s0 + f, s1 - f, -4, 4, z0 + f, z1 - f, ["glass", null, null, null, null, null], tag);
+    }
+  }
+
+  function buildWall(d){
+    var acc = new Acc(), fr = d, h = d.th / 2;
+    if (d.ghost){ fbox(acc, fr, 0, d.len, -h, h, 0, d.top, "ghost", { k: "ghost", wall: d.id }); return acc.mesh(); }
+    var RB = 180, RT = 220, RC = 170, CO = 62;   /* 陰の帯：床ぎわ・天井ぎわ・入隅の幅（mm）と、壁の芯から面までの見込み */
+    function side(sg, t, n, s0, s1, z0, z1, sd){
+      for (var i = 0; i < sg.length; i++){
+        var g = sg[i], a = Math.max(s0, g.s0), b = Math.min(s1, g.s1);
+        if (!(b - a > .5)) continue;
+        acc.quad(g.m, [fpt(fr, a, t, z0), fpt(fr, b, t, z0), fpt(fr, b, t, z1), fpt(fr, a, t, z1)], n, [[a * K, z0 * K], [b * K, z0 * K], [b * K, z1 * K], [a * K, z1 * K]], { k: "face", wall: d.id, side: sd, room: g.room });
+        if (!g.ch) continue;
+        var tt = t + sd * 1.2, zc = Math.min(z1, g.ch), zf = Math.max(z0, 0);
+        var ao = function(a2, b2, za, zb, va, vb, alongS){
+          if (!(b2 - a2 > .5) || !(zb - za > .5)) return;
+          acc.quad("ao", [fpt(fr, a2, tt, za), fpt(fr, b2, tt, za), fpt(fr, b2, tt, zb), fpt(fr, a2, tt, zb)], n, alongS ? [[0, va], [0, vb], [0, vb], [0, va]] : [[0, va], [0, va], [0, vb], [0, vb]], null);
+        };
+        ao(a, b, zf, Math.min(zc, RB), zf / RB, Math.min(zc, RB) / RB, false);                                              /* 床ぎわ */
+        ao(a, b, Math.max(zf, g.ch - RT), zc, (g.ch - Math.max(zf, g.ch - RT)) / RT, (g.ch - zc) / RT, false);              /* 天井ぎわ */
+        if (g.c0){ var e0 = g.q0 + CO, a2 = Math.max(a, e0), b2 = Math.min(b, e0 + RC); ao(a2, b2, zf, zc, (a2 - e0) / RC, (b2 - e0) / RC, true); }     /* 入隅 */
+        if (g.c1){ var e1 = g.q1 - CO, a3 = Math.max(a, e1 - RC), b3 = Math.min(b, e1); ao(a3, b3, zf, zc, (e1 - a3) / RC, (e1 - b3) / RC, true); }
+        if (!g.tr) continue;
+        if (z0 <= .5) fbox(acc, fr, a, b, sd > 0 ? t : t - 9, sd > 0 ? t + 9 : t, 0, 60, "base", null);                                          /* 巾木 */
+        if (z1 >= g.ch - .5 && z0 < g.ch - 22) fbox(acc, fr, a, b, sd > 0 ? t : t - 14, sd > 0 ? t + 14 : t, g.ch - 22, g.ch, "crown", null);   /* 廻り縁 */
+      }
+    }
+    function piece(s0, s1, z0, z1, endL, endR, top, bot){
+      if (!(s1 - s0 > .5) || !(z1 - z0 > .5)) return;
+      side(d.sp, h, [-fr.uy, 0, fr.ux], s0, s1, z0, z1, 1); side(d.sm, -h, [fr.uy, 0, -fr.ux], s0, s1, z0, z1, -1);
+      fbox(acc, fr, s0, s1, -h, h, z0, z1, [null, null, endL ? "cloth" : null, endR ? "cloth" : null, top ? "cap" : null, bot ? "cap" : null], { k: "edge", wall: d.id });
+    }
+    /* 開口の左右の端で壁を縦に区切り、区切りごとに「開口でない高さ」だけ壁を立てる（上下に並ぶ窓もそのまま抜ける） */
+    var carve = d.ops.filter(function(o){ return !o.gone; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
+    carve.forEach(function(o){ xs.push(o.s0, o.s1); });
+    xs = xs.filter(function(x){ return x >= sA - .01 && x <= sB + .01; }).sort(function(a, b){ return a - b; });
+    function open2(x, za, zb, right){ return carve.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
+    for (var i = 0; i < xs.length - 1; i++){
+      var xa = xs[i], xb = xs[i + 1]; if (xb - xa < .5) continue;
+      var cov = carve.filter(function(o){ return o.s0 <= xa + .5 && o.s1 >= xb - .5; }).sort(function(p, q){ return p.z0 - q.z0; }), z = d.z0;
+      for (var j = 0; j <= cov.length; j++){
+        var o = cov[j] || null, zb = o ? o.z0 : d.top;
+        if (zb - z > .5) piece(xa, xb, z, zb, xa <= sA + .5 || open2(xa, z, zb, false), xb >= sB - .5 || open2(xb, z, zb, true), o ? true : capT, z > d.z0 + .5 ? true : capB);
+        if (o) z = Math.max(z, o.z1);
+      }
+    }
+    carve.forEach(function(o){ fitting(acc, fr, d, o); });
+    d.ops.forEach(function(o){   /* 撤去する建具：開口は抜かず、両側に赤い印 */
+      if (!o.gone) return; var tg = { k: "gone", id: o.id };
+      fbox(acc, fr, o.s0, o.s1, h + 1, h + 3, o.z0, o.z1, ["ghost", null, null, null, null, null], tg);
+      fbox(acc, fr, o.s0, o.s1, -h - 3, -h - 1, o.z0, o.z1, [null, "ghost", null, null, null, null], tg);
+    });
+    return acc.mesh();
+  }
+
+  function ring(p){ var o = p.map(function(q){ return [q[0], q[1]]; }); if (o.length > 1 && Math.abs(o[0][0] - o[o.length - 1][0]) < .01 && Math.abs(o[0][1] - o[o.length - 1][1]) < .01) o.pop(); return o; }
+  function buildRoom(d){
+    var acc = new Acc(), pts = ring(d.poly), holes = d.holes.map(ring), all = pts.slice(), y1 = d.ch * K, tf = { k: "floor", room: d.id }, tc = { k: "ceil", room: d.id }, fm = "fl:" + d.fk;
+    holes.forEach(function(hh){ all = all.concat(hh); });
+    function v2(p){ return new T.Vector2(p[0], p[1]); }
+    var tris = T.ShapeUtils.triangulateShape(pts.map(v2), holes.map(function(hh){ return hh.map(v2); }));
+    tris.forEach(function(t){
+      var a = all[t[0]], b = all[t[1]], c = all[t[2]], ua = [a[0] * K, a[1] * K], ub = [b[0] * K, b[1] * K], uc = [c[0] * K, c[1] * K];
+      acc.tri(fm, [ua[0], 0, ua[1]], [ub[0], 0, ub[1]], [uc[0], 0, uc[1]], [0, 1, 0], ua, ub, uc, tf);
+      acc.tri(d.cf, [ua[0], y1, ua[1]], [ub[0], y1, ub[1]], [uc[0], y1, uc[1]], [0, -1, 0], ua, ub, uc, tc);
+    });
+    [pts].concat(holes).forEach(function(Q, qi){   /* 壁ぎわの陰の帯（床と天井） */
+      var sg = (polyArea(Q) > 0 ? 1 : -1) * (qi === 0 ? 1 : -1), n = Q.length;
+      for (var i = 0; i < n; i++){
+        var a = Q[i], b = Q[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); if (L < 1) continue;
+        var nx = -dy / L * sg, ny = dx / L * sg, q = [[a[0] + nx * 62, a[1] + ny * 62], [b[0] + nx * 62, b[1] + ny * 62], [b[0] + nx * 300, b[1] + ny * 300], [a[0] + nx * 300, a[1] + ny * 300]], uvq = [[0, 0], [0, 0], [0, 1], [0, 1]];
+        acc.quad("ao", q.map(function(p){ return [p[0] * K, .004, p[1] * K]; }), [0, 1, 0], uvq, null);
+        acc.quad("ao", q.map(function(p){ return [p[0] * K, y1 - .0015, p[1] * K]; }), [0, -1, 0], uvq, null);
+      }
+    });
+    return acc.mesh();
+  }
+
+  var AREAM = { tile: "tile", board: "wood", waist: "wood", niche: "mark", shikkui: "shikkui", accent: "accent", under: "under", demo: "ghost" };
+  var TKH = { kitchen: [0, 850], senmen: [0, 800], wc: [0, 420], bath: [0, 520], tearai: [650, 820], geta: [0, 900], senpan: [0, 60], makura: [1820, 1845], chudan: [850, 875], pillar: [0, -1], counter: [700, 735], stair: [0, 200], floor: [0, 6], yukaten: [0, 6], yukashu: [0, 6], dansa: [0, 6], ceil: [-1, -1], acout: [-1, -1] };
+  var TKM = { kitchen: "cab", senmen: "cab", wc: "porc", bath: "porc", tearai: "porc", geta: "cab", senpan: "porc", makura: "wood", chudan: "wood", pillar: "wood", counter: "wood", stair: "wood" };
+  function buildThing(d){
+    var acc = new Acc(), tag = { k: "thing", id: d.id, list: d.list }, gh = d.state === "remove";
+    if (d.list === "fx"){
+      var fr = d, h = d.th / 2, sd = d.side, u = d.u, z = d.z || 0, L = d.wlen, top = d.top, k = d.k;
+      var on = function(s0, s1, z0, z1, dep, mk){ fbox(acc, fr, s0, s1, sd > 0 ? h : -h - dep, sd > 0 ? h + dep : -h, Math.max(0, z0), Math.min(top, z1), (gh || mk === "ghost") ? "ghost" : mk, tag); };
+      if (d.shape === "pt"){
+        if (k === "alarm") on(u - 50, u + 50, z - 50, z + 50, 25, "plate");
+        else if (k === "sconce"){ on(u - 30, u + 30, z - 30, z + 30, 20, "plate"); on(u - 60, u + 60, z + 10, z + 110, 90, "lamp"); }
+        else if (k === "hanger") on(u - 150, u + 150, z - 8, z + 8, 70, "steel");
+        else { on(u - 35, u + 35, z - 57, z + 58, 8, "plate"); on(u - 14, u + 14, z - 22, z + 22, 10, "mark"); }
+      } else if (d.shape === "seg"){
+        var len = d.len || 900;
+        if (d.v) on(u - 17, u + 17, z, z + len, 55, k === "rod" ? "steel" : "wood");
+        else if (k === "indirect") on(Math.max(0, u), Math.min(L, u + len), z - 35, z + 35, 100, "cap");
+        else on(Math.max(0, u), Math.min(L, u + len), z - 17, z + 17, k === "rod" ? 90 : 55, k === "rod" ? "steel" : "wood");
+      } else {
+        var a2 = Math.max(0, u), b2 = Math.min(L, u + (d.len || 600)), z1 = Math.min(top, z + (d.hgt || (d.shape === "wall" ? top : 600)));
+        if (k === "counter" || k === "cshelf") on(a2, b2, z1 - 35, z1, k === "counter" ? 350 : 250, "wood");
+        else if (k === "curtbox") on(a2, b2, top - Math.min(d.hgt || 150, 400), top, 140, "cap");
+        else on(a2, b2, z, z1, k === "accent" ? 3 : 8, AREAM[k] || "under");
+      }
+    } else if (d.list === "lights"){
+      if (!gh && d.k !== "rail" && d.rb){   /* 光の輪（部屋の中だけ） */
+        var R2 = d.k === "ceil" ? 1500 : 800, px0 = Math.max(d.x - R2, d.rb[0] + 70), px1 = Math.min(d.x + R2, d.rb[2] - 70), py0 = Math.max(d.y - R2, d.rb[1] + 70), py1 = Math.min(d.y + R2, d.rb[3] - 70), uu = function(v, c){ return (v - c + R2) / (2 * R2); };
+        if (px1 - px0 > 50 && py1 - py0 > 50) acc.quad("pool", [[px0 * K, .006, py0 * K], [px1 * K, .006, py0 * K], [px1 * K, .006, py1 * K], [px0 * K, .006, py1 * K]], [0, 1, 0], [[uu(px0, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py1, d.y)], [uu(px0, d.x), uu(py1, d.y)]], null);
+      }
+      if (d.k === "rail"){ var L2 = (d.len || 1500) / 2, hz = d.dir !== "v"; fbox(acc, FR0, d.x - (hz ? L2 : 17), d.x + (hz ? L2 : 17), d.y - (hz ? 17 : L2), d.y + (hz ? 17 : L2), d.ch - 30, d.ch - 1, gh ? "ghost" : "mark", tag); }
+      else {
+        var r = d.k === "ceil" ? 250 : 60, zc = (d.ch - (d.k === "ceil" ? 45 : 3)) * K, mk2 = gh ? "ghost" : "lamp", c0 = [d.x * K, zc, d.y * K], n = 20;
+        for (var i = 0; i < n; i++){
+          var a = i / n * 6.283185, b = (i + 1) / n * 6.283185, pa = [(d.x + r * Math.cos(a)) * K, zc, (d.y + r * Math.sin(a)) * K], pb = [(d.x + r * Math.cos(b)) * K, zc, (d.y + r * Math.sin(b)) * K];
+          acc.tri(mk2, c0, pa, pb, [0, -1, 0], [0, 0], [0, 0], [0, 0], tag);
+          if (d.k === "ceil") acc.quad(gh ? "ghost" : "plate", [pa, pb, [pb[0], (d.ch - 1) * K, pb[2]], [pa[0], (d.ch - 1) * K, pa[2]]], [Math.cos((a + b) / 2), 0, Math.sin((a + b) / 2)], [[0, 0], [0, 0], [0, 0], [0, 0]], tag);
+        }
+      }
+    } else if (d.list === "tenken"){
+      var rg = TKH[d.k] || [0, 500], z0 = rg[0], zt = rg[1];
+      if (z0 < 0){ z0 = d.ch - 8; zt = d.ch - 1; } else if (zt < 0) zt = d.ch;
+      fbox(acc, FR0, d.x - d.hx, d.x + d.hx, d.y - d.hy, d.y + d.hy, z0, zt, gh ? "ghost" : (TKM[d.k] || "mark"), tag);
+      if (d.k === "kitchen" && !gh) fbox(acc, FR0, d.x - d.hx - 10, d.x + d.hx + 10, d.y - d.hy - 10, d.y + d.hy + 10, zt, zt + 30, "steel", tag);
+    } else {
+      var fk = FLOORS[d.k] ? d.k : "floorFin";
+      fbox(acc, FR0, Math.min(d.x0, d.x1), Math.max(d.x0, d.x1), Math.min(d.y0, d.y1), Math.max(d.y0, d.y1), 0, d.list === "zones" ? 2 : 3, [null, null, null, null, "fl:" + fk, null], { k: "floor", id: d.id, list: d.list });
+    }
+    return acc.mesh();
+  }
+  function build(u){ return u.kind === "room" ? buildRoom(u.d) : u.kind === "wall" ? buildWall(u.d) : buildThing(u.d); }
+
+  /* ===== 4. 直した所だけ差し替える ===== */
+  function drop(key){ var c = UNITS[key]; if (c && c.obj){ if (root) root.remove(c.obj); c.obj.traverse(function(o){ if (o.geometry) try { o.geometry.dispose(); } catch(e){} }); } }
+  function clearAll(){ Object.keys(UNITS).forEach(function(k){ drop(k); delete UNITS[k]; }); }
+  function sync(){
+    var m = mado(); if (!m) return { ok: false, why: "no-mado" };
+    if (!T || !root) return { ok: false, why: "not-open" };
+    var rd = m.read(); if (!rd || !rd.ok) return { ok: false, why: (rd && rd.why) || "read" };
+    var t0 = performance.now();
+    if (rd.empty){ clearAll(); MODEL = null; last = { rev: rd.rev, built: 0, kept: 0, removed: 0, ms: 0, renderMs: last.renderMs, fps: last.fps }; return { ok: true, empty: true }; }
+    var M = model(rd), seen = Object.create(null), built = 0, kept = 0, removed = 0;
+    M.units.forEach(function(u){
+      seen[u.key] = 1; var cur = UNITS[u.key];
+      if (cur && cur.sig === u.sig){ kept++; return; }
+      if (cur) drop(u.key);
+      var obj = null; try { obj = build(u); } catch(e){ warn("部品を作れませんでした：" + u.key, e); M.warn.push("作れなかった部品：" + u.key); }
+      if (obj){ obj.name = u.key; root.add(obj); }
+      UNITS[u.key] = { sig: u.sig, obj: obj }; built++;
+    });
+    Object.keys(UNITS).forEach(function(k){ if (!seen[k]){ drop(k); delete UNITS[k]; removed++; } });
+    MODEL = M; fitSun();
+    last = { rev: rd.rev, built: built, kept: kept, removed: removed, ms: Math.round((performance.now() - t0) * 10) / 10, renderMs: last.renderMs, fps: last.fps };
+    return { ok: true, built: built, kept: kept, removed: removed, ms: last.ms, warn: M.warn.slice(), note: M.note.slice() };
+  }
+
+  /* ===== 5. 画面枠（この中だけで動く） ===== */
+  function loadThree(){
+    if (window.THREE){ T = window.THREE; return Promise.resolve(true); }
+    if (threeP) return threeP;
+    threeP = new Promise(function(res){
+      setTimeout(function(){
+        try {
+          var bin = atob(document.getElementById("threeSrc254").textContent.replace(/\s+/g, "")), by = new Uint8Array(bin.length);
+          for (var i = 0; i < bin.length; i++) by[i] = bin.charCodeAt(i);
+          var sc = document.createElement("script"); sc.textContent = new TextDecoder("utf-8").decode(by); document.head.appendChild(sc);
+          T = window.THREE || null;
+        } catch(e){ warn("three.js を読めませんでした", e); T = null; }
+        if (!T) threeP = null;
+        res(!!T);
+      }, 30);
+    });
+    return threeP;
+  }
+  function el(tag, css, text){ var e = document.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
+  var BTN = "min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:var(--panel,#fff);color:var(--ink,#18202A);font:inherit;font-size:14px;font-weight:700;flex:0 0 auto;white-space:nowrap";
+  function frame(){
+    if (V) return V;
+    var box = el("div", "position:fixed;inset:0;z-index:2147483000;display:none;flex-direction:column;background:var(--bg,#F7F9FC);color:var(--ink,#18202A);font-size:14px;line-height:1.4;-webkit-user-select:none;user-select:none");
+    box.id = "rittaiRoot";
+    var top = el("div", "display:flex;gap:6px;align-items:center;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 6px;overflow-x:auto;background:var(--panel,#fff);border-bottom:1px solid var(--line,#DCE3EB)");
+    var mid = el("div", "flex:1;min-height:0;position:relative;background:#e9eef2;overflow:hidden");
+    var cvs = el("canvas", "position:absolute;left:0;top:0;width:100%;height:100%;display:block;touch-action:none");
+    var msg = el("div", "position:absolute;left:16px;right:16px;top:38%;text-align:center;font-size:15px;font-weight:700;pointer-events:none;text-shadow:0 0 6px #fff,0 0 6px #fff");
+    var bot = el("div", "padding:4px 8px calc(env(safe-area-inset-bottom,0px) + 6px);background:var(--panel,#fff);border-top:1px solid var(--line,#DCE3EB)");
+    var speed = el("div", "font-size:12px;color:var(--sub,#5B6673);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:17px;padding:0 2px 4px", "");
+    var row = el("div", "display:flex;gap:8px;align-items:center;overflow-x:auto");
+    var bClose = el("button", BTN, "とじる"), bQual = el("button", BTN, ""), bGhost = el("button", BTN, "");
+    bClose.type = bQual.type = bGhost.type = "button"; bGhost.style.display = "none";
+    bClose.onclick = close;
+    bQual.onclick = function(){ setQual(QUAL === "hq" ? "lt" : "hq", true); };
+    bGhost.onclick = function(){ var g = mat("ghost"); g.visible = !g.visible; labels(); ask(); };
+    mid.appendChild(cvs); mid.appendChild(msg); row.appendChild(bClose); row.appendChild(bQual); row.appendChild(bGhost); bot.appendChild(speed); bot.appendChild(row);
+    box.appendChild(top); box.appendChild(mid); box.appendChild(bot); document.body.appendChild(box);
+    V = { box: box, top: top, mid: mid, cvs: cvs, msg: msg, bGhost: bGhost, bQual: bQual, speed: speed, open: false };
+    bind(cvs);
+    cvs.addEventListener("webglcontextrestored", function(){ try { if (R){ R.shadowMap.needsUpdate = true; ask(); } } catch(e){} });   /* 描く仕組みが戻った時は、描き直す */
+    return V;
+  }
+  function say(t, ms){ if (!V) return; clearTimeout(tmSay); V.msg.textContent = t || ""; if (t && ms) tmSay = setTimeout(function(){ if (V) V.msg.textContent = ""; }, ms); }
+  function labels(){
+    if (!V || !T) return;
+    var has = !!(MODEL && (MODEL.n.ghosts || MODEL.units.some(function(u){ return u.sig.indexOf('"gone":1') >= 0 || u.sig.indexOf('"state":"remove"') >= 0; })));
+    V.bGhost.style.display = has ? "" : "none"; V.bGhost.textContent = "撤去の印：" + (mat("ghost").visible ? "入" : "切");
+    V.bQual.textContent = "画質：" + (QUAL === "hq" ? "きれい" : "軽い（スマホ用）");
+  }
+  function chips(){
+    if (!V) return;
+    V.top.textContent = "";
+    V.top.appendChild(el("span", "font-size:12px;color:var(--sub,#5B6673);flex:0 0 auto;white-space:nowrap;padding:0 4px", "見るだけ・試験中"));
+    (MODEL ? MODEL.rooms : []).forEach(function(r, i){
+      var b = el("button", BTN + (r.id === fpRoom ? ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : ""), r.name || ("部屋" + (i + 1)));
+      b.type = "button"; b.onclick = function(){ stand(r.id); chips(); ask(); };
+      V.top.appendChild(b);
+    });
+  }
+  function setup(){
+    if (R) return;
+    R = new T.WebGLRenderer({ canvas: V.cvs, antialias: true, powerPreference: "high-performance" });
+    R.toneMapping = T.ACESFilmicToneMapping; R.toneMappingExposure = 1.12;
+    if ("outputColorSpace" in R) R.outputColorSpace = T.SRGBColorSpace;
+    R.shadowMap.enabled = true; R.shadowMap.type = T.PCFSoftShadowMap; R.shadowMap.autoUpdate = false;   /* 影は、家が変わった時だけ計算する */
+    scene = new T.Scene(); scene.background = new T.Color(0xe9eef2);
+    hemi = new T.HemisphereLight(0xffffff, 0xf3eee4, 2.5); scene.add(hemi);
+    sun = new T.DirectionalLight(0xfff1dc, 1.1); scene.add(sun); scene.add(sun.target);
+    sun.shadow.mapSize.set(4096, 4096); sun.shadow.bias = -.0004; sun.shadow.normalBias = .02;
+    root = new T.Group(); scene.add(root);
+    cam = new T.PerspectiveCamera(80, 1, .05, 300);
+    try { ENV = envMap(); } catch(e){ warn("映り込みの絵を作れませんでした", e); ENV = null; }
+    applyQual();
+  }
+  function envMap(){   /* 床のつやに映る、明るい空と窓の絵（小さな絵1枚から作る） */
+    var c = document.createElement("canvas"); c.width = 256; c.height = 128; var g = c.getContext("2d"), gr = g.createLinearGradient(0, 0, 0, 128);
+    gr.addColorStop(0, "#f2f6fb"); gr.addColorStop(.46, "#ffffff"); gr.addColorStop(.56, "#e6e0d5"); gr.addColorStop(1, "#b4ab9c"); g.fillStyle = gr; g.fillRect(0, 0, 256, 128);
+    g.fillStyle = "#ffffff"; g.fillRect(18, 36, 50, 30); g.fillRect(150, 32, 62, 34);
+    var t = new T.CanvasTexture(c); t.mapping = T.EquirectangularReflectionMapping; if ("colorSpace" in t) t.colorSpace = T.SRGBColorSpace;
+    var pm = new T.PMREMGenerator(R), out = pm.fromEquirectangular(t).texture; pm.dispose(); t.dispose();
+    return out;
+  }
+  function applyQual(){
+    if (!R) return; var hq = QUAL === "hq";
+    Object.keys(HQM).forEach(function(k){ if (MATS[k]) MATS[k].visible = hq; });
+    sun.castShadow = hq; sun.intensity = hq ? 3.4 : 1.1; hemi.intensity = hq ? 1.15 : 2.5;
+    scene.environment = (hq && ENV) ? ENV : null;
+    if (!hq && sun.shadow.map){ try { sun.shadow.map.dispose(); } catch(e){} sun.shadow.map = null; }   /* 軽い版では、影の計算用の場所を返す */
+    R.shadowMap.needsUpdate = true; R.setPixelRatio(prNow());
+  }
+  function fitSun(){   /* 日ざしの向きと、影を計算する範囲（家ぜんたい） */
+    if (!MODEL || !sun) return;
+    var b = MODEL.box, cx = (b.x0 + b.x1) / 2 * K, cz = (b.y0 + b.y1) / 2 * K, half = Math.max(b.x1 - b.x0, b.y1 - b.y0) / 2 * K + 3, c = sun.shadow.camera;
+    sun.target.position.set(cx, 0, cz); sun.position.set(cx + 9, 26, cz + 20); sun.target.updateMatrixWorld();
+    c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.near = 1; c.far = 80; c.updateProjectionMatrix();
+    R.shadowMap.needsUpdate = true;
+  }
+  /* 速さを測る：きれい／軽い を数コマずつ描き、描き終わりまで待って時間を取る（真ん中の値・ms） */
+  function bench(){
+    if (!R || !fp) return null;
+    var gl = R.getContext(), px = new Uint8Array(4), out = {}, keep = QUAL, yaw0 = fp.yaw;
+    ["hq", "lt"].forEach(function(q){
+      QUAL = q; applyQual(); var ts = [];
+      for (var i = 0; i < 8; i++){ fp.yaw = yaw0 + i * .4; var t0 = performance.now(); place(); R.render(scene, cam); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); if (i > 2) ts.push(performance.now() - t0); }
+      ts.sort(function(a, b){ return a - b; }); out[q] = Math.round(ts[Math.floor(ts.length / 2)] * 10) / 10;
+    });
+    fp.yaw = yaw0; QUAL = keep; applyQual(); BENCH = out;
+    return out;
+  }
+  function setQual(q, manual){
+    if (q !== "hq" && q !== "lt") return QUAL;
+    QUAL = q; QAUTO = !manual;
+    if (manual) try { window.WALK2.set("q", q); } catch(e){}
+    applyQual(); labels(); renderNow();
+    return QUAL;
+  }
+  function pr(){ return Math.min(window.devicePixelRatio || 1, QUAL === "hq" ? 3 : 2); }
+  function prNow(){ return (isMoving && QUAL !== "hq") ? Math.min(pr(), 1.25) : pr(); }   /* 軽い版だけ：動かしている間は粗く、止めたら細かく1枚 */
+  function resize(){
+    if (!R || !V) return;
+    var w = Math.max(1, V.mid.clientWidth), h = Math.max(1, V.mid.clientHeight);
+    R.setPixelRatio(prNow()); R.setSize(w, h, false);
+    cam.aspect = w / h; cam.updateProjectionMatrix();
+    if (fp && !fovUser) fp.fov = autoFov();
+  }
+  function autoFov(){ var a = cam ? cam.aspect : 1; return clamp(2 * Math.atan(Math.tan(31 * Math.PI / 180) / a) * 180 / Math.PI, 55, 96); }   /* 横に約62°見える広さ */
+  function place(){
+    if (!fp) return;
+    cam.position.set(fp.x, fp.y, fp.z); var cp = Math.cos(fp.p);
+    cam.lookAt(fp.x + Math.sin(fp.yaw) * cp, fp.y + Math.sin(fp.p), fp.z - Math.cos(fp.yaw) * cp);
+    if (Math.abs(cam.fov - fp.fov) > .01){ cam.fov = fp.fov; cam.updateProjectionMatrix(); }
+  }
+  function renderNow(){
+    if (!R || !V || !V.open) return;
+    var t0 = performance.now(); place(); R.render(scene, cam);
+    var t1 = performance.now(); last.renderMs = Math.round((t1 - t0) * 10) / 10;
+    times.push(t1); while (times.length && t1 - times[0] > 1000) times.shift();
+    if (isMoving) last.fps = times.length;
+    if (t1 - speedAt > 300){ speedAt = t1; V.speed.textContent = "速さ（1コマ）" + (BENCH ? "　きれい " + BENCH.hq.toFixed(1) + "ms／軽い " + BENCH.lt.toFixed(1) + "ms" : "") + (isMoving && times.length > 3 ? "　いま毎秒" + times.length + "コマ" : ""); }
+  }
+  function tick(){ raf = 0; if (!need) return; need = false; renderNow(); }
+  function ask(){ need = true; if (!raf && V && V.open && R) raf = requestAnimationFrame(tick); }
+  function moving(on){ if (isMoving === on) return; isMoving = on; if (!R || !V || !V.open) return; if (QUAL !== "hq") R.setPixelRatio(prNow()); renderNow(); }
+  function bind(cvs){
+    var ps = Object.create(null), n = 0, pinch = 0;
+    function dist(){ var k = Object.keys(ps); return k.length < 2 ? 0 : Math.hypot(ps[k[0]][0] - ps[k[1]][0], ps[k[0]][1] - ps[k[1]][1]); }
+    function up(e){ if (!ps[e.pointerId]) return; delete ps[e.pointerId]; n = Object.keys(ps).length; pinch = 0; if (!n) moving(false); }
+    cvs.addEventListener("pointerdown", function(e){ ps[e.pointerId] = [e.clientX, e.clientY]; n = Object.keys(ps).length; try { cvs.setPointerCapture(e.pointerId); } catch(x){} pinch = n === 2 ? dist() : 0; moving(true); e.preventDefault(); });
+    cvs.addEventListener("pointermove", function(e){
+      var p = ps[e.pointerId]; if (!p || !fp) return;
+      var dx = e.clientX - p[0], dy = e.clientY - p[1]; p[0] = e.clientX; p[1] = e.clientY;
+      if (n === 1){ var k = fp.fov / 60 * .0045; fp.yaw -= dx * k; fp.p = clamp(fp.p + dy * k, -1.2, 1.2); }
+      else if (n === 2){ var d2 = dist(); if (pinch > 0 && d2 > 0){ fp.fov = clamp(fp.fov * pinch / d2, 40, 110); fovUser = true; } pinch = d2; }
+      ask();
+    });
+    cvs.addEventListener("pointerup", up); cvs.addEventListener("pointercancel", up);
+    cvs.addEventListener("wheel", function(e){ if (!fp) return; fp.fov = clamp(fp.fov * (e.deltaY > 0 ? 1.06 : .94), 40, 110); fovUser = true; ask(); e.preventDefault(); }, { passive: false });
+  }
+  /* 部屋の中の立ち位置：いちばん遠い角の少し内側に立ち、部屋の奥を向く */
+  function stand(id){
+    if (!MODEL){ fp = null; return; }
+    if (!MODEL.rooms.length){ var bx = MODEL.box; fp = { x: (bx.x0 + bx.x1) / 2 * K, y: EYE * K, z: (bx.y0 + bx.y1) / 2 * K, yaw: 0, p: -.06, fov: fovUser && fp ? fp.fov : autoFov() }; fpRoom = null; fpPid = MODEL.pid; return; }
+    var r = null; MODEL.rooms.forEach(function(q){ if (q.id === id) r = q; }); if (!r) r = MODEL.rooms.slice().sort(function(a, b){ return b.area - a.area; })[0];
+    var P = r.poly, cx = 0, cy = 0, i, j, pts = [], xs = P.map(function(q){ return q[0]; }), ys = P.map(function(q){ return q[1]; });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), small = Math.min(x1 - x0, y1 - y0) < 1900;
+    for (i = 0; i < P.length; i++){ cx += P[i][0]; cy += P[i][1]; } cx /= P.length; cy /= P.length;
+    for (i = 0; i < P.length; i++){ var dx = cx - P[i][0], dy = cy - P[i][1], L = Math.hypot(dx, dy) || 1, k = Math.min(.45, 700 / L); pts.push([P[i][0] + dx * k, P[i][1] + dy * k]); }   /* 角の少し内側 */
+    for (i = 1; i < 7; i++) for (j = 1; j < 7; j++) pts.push([x0 + (x1 - x0) * i / 7, y0 + (y1 - y0) * j / 7]);                                                  /* 部屋の中の点 */
+    pts.push([cx, cy]);
+    var cands = pts.filter(function(q){ return inRoom(q[0], q[1], r); }).map(function(q){ return [q[0], q[1], clearOf(q[0], q[1], r)]; });
+    var free = function(c){ return !MODEL.blocks.some(function(b){ return c[0] > b[0] && c[0] < b[2] && c[1] > b[1] && c[1] < b[3]; }); };
+    var ok = cands.filter(function(c){ return c[2] >= 300 && free(c); });
+    if (!ok.length) ok = cands.filter(function(c){ return c[2] >= 300; });
+    if (!ok.length){ cands.sort(function(a, b){ return b[2] - a[2]; }); ok = [cands[0] || [cx, cy, 0]]; }
+    var ND = 24, bestS = -1, me = ok[0], yaw = 0;                     /* 壁から離れていて、いちばん遠くまで広く見渡せる所と向きを選ぶ */
+    ok.forEach(function(c){
+      var fl = [], k2, n2, s;
+      for (k2 = 0; k2 < ND; k2++){ var an = k2 / ND * 6.283185; fl.push(Math.min(freeLen(c[0], c[1], Math.sin(an), -Math.cos(an), r), 12000)); }
+      for (k2 = 0; k2 < ND; k2++){ s = 0; for (n2 = -2; n2 <= 2; n2++) s += fl[(k2 + n2 + ND) % ND]; if (s > bestS){ bestS = s; me = c; yaw = k2 / ND * 6.283185; } }
+    });
+    fp = { x: me[0] * K, y: Math.min(EYE, r.ch - 200) * K, z: me[1] * K, yaw: yaw, p: small ? -.16 : -.06, fov: fovUser && fp ? fp.fov : (small ? Math.max(autoFov(), 100) : autoFov()) };
+    fpRoom = r.id; fpPid = MODEL.pid;
+  }
+  function ringsOf(r){ return [r.poly].concat(r.holes); }
+  function segD(x, y, ax, ay, bx, by){ var ex = bx - ax, ey = by - ay, L2 = ex * ex + ey * ey, tt = L2 > 0 ? clamp(((x - ax) * ex + (y - ay) * ey) / L2, 0, 1) : 0; return Math.hypot(x - ax - ex * tt, y - ay - ey * tt); }
+  function clearOf(x, y, r){   /* 部屋のふちと、部屋の中に立つ壁からの離れ（mm） */
+    var m = 1e9;
+    ringsOf(r).forEach(function(Q){ for (var i = 0; i < Q.length; i++){ var a = Q[i], b = Q[(i + 1) % Q.length], d = segD(x, y, a[0], a[1], b[0], b[1]) - 75; if (d < m) m = d; } });
+    MODEL.segs.forEach(function(s){ var d = segD(x, y, s[0], s[1], s[2], s[3]) - s[4]; if (d < m) m = d; });
+    return m;
+  }
+  function freeLen(x, y, dx, dy, r){   /* 点から向き(dx,dy)へ進んで、部屋のふちか壁に当たるまでの距離 */
+    var best = 1e9;
+    function hit(ax, ay, bx, by, pad){ var ex = bx - ax, ey = by - ay, den = dx * ey - dy * ex; if (Math.abs(den) < 1e-9) return; var tt = ((ax - x) * ey - (ay - y) * ex) / den, uu = ((ax - x) * dy - (ay - y) * dx) / den; if (tt > 1 && uu >= 0 && uu <= 1 && tt - pad < best) best = Math.max(0, tt - pad); }
+    ringsOf(r).forEach(function(Q){ for (var i = 0; i < Q.length; i++) hit(Q[i][0], Q[i][1], Q[(i + 1) % Q.length][0], Q[(i + 1) % Q.length][1], 0); });
+    MODEL.segs.forEach(function(s){ hit(s[0], s[1], s[2], s[3], s[4]); });
+    return best;
+  }
+  function roomOfFp(){ if (!fp || !MODEL) return null; var x = fp.x / K, y = fp.z / K, hit = null; MODEL.rooms.forEach(function(r){ if (!hit && inRoom(x, y, r)) hit = r.id; }); return hit; }
+  function afterSync(){ labels(); var here = (fp && MODEL && fpPid === MODEL.pid) ? roomOfFp() : null; if (here) fpRoom = here; else stand(fpRoom); chips(); }
+  var WHY = { "no-mado": "準備ができていません（窓口がありません）。", "no-nafuda": "準備ができていません（名札がありません）。", "no-data": "家のデータがまだありません。" };
+  function open(opt){
+    opt = opt || {};
+    if (!sw()) return Promise.resolve({ ok: false, why: "switch-off" });
+    var v = frame(); v.box.style.display = "flex"; v.open = true; say("立体を用意しています…");
+    return loadThree().then(function(ok){
+      if (!v.open) return { ok: false, why: "closed" };
+      if (!ok){ say("この端末では立体を出せませんでした。とじて、今までの画面を使ってください。"); return { ok: false, why: "no-three" }; }
+      try {
+        setup(); resize();
+        var r = sync();
+        if (!r.ok){ say(WHY[r.why] || "家のデータを読めませんでした。"); return r; }
+        if (r.empty){ fp = null; chips(); say("まだ外枠がありません。①描く で外枠をなぞってください。"); R.render(scene, cam); return r; }
+        say(""); if (opt.room) fpRoom = opt.room;
+        if (opt.room || !fp || fpPid !== MODEL.pid || !roomOfFp()) stand(fpRoom); else fpRoom = roomOfFp();
+        if (!BENCH && fp){
+          var man = null; try { man = window.WALK2.get("q"); } catch(e){}
+          bench();
+          if (man === "hq" || man === "lt"){ QUAL = man; QAUTO = false; } else if (BENCH.hq > SLOW){ QUAL = "lt"; QAUTO = true; } else { QUAL = "hq"; QAUTO = false; }
+          applyQual();
+          if (QAUTO) say("この端末では「軽い」にしました。下の「画質」で「きれい」に戻せます。", 5000);
+        }
+        speedAt = 0; labels(); chips(); renderNow();
+        return { ok: true, built: r.built, kept: r.kept, removed: r.removed, ms: r.ms, warn: r.warn };
+      } catch(e){ warn("開けませんでした", e); say("立体を出せませんでした。とじて、今までの画面を使ってください。"); return { ok: false, why: "error", msg: String((e && e.message) || e) }; }
+    });
+  }
+  function close(){ if (!V) return; V.open = false; V.box.style.display = "none"; if (raf){ cancelAnimationFrame(raf); raf = 0; } need = false; isMoving = false; }
+  function stats(){
+    var meshes = 0, tris = 0; Object.keys(UNITS).forEach(function(k){ var o = UNITS[k].obj; if (o){ meshes++; tris += o.userData.tris || 0; } });
+    return { open: !!(V && V.open), units: Object.keys(UNITS).length, meshes: meshes, tris: tris, rev: last.rev, built: last.built, kept: last.kept, removed: last.removed, ms: last.ms, renderMs: last.renderMs, fps: last.fps, room: fpRoom, calls: R ? R.info.render.calls : 0, qual: QUAL, auto: QAUTO, bench: BENCH };
+  }
+  /* 画面の点（−1〜1）で触った面を返す。段階6（触って候補）の土台 */
+  function pick(nx, ny){
+    if (!R || !fp || !root) return null;
+    place(); cam.updateMatrixWorld(true);
+    var rc = new T.Raycaster(); rc.setFromCamera(new T.Vector2(nx, ny), cam);
+    var hits = rc.intersectObjects(root.children, true);
+    for (var i = 0; i < hits.length; i++){
+      var h = hits[i], tg = (h.object.userData.tags || [])[h.faceIndex] || null;
+      if (!tg || tg.k === "ghost" || tg.k === "gone") continue;
+      return { unit: h.object.parent ? h.object.parent.name : "", tag: tg, at: [Math.round(h.point.x / K), Math.round(h.point.z / K), Math.round(h.point.y / K)], dist: Math.round(h.distance / K) };
+    }
+    return null;
+  }
+  /* 形の自己点検（three.js なしで動く） */
+  function plan(){
+    var m = mado(); if (!m) return { ok: false, why: "no-mado" };
+    var rd = m.read(); if (!rd || !rd.ok) return { ok: false, why: (rd && rd.why) || "read" };
+    if (rd.empty) return { ok: true, empty: true, rooms: [], units: [], warn: [], note: [] };
+    var M = model(rd);
+    return { ok: true, rev: M.rev, mode: M.mode, ch: M.ch, n: M.n, rooms: M.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk, ch: r.ch, area: Math.round(r.area / 1e4) / 100 }; }), units: M.units.map(function(u){ return { key: u.key, kind: u.kind, sig: u.sig }; }), warn: M.warn, note: M.note, outline: Math.round(Math.abs(polyArea(rd.outline)) / 1e4) / 100 };
+  }
+  function check(){
+    var p = plan(); if (!p.ok) return p; if (p.empty) return { ok: true, empty: true, issues: [] };
+    var issues = p.warn.slice(), fa = 0;
+    p.rooms.forEach(function(r){ fa += r.area; });
+    if (p.rooms.length && Math.abs(fa - p.outline) > p.outline * .01 + .05) issues.push("床の合計が外枠と合わない：" + fa.toFixed(2) + "㎡／" + p.outline.toFixed(2) + "㎡");
+    p.units.forEach(function(u){ if (/NaN|Infinity/.test(u.sig)) issues.push("数字でない値：" + u.key); });
+    return { ok: issues.length === 0, issues: issues, notes: p.note, n: { rooms: p.rooms.length, walls: p.n.walls, ghosts: p.n.ghosts, ops: p.n.ops, things: p.n.things, units: p.units.length }, floor: Math.round(fa * 100) / 100, outline: p.outline };
+  }
+
+  /* ===== 6. 入口（スイッチが「入」の時だけ ⋯ に出す） ===== */
+  var NOTE_ON = "切のままなら、今までと同じです。入にすると、下に「新しい立体を見る」が出ます（見るだけ）。";
+  function menu(){
+    try {
+      var mm = document.querySelector("details.mo .mm"), b = document.getElementById("rittaiMenu"), nt = document.getElementById("walk2Note"), on = sw();
+      if (!on){ if (b) b.remove(); if (nt && noteOrg !== null && nt.textContent === NOTE_ON) nt.textContent = noteOrg; return; }
+      if (!mm) return;
+      if (nt && nt.textContent !== NOTE_ON){ if (noteOrg === null) noteOrg = nt.textContent; nt.textContent = NOTE_ON; }
+      if (b) return;
+      b = document.createElement("button"); b.type = "button"; b.id = "rittaiMenu"; b.textContent = "新しい立体を見る（見るだけ・試験中）";
+      b.onclick = function(){ open(); };
+      if (nt && nt.parentNode === mm) mm.insertBefore(b, nt.nextSibling); else mm.appendChild(b);
+    } catch(e){}
+  }
+  window.addEventListener("walk2-switch", function(e){ setTimeout(menu, 0); if (e && e.detail && !e.detail.on) close(); });
+  window.addEventListener("mado-change", function(){
+    if (!(V && V.open && R)) return;
+    clearTimeout(tmSync);
+    tmSync = setTimeout(function(){ try { var r = sync(); if (r.ok && !r.empty){ afterSync(); say(""); } else if (r.empty){ fp = null; chips(); say("まだ外枠がありません。①描く で外枠をなぞってください。"); } ask(); } catch(e){ warn("直した所の差し替え", e); } }, 60);
+  });
+  window.addEventListener("resize", function(){ if (V && V.open && R){ resize(); ask(); } });
+  setInterval(menu, 1500); menu();
+
+  window.RITTAI = {
+    v: VER, stage: STAGE,
+    ready: function(){ return !!mado(); },
+    open: open, close: close, isOpen: function(){ return !!(V && V.open); },
+    sync: function(){ var r = sync(); if (r.ok && V && V.open){ if (!r.empty) afterSync(); renderNow(); } return r; },
+    plan: plan, check: check, stats: stats, pick: pick, bench: function(){ var b = bench(); if (b){ speedAt = 0; renderNow(); } return b; },
+    quality: function(q){ return q ? setQual(q, true) : QUAL; },
+    rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk }; }) : []; },
+    stand: function(id){ stand(id); chips(); renderNow(); return fp ? { x: fp.x / K, y: fp.z / K, room: fpRoom } : null; },
+    cam: function(o){ if (!fp) return null; o = o || {}; if (fin(o.x)) fp.x = o.x * K; if (fin(o.y)) fp.z = o.y * K; if (fin(o.h)) fp.y = o.h * K; if (fin(o.yaw)) fp.yaw = o.yaw * Math.PI / 180; if (fin(o.pitch)) fp.p = o.pitch * Math.PI / 180; if (fin(o.fov)){ fp.fov = o.fov; fovUser = true; } renderNow(); return { x: fp.x / K, y: fp.z / K, h: fp.y / K, yaw: fp.yaw * 180 / Math.PI, pitch: fp.p * 180 / Math.PI, fov: fp.fov }; },
+    ghost: function(on){ if (!T) return null; var g = mat("ghost"); if (typeof on === "boolean"){ g.visible = on; labels(); renderNow(); } return g.visible; }
+  };
+})();
+</script>
