@@ -47028,11 +47028,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・寸法の決まっていない辺がある時は、図面を開いた時に「外壁の線をタップ」の案内を1回出す。
    ・今回は1階だけ。⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない。保存キーは増やさない。
    CAD-671（2026-11-27 Claude）：リフォームの時、道具を持たずに間仕切りをタップ→図面の下に「既存・新設・撤去」の帯。
-     今のアプリの setPState をそのまま呼ぶ（戻す1回で戻る）。選んだ間仕切りはピンクで点滅。新築は全部新設なので出さない。 */
+     今のアプリの setPState をそのまま呼ぶ（戻す1回で戻る）。選んだ間仕切りはピンクで点滅。新築は全部新設なので出さない。
+   CAD-672（2026-11-27 Claude）：外側の「寸法の数字」をタップしても、その辺の数字パッドが出る（Fable の案を取り込み）。
+     結びつけるのは「外形の1辺とちょうど同じ長さの数字」だけ。向き（横の数字＝横の辺、縦の数字＝縦の辺）が同じで、一番近い辺。
+     間仕切りで割れた途中の数字は辺ではないので、何もしない。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
-  var VER = 2, NS = "http://www.w3.org/2000/svg";
+  var VER = 3, NS = "http://www.w3.org/2000/svg";
   var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -47104,10 +47107,28 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
     var i = edgeAt(p);
+    if (i < 0) i = dimEdgeAt(p);
     if (i < 0){ var pi = partAt(p); if (pi >= 0){ setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else closePart(); return; }
     closePart();
     setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0);   /* 図面の「部屋を選ぶ」タップは打ち消す */
     tapT = Date.now(); open(i);
+  }
+  /* 外側の寸法の数字 → 外形の辺（その数字とちょうど同じ長さで、向きが同じ、一番近い辺） */
+  function dimEdgeAt(p){
+    var z = zumen(), L = null; try { L = z && z.layout ? z.layout() : null; } catch(e){ L = null; }
+    if (!L || !L.ok || !Array.isArray(L.labels)) return -1;
+    var pad8 = 8 * pxmm(), hitL = null;
+    L.labels.forEach(function(q){ if (q.k !== "dim" || !q.bx) return; var b = q.bx; if (p[0] >= b[0] - pad8 && p[0] <= b[2] + pad8 && p[1] >= b[1] - pad8 && p[1] <= b[3] + pad8) hitL = q; });
+    if (!hitL) return -1;
+    var v = parseFloat(String(hitL.text).replace(/,/g, "")); if (!(v > 0)) return -1;
+    var P = pts(), n = P.length, best = -1, bd = Infinity, k;
+    for (k = 0; k < n; k++){
+      var a = P[k], b2 = P[(k + 1) % n], len = Math.hypot(b2[0] - a[0], b2[1] - a[1]), horiz = Math.abs(a[1] - b2[1]) < 1;
+      if (Math.abs(len - v) > 1) continue;
+      if (hitL.rot ? horiz : !horiz) continue;
+      var d = segD(hitL.cx, hitL.cy, a, b2); if (d < bd){ bd = d; best = k; }
+    }
+    return best;
   }
   /* ===== 3b. リフォームの間仕切り：既存・新設・撤去（今の setPState） ===== */
   var partSel = -1, partObj = null, partBar = null;   /* 選んだ間仕切りは、物そのもので覚える（戻す・足す・消すで番号がずれても取り違えない） */
@@ -47245,7 +47266,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.KAKU3 = {
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
-    open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; },
+    open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
   };
 })();
