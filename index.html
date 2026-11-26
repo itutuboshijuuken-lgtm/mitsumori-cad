@@ -47235,11 +47235,28 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     L.labels.forEach(function(q){ if (q.k !== "dim" || !q.bx) return; var b = q.bx; if (p[0] >= b[0] - pad8 && p[0] <= b[2] + pad8 && p[1] >= b[1] - pad8 && p[1] <= b[3] + pad8) hitL = q; });
     if (!hitL) return -1;
     var v = parseFloat(String(hitL.text).replace(/,/g, "")); if (!(v > 0)) return -1;
-    var P = pts(), n = P.length, best = -1, bd = Infinity, k;
+    /* CAD-684：数字の区間（寸法線の上の点と点の間で、数字と同じ長さ・数字に一番近い区間）と、範囲が一致する辺だけ。
+       数字は重ならないよう区間の真ん中からずれて置かれることがあるので、数字の位置ではなく寸法線から区間を出す。L字で同じ長さの辺が2本あっても取り違えない */
+    var seg = null, sd = Infinity, rows = Array.isArray(L.dims) ? L.dims : [], ticks = Array.isArray(L.ticks) ? L.ticks : [];
+    rows.forEach(function(r){
+      var hz = Math.abs(r[1] - r[3]) < 1; if (hitL.rot ? hz : !hz) return;
+      var at = hz ? r[1] : r[0], cs = [hz ? Math.min(r[0], r[2]) : Math.min(r[1], r[3]), hz ? Math.max(r[0], r[2]) : Math.max(r[1], r[3])];
+      ticks.forEach(function(t){ if (Math.abs((hz ? t[1] : t[0]) - at) < 1) cs.push(hz ? t[0] : t[1]); });
+      cs.sort(function(x, y){ return x - y; });
+      for (var q = 0; q + 1 < cs.length; q++){
+        var s0 = cs[q], s1 = cs[q + 1]; if (s1 - s0 < 1 || Math.abs((s1 - s0) - v) > 1) continue;
+        var mx = hz ? (s0 + s1) / 2 : at, my = hz ? at : (s0 + s1) / 2, dd = Math.hypot(hitL.cx - mx, hitL.cy - my);
+        if (dd < sd){ sd = dd; seg = [s0, s1]; }
+      }
+    });
+    if (!seg) return -1;
+    var P = pts(), n = P.length, best = -1, bd = Infinity, k, lo = seg[0], hi = seg[1];
     for (k = 0; k < n; k++){
       var a = P[k], b2 = P[(k + 1) % n], len = Math.hypot(b2[0] - a[0], b2[1] - a[1]), horiz = Math.abs(a[1] - b2[1]) < 1;
       if (Math.abs(len - v) > 1) continue;
       if (hitL.rot ? horiz : !horiz) continue;
+      var e0 = horiz ? Math.min(a[0], b2[0]) : Math.min(a[1], b2[1]), e1 = horiz ? Math.max(a[0], b2[0]) : Math.max(a[1], b2[1]);
+      if (Math.abs(e0 - lo) > 2 || Math.abs(e1 - hi) > 2) continue;
       var d = segD(hitL.cx, hitL.cy, a, b2); if (d < bd){ bd = d; best = k; }
     }
     return best;
