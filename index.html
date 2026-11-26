@@ -47129,11 +47129,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-674（2026-11-27 Claude）：道具を持たずに部屋をタップして選ぶと、図面の下に「部屋名・広さ・［名前］（リフォームは［仕上げ］も）」の帯。
      名前は今の roomNameSheet、仕上げは今の roomFinSheet をそのまま呼ぶ（候補・予想・自分で入力・予想に戻す も同じ）。
    CAD-677（2026-11-27 Claude）：道具を持たずにドア・窓をタップ→「種類 大きさ・［変える］・［向き］（ドア）・［状態］（新設／既存の確認がある物）」の帯。
-     変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。 */
+     変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。
+   CAD-678（2026-11-27 Claude）：照明をタップ→帯（リフォームは［新設］［撤去］［交換］＝書く窓口 MADO.write の act、レールは［縦横］）。
+     階段をタップ→［回す］（上る向きを90°ずつ。今の moveTenken で外形の中に収める）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
-  var VER = 5, NS = "http://www.w3.org/2000/svg";
+  var VER = 6, NS = "http://www.w3.org/2000/svg";
   var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
 
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -47182,7 +47184,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!A) return;
     if (editing) endEdit(true);
     try { A.obs.disconnect(); A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); A.ov.remove(); A.msg.remove(); } catch(e){}
-    closePart(); closeRoom(); closeSash(); A = null; down = null; nDown = 0;
+    closePart(); closeRoom(); closeSash(); closeThing(); A = null; down = null; nDown = 0;
   }
   function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
   function say(t){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t) tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 3200); }
@@ -47198,6 +47200,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (partObj && busy()) closePart();
     if (roomCid != null && busy()) closeRoom();
     if (sashObj && busy()) closeSash();
+    if (thObj && busy()) closeThing();
     down = (nDown === 1 && !busy() && !editing) ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null;
   }
   function onMove(e){ if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down = null; }
@@ -47206,8 +47209,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var d = down; if (!d || e.pointerId !== d.id) return; down = null;
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
+    var li = ltAt(p), ki = li < 0 ? stairAt(p) : -1;
+    if (li >= 0 || ki >= 0){ closePart(); closeRoom(); closeSash(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openThing(li >= 0 ? "lt" : "k", li >= 0 ? li : ki); return; }
+    closeThing();
     var si = sashAt(p);
-    if (si >= 0){ closePart(); closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openSash(si); return; }
+    if (si >= 0){ closePart(); closeRoom(); closeThing(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openSash(si); return; }
     closeSash();
     var i = edgeAt(p);
     if (i < 0) i = dimEdgeAt(p);
@@ -47234,6 +47240,51 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     }
     return best;
   }
+  /* ===== 3e. 照明・階段の帯 ===== */
+  var thBar = null, thObj = null, thKind = "";
+  function ltAt(p){ var best = -1, bd = 26 * pxmm(); (S.lights || []).forEach(function(l, i){ var d; if (l.k === "rail"){ var L = l.len || 1500, hz = l.dir !== "v"; d = segD(p[0], p[1], hz ? [l.x - L / 2, l.y] : [l.x, l.y - L / 2], hz ? [l.x + L / 2, l.y] : [l.x, l.y + L / 2]); } else d = Math.max(0, Math.hypot(p[0] - l.x, p[1] - l.y) - (l.k === "down" ? 85 : 190)); if (d < bd){ bd = d; best = i; } }); return best; }
+  function stairAt(p){ var best = -1; (S.tenken || []).forEach(function(o, i){ if (o.k !== "stair" || typeof tkExt !== "function") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1]) best = i; }); return best; }
+  var ACT = { "new": "新設", remove: "撤去", swap: "交換" };
+  function thLab(){ if (!thObj) return ""; if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : ""); return "階段　上り：" + ({ n: "上", e: "右", s: "下", w: "左" }[thObj.dir || "n"] || ""); }
+  function openThing(kind, i){
+    if (!A || busy() || editing) return { ok: false };
+    var o = kind === "lt" ? (S.lights || [])[i] : (S.tenken || [])[i]; if (!o) return { ok: false };
+    thObj = o; thKind = kind;
+    if (!thBar){ thBar = document.createElement("div"); thBar.id = "k3ThingBar"; thBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
+    if (!A.mid.contains(thBar)) A.mid.appendChild(thBar);
+    var lab = thLab(); thBar.dataset.lab = lab;
+    var B = "flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    thBar.innerHTML = '<div style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:800">' + lab + "</div>";
+    var mk = function(t, fn, on){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; if (on){ b.style.background = "#E6EFFA"; b.style.borderColor = "var(--ai,#2563B0)"; b.style.color = "var(--ai,#2563B0)"; } b.onclick = fn; thBar.appendChild(b); return b; };
+    if (kind === "lt"){
+      if (isRf()) ["new", "remove", "swap"].forEach(function(a){ mk(ACT[a], function(){ setAct(a); }, (o.act || "new") === a); });
+      if (o.k === "rail") mk("縦横", railDir);
+    } else mk("回す", turnStair);
+    var x = mk("×", closeThing); x.style.padding = "0"; x.style.width = "44px";
+    return { ok: true, kind: kind, label: lab };
+  }
+  function thIdx(){ return thKind === "lt" ? (S.lights || []).indexOf(thObj) : (S.tenken || []).indexOf(thObj); }
+  function setAct(a){
+    var m = window.MADO; if (!thObj || !thObj.nid || !m) return { ok: false };
+    if ((thObj.act || "new") === a) return { ok: true, same: true };
+    var r = m.write([{ op: "set", id: thObj.nid, act: a }]); if (!r || !r.ok){ say("変えられませんでした"); return { ok: false }; }
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    say("照明を「" + ACT[a] + "」にしました（戻すで戻せます）"); reopenThing(); return { ok: true };
+  }
+  function railDir(){
+    if (!thObj) return { ok: false };
+    try { pushUndo(); thObj.dir = thObj.dir === "v" ? "h" : "v"; if (typeof moveLight476 === "function") moveLight476(thObj, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("レールの向き", e); return { ok: false }; }
+    reopenThing(); return { ok: true, dir: thObj.dir };
+  }
+  function turnStair(){
+    if (!thObj) return { ok: false };
+    var ord = ["n", "e", "s", "w"], k = ord.indexOf(thObj.dir || "n");
+    try { pushUndo(); thObj.dir = ord[(k + 1) % 4]; if (typeof moveTenken === "function") moveTenken(thObj, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("階段を回す", e); return { ok: false }; }
+    reopenThing(); return { ok: true, dir: thObj.dir };
+  }
+  function reopenThing(){ var o = thObj, kd = thKind; setTimeout(function(){ if (thObj !== o) return; var j = thIdx(); if (j >= 0) openThing(kd, j); else closeThing(); }, 60); }
+  function closeThing(){ thObj = null; thKind = ""; if (thBar && thBar.parentNode) thBar.parentNode.removeChild(thBar); }
+
   /* ===== 3d. ドア・窓の帯（変える・向き・状態） ===== */
   var sashBar = null, sashObj = null;
   function sashAt(p){   /* 今の pickCands の建具と同じ近さ（26px・ドアは中心も見る）を、新しい図面の大きさで */
@@ -47444,6 +47495,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var o = zopen();
     if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } closePart(); wasOpen = false; return; }
     if (partObj && (busy() || partIdx() < 0 || !isRf())) closePart();
+    if (thObj && (busy() || thIdx() < 0)) closeThing();
     if (sashObj){
       var sj = (S.sashes || []).indexOf(sashObj);
       if (busy() || sj < 0) closeSash();
@@ -47464,7 +47516,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
-    room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
+    room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, thing: function(kind, i){ return openThing(kind, i); }, thingClose: closeThing, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
   };
 })();
