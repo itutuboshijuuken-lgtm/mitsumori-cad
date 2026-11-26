@@ -46311,7 +46311,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     [b.undo, b.redo, b.clear, b.fix, el("span", "flex:1"), b.redraw, b.cancel].forEach(function(x){ row.appendChild(x); });
     mid.appendChild(layer); mid.appendChild(msg); root.insertBefore(row, bot);
     A = { root: root, mid: mid, row: row, layer: layer, ink: ink, hint: hint, msg: msg, b: b, top: top, top0: top ? top.textContent : "" };
-    if (top) top.textContent = "試験中　新しい図面（外形をなぞれます）";
+    if (top) top.textContent = "試験中　新しい図面（1階）";   /* CAD-676：描く・置く・印刷まで入ったので、見出しは短く */
     bind(layer);
     if (obsRoot) obsRoot.disconnect();
     obsRoot = new MutationObserver(function(){ onState(); }); obsRoot.observe(root, { attributes: true, attributeFilter: ["style"] });
