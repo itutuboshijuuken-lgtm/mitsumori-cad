@@ -47959,7 +47959,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      階段をタップ→［回す］（上る向きを90°ずつ。今の moveTenken で外形の中に収める）。
    CAD-687（2026-11-27 Claude/Opus）：間仕切りのタップは新築でも帯を出す。帯に［形］（今の partFormSheet292＝普通の壁・垂れ壁・腰壁・ふかす・開放）。
      帯の左に形と高さ（垂れ壁 下がり600 など）。垂れ壁の別の記録（S.tare）も図面に細い点線の壁で描き、タップ→帯［下がり］（今の tareEdit）。
-     MADO.read の things に list:"tare"（x0,y0,x1,y1,h,z0,z1）を足した（立体で使える）。 */
+     MADO.read の things に list:"tare"（x0,y0,x1,y1,h,z0,z1）を足した（立体で使える）。
+   CAD-688（2026-11-27 Claude/Opus）：新築・増築で部屋をタップ→帯に［床］。フローリング・フロアタイル・クッションフロア・無垢板15・畳から選ぶ。
+     適用は今の「床を構えて部屋をタップ」（HB.__ltSeg50）を1回呼ぶだけ（部屋の形どおり・二重取りの引き算・戻す1回は今と同じ）。
+     囲みで置いた床だけで部屋が埋まっていて今の仕組みが守って置かない時は、この部屋の中だけにある床に部屋タップの印を付けて置き換える（小上がりは除く）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
@@ -48229,8 +48232,53 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; roomBar.appendChild(b); return b; };
     mk("名前", function(){ var rr = roomObj(roomCid); if (rr && typeof roomNameSheet === "function") roomNameSheet(rr); });
     if (isRf() && typeof roomFinSheet === "function") mk("仕上げ", function(){ var rr = roomObj(roomCid); if (rr) roomFinSheet(rr); });
+    if (!isRf() && HB && typeof HB.__ltSeg50 === "function") mk("床", function(){ floorSheet(); });   /* CAD-688：新築・増築の部屋の床 */
     var x = mk("×", function(){ closeRoom(); try { var z = zumen(); if (z) z.select(null); } catch(e){} }); x.style.padding = "0"; x.style.width = "44px";
     return { ok: true, cid: cid, name: nm };
+  }
+  /* ===== CAD-688：新築・増築の部屋の床。今の「床を構えて部屋をタップ」（HB.__ltSeg50）をそのまま1回呼ぶ
+     （部屋の形どおりに四角で置く・囲みで置いた土間や畳は守る・二重取りの引き算・戻す1回、まで今と同じ） ===== */
+  var FLK = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "クッションフロア"], ["flMuku", "無垢板15ミリ"], ["tatami", "畳"]];
+  function floorNow(r){
+    var p = r && r.p, fk = null; if (!p) return "";
+    (S.tatami || []).forEach(function(o){ if (o && !o.h && p[0] >= o.x0 && p[0] <= o.x1 && p[1] >= o.y0 && p[1] <= o.y1) fk = o.fk || (/^fl:/.test(String(o.st || "")) ? String(o.st).slice(3) : "tatami"); });
+    if (!fk) fk = S.flType || "floorFin";
+    var N = (HB && HB.__FLN) || {}; return N[fk] || (fk.indexOf("tatami") >= 0 ? "畳" : fk);
+  }
+  function floorSheet(){
+    var r = roomObj(roomCid); if (!r || !r.p) return;
+    var cur = floorNow(r), nm = roomNm(r);
+    $("mbox").innerHTML = "<h3>" + String(nm).replace(/[<&]/g, "") + "の床</h3><p class='hint' style='margin:2px 0 8px'>今は <b>" + cur + "</b>。選ぶとこの部屋の床がそれになります。</p>"
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">' + FLK.map(function(f){ return '<button type="button" class="btn sub" data-k688="' + f[0] + '" style="min-height:48px' + (f[1] === cur ? ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : "") + '">' + f[1] + "</button>"; }).join("") + "</div>"
+      + '<div class="row" style="margin-top:10px"><button type="button" class="btn" id="k688Ok" style="width:100%;min-height:46px">閉じる</button></div>';
+    $("modal").hidden = false;
+    $("k688Ok").onclick = function(){ $("modal").hidden = true; };
+    $("mbox").querySelectorAll("[data-k688]").forEach(function(b){ b.onclick = function(){ $("modal").hidden = true; setFloor(b.dataset.k688); }; });
+  }
+  function setFloor(fk){
+    var r = roomObj(roomCid); if (!r || !r.p || !HB || typeof HB.__ltSeg50 !== "function") return { ok: false };
+    var arm0 = HB.__floorArm, sel0 = sel, ok = false, pt = [r.p[0], r.p[1]], before = JSON.stringify(S.tatami || []);
+    try {
+      sel = null; HB.__floorArm = fk; ok = !!HB.__ltSeg50(pt);
+      /* 囲みで置いた床（印なし）だけで部屋が埋まっていると、今の仕組みはそれを守って何も置かない。
+         ここは「この部屋の床」をはっきり選んだので、この部屋の中だけにある床（小上がりは除く）に部屋タップの印を付けて置き換える。戻すは1回 */
+      if (ok && JSON.stringify(S.tatami || []) === before){
+        if (undoStack.length && undoStack[undoStack.length - 1] === undoSnap()) undoStack.pop();
+        var inR = function(o){ var e = Math.min(200, (o.x1 - o.x0) / 4, (o.y1 - o.y0) / 4), c = [[(o.x0 + o.x1) / 2, (o.y0 + o.y1) / 2], [o.x0 + e, o.y0 + e], [o.x1 - e, o.y0 + e], [o.x1 - e, o.y1 - e], [o.x0 + e, o.y1 - e]]; return c.every(function(q){ var rr = roomAt(q[0], q[1]); return rr && rr.cid === r.cid; }); };
+        var mine = (S.tatami || []).filter(function(o){ return o && !o.h && o.fk !== "flAge" && !o.rm && inR(o); });
+        if (mine.length){
+          pushUndo(); var top = undoStack.length;
+          mine.forEach(function(o){ o.rm = 1; });
+          var mid = JSON.stringify(S.tatami || []);
+          HB.__floorArm = fk; HB.__ltSeg50(pt);
+          if (undoStack.length > top) undoStack.splice(top, undoStack.length - top);
+          if (JSON.stringify(S.tatami || []) === mid){ mine.forEach(function(o){ delete o.rm; }); undoStack.pop(); }
+        }
+      }
+    } catch(e){ warn("部屋の床", e); }
+    finally { HB.__floorArm = arm0 || null; if (!ok) sel = sel0; }
+    setTimeout(function(){ if (roomCid != null){ var r2 = roomObj(roomCid); if (r2) openRoom(roomCid); } }, 60);
+    return { ok: ok, now: floorNow(roomObj(roomCid)) };
   }
   function closeRoom(){ roomCid = null; if (roomBar && roomBar.parentNode) roomBar.parentNode.removeChild(roomBar); }
 
@@ -48423,7 +48471,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
     room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, thing: function(kind, i){ return openThing(kind, i); }, thingClose: closeThing, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
-    part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; }
+    part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; },
+    floor: function(fk){ return setFloor(fk); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
   };
 })();
 </script>
