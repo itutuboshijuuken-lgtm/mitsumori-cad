@@ -25770,6 +25770,38 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
  const gnd=new T.Mesh(new T.PlaneGeometry(40,40),M({map:X.ground,roughness:1}));X.ground.repeat.set(10,10);gnd.rotation.x=-Math.PI/2;gnd.receiveShadow=true;gnd.position.set(W/2,0,D/2);gnd.userData.gnd538=1;add(gnd,sc);
  X.floor.repeat.set(1,1);
  const flat=(x0,z0,x1,z1,y,m,per)=>{const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);g.translate((x0+x1)/2,y,(z0+z1)/2);const uv=g.attributes.uv,p=g.attributes.position;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)/per,p.getZ(i)/per);const o=new T.Mesh(g,m);o.receiveShadow=true;return o};
+ /* CAD-654（公開しない・作業中）：畳の割り付けを立体図へ反映する。従来の立体図は汎用畳テクスチャ（1.82×0.91）の繰り返しで、間取りの割り付け計算 tatTile を読んでいなかった（翔伍の実機指摘 2026-11-26「畳の割り付け室内立体図に反映されてない」）。レコードごとに tatTile の結果をそのまま絵（キャンバス）にして貼る。2D（tatSvg）と同じ tatTile が唯一の出どころ */
+ const tatTexCache654={};
+ const tatTex654=(t,rr,r)=>{try{
+  const Wmm=Math.abs(t.x1-t.x0),Hmm=Math.abs(t.y1-t.y0);if(!(Wmm>0)||!(Hmm>0))return null;
+  const key=Wmm+"x"+Hmm;let ent=tatTexCache654[key];
+  if(!ent){
+   const mats=(typeof tatTile==="function")?tatTile(Wmm,Hmm):[];if(!mats.length)return null;
+   let sc=256/910;if(Wmm*sc>1024)sc=1024/Wmm;if(Hmm*sc>1024)sc=Math.min(sc,1024/Hmm);
+   const cw=Math.max(2,Math.round(Wmm*sc)),ch=Math.max(2,Math.round(Hmm*sc));
+   const cv=document.createElement("canvas");cv.width=cw;cv.height=ch;const g=cv.getContext("2d");
+   g.fillStyle="#8a8552";g.fillRect(0,0,cw,ch);
+   let seed=1234567;const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+   mats.forEach(m=>{
+    const x=m.x*sc,y=m.y*sc,w=m.w*sc,h=m.h*sc;
+    g.fillStyle="#bfb577";g.fillRect(x,y,w,h);
+    const vert=h>=w,n=Math.max(8,((vert?w:h)/3)|0);
+    for(let k=0;k<n;k++){const p=rnd();g.fillStyle="rgba("+(120+rnd()*50|0)+","+(110+rnd()*40|0)+",50,"+(.08+rnd()*.14)+")";if(vert)g.fillRect(x+p*w,y,1.3,h);else g.fillRect(x,y+p*h,w,1.3);}
+    g.fillStyle="#1d1a14";const ew=Math.max(2,Math.min(w,h)*.055);
+    if(vert){g.fillRect(x,y,ew,h);g.fillRect(x+w-ew,y,ew,h);}else{g.fillRect(x,y,w,ew);g.fillRect(x,y+h-ew,w,ew);}
+    g.strokeStyle="rgba(29,26,20,.55)";g.lineWidth=1.5;g.strokeRect(x+.75,y+.75,w-1.5,h-1.5);
+   });
+   const tx=new T.CanvasTexture(cv);tx.colorSpace=T.SRGBColorSpace;tx.anisotropy=4;tx.wrapS=tx.wrapT=T.ClampToEdgeWrapping;
+   ent=tatTexCache654[key]={tx,mats:mats.length};
+  }
+  const rw=rr.x1-rr.x0,rd=rr.z1-rr.z0;if(!(rw>0)||!(rd>0))return null;
+  const tx2=ent.tx.clone();tx2.needsUpdate=true;
+  tx2.repeat.set((r.x1-r.x0)/rw,(r.z1-r.z0)/rd);
+  tx2.offset.set((r.x0-rr.x0)/rw,(rr.z1-r.z1)/rd);
+  tx2.userData={mats654:ent.mats};
+  return new T.MeshStandardMaterial({map:tx2,roughness:.95});
+ }catch(e){return null}};
+ const flatUV654=(x0,z0,x1,z1,y,m)=>{const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-Math.PI/2);g.translate((x0+x1)/2,y,(z0+z1)/2);const o=new T.Mesh(g,m);o.receiveShadow=true;return o};
  /* 基礎 */
  /* CAD-477：外形が四角でなくても（L字・玄関の欠き込みなど）立体にする。外形を四角の集まりに分けて、基礎・床・外壁を作る。2階は2階の外形で */
  const OX477=B307?B307.x0:0,OY477=B307?B307.y0:0;
@@ -25813,7 +25845,7 @@ function build(S,T,opt){const doors546=[];/* CAD-546：近づくと開く扉の�
  /* CAD-297（同・取り込み1）：床の範囲は fk に応じた材料で描く（全部を畳にしない）。座上げは上の仕上げ（fin）で描く */
  const flMat297=t=>{const f=t.fk||'tatami';if(f==='tatami')return mat.tatami;if(f==='flCF')return mat.cf;if(f==='flDoma')return mat.conc;if(f==='floorFin')return mat.tileF;if(f==='flAge'){const g=t.fin||'tatami';return g==='flCF'?mat.cf:(g==='tatami'?mat.tatami:mat.floor)}return mat.floor};
  (S.zones||[]).forEach(z=>{const r=clipR297(R(z));if(!r)return;const m=z.k==='ub'?mat.tileB:z.k==='toilet'?mat.wcF:z.k==='doma'?mat.conc:mat.floor; /* CAD-312：浴室の床はタイル調、トイレの床は便器の白と区別できる色に */if(z.k==='closet'||z.k==='hall')return;add(flat(r.x0,r.z0,r.x1,r.z1,FL+(z.k==='doma'?-STEP547+.004:.004),m,z.k==='ub'?.6:1))});
- (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const d547=t.fk==='flDoma',yT547=d547?FL-STEP547+.012:FL+.012,yB547=d547?FL-STEP547:FL;/* CAD-547：土間の仕上げの範囲は一段低く */{const fk582=t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami');let vt582=(r.z1-r.z0)>(r.x1-r.x0)*1.05;if(fk582==='flComp'||fk582==='flMuku'||fk582==='flMuku30'){const jv582=window.__dir295Vert?window.__dir295Vert(t):null;if(jv582!==null&&jv582!==undefined)vt582=!!jv582;else{const JJ582=window.__judge582&&window.__judge582();if(JJ582&&JJ582.mode582==='nashi')vt582=JJ582.houseVert582}}const tx=flTex525(fk582,vt582);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,yT547,tx,fk582==='tatami'));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,yT547,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(m)),0)});
+ (S.tatami||[]).forEach(t=>{const r=clipR297(R(t));if(!r)return;const d547=t.fk==='flDoma',yT547=d547?FL-STEP547+.012:FL+.012,yB547=d547?FL-STEP547:FL;/* CAD-547：土間の仕上げの範囲は一段低く */{const fk582=t.fk==='flAge'?(t.fin||'tatami'):(t.fk||'tatami');let vt582=(r.z1-r.z0)>(r.x1-r.x0)*1.05;if(fk582==='flComp'||fk582==='flMuku'||fk582==='flMuku30'){const jv582=window.__dir295Vert?window.__dir295Vert(t):null;if(jv582!==null&&jv582!==undefined)vt582=!!jv582;else{const JJ582=window.__judge582&&window.__judge582();if(JJ582&&JJ582.mode582==='nashi')vt582=JJ582.houseVert582}}if(fk582==='tatami'){const lm654=tatTex654(t,R(t),r);if(lm654){add(flatUV654(r.x0,r.z0,r.x1,r.z1,yT547,lm654));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(mat.tatami)),0);return}}const tx=flTex525(fk582,vt582);if(tx){add(flatT525(r.x0,r.z0,r.x1,r.z1,yT547,tx,fk582==='tatami'));add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(tx.m)),0);return}}/* CAD-526 */const m=flMat297(t);const o=flat(r.x0,r.z0,r.x1,r.z1,yT547,m,m===mat.tatami?1.82:1);add(o);add(box(r.x0,yB547,r.z0,r.x1,yT547,r.z1,six(m)),0)});
  /* 洗面所(2枚目のroomRecs)はCF */
  (S.roomRecs||[]).forEach(r0=>{const nm=(S.roomNames||[]).find(n=>n.p[0]>=Math.min(r0.x0,r0.x1)&&n.p[0]<=Math.max(r0.x0,r0.x1)&&n.p[1]>=Math.min(r0.y0,r0.y1)&&n.p[1]<=Math.max(r0.y0,r0.y1));if(nm&&(nm.name==='洗面所'||nm.name==='浴室'||nm.name==='トイレ')){const r=clipR297(R(r0));if(r)add(flat(r.x0,r.z0,r.x1,r.z1,FL+.004,nm.name==='浴室'?mat.tileB:(nm.name==='トイレ'?mat.wcF:mat.cf),nm.name==='浴室'?.6:1))} /* CAD-312：浴室・トイレの床も（従来は洗面所のCFだけ描いていた） */});
  {const ft=S.flType==='flSheet'?'flComp':(S.flType||'floorFin');base525.forEach(r=>{const tx=flTex525(ft,(()=>{try{const J582b=window.__judge582&&window.__judge582();return !!(J582b&&J582b.mode582==='nashi'&&J582b.houseVert582)}catch(e){return false}})());sub547(r,DR547).forEach(q=>add(tx?flatT525(q[0],q[1],q[2],q[3],FL+.002,tx):flat(q[0],q[1],q[2],q[3],FL+.002,mat.floor,1.0)))})}
@@ -40446,12 +40478,12 @@ body:not(.nbtutRun) #stM #stepBar399,body:not(.nbtutRun) #stM #stepGuide400,body
     var dt = last ? Math.min(.05, (ts - last) / 1000) : 0; last = ts;
     var hh = h();
     if (hh){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y;
-      if ((ax || ay) && !(j.__lt && performance.now() - j.__lt < 120)) hh.look(ax * Math.abs(ax) * 2.4 * dt, -ay * Math.abs(ay) * .8 * dt); }   /* ゆっくり目：倒し具合の2乗で、最大でも 横1.26（一周5秒、CAD-534）・縦0.35 rad/秒 */
+      if (ax || ay) hh.look(ax * Math.abs(ax) * 2.4 * dt, -ay * Math.abs(ay) * .8 * dt); }   /* CAD-654（公開しない・作業中）：__lt のゲートを外した。歩くスティック（#joy525）と同じく、回すのはこのループ一本にする（下の pointermove の注記参照） */   /* ゆっくり目：倒し具合の2乗で、最大でも 横1.26（一周5秒、CAD-534）・縦0.35 rad/秒 */
     raf = requestAnimationFrame(loop);
   }
   function setK(e){ var R = 34, dx = e.clientX - v.cx, dy = e.clientY - v.cy, d = Math.hypot(dx, dy); if (d > R){ dx *= R / d; dy *= R / d; } knob.style.transform = "translate(" + dx + "px," + dy + "px)"; v.x = dx / R; v.y = dy / R; }
   j.addEventListener("pointerdown", function(e){ e.preventDefault(); e.stopPropagation(); try { j.setPointerCapture(e.pointerId); } catch(er){} var rc = j.getBoundingClientRect(); v = {id: e.pointerId, cx: rc.left + rc.width / 2, cy: rc.top + rc.height / 2, x: 0, y: 0}; setK(e); last = 0; if (!raf) raf = requestAnimationFrame(loop); });
-  j.addEventListener("pointermove", function(e){ if (!v || e.pointerId !== v.id) return; e.preventDefault(); setK(e); var now = performance.now(), dt = j.__lt ? Math.min(.08, (now - j.__lt) / 1000) : 0; j.__lt = now; var hh = h(); if (hh && dt){ var ax = Math.abs(v.x) < .12 ? 0 : v.x, ay = Math.abs(v.y) < .12 ? 0 : v.y; if (ax || ay) hh.look(ax * Math.abs(ax) * 2.4 * dt, -ay * Math.abs(ay) * .8 * dt); } });
+  j.addEventListener("pointermove", function(e){ if (!v || e.pointerId !== v.id) return; e.preventDefault(); setK(e); });   /* CAD-654（公開しない・作業中）：指の動きでは直接回さない。以前は pointermove でも look をかけ、rAF ループ側は「最後の move から120ms」ゲートで止めていたため、(1) 指を止めると120ms回転が止まり (2) 再び動かすと溜まった dt（最大80ms分）が一気に進む、というカクツキになっていた（翔伍の実機指摘 2026-11-26）。歩くスティックと同じ作り：指は向き（v）を決めるだけ、回すのは rAF ループ一本。速さの式は従来のまま */
   function end(e){ if (!v || e.pointerId !== v.id) return; v = null; knob.style.transform = ""; }
   j.addEventListener("pointerup", end); j.addEventListener("pointercancel", end);
 })();
