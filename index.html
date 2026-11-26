@@ -44074,3 +44074,329 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   setInterval(menu, 1500); menu();
 })();
 </script>
+<script>
+/* ---------- CAD-659：名札（なふだ）段階1 ＝ 物に名札を付け、番号のずれを直す（2026-11-26 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること
+     1) 間仕切り・建具・壁の物・設備・照明・床の範囲に名札（nid）を付ける。外周の辺の名札は S.eids に「e1,e2,…」の文字で並べて持つ（階ごと）。
+        ※辺そのものには名札を書かない。1階と2階の外周を「文字にして比べる」計算があり、辺に項目を足すと総2階の判定が変わるため。
+        ※配列ではなく文字1本で持つ。物差し（ruler-floor）が「S の配列の顔ぶれ」も比べるので、配列は増やさない。
+     2) 保存の直前に、間仕切りに付いた物の番号（建具の host.i・壁の物の w）のずれを直す。
+        古い部品が間仕切りを消す・切る・割る時に番号を直し忘れても、物は「元あった場所の壁」に付いたまま。
+        壁が始点側から切られた・伸びた時は、物の位置（壁の端からの距離）を直して、同じ場所に保つ。
+        付いていた壁（の部分）が無くなった物は、一緒に外す。外周の辺に付いた物は、今の部品が正しく直しているので触らない。
+     3) 「戻す」の範囲に、部屋の名前・部屋の仕上げ・部屋の記録・手で決めた筋交い・辺の名札を足す。
+     4) 版番号 S.schema = 1。
+   ・データは足すだけ：nid／S.eids／S.nseq／S.schema。今ある項目の名前・意味は変えない。前の版は足した項目を無視して動く。
+   ・この部品は自分からは保存しない（開いただけでは保存データは変わらない。アプリのふつうの保存の時に一緒に残る）。保存キーは増やさない。
+   ・見積・数量・耐力壁の計算、描画には触れない。番号が合っているデータでは、名札を足す以外に何も書き換えない。
+   ・番号を直すのは「この画面を開いてから変わった分」だけ。開く前からおかしかった物は直さない（NAFUDA.check() で数えられる）。
+   ・戻し方：この <script> を消すだけ。 */
+(function(){
+  "use strict";
+  if (window.NAFUDA) return;
+  var TOL = 1.5;   /* mm。同じ点・同じ線とみなす幅 */
+  var LISTS = [["parts2D", "p"], ["sashes", "s"], ["fx", "f"], ["tenken", "k"], ["lights", "l"], ["tatami", "t"]];
+  var EXTRA = [["rf", "roomFin"], ["rn", "roomNames"], ["rr", "roomRecs"], ["b1", "braces406"], ["b2", "braces406f2"], ["ei", "eids"]];
+  var C = null, last = null;
+
+  function st(){ try { return (typeof S !== "undefined" && S && typeof S === "object") ? S : null; } catch(e){ return null; } }
+  function pid(){ try { return (typeof PJ !== "undefined" && PJ) ? String(PJ.cur) : ""; } catch(e){ return ""; } }
+  function warn(m, e){ try { console.warn("[NAFUDA] " + m, e || ""); } catch(x){} }
+  function num(v){ return (typeof v === "number" && isFinite(v)) ? v : null; }
+  function isObj(o){ return !!o && typeof o === "object" && !Array.isArray(o); }
+  function arr(a){ return Array.isArray(a) ? a : []; }
+
+  /* 辺の名札は階ごとに持つ（階を切り替えた時に、外周と一緒に入れ替わる） */
+  try { if (typeof FLOOR_KEYS !== "undefined" && FLOOR_KEYS.indexOf("eids") < 0) FLOOR_KEYS.push("eids"); } catch(e){}
+
+  /* 辺の名札の読み書き（保存の形は「e1,e2,…」の文字） */
+  function eidsOf(c){ var v = c && c.eids; if (typeof v === "string") return v ? v.split(",") : []; return Array.isArray(v) ? v.slice() : null; }
+
+  /* ---- 名札を付ける ---- */
+  function freshId(s, kind, used){
+    var n = (typeof s.nseq === "number" && isFinite(s.nseq) && s.nseq >= 0) ? Math.floor(s.nseq) : 0, id;
+    do { n += 1; id = kind + n.toString(36); } while (used[id] === 1);
+    s.nseq = n; return id;
+  }
+  function tagList(s, list, kind, used, rep){
+    if (!Array.isArray(list)) return;
+    for (var i = 0; i < list.length; i++){
+      var o = list[i]; if (!isObj(o)) continue;
+      if (typeof o.nid !== "string" || !o.nid || used[o.nid] === 1){ o.nid = freshId(s, kind, used); rep.tagged++; }
+      used[o.nid] = 1;
+    }
+  }
+  function tagEdges(s, c, used, rep){
+    if (!Array.isArray(c.edges)){ if (c.eids !== undefined) delete c.eids; return; }
+    var n = c.edges.length, cur = eidsOf(c), ids = (cur && cur.length === n) ? cur : null, out = new Array(n), ch = !ids || typeof c.eids !== "string";
+    for (var i = 0; i < n; i++){
+      var id = ids ? ids[i] : undefined;
+      if (typeof id !== "string" || !id || used[id] === 1){ id = freshId(s, "e", used); rep.tagged++; ch = true; }
+      used[id] = 1; out[i] = id;
+    }
+    if (ch) c.eids = out.join(",");
+  }
+  function tagOne(s, c, used, rep){
+    tagEdges(s, c, used, rep);
+    for (var i = 0; i < LISTS.length; i++) tagList(s, c[LISTS[i][0]], LISTS[i][1], used, rep);
+  }
+  function tagAll(s, rep){
+    var used = Object.create(null);
+    tagOne(s, s, used, rep);                                   /* 今の階が先（名札を保つ） */
+    var fl = s.fl; if (!Array.isArray(fl)) return;
+    var fi = s.fi || 0;
+    for (var k = 0; k < fl.length; k++){ if (k === fi) continue; var sn = fl[k] && fl[k].snap; if (isObj(sn)) tagOne(s, sn, used, rep); }
+  }
+
+  /* ---- 外周の形が変わった時の、辺の名札の引き継ぎ（かんたんな決まり。仕上げは段階11） ---- */
+  function realignEids(s){
+    var E = s.edges; if (!Array.isArray(E) || !C) return;
+    var old = C.edges, oid = C.eids, n = E.length, m = old.length, i;
+    var same = n === m; if (same) for (i = 0; i < n; i++) if (!E[i] || E[i].d !== old[i].d){ same = false; break; }
+    if (same) return;                                          /* 本数と向きが同じ（長さだけ直した）：そのまま */
+    var a = 0; while (a < n && a < m && E[a] && E[a].d === old[a].d && E[a].v === old[a].v) a++;
+    var b = 0; while (b < n - a && b < m - a && E[n - 1 - b] && E[n - 1 - b].d === old[m - 1 - b].d && E[n - 1 - b].v === old[m - 1 - b].v) b++;
+    var ids = new Array(n), om = m - a - b, nm = n - a - b, best = -1;
+    for (i = 0; i < a; i++) ids[i] = oid[i];
+    for (i = 0; i < b; i++) ids[n - 1 - i] = oid[m - 1 - i];
+    if (om === 1 && nm >= 1){ for (i = a; i < n - b; i++) if (E[i] && E[i].d === old[a].d && (best < 0 || E[i].v > E[best].v)) best = i; if (best >= 0) ids[best] = oid[a]; }
+    else if (nm === 1 && om >= 1){ for (i = a; i < m - b; i++) if (E[a] && old[i].d === E[a].d && (best < 0 || old[i].v > old[best].v)) best = i; if (best >= 0) ids[a] = oid[best]; }
+    for (i = 0; i < n; i++) if (typeof ids[i] !== "string") ids[i] = "";
+    s.eids = ids.join(",");                                    /* 空いた所は、このあと新しい名札が付く */
+  }
+
+  /* ---- 壁に付く物を、1つの形にそろえて読む・書く ---- */
+  function itemRefs(s){
+    var out = [], i, o;
+    var fx = arr(s.fx);
+    for (i = 0; i < fx.length; i++){ o = fx[i]; if (!isObj(o) || typeof o.w !== "number" || !isFinite(o.w)) continue;
+      out.push({ kind: "f", o: o, wt: o.w >= 100 ? "p" : "e", wi: o.w >= 100 ? o.w - 100 : o.w, off: num(o.u), len: num(o.len) }); }
+    var ss = arr(s.sashes);
+    for (i = 0; i < ss.length; i++){ o = ss[i]; if (!isObj(o) || !isObj(o.host) || (o.host.t !== "e" && o.host.t !== "p") || typeof o.host.i !== "number") continue;
+      out.push({ kind: "s", o: o, wt: o.host.t, wi: o.host.i, off: num(o.pos), len: num(o.w) }); }
+    return out;
+  }
+  function setIndex(r, wi){ if (r.kind === "f") r.o.w = 100 + wi; else r.o.host.i = wi; r.wi = wi; }      /* 間仕切りの物だけに使う */
+  function setOff(r, v){ v = Math.max(0, Math.round(v * 2) / 2); if (r.kind === "f") r.o.u = v; else r.o.pos = v; r.off = v; }
+
+  /* ---- 形の比べ方 ---- */
+  function seg(q){ return { x1: +q.x1, y1: +q.y1, x2: +q.x2, y2: +q.y2 }; }
+  function segLen(g){ return Math.hypot(g.x2 - g.x1, g.y2 - g.y1); }
+  function near(a, b){ return Math.abs(a - b) <= TOL; }
+  function sameSeg(a, b){ return Math.abs(a.x1 - b.x1) < 0.01 && Math.abs(a.y1 - b.y1) < 0.01 && Math.abs(a.x2 - b.x2) < 0.01 && Math.abs(a.y2 - b.y2) < 0.01; }
+  function ov(a0, a1, b0, b1){ return Math.min(a1, b1) - Math.max(a0, b0); }
+  function relation(og, ng){
+    var dsx = ng.x1 - og.x1, dsy = ng.y1 - og.y1, dex = ng.x2 - og.x2, dey = ng.y2 - og.y2;
+    if (near(dsx, dex) && near(dsy, dey)) return { kind: "rigid", dx: dsx, dy: dsy };          /* 形はそのまま（動いていない・平行に動いた） */
+    var L = segLen(og); if (!(L > 0)) return { kind: "other" };
+    var ux = (og.x2 - og.x1) / L, uy = (og.y2 - og.y1) / L;
+    var c1 = Math.abs(dsx * uy - dsy * ux), c2 = Math.abs((ng.x2 - og.x1) * uy - (ng.y2 - og.y1) * ux);
+    var fwd = (ng.x2 - ng.x1) * ux + (ng.y2 - ng.y1) * uy;
+    if (c1 <= TOL && c2 <= TOL && fwd > 0) return { kind: "cut", t: dsx * ux + dsy * uy };     /* 同じ線の上で、端が切られた・伸びた */
+    return { kind: "other" };
+  }
+  function stays(off, len, L){ return len > 0 ? ov(off, off + len, 0, L) > TOL : (off >= -TOL && off <= L + TOL); }
+  /* 物が元あった場所に、今ある間仕切りを探す（同じ向き・同じ線の上・重なりが一番大きい壁） */
+  function findWallAt(parts, og, r, tx, ty){
+    var L0 = segLen(og); if (!(L0 > 0)) return null;
+    var ux = (og.x2 - og.x1) / L0, uy = (og.y2 - og.y1) / L0, ln = r.len || 0, whole = r.off == null;
+    var off = whole ? L0 / 2 : r.off, px = og.x1 + tx + ux * off, py = og.y1 + ty + uy * off, best = null, bestOv = -1;
+    for (var i = 0; i < parts.length; i++){
+      var q = parts[i]; if (!isObj(q)) continue;
+      var L = Math.hypot(q.x2 - q.x1, q.y2 - q.y1); if (!(L > 0)) continue;
+      var vx = (q.x2 - q.x1) / L, vy = (q.y2 - q.y1) / L;
+      if (vx * ux + vy * uy < 0.999) continue;
+      var dx = px - q.x1, dy = py - q.y1; if (Math.abs(dx * vy - dy * vx) > TOL) continue;
+      var s0 = dx * vx + dy * vy, o;
+      if (whole || !(ln > 0)){ if (s0 < -TOL || s0 > L + TOL) continue; o = 1; }
+      else { o = ov(s0, s0 + ln, 0, L); if (!(o > TOL)) continue; }
+      if (o > bestOv){ bestOv = o; best = { i: i, off: s0 }; }
+    }
+    return best;
+  }
+
+  /* ---- 番号の付け直し（間仕切りに付いた物だけ。前の保存から変わった分だけ） ---- */
+  function syncItems(s, rep){
+    var parts = arr(s.parts2D), pIndex = Object.create(null), i, q;
+    for (i = 0; i < parts.length; i++){ q = parts[i]; if (isObj(q) && q.nid) pIndex[q.nid] = i; }
+    /* 外周の原点が動いて、間仕切りが全部同じだけ動いた時のずれ */
+    var tx = 0, ty = 0, tn = 0, tOk = true;
+    for (i = 0; i < parts.length; i++){ q = parts[i]; if (!isObj(q) || !q.nid || !C.parts[q.nid]) continue;
+      var rl = relation(C.parts[q.nid], seg(q)); if (rl.kind !== "rigid") continue;
+      if (!tn){ tx = rl.dx; ty = rl.dy; } else if (Math.abs(rl.dx - tx) > 0.01 || Math.abs(rl.dy - ty) > 0.01) tOk = false;
+      tn++; }
+    if (!tOk || !tn){ tx = 0; ty = 0; }
+    var refs = itemRefs(s), drops = [];
+    for (var k = 0; k < refs.length; k++){
+      var r = refs[k]; if (r.wt !== "p" || !r.o.nid) continue;
+      var c = C.items[r.o.nid]; if (!c || c.wid == null) continue;                               /* 新しい物・前から壁が無かった物：触らない */
+      if (c.kind !== r.kind || c.wt !== r.wt || c.wi !== r.wi || c.off !== r.off) continue;      /* 古い部品が番号か位置を書き換えた：それを信じる */
+      var og = C.parts[c.wid]; if (!og) continue;
+      var ti = pIndex[c.wid], tq = ti != null ? parts[ti] : null;
+      var curQ = (r.wi >= 0 && r.wi < parts.length) ? parts[r.wi] : null;
+      if (tq && curQ === tq && sameSeg(og, seg(tq))) continue;                                   /* 何も変わっていない */
+      if (tq){
+        var rel = relation(og, seg(tq));
+        if (rel.kind !== "cut" || r.off == null){ if (ti !== r.wi){ setIndex(r, ti); rep.moved++; } continue; }   /* 壁と一緒に動く */
+        var no = r.off - rel.t, L = segLen(seg(tq));
+        if (stays(no, r.len || 0, L)){
+          if (ti !== r.wi){ setIndex(r, ti); rep.moved++; }
+          if (Math.abs(rel.t) > 0.01){ setOff(r, no); rep.shifted++; }
+          continue;
+        }
+      }
+      var hit = findWallAt(parts, og, r, tx, ty);
+      if (hit){ if (hit.i !== r.wi) setIndex(r, hit.i); if (r.off != null) setOff(r, hit.off); rep.rehomed++; continue; }
+      /* 元の場所に壁が無い。今の番号の壁が「作り直された同じ形の壁」なら、そのまま付けておく */
+      if (!tq && isObj(curQ) && (!curQ.nid || !C.parts[curQ.nid])){
+        var cg = seg(curQ), l1 = segLen(cg), l0 = segLen(og);
+        if (l0 > 0 && l1 > 0 && near(l0, l1) && ((cg.x2 - cg.x1) * (og.x2 - og.x1) + (cg.y2 - cg.y1) * (og.y2 - og.y1)) / (l0 * l1) > 0.999) continue;
+      }
+      drops.push(r);
+    }
+    if (!drops.length) return;
+    if (drops.length > 12 && drops.length > refs.length * 0.6){ warn("外す物が多すぎるため、今回は外さない", drops.length); rep.skipped = drops.length; return; }
+    var df = [], ds = [];
+    drops.forEach(function(d){ (d.kind === "f" ? df : ds).push(d.o); });
+    if (df.length) s.fx = arr(s.fx).filter(function(o){ return df.indexOf(o) < 0; });
+    if (ds.length) s.sashes = arr(s.sashes).filter(function(o){ return ds.indexOf(o) < 0; });
+    rep.dropped = drops.length;
+  }
+
+  /* ---- 控え（前の保存の時の、壁の形と、物の番号・位置） ---- */
+  function refreshCache(s){
+    var parts = arr(s.parts2D), eids = eidsOf(s) || [], c = { pid: pid(), fi: s.fi || 0, view: String(s.__view208 || ""), eids: eids.slice(), edges: [], parts: Object.create(null), items: Object.create(null) };
+    arr(s.edges).forEach(function(e){ c.edges.push({ d: e && e.d, v: e && e.v }); });
+    parts.forEach(function(q){ if (isObj(q) && q.nid) c.parts[q.nid] = seg(q); });
+    itemRefs(s).forEach(function(r){
+      if (!r.o.nid) return;
+      var wid = r.wt === "e" ? (eids[r.wi] || null) : ((isObj(parts[r.wi]) && parts[r.wi].nid) || null);
+      c.items[r.o.nid] = { kind: r.kind, wt: r.wt, wi: r.wi, wid: wid, off: r.off };
+    });
+    C = c;
+  }
+  function sigOk(s){
+    if (!C || C.pid !== pid() || C.fi !== (s.fi || 0) || C.view !== String(s.__view208 || "")) return false;
+    var e = eidsOf(s) || []; if (!e.length || e.length !== C.eids.length) return false;
+    for (var i = 0; i < e.length; i++) if (e[i] !== C.eids[i]) return false;
+    return true;
+  }
+  function relink(s, forceLoad){
+    var rep = { mode: "load", tagged: 0, moved: 0, shifted: 0, rehomed: 0, dropped: 0 };
+    var inc = !forceLoad && sigOk(s);
+    if (inc){ rep.mode = "inc"; realignEids(s); }
+    tagAll(s, rep);
+    if (inc) syncItems(s, rep);
+    if (!(s.schema >= 1)) s.schema = 1;
+    return rep;
+  }
+
+  /* ---- 読み込みの時：10cm未満の切れ端の掃除（thinParts142）が直し忘れる、壁の物の番号を直す ---- */
+  function thinFix(s, raw){
+    try {
+      if (!isObj(raw) || !Array.isArray(raw.parts2D) || !Array.isArray(s.parts2D) || !Array.isArray(s.fx)) return 0;
+      var n0 = raw.parts2D.length, n1 = s.parts2D.length, keep = [], k = 0, i, q, f;
+      if (n1 >= n0) return 0;
+      for (i = 0; i < n0; i++){ q = raw.parts2D[i]; if (q && Math.hypot(q.x2 - q.x1, q.y2 - q.y1) >= 100) keep[i] = k++; }
+      if (k !== n1) return 0;                                  /* 切れ端の掃除ではない減り方：触らない */
+      var rf = arr(raw.fx); if (rf.length !== s.fx.length) return 0;
+      for (i = 0; i < rf.length; i++){ if (!isObj(s.fx[i]) || !isObj(rf[i]) || s.fx[i].w !== rf[i].w || s.fx[i].k !== rf[i].k) return 0; }   /* 保存のままの並びである事を確かめる */
+      var out = [], ch = 0;
+      for (i = 0; i < s.fx.length; i++){ f = s.fx[i];
+        if (typeof f.w === "number" && f.w >= 100){ var ni = keep[f.w - 100]; if (ni == null){ ch++; continue; } if (100 + ni !== f.w){ f.w = 100 + ni; ch++; } }
+        out.push(f); }
+      if (out.length !== s.fx.length) s.fx = out;
+      return ch;
+    } catch(e){ return 0; }
+  }
+  function afterLoad(){
+    var s = st(); if (!s) return;
+    var raw = null; try { if (typeof LSg === "function") raw = LSg("zochiku-p-" + pid()); } catch(e){}
+    var thin = thinFix(s, raw), rep = relink(s, true);
+    rep.thin = thin; last = rep; refreshCache(s);
+  }
+  function note(rep){
+    if (!rep || !rep.dropped) return;
+    try { setTimeout(function(){ try { if (typeof toast === "function") toast("壁が無くなったので、付いていた物を" + rep.dropped + "点外しました"); } catch(e){} }, 1200); } catch(e){}
+  }
+
+  /* ---- 接点（4つだけ）：保存の前後／現場を開いた後／「戻す」の控えと復元 ---- */
+  try {
+    if (typeof save === "function"){
+      var _save = save;
+      save = function(){
+        var s = st();
+        try { if (s){ last = relink(s, false); note(last); } } catch(e){ warn("付け直し", e); }
+        var r = _save.apply(this, arguments);
+        try { if (s && st() === s) refreshCache(s); else C = null; } catch(e2){ C = null; }
+        return r;
+      };
+    }
+    if (typeof loadProject === "function"){
+      var _lp = loadProject;
+      loadProject = function(){
+        var r = _lp.apply(this, arguments);
+        try { afterLoad(); } catch(e){ C = null; warn("読み込みの後", e); }
+        return r;
+      };
+    }
+    if (typeof undoSnap === "function" && typeof undoRestore === "function"){
+      var _us = undoSnap, _ur = undoRestore;
+      undoSnap = function(){
+        var u = _us.apply(this, arguments);
+        try {
+          var s = st();
+          if (s && typeof u === "string" && u.length > 2 && u.charAt(u.length - 1) === "}"){
+            var add = "";
+            for (var i = 0; i < EXTRA.length; i++){ var v = s[EXTRA[i][1]]; add += ",\"" + EXTRA[i][0] + "\":" + JSON.stringify(v === undefined ? null : v); }
+            u = u.slice(0, -1) + add + "}";
+          }
+        } catch(e){}
+        return u;
+      };
+      undoRestore = function(u){
+        try {
+          var d = JSON.parse(u), s = st();
+          if (isObj(d) && s) for (var i = 0; i < EXTRA.length; i++){ var k = EXTRA[i][0], key = EXTRA[i][1]; if (!(k in d)) continue; if (d[k] === null) delete s[key]; else s[key] = d[k]; }
+        } catch(e){}
+        return _ur.apply(this, arguments);
+      };
+    }
+  } catch(e){ warn("接点", e); }
+
+  /* ---- データの健康診断（確かめ用。何も書き換えない） ---- */
+  function check(){
+    var s = st(), out = { ok: false, schema: 0, floors: 0, things: 0, noNid: 0, dup: 0, badRef: 0, eidsBad: 0 };
+    if (!s) return out;
+    out.schema = s.schema || 0;
+    var seen = Object.create(null);
+    function one(c){
+      out.floors++;
+      var ne = Array.isArray(c.edges) ? c.edges.length : 0, np = arr(c.parts2D).length;
+      if (Array.isArray(c.edges)){
+        var ei = eidsOf(c);
+        if (typeof c.eids !== "string" || !ei || ei.length !== ne) out.eidsBad++;
+        else ei.forEach(function(id){ if (typeof id !== "string" || !id) out.eidsBad++; else if (seen[id] === 1) out.dup++; else seen[id] = 1; });
+      }
+      LISTS.forEach(function(L){ arr(c[L[0]]).forEach(function(o){ if (!isObj(o)) return; out.things++; if (typeof o.nid !== "string" || !o.nid) out.noNid++; else if (seen[o.nid] === 1) out.dup++; else seen[o.nid] = 1; }); });
+      arr(c.fx).forEach(function(f){ if (!isObj(f) || typeof f.w !== "number") return; if (f.w >= 100 ? (f.w - 100 >= np) : (f.w < 0 || f.w >= ne)) out.badRef++; });
+      arr(c.sashes).forEach(function(sa){ if (!isObj(sa) || !isObj(sa.host) || typeof sa.host.i !== "number") return; var n = sa.host.t === "p" ? np : (sa.host.t === "e" ? ne : -1); if (n >= 0 && (sa.host.i < 0 || sa.host.i >= n)) out.badRef++; });
+    }
+    one(s);
+    if (Array.isArray(s.fl)){ var fi = s.fi || 0; s.fl.forEach(function(f, k){ if (k !== fi && f && isObj(f.snap)) one(f.snap); }); }
+    out.ok = !out.noNid && !out.dup && !out.badRef && !out.eidsBad;
+    return out;
+  }
+
+  window.NAFUDA = {
+    v: 1, stage: 1,
+    sync: function(){ var s = st(); if (!s) return null; last = relink(s, false); refreshCache(s); return last; },   /* 保存せずに付け直す（確かめ用・次の段階用） */
+    check: check,
+    wallId: function(t, i){ var s = st(); if (!s) return null; if (t === "e") return (eidsOf(s) || [])[i] || null; var q = arr(s.parts2D)[i]; return (isObj(q) && q.nid) || null; },
+    last: function(){ return last; }
+  };
+
+  try { afterLoad(); } catch(e){ C = null; warn("起動", e); }
+})();
+</script>
