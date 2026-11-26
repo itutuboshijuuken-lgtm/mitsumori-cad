@@ -31195,6 +31195,7 @@ window.__len309txt = function(){ return null; };
       var yr = runY(ai);
       var fs = 20;
       if (nm){ var wAt = function(f){ return [...nm].length * f * 0.98 + 4; }; if (wAt(fs) > xr[1] - xr[0]) fs = Math.max(11, Math.floor(fs * (xr[1] - xr[0]) / wAt(fs))); }
+      /* CAD-655：㎡の字は最初から h432 を付けて出す。従来は描いてから view432 が300ms見張りで隠していたため、描き直しの直後（特に範囲編集に入った直後）に㎡が全部見えて文字が重なって見えた（翔伍の実機動画 2026-11-26）。隠す条件（body.v432 の下で display:none）は従来と同じで、落ち着いた状態の見た目は変わらない。印刷・完成図は別の描き手なので影響なし */
       var areaTxt = fmt(r.area, 1) + "㎡";
       var wMax = Math.max(nm ? [...nm].length * fs * 0.98 + 4 : 0, [...areaTxt].length * 11 * 0.62 + 4);
       var cx = (xr[1] - xr[0] >= wMax) ? Math.max(xr[0] + wMax / 2, Math.min(xr[1] - wMax / 2, c[0])) : (xr[0] + xr[1]) / 2;
@@ -31209,12 +31210,12 @@ window.__len309txt = function(){ return null; };
         var yMin = yr[0] + fs * 0.8, yMax = yr[1] - (extra ? 36 : 20);
         var cy = yMax >= yMin ? Math.max(yMin, Math.min(yMax, c[1])) : (yr[0] + yr[1]) / 2 - 3;
         g += '<text class="halo" x="' + cx + '" y="' + cy + '" text-anchor="middle" style="font-size:' + fs + 'px;font-weight:800;fill:' + (on ? "#C2571A" : "#2563B0") + ';fill-opacity:' + (on ? ".9" : ".62") + ';pointer-events:none">' + nm + '</text>';
-        g += '<text class="halo" x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';   /* CAD-348：床の絵の上でも読める様に白の縁取り */
+        g += '<text class="halo h432" x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';   /* CAD-348：床の絵の上でも読める様に白の縁取り */
         if (noWork) g += '<text class="halo" x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
         else if (flTxt) g += '<text class="halo" x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#2F6B5F;fill-opacity:.75;pointer-events:none">' + flTxt + '</text>';
       } else {
         var cyA = (yr[0] + yr[1]) / 2 + 4;
-        g += '<text class="halo" x="' + cx + '" y="' + cyA + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
+        g += '<text class="halo h432" x="' + cx + '" y="' + cyA + '" text-anchor="middle" style="font-size:11px;font-weight:700;fill:#5B6673;fill-opacity:.58;pointer-events:none">' + areaTxt + '</text>';
         if (noWork) g += '<text class="halo" x="' + cx + '" y="' + (cyA + 16) + '" text-anchor="middle" style="font-size:11px;font-weight:800;fill:#C62828;fill-opacity:.85;pointer-events:none">工事なし</text>';
       }
       g += "</g>";
