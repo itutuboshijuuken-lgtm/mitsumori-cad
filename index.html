@@ -47254,6 +47254,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      電気は一番近い壁（25px以内）の、タップした側の面に付く。高さは今の決まり（コンセント300・スイッチ1200・警報器は天井-150・壁付け照明1800）。
      設備＝今の addTenken を、置く場所（HB.__putAt）だけ渡してそのまま呼ぶ（壁にくっつける・外なら寄せる・向きも今と同じ）。
    ・置いた物（ドア・窓・照明・設備・電気）はつかんで動かせる＝MADO.write の「動かす」。消すは「消す」の道具で（電気も消せるようにした＝MADO.write の「消す」）。
+   CAD-686（2026-11-27 Claude）：［置く］で、アプリにある壁の物40種すべてと、設備の残り5種（段差解消・エアコン用コンセント・枕棚・中段棚・床下点検口（大））を置けるように。
+     分け方：照明／電気／壁の仕上げ／造作／窓まわり／小物／設備。置き方は MADO.write（室内図で置いた時と同じ記録・同じ大きさの決まり）。
+     点の物は今の決まりの高さ、線・面の物は今の決まりの長さ（タップした所が真ん中）、アクセントクロスは壁1面。
+     置いた壁の物は、点も線も面も、つかんで動かせる（線・面は長さそのまま）・消すで消せる。
    CAD-673（2026-11-27 Claude）：つかみ方を 11/21 の翔伍の決めにそろえた。
    ・置いた直後と、動かして直した直後（最後に触ってから3秒）は、長押しなしですぐつかめる。それより前の物は長押し（0.45秒）でつかむ。
      ちょっと当たって動くのを防ぐため。長押しの前に指が動いたら、図面を動かす方になる。
@@ -47483,10 +47487,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 
   /* ===== 5c0. 置く：何を置くか（大きいボタン。選んだら閉じる） ===== */
   var PUTS = [
-    ["照明", [["lt", "down", "ダウンライト（DL）"], ["lt", "ceil", "シーリング（CL）"], ["lt", "rail", "ライティングレール"]]],
-    ["電気", [["fx", "outlet", "コンセント"], ["fx", "switch", "スイッチ"], ["fx", "alarm", "火災警報器"], ["fx", "sconce", "壁付け照明"]]],
+    ["照明", [["lt", "down", "ダウンライト（DL）"], ["lt", "ceil", "シーリング（CL）"], ["lt", "rail", "ライティングレール"], ["fx", "pendant", "ペンダントライト"], ["fx", "spot", "スポットライト"], ["fx", "duct", "ダクトレール"], ["fx", "indirect", "間接照明"], ["fx", "sconce", "壁付け照明"]]],
+    ["電気", [["fx", "outlet", "コンセント"], ["fx", "usb", "USBコンセント"], ["fx", "switch", "スイッチ"], ["fx", "dimmer", "調光スイッチ"], ["fx", "sensor", "人感センサー"], ["fx", "tv", "テレビ端子"], ["fx", "lan", "LAN端子"], ["fx", "doorphone", "テレビドアホン"], ["fx", "panel", "分電盤"], ["fx", "alarm", "火災警報器"], ["tk", "acout", "エアコン用コンセント（天井）"]]],
+    ["壁の仕上げ", [["fx", "accent", "アクセントクロス"], ["fx", "board", "板張り"], ["fx", "tile", "タイル仕上げ"], ["fx", "eco", "エコカラット"], ["fx", "shikkui", "漆喰"], ["fx", "waist", "腰壁"], ["fx", "under", "下地補強"], ["fx", "demo", "壁の一部を剥がす"]]],
+    ["造作", [["fx", "niche", "ニッチ"], ["fx", "kuri", "くりぬき"], ["fx", "counter", "カウンター"], ["fx", "cshelf", "カウンター棚"], ["fx", "shelf", "可動棚"], ["fx", "pipe", "ハンガーパイプ"], ["fx", "mirror", "姿見"], ["tk", "makura", "枕棚"], ["tk", "chudan", "中段棚"]]],
+    ["窓まわり", [["fx", "rod", "カーテンレール"], ["fx", "curtbox", "カーテンボックス"], ["fx", "roll", "ロールスクリーン"], ["fx", "blind", "ブラインド"]]],
+    ["小物", [["fx", "rail", "手すり"], ["fx", "towel", "タオル掛け"], ["fx", "paper", "紙巻器"], ["fx", "coat", "コート掛け"], ["fx", "hanger", "室内物干し"], ["fx", "picrail", "ピクチャーレール"], ["fx", "tvwall", "壁掛けテレビ"]]],
     ["設備", [["tk", "kitchen", "キッチン"], ["tk", "senmen", "洗面化粧台"], ["tk", "wc", "便器"], ["tk", "bath", "浴槽"], ["tk", "tearai", "手洗い"], ["tk", "geta", "下駄箱"], ["tk", "senpan", "洗濯機パン"], ["tk", "stair", "階段"],
-             ["tk", "floor", "床下点検口"], ["tk", "ceil", "天井点検口"], ["tk", "yukashu", "床下収納庫"], ["tk", "pillar", "独立柱"]]]
+             ["tk", "floor", "床下点検口"], ["tk", "yukaten", "床下点検口（大）"], ["tk", "ceil", "天井点検口"], ["tk", "yukashu", "床下収納庫"], ["tk", "pillar", "独立柱"], ["tk", "dansa", "段差解消・敷居撤去"]]]
   ];
   function choosePut(){
     if (!A || !usable()) return false;
@@ -47530,7 +47538,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return true;
   }
   function pick2put(){
-    var where = (!spec.put || spec.put === "fx") ? "置きたい壁をタップ" : "置きたい所をタップ";
+    var where = (!spec.put || spec.put === "fx") ? (fxType(spec.k) === "wall" ? "貼りたい壁の面をタップ" : "置きたい壁をタップ") : "置きたい所をタップ";
     say(spec.label + "：" + where + "してください（続けて置けます。置いた物はつかんで動かせます" + (!spec.put ? "・ドアはタップで向きが変わります" : "") + "）");
   }
   function wallsNow(){ var r = rd(); return (r && r.ok && Array.isArray(r.walls)) ? r.walls.filter(function(w){ return w.state !== "remove" && w.len > 0; }) : []; }
@@ -47659,15 +47667,20 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!appOk()) return { ok: false };
     return wr([{ op: "add", list: "lights", k: spec.k, x: p[0], y: p[1] }]);
   }
-  var FXZ = { outlet: 300, switch: 1200, sconce: 1800 };
+  /* 点の物の高さ（室内図で置いた時に近い高さ。火災警報器・室内物干しは窓口が天井から決める） */
+  var FXZ = { outlet: 300, usb: 300, tv: 300, lan: 300, switch: 1200, dimmer: 1200, sconce: 1800, spot: 2200, pendant: 2200, sensor: 2200, tvwall: 1000, coat: 1600, doorphone: 1400, panel: 1800, paper: 700 };
+  function fxType(k){ try { return (typeof FK !== "undefined" && FK[k]) ? FK[k][1] : ""; } catch(e){ return ""; } }
   function sideOf(w, p){ var d = (p[0] - w.a[0]) * (-w.uy) + (p[1] - w.a[1]) * w.ux; return d >= 0 ? 1 : -1; }
+  function isRf(){ try { return S.mode === "rf"; } catch(e){ return false; } }
   function placeFx(p){
     if (!appOk()) return { ok: false };
     var nw = nearWall(p, wallsNow(), 25); if (!nw) return { ok: false, why: "far" };
     if (nw.w.form === "open"){ say("壁の無い辺には付けられません"); return { ok: false, why: "open" }; }
-    var c = { op: "add", list: "fx", k: spec.k, wall: nw.w.id, u: Math.round(nw.t * nw.L) };
+    var typ = fxType(spec.k), c = { op: "add", list: "fx", k: spec.k, wall: nw.w.id };
     if (nw.w.t === "p") c.side = sideOf(nw.w, p);
-    if (FXZ[spec.k] != null) c.z = FXZ[spec.k];
+    if (typ === "pt"){ c.u = Math.round(nw.t * nw.L); if (FXZ[spec.k] != null) c.z = FXZ[spec.k]; }
+    else if (typ !== "wall") c.at = { u: Math.round(nw.t * nw.L) };   /* 線・面の物：今の決まりの長さで、タップした所が真ん中 */
+    if (spec.k === "demo" && !isRf()){ say("壁の一部を剥がすのは、リフォームの時だけです"); return { ok: false, why: "rf-only" }; }
     return wr([c]);
   }
   function placeTk(p){
@@ -47684,9 +47697,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     clearOv();
     if (drag.t0 === "fx"){
       var nw = nearWall(p, drag.W, 60); if (!nw || nw.w.form === "open"){ drag.to = null; return; }
-      var u = Math.round(nw.t * nw.L), side = nw.w.t === "p" ? sideOf(nw.w, p) : (nw.w.inner || 1), nx = -nw.w.uy * side, ny = nw.w.ux * side, off = (nw.w.th || 120) / 2 + 95;
-      drag.to = { wall: nw.w.id, u: u, side: nw.w.t === "p" ? side : null };
-      S2("circle", { cx: nw.w.a[0] + nw.w.ux * u + nx * off, cy: nw.w.a[1] + nw.w.uy * u + ny * off, r: 90, fill: "rgba(37,99,176,.18)", stroke: "#2563B0", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" });
+      var typ = fxType(o.k), side = nw.w.t === "p" ? sideOf(nw.w, p) : (nw.w.inner || 1), nx = -nw.w.uy * side, ny = nw.w.ux * side, off = (nw.w.th || 120) / 2 + 95;
+      if (typ === "wall"){ drag.to = null; return; }   /* 壁1面の物（アクセントクロス）は動かさない（消して置き直す） */
+      if (typ === "pt"){
+        var u = Math.round(nw.t * nw.L);
+        drag.to = { wall: nw.w.id, u: u, side: nw.w.t === "p" ? side : null };
+        S2("circle", { cx: nw.w.a[0] + nw.w.ux * u + nx * off, cy: nw.w.a[1] + nw.w.uy * u + ny * off, r: 90, fill: "rgba(37,99,176,.18)", stroke: "#2563B0", "stroke-width": 1.5, "vector-effect": "non-scaling-stroke" });
+        return;
+      }
+      var len = Math.min(o.len || 900, nw.L), u0 = Math.round(Math.max(0, Math.min(nw.L - len, nw.t * nw.L - len / 2)) / 5) * 5;   /* 線・面の物は長さそのまま */
+      drag.to = { wall: nw.w.id, u: u0, side: nw.w.t === "p" ? side : null };
+      S2("line", { x1: nw.w.a[0] + nw.w.ux * u0 + nx * 60, y1: nw.w.a[1] + nw.w.uy * u0 + ny * 60, x2: nw.w.a[0] + nw.w.ux * (u0 + len) + nx * 60, y2: nw.w.a[1] + nw.w.uy * (u0 + len) + ny * 60, stroke: "#2563B0", "stroke-width": 6, "stroke-opacity": ".5", "vector-effect": "non-scaling-stroke" });
       return;
     }
     var dx = p[0] - drag.p0[0], dy = p[1] - drag.p0[1], nx2 = o.x + dx, ny2 = o.y + dy;
@@ -47805,13 +47826,15 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 
   /* ===== 6. 消す（物をタップ＝今の②間取りの「消す」／外壁の線＝今の②寸法の「消す」） ===== */
   function segDist2(pt, a, b){ return segD(pt[0], pt[1], a, b); }
-  function fxPts(){   /* 電気（壁の物）の、図面での位置（新しい図面の記号と同じ置き方） */
+  function fxPts(){   /* 壁の物の、図面での位置（新しい図面の記号と同じ置き方）。点の物は点、線・面・壁1面の物は線分 */
     var out = [], r = rd(); if (!r || !r.ok) return out; var W = Object.create(null);
     (r.walls || []).forEach(function(w){ if (w.id) W[w.id] = w; });
     (r.things || []).forEach(function(t){
-      if (t.list !== "fx" || !/^(outlet|switch|sconce|alarm)$/.test(t.kind) || typeof t.u !== "number") return;
-      var w = W[t.wall]; if (!w) return; var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, off = (w.th || 120) / 2 + 95;
-      out.push({ i: t.i, x: w.a[0] + w.ux * t.u + nx * off, y: w.a[1] + w.uy * t.u + ny * off });
+      if (t.list !== "fx") return;
+      var w = W[t.wall]; if (!w) return; var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, th = (w.th || 120) / 2, typ = fxType(t.kind);
+      if (typ === "pt"){ if (typeof t.u !== "number") return; out.push({ i: t.i, x: w.a[0] + w.ux * t.u + nx * (th + 95), y: w.a[1] + w.uy * t.u + ny * (th + 95) }); return; }
+      var u0 = typeof t.u === "number" ? t.u : 0, len = typeof t.len === "number" ? t.len : (w.len || 0), off = th + 60;
+      out.push({ i: t.i, seg: true, a: [w.a[0] + w.ux * u0 + nx * off, w.a[1] + w.uy * u0 + ny * off], b: [w.a[0] + w.ux * (u0 + len) + nx * off, w.a[1] + w.uy * (u0 + len) + ny * off], len: len, whole: typ === "wall" });
     });
     return out;
   }
@@ -47819,7 +47842,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var rad = 26 * pxmm(), c = [];
     try {
       var near = Math.max(260, 12 * pxmm());   /* CAD-680：照明と電気の記号は小さいので、今の ltNear と同じ260mm（最低12px）で当てる */
-      fxPts().forEach(function(q){ var d = Math.hypot(q.x - pt[0], q.y - pt[1]); if (d < near) c.push({ t: "fx", i: q.i, d: Math.max(0, d - 40) }); });
+      fxPts().forEach(function(q){ var d = q.seg ? segD(pt[0], pt[1], q.a, q.b) : Math.hypot(q.x - pt[0], q.y - pt[1]); if (d < near) c.push({ t: "fx", i: q.i, d: Math.max(0, d - 40), whole: !!q.whole }); });
       (S.sashes || []).forEach(function(sa, i){
         if (!sa.drawn || !sa.host || typeof hostSeg !== "function") return; var seg = hostSeg(sa.host); if (!seg) return;
         var L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]) || 1, u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
@@ -48367,7 +48390,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      電気：コンセント＝丸に平行線2本、スイッチ＝黒丸、壁付け照明＝壁側を塗った丸、火災警報器＝丸に「警」、間接照明＝壁ぎわの破線。
            壁の部屋側の面に付けて描く（窓口の「面」の向きを使う）。
      撤去は赤、既存は灰色、新設は黒（図面の他の記号と同じ決まり）。
-   ・ZUMEN の描き直しのたびに呼ばれる（ZUMEN.draw の中に、記号の段を1つだけ足した）。この部品が無ければ何も描かない。 */
+   ・ZUMEN の描き直しのたびに呼ばれる（ZUMEN.draw の中に、記号の段を1つだけ足した）。この部品が無ければ何も描かない。
+   CAD-686：壁の物40種すべての記号（TV＝二重丸・LAN／ドアホン＝四角・分電盤＝半分塗りの四角・調光＝黒丸に矢・人感S・USB・
+     手すり＝二重線・カーテンレール＝破線CR・可動棚＝点線の帯・板張りやタイル＝細い斜線の帯・ニッチ＝壁に彫り込み・アクセント＝壁1面の帯 ほか）。 */
 (function(){
   "use strict";
   if (window.ZSYM) return;
@@ -48488,27 +48513,79 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
 
   /* 電気（壁の物）：壁の部屋側の面に付ける */
+  /* 壁の物：壁の部屋側の面に付けて描く（CAD-686：40種すべて。電灯コンセント図の書き方） */
+  function fxType(k){ try { return (typeof FK !== "undefined" && FK[k]) ? FK[k][1] : ""; } catch(e){ return ""; } }
+  var PTL = { usb: "USB", tv: "TV", lan: "LAN", doorphone: "DH", sensor: "S", dimmer: "D", spot: "SP", pendant: "P", coat: "フック", hanger: "物干", paper: "紙巻", tvwall: "TV" };
+  var SEGL = { rail: "手摺", rod: "CR", roll: "RS", blind: "BL", picrail: "PR", duct: "DR", indirect: "間接", towel: "タオル", shelf: "可動棚", pipe: "HP" };
+  var AREAL = { board: "板張", tile: "タイル", eco: "エコカラット", shikkui: "漆喰", waist: "腰壁", under: "補強", niche: "ニッチ", kuri: "くりぬき", counter: "カウンター", cshelf: "棚", mirror: "姿見", curtbox: "CB", demo: "剥がし" };
+  function fxFrame(t, W){
+    var w = W[t.wall]; if (!w) return null;
+    var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, th = (w.th || 120) / 2;
+    return { w: w, side: side, nx: nx, ny: ny, th: th, at: function(u, off){ return [w.a[0] + w.ux * u + nx * (th + off), w.a[1] + w.uy * u + ny * (th + off)]; } };
+  }
+  /* 壁の物の名前：壁から base 離した所に、字の幅（横書き）の分だけ部屋の内側へずらして置く（縦の壁でも壁にかぶらない） */
+  function tw2(str, size){ var w = 0; for (var i = 0; i < str.length; i++) w += str.charCodeAt(i) < 128 ? size * .62 : size * 1.0; return w; }
+  function fxLabel(g, F, u, base, str, size, col){
+    if (!str) return; var ext = Math.abs(F.nx) * tw2(str, size) / 2 + Math.abs(F.ny) * size * .6;
+    var c = F.at(u, base + ext + 20); return text(g, c[0], c[1], str, size, col);
+  }
+  function band(g, F, u0, u1, d0, d1, at){ var a = F.at(u0, d0), b = F.at(u1, d0), c = F.at(u1, d1), e = F.at(u0, d1); return E("path", Object.assign({ d: "M" + a.join(" ") + "L" + b.join(" ") + "L" + c.join(" ") + "L" + e.join(" ") + "Z", "stroke-width": .7 }, at), g); }
   function fxOne(t, W, g, f){
-    var w = W[t.wall]; if (!w || !fin(t.u)) return;
-    var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, th = (w.th || 120) / 2, col = colOf(t.state);
-    var at = function(u, off){ return [w.a[0] + w.ux * u + nx * (th + off), w.a[1] + w.uy * u + ny * (th + off)]; };
-    var k = t.kind, c;
-    if (k === "outlet"){
-      var r = 80; c = at(t.u, r + 15);
-      E("circle", { cx: c[0], cy: c[1], r: r, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
-      [-28, 28].forEach(function(s){ E("line", { x1: c[0] + w.ux * s - nx * r * .55, y1: c[1] + w.uy * s - ny * r * .55, x2: c[0] + w.ux * s + nx * r * .55, y2: c[1] + w.uy * s + ny * r * .55, stroke: col, "stroke-width": .7 }, g); });
-    } else if (k === "switch"){
-      c = at(t.u, 70); E("circle", { cx: c[0], cy: c[1], r: 55, fill: col }, g);
-    } else if (k === "sconce"){
-      var rs = 95; c = at(t.u, rs + 10);
-      E("circle", { cx: c[0], cy: c[1], r: rs, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
-      var a0 = [c[0] - w.ux * rs, c[1] - w.uy * rs], a1 = [c[0] + w.ux * rs, c[1] + w.uy * rs], sw = (side > 0) ? 0 : 1;
-      E("path", { d: "M" + a0[0] + " " + a0[1] + "A" + rs + " " + rs + " 0 0 " + sw + " " + a1[0] + " " + a1[1] + "Z", fill: col }, g);   /* 壁側の半分を塗る */
-    } else if (k === "alarm"){
-      c = at(t.u, 130); E("circle", { cx: c[0], cy: c[1], r: 120, fill: "#fff", stroke: col, "stroke-width": .8 }, g); text(g, c[0], c[1], "警", 150 * f, col);
-    } else if (k === "indirect" && fin(t.len)){
-      var p0 = at(t.u, 60), p1 = at(t.u + t.len, 60); E("line", { x1: p0[0], y1: p0[1], x2: p1[0], y2: p1[1], stroke: col, "stroke-width": 1.4, "stroke-dasharray": "6 4" }, g);
+    var F = fxFrame(t, W); if (!F) return;
+    var w = F.w, col = colOf(t.kind === "demo" ? "remove" : t.state), k = t.kind, typ = fxType(k), lab = 130 * f, c;
+    if (typ === "pt"){
+      if (!fin(t.u)) return;
+      if (k === "outlet" || k === "usb"){
+        var r = 80; c = F.at(t.u, r + 15);
+        E("circle", { cx: c[0], cy: c[1], r: r, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+        [-28, 28].forEach(function(s2){ E("line", { x1: c[0] + w.ux * s2 - F.nx * r * .55, y1: c[1] + w.uy * s2 - F.ny * r * .55, x2: c[0] + w.ux * s2 + F.nx * r * .55, y2: c[1] + w.uy * s2 + F.ny * r * .55, stroke: col, "stroke-width": .7 }, g); });
+        if (k === "usb") fxLabel(g, F, t.u, 2 * r + 15, "USB", lab * .8, col);
+      } else if (k === "switch" || k === "dimmer"){
+        c = F.at(t.u, 70); E("circle", { cx: c[0], cy: c[1], r: 55, fill: col }, g);
+        if (k === "dimmer"){ E("line", { x1: c[0] + w.ux * 40 + F.nx * 40, y1: c[1] + w.uy * 40 + F.ny * 40, x2: c[0] + w.ux * 110 + F.nx * 110, y2: c[1] + w.uy * 110 + F.ny * 110, stroke: col, "stroke-width": .8 }, g); fxLabel(g, F, t.u, 125, "D", lab * .8, col); }   /* 調光：黒丸に矢 */
+      } else if (k === "sconce"){
+        var rs = 95; c = F.at(t.u, rs + 10);
+        E("circle", { cx: c[0], cy: c[1], r: rs, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+        var a0 = [c[0] - w.ux * rs, c[1] - w.uy * rs], a1 = [c[0] + w.ux * rs, c[1] + w.uy * rs], sw = (F.side > 0) ? 0 : 1;
+        E("path", { d: "M" + a0[0] + " " + a0[1] + "A" + rs + " " + rs + " 0 0 " + sw + " " + a1[0] + " " + a1[1] + "Z", fill: col }, g);   /* 壁側の半分を塗る */
+      } else if (k === "alarm"){
+        c = F.at(t.u, 130); E("circle", { cx: c[0], cy: c[1], r: 120, fill: "#fff", stroke: col, "stroke-width": .8 }, g); text(g, c[0], c[1], "警", 150 * f, col);
+      } else if (k === "tv"){
+        c = F.at(t.u, 95); E("circle", { cx: c[0], cy: c[1], r: 80, fill: "#fff", stroke: col, "stroke-width": .8 }, g); E("circle", { cx: c[0], cy: c[1], r: 40, fill: "none", stroke: col, "stroke-width": .7 }, g);   /* テレビ端子：二重丸 */
+        fxLabel(g, F, t.u, 175, "TV", lab * .8, col);
+      } else if (k === "panel"){
+        band(g, F, t.u - 250, t.u + 250, 0, 140, { fill: "#fff", stroke: col });
+        var p1 = F.at(t.u - 250, 0), p2 = F.at(t.u + 250, 140), p3 = F.at(t.u + 250, 0);
+        E("path", { d: "M" + p1.join(" ") + "L" + p2.join(" ") + "L" + p3.join(" ") + "Z", fill: col }, g);   /* 分電盤：四角の半分を塗る */
+      } else if (k === "tvwall"){
+        band(g, F, t.u - 500, t.u + 500, 0, 70, { fill: "#fff", stroke: col }); fxLabel(g, F, t.u, 70, "壁掛TV", lab * .8, col);
+      } else {
+        var sq = k === "lan" || k === "doorphone"; c = F.at(t.u, 95);
+        if (sq) band(g, F, t.u - 75, t.u + 75, 20, 170, { fill: "#fff", stroke: col });
+        else E("circle", { cx: c[0], cy: c[1], r: 75, fill: "#fff", stroke: col, "stroke-width": .8 }, g);
+        if (k === "spot"){ [0, 1, 2, 3].forEach(function(q){ var an = q * Math.PI / 2 + Math.PI / 4; E("line", { x1: c[0] + Math.cos(an) * 75, y1: c[1] + Math.sin(an) * 75, x2: c[0] + Math.cos(an) * 120, y2: c[1] + Math.sin(an) * 120, stroke: col, "stroke-width": .7 }, g); }); }
+        var lb = PTL[k] || ""; if (lb){ if (lb.length <= 2 && !sq) text(g, c[0], c[1], lb, lab * .75, col); else fxLabel(g, F, t.u, 170, lb, lab * .8, col); }
+      }
+      return;
     }
+    var L = w.len || 0, u0 = fin(t.u) ? t.u : 0, len = fin(t.len) ? t.len : L, u1 = u0 + len, um = (u0 + u1) / 2;
+    if (typ === "wall"){   /* アクセントクロス：壁1面に帯 */
+      band(g, F, 0, L, 0, 45, { fill: "rgba(24,32,42,.18)", stroke: col }); fxLabel(g, F, L / 2, 45, "アクセント", lab * .8, col); return;
+    }
+    if (typ === "seg"){
+      var off = k === "pipe" ? 300 : k === "shelf" ? 0 : k === "picrail" ? 25 : 60, at0 = F.at(u0, off), at1 = F.at(u1, off);
+      if (k === "rail"){ var b0 = F.at(u0, 40), b1 = F.at(u1, 40), c0 = F.at(u0, 85), c1 = F.at(u1, 85); E("line", { x1: b0[0], y1: b0[1], x2: b1[0], y2: b1[1], stroke: col, "stroke-width": .8 }, g); E("line", { x1: c0[0], y1: c0[1], x2: c1[0], y2: c1[1], stroke: col, "stroke-width": .8 }, g); }
+      else if (k === "shelf") band(g, F, u0, u1, 0, 300, { fill: "none", stroke: col, "stroke-dasharray": "5 3" });
+      else E("line", { x1: at0[0], y1: at0[1], x2: at1[0], y2: at1[1], stroke: col, "stroke-width": k === "duct" ? 2.2 : k === "indirect" ? 1.4 : .9, "stroke-dasharray": (k === "rod" || k === "indirect") ? "6 4" : k === "pipe" ? "10 3 2 3" : "none" }, g);
+      fxLabel(g, F, um, (k === "pipe" || k === "shelf") ? 300 : 90, SEGL[k] || "", lab * .8, col);
+      return;
+    }
+    /* 面の物 */
+    var dep = k === "counter" ? 450 : k === "cshelf" ? 250 : k === "curtbox" ? 150 : k === "mirror" ? 30 : 40;
+    if (k === "niche" || k === "kuri") band(g, F, u0, u1, -F.th * .8, 0, { fill: "#fff", stroke: col });   /* 壁の中へ彫り込む */
+    else band(g, F, u0, u1, 0, dep, { fill: k === "under" || k === "demo" ? "none" : "#fff", stroke: col, "stroke-dasharray": (k === "under" || k === "demo" || k === "cshelf") ? "5 3" : "none" });
+    if (/^(board|tile|eco|shikkui|waist)$/.test(k)){ for (var q = u0 + 150; q < u1 - 50; q += 300){ var h0 = F.at(q, 0), h1 = F.at(q + 60, dep); E("line", { x1: h0[0], y1: h0[1], x2: h1[0], y2: h1[1], stroke: col, "stroke-width": .5 }, g); } }   /* 仕上げは細い斜線 */
+    fxLabel(g, F, um, Math.max(dep, 40), AREAL[k] || "", lab * .8, col);
   }
 
   function fill(g, L){
@@ -48524,13 +48601,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         try {
           if (li === "tenken"){ if (!(tkOne(t, g, f) || sqOne(t, g, f) || appOne(t, g, f))) boxOne(t, g, f); n++; }
           else if (li === "lights"){ ltOne(t, g, f); n++; }
-          else if (FXK.test(t.kind)){ fxOne(t, W, g, f); n++; }
+          else if (fxType(t.kind)){ fxOne(t, W, g, f); n++; }
         } catch(e){ warn("記号 " + t.list + ":" + t.kind, e); }
       });
     });
     return n;
   }
-  var FXK = /^(outlet|switch|sconce|alarm|indirect)$/;
+
   /* 記号が占める範囲（図面のmm）。部屋名の置き場所を決める時に避けてもらう */
   function boxes(rd, f){
     var out = [], W = Object.create(null), lab = 150 * (f || 1);
@@ -48543,10 +48620,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         } else if (t.list === "lights" && fin(t.x) && fin(t.y)){
           if (t.kind === "rail"){ var L = t.len || 1500, hz = t.dir !== "v"; out.push(hz ? [t.x - L / 2, t.y - 70, t.x + L / 2, t.y + lab * 2] : [t.x - 70, t.y - L / 2, t.x + 70, t.y + L / 2 + lab * 2]); }
           else { var r = t.kind === "down" ? 85 : 190; out.push([t.x - r, t.y - r, t.x + r, t.y + r + lab * 1.5]); }
-        } else if (t.list === "fx" && FXK.test(t.kind) && t.kind !== "indirect"){
-          var w = W[t.wall]; if (!w || !fin(t.u)) return;
-          var side = t.side || w.inner || 1, nx = -w.uy * side, ny = w.ux * side, off = (w.th || 120) / 2 + 130, cx = w.a[0] + w.ux * t.u + nx * off, cy = w.a[1] + w.uy * t.u + ny * off;
-          out.push([cx - 130, cy - 130, cx + 130, cy + 130]);
+        } else if (t.list === "fx" && fxType(t.kind)){
+          var F = fxFrame(t, W); if (!F) return; var typ = fxType(t.kind);
+          if (typ === "pt"){ if (!fin(t.u)) return; var cc = F.at(t.u, 130); out.push([cc[0] - 150, cc[1] - 150, cc[0] + 150, cc[1] + 150]); return; }
+          var u0 = fin(t.u) ? t.u : 0, len = fin(t.len) ? t.len : (F.w.len || 0), dep = t.kind === "counter" ? 450 : t.kind === "pipe" || t.kind === "shelf" ? 300 : 90;
+          var q1 = F.at(u0, 0), q2 = F.at(u0 + len, dep + lab * 1.6);
+          out.push([Math.min(q1[0], q2[0]), Math.min(q1[1], q2[1]), Math.max(q1[0], q2[0]), Math.max(q1[1], q2[1])]);
         }
       } catch(e){}
     });
