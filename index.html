@@ -36860,7 +36860,7 @@ nav.steps{padding:1px 6px 3px}
     try{
       if (typeof HB === "undefined" || !HB.__pageM) { lastKey = ""; return; }
       var svg = document.getElementById("plan");
-      if (document.body.classList.contains("v432")){ var o424 = svg && svg.querySelector("#dim424"); if (o424) o424.remove(); lastKey = ""; return; }   /* CAD-648：大きい寸法（view432）が出ている時は寸法列を描かない。隠す前提で描くのは下地の無駄（翔伍の指示で組み替え第1段） */
+      if (true){ var o424 = svg && svg.querySelector("#dim424"); if (o424) o424.remove(); lastKey = ""; return; }   /* CAD-656：通り芯の寸法列（fs424）も後付け表示なので止める。寸法は drawPlan 本来の dimOverlay だけにする */   /* CAD-648：大きい寸法（view432）が出ている時は寸法列を描かない。隠す前提で描くのは下地の無駄（翔伍の指示で組み替え第1段） */
       if (!svg || typeof S === "undefined" || !S || !S.edges || !S.edges.length) return;
       if (typeof bbox !== "function" || typeof gridLines345 !== "function") return;
       var grp = svg.querySelector('g[data-sno="grid345"]');
@@ -37146,7 +37146,7 @@ nav.steps{padding:1px 6px 3px}
   var css = document.createElement("style");
   css.textContent = "body.v432 #plan #dim424,body.v432 #plan .h432,body.v432 #plan #dimChain426{display:none!important}";   /* CAD-645：外周チェーン（小さい寸法）と view432 の大きい寸法が同じ寸法を二重に出し、tidyPlanLabels の回避が終わらなかった。二重を止める */
   document.head.appendChild(css);
-  function on(){ var m = document.getElementById("stM"); return !!(m && !m.hidden && m.getClientRects().length && typeof HB !== "undefined" && HB.__pageM && typeof S !== "undefined" && S.edges); }
+  function on(){ return false; }   /* CAD-656（翔伍の指示 2026-11-26）：間取りの「絵のこだわり」を解除。view432の後付け表示（大きい寸法・字の隠し・数字の拡大・910の点）を止め、描いたまま出す。見積・保存データ・室内図・立体図には触らない */
   function el(tag, at, txt){ var e = document.createElementNS(NS, tag); for (var k in at) e.setAttribute(k, at[k]); if (txt != null) e.textContent = txt; return e; }
   var HIDE_FILL = ["rgb(194, 87, 26)", "rgb(30, 58, 138)", "rgb(138, 150, 163)"], HIDE_STROKE = ["#8a96a3", "#c2571a"];   /* CAD-442：#1E3A8A は外周の線にも使われていたので隠さない */
   function apply(){
