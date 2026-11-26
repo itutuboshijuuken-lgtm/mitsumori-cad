@@ -47132,6 +47132,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-677（2026-11-27 Claude）：道具を持たずにドア・窓をタップ→「種類 大きさ・［変える］・［向き］（ドア）・［状態］（新設／既存の確認がある物）」の帯。
      変えるは今の changeSheet、状態は今の sashAskState、向きは KAKU2 と同じ4通りの切り替え。ドア・窓のタップは外壁の寸法パッドより先に拾う。
    CAD-679：照明の当たり方を今の ltNear（260mm）にそろえた（照明の近くの部屋のタップが照明に取られないように）。
+   CAD-683：設備（キッチン・浴槽・洗面など）をタップ→帯に［幅］［奥行］。今の数字パッド（openPad）で入れ、今の moveTenken で外形の中に収める（戻す1回で戻る）。階段は［回す］も。
    CAD-681：新しい図面を初めて開いた時に1回だけ、短い案内を出す（覚えるのは walk2-v1 の中の hint681 だけ。保存キーは増やさない）。
    CAD-678（2026-11-27 Claude）：照明をタップ→帯（リフォームは［新設］［撤去］［交換］＝書く窓口 MADO.write の act、レールは［縦横］）。
      階段をタップ→［回す］（上る向きを90°ずつ。今の moveTenken で外形の中に収める）。 */
@@ -47212,7 +47213,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var d = down; if (!d || e.pointerId !== d.id) return; down = null;
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
-    var li = ltAt(p), ki = li < 0 ? stairAt(p) : -1;
+    var li = ltAt(p), ki = li < 0 ? tkAt(p) : -1;
     if (li >= 0 || ki >= 0){ closePart(); closeRoom(); closeSash(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openThing(li >= 0 ? "lt" : "k", li >= 0 ? li : ki); return; }
     closeThing();
     var si = sashAt(p);
@@ -47247,9 +47248,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var thBar = null, thObj = null, thKind = "";
   /* 照明の当たり方は今の ltNear と同じ（中心・レールの線から260mm以内）。小さく見えている時も指で押せるよう、最低12px */
   function ltAt(p){ var best = -1, bd = Math.max(260, 12 * pxmm()); (S.lights || []).forEach(function(l, i){ var d; if (l.k === "rail"){ var L = l.len || 1500, hz = l.dir !== "v"; d = segD(p[0], p[1], hz ? [l.x - L / 2, l.y] : [l.x, l.y - L / 2], hz ? [l.x + L / 2, l.y] : [l.x, l.y + L / 2]); } else d = Math.hypot(p[0] - l.x, p[1] - l.y); if (d < bd){ bd = d; best = i; } }); return best; }
-  function stairAt(p){ var best = -1; (S.tenken || []).forEach(function(o, i){ if (o.k !== "stair" || typeof tkExt !== "function") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1]) best = i; }); return best; }
+  function tkAt(p){ var best = -1, ba = Infinity; (S.tenken || []).forEach(function(o, i){ if (typeof tkExt !== "function" || typeof o.x !== "number") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1] && e[0] * e[1] < ba){ ba = e[0] * e[1]; best = i; } }); return best; }   /* 重なっている時は小さい方 */
   var ACT = { "new": "新設", remove: "撤去", swap: "交換" };
-  function thLab(){ if (!thObj) return ""; if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : ""); return "階段　上り：" + ({ n: "上", e: "右", s: "下", w: "左" }[thObj.dir || "n"] || ""); }
+  function thLab(){
+    if (!thObj) return ""; if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : "");
+    var nm = ""; try { nm = (typeof TKN !== "undefined" && TKN[thObj.k]) || thObj.k; } catch(e){ nm = thObj.k; }
+    var sz = (typeof thObj.d === "number") ? thObj.w + "×" + thObj.d : thObj.w + "角";
+    return (thObj.k === "stair" ? "階段　上り：" + ({ n: "上", e: "右", s: "下", w: "左" }[thObj.dir || "n"] || "") + "　" : nm + "　") + sz;
+  }
   function openThing(kind, i){
     if (!A || busy() || editing) return { ok: false };
     var o = kind === "lt" ? (S.lights || [])[i] : (S.tenken || [])[i]; if (!o) return { ok: false };
@@ -47263,7 +47269,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (kind === "lt"){
       if (isRf()) ["new", "remove", "swap"].forEach(function(a){ mk(ACT[a], function(){ setAct(a); }, (o.act || "new") === a); });
       if (o.k === "rail") mk("縦横", railDir);
-    } else mk("回す", turnStair);
+    } else {
+      if (o.k === "stair") mk("回す", turnStair);
+      if (o.k !== "pillar" && o.k !== "dansa") mk("幅", function(){ tkSize("w"); });
+      if (typeof o.d === "number" && o.k !== "dansa") mk("奥行", function(){ tkSize("d"); });
+    }
     var x = mk("×", closeThing); x.style.padding = "0"; x.style.width = "44px";
     return { ok: true, kind: kind, label: lab };
   }
@@ -47285,6 +47295,16 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var ord = ["n", "e", "s", "w"], k = ord.indexOf(thObj.dir || "n");
     try { pushUndo(); thObj.dir = ord[(k + 1) % 4]; if (typeof moveTenken === "function") moveTenken(thObj, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("階段を回す", e); return { ok: false }; }
     reopenThing(); return { ok: true, dir: thObj.dir };
+  }
+  function tkSize(key){
+    var o = thObj; if (!o || typeof openPad !== "function") return { ok: false };
+    var nm = ""; try { nm = (typeof TKN !== "undefined" && TKN[o.k]) || o.k; } catch(e){ nm = o.k; }
+    openPad({   /* パッドは、新しい図面が開いている間は KAKU2 の印（k2z）で一番手前に出る */ title: nm + "の" + (key === "w" ? "幅" : "奥行"), sub: key === "w" ? "壁に沿った長さ（mm）" : "壁からの出（mm）", unit: "mm", value: o[key] || "", done: function(v){
+      if (v == null || !(v >= 100) || v > 6000 || v === o[key]) return;
+      try { pushUndo(); o[key] = Math.round(v); if (typeof moveTenken === "function") moveTenken(o, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("設備の大きさ", e); return; }
+      say(nm + "の" + (key === "w" ? "幅" : "奥行") + "を " + Math.round(v).toLocaleString("ja-JP") + "mm にしました（戻すで戻せます）"); reopenThing();
+    } });
+    return { ok: true };
   }
   function reopenThing(){ var o = thObj, kd = thKind; setTimeout(function(){ if (thObj !== o) return; var j = thIdx(); if (j >= 0) openThing(kd, j); else closeThing(); }, 60); }
   function closeThing(){ thObj = null; thKind = ""; if (thBar && thBar.parentNode) thBar.parentNode.removeChild(thBar); }
