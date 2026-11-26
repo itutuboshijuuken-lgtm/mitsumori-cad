@@ -46680,3 +46680,182 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   };
 })();
 </script>
+<script>
+/* ---------- CAD-666：描く3回目 ＝ 新しい図面で「寸法の数字入れ」（2026-11-27 Claude）----------
+   この部品は「Claudeの持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
+   ・やること：新しい図面（#zumenRoot）で、外壁の線をタップすると、その辺の寸法の数字パッドが出る。
+   ・数字パッドは今のアプリの editEdge(i) をそのまま呼ぶ（写して作り直さない）。だから、
+     共通の寸法ボタン・前へ／次へ・「この辺を母屋側にする」・戻す・寸法の決まり方（solve）は今の②寸法と全く同じ。
+   ・新しい図面の上にパッドを出すため、開いている間だけパッドを一番手前にする。
+     パッドの上の空いた所に家全体が見えるよう図面を寄せ、選んだ辺を今と同じピンクで点滅させる。閉じたら元の見え方に戻す。
+   ・道具（描き足す・消す・消しゴム）を持っている時と、外形をなぞっている時は、パッドを出さない（その道具のタップが優先）。
+   ・寸法の決まっていない辺がある時は、図面を開いた時に「外壁の線をタップ」の案内を1回出す。
+   ・今回は1階だけ。⋯の「新しい歩く画面（試験中）」が「入」の時だけ動く。切なら何も足さない。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.KAKU3) return;
+  var VER = 1, NS = "http://www.w3.org/2000/svg";
+  var A = null, down = null, nDown = 0, editing = false, vb0 = null, key0 = "", tmClose = 0, tmMsg = 0, obsPad = null, hinted = false, wasOpen = false;
+
+  function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
+  function zumen(){ var z = window.ZUMEN; return (z && typeof z.isOpen === "function") ? z : null; }
+  function zopen(){ var z = zumen(); try { return !!(z && z.isOpen()); } catch(e){ return false; } }
+  function rd(){ try { var m = window.MADO; return m ? m.read() : null; } catch(e){ return null; } }
+  function warn(m, e){ try { console.warn("[KAKU3] " + m, e || ""); } catch(x){} }
+  function busy(){
+    try { if (window.KAKU && window.KAKU.state().tracing) return true; } catch(e){}
+    try { if (window.KAKU2 && window.KAKU2.state().tool) return true; } catch(e){}
+    return false;
+  }
+  function appOk(){
+    try { if (typeof HB !== "undefined" && HB && HB.__nbtut) return false; } catch(e){}
+    try { return typeof S !== "undefined" && S && Array.isArray(S.edges) && S.edges.length >= 3 && typeof editEdge === "function" && typeof pts === "function"; } catch(e){ return false; }
+  }
+  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty && !(r.fi > 0)); }
+  function usable(){ return sw() && zopen() && appOk() && f1(); }
+  function plan(){ return A ? A.root.querySelector('svg[aria-label="平面図"]') : null; }
+  function pad(){ return document.getElementById("pad"); }
+  function padOpen(){ var p = pad(); return !!(p && !p.hidden); }
+  function boxKey(){ try { return JSON.stringify(pts()); } catch(e){ return ""; } }
+
+  /* ===== 1. 取り付け ===== */
+  var css = document.createElement("style");
+  css.textContent = "body.k3pad #pad{z-index:2147483100!important}" +
+    "@keyframes k3blink{0%,100%{opacity:1}50%{opacity:.25}}#k3Ov .k3sel{animation:k3blink 1s ease-in-out infinite}";
+  document.head.appendChild(css);
+  function attach(){
+    var root = document.getElementById("zumenRoot"); if (!root) return null;
+    var svg = root.querySelector('svg[aria-label="平面図"]'), mid = svg ? svg.parentNode : null; if (!mid) return null;
+    if (A && A.root === root && A.mid === mid && mid.contains(A.ov)) return A;
+    detach();
+    var ov = document.createElementNS(NS, "svg"); ov.id = "k3Ov"; ov.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    ov.style.cssText = "position:absolute;left:0;top:0;width:100%;height:100%;display:block;pointer-events:none;z-index:1";
+    var msg = document.createElement("div"); msg.id = "k3Msg";
+    msg.style.cssText = "position:absolute;left:10px;right:10px;top:10px;padding:8px 12px;border-radius:12px;background:rgba(24,32,42,.88);color:#fff;font-size:13px;font-weight:700;line-height:1.45;text-align:center;pointer-events:none;display:none;z-index:3";
+    mid.appendChild(ov); mid.appendChild(msg);
+    A = { root: root, mid: mid, ov: ov, msg: msg, obs: new MutationObserver(syncVb) };
+    A.obs.observe(svg, { attributes: true, attributeFilter: ["viewBox"] }); syncVb();
+    mid.addEventListener("pointerdown", onDown, true); mid.addEventListener("pointermove", onMove, true);
+    mid.addEventListener("pointerup", onUp, true); mid.addEventListener("pointercancel", onUp, true);
+    return A;
+  }
+  function detach(){
+    if (!A) return;
+    if (editing) endEdit(true);
+    try { A.obs.disconnect(); A.mid.removeEventListener("pointerdown", onDown, true); A.mid.removeEventListener("pointermove", onMove, true); A.mid.removeEventListener("pointerup", onUp, true); A.mid.removeEventListener("pointercancel", onUp, true); A.ov.remove(); A.msg.remove(); } catch(e){}
+    A = null; down = null; nDown = 0;
+  }
+  function syncVb(){ var s = plan(); if (A && s){ var v = s.getAttribute("viewBox"); if (v) A.ov.setAttribute("viewBox", v); } }
+  function say(t){ if (!A) return; clearTimeout(tmMsg); A.msg.textContent = t || ""; A.msg.style.display = t ? "block" : "none"; if (t) tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 3200); }
+
+  /* ===== 2. タップを拾う（図面の動かし方・部屋の選び方は邪魔しない） ===== */
+  function toPlan(cx, cy){ var s = plan(), m = s && s.getScreenCTM(); if (!m) return null; var p = s.createSVGPoint(); p.x = cx; p.y = cy; p = p.matrixTransform(m.inverse()); return [p.x, p.y]; }
+  function pxmm(){ var s = plan(), m = s && s.getScreenCTM(); return (m && m.a) ? 1 / m.a : 1; }
+  function segD(x, y, a, b){ var ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey, t = L2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / L2)) : 0; return Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t); }
+  function edgeAt(p){ var P = pts(), n = P.length, best = -1, bd = 16 * pxmm(), i, d; for (i = 0; i < n; i++){ d = segD(p[0], p[1], P[i], P[(i + 1) % n]); if (d < bd){ bd = d; best = i; } } return best; }
+  function selNow(){ try { var z = zumen(); return z ? z.selected() : null; } catch(e){ return null; } }
+  function onDown(e){
+    nDown++;
+    down = (nDown === 1 && !busy() && !editing) ? { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), sel: selNow() } : null;
+  }
+  function onMove(e){ if (down && e.pointerId === down.id && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down = null; }
+  function onUp(e){
+    nDown = Math.max(0, nDown - 1);
+    var d = down; if (!d || e.pointerId !== d.id) return; down = null;
+    if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
+    var p = toPlan(e.clientX, e.clientY); if (!p) return;
+    var i = edgeAt(p); if (i < 0) return;
+    setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0);   /* 図面の「部屋を選ぶ」タップは打ち消す */
+    tapT = Date.now(); open(i);
+  }
+  /* 指を離した直後、同じ場所に「クリック」が届く。開いたばかりのパッドのボタン（×など）に当たって閉じないよう、それだけ捨てる */
+  var tapT = 0;
+  document.addEventListener("click", function(e){
+    if (!tapT || Date.now() - tapT > 450) return;
+    var t = e.target; if (t && t.closest && t.closest("#pad")){ tapT = 0; e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  /* ===== 3. 数字パッドを開く（今の editEdge をそのまま） ===== */
+  function open(i){
+    if (!usable() || busy() || !(i >= 0) || !S.edges[i]) return { ok: false };
+    var z = zumen();
+    if (!editing){ vb0 = z ? z.view() : null; key0 = boxKey(); }
+    editing = true; document.body.classList.add("k3pad"); say("");
+    try { editEdge(i); } catch(e){ warn("editEdge", e); endEdit(true); return { ok: false }; }
+    setTimeout(onPadShown, 30);
+    return { ok: true, edge: i };
+  }
+  function onPadShown(){
+    if (!editing || !A) return;
+    if (!padOpen()){ endEdit(); return; }
+    fitAbovePad(); mark();
+  }
+  /* パッドの上の空いた所に、家全体が収まるように寄せる（家の大きさの1割＋寸法の段の分の余白） */
+  function fitAbovePad(){
+    try {
+      var z = zumen(), s = plan(); if (!z || !s) return;
+      var r = s.getBoundingClientRect(), pr = pad().getBoundingClientRect(), W = r.width, H = r.height, h1 = Math.max(80, Math.min(H, pr.top - r.top) - 8);
+      var P = pts(), xs = P.map(function(p){ return p[0]; }), ys = P.map(function(p){ return p[1]; });
+      var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+      var m = Math.max(x1 - x0, y1 - y0) * 0.1 + 1300, bw = x1 - x0 + 2 * m, bh = y1 - y0 + 2 * m;
+      if (!(W > 0 && H > 0)) return;
+      var k = Math.max(bw / W, bh / h1), cx = (x0 + x1) / 2, top = y0 - m - (h1 * k - bh) / 2;
+      z.view([cx - W * k / 2, top, W * k, H * k]);
+    } catch(e){ warn("寄せる", e); }
+  }
+  function mark(){
+    if (!A) return; while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
+    var i = (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null; if (!(i >= 0)) return;
+    var P = pts(), a = P[i], b = P[(i + 1) % P.length]; if (!a || !b) return;
+    var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
+    l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]);
+    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    A.ov.appendChild(l);
+  }
+  function endEdit(quiet){
+    clearTimeout(tmClose);
+    if (!editing) return; editing = false;
+    document.body.classList.remove("k3pad");
+    if (A) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
+    try { var z = zumen(); if (z && z.isOpen()){ if (boxKey() !== key0 || !vb0) z.home(); else z.view(vb0); } } catch(e){}
+    vb0 = null;
+    if (!quiet) hint(true);
+  }
+  /* パッドの開け閉めを見張る。前へ／次へは「閉じてすぐ開く」ので、少し待ってから閉じたと決める */
+  function watchPad(){
+    var p = pad(); if (!p || obsPad) return;
+    obsPad = new MutationObserver(function(){
+      if (!editing) return;
+      if (padOpen()){ clearTimeout(tmClose); setTimeout(function(){ if (editing && padOpen()){ mark(); } }, 30); }
+      else { clearTimeout(tmClose); tmClose = setTimeout(function(){ if (editing && !padOpen()) endEdit(); }, 120); }
+    });
+    obsPad.observe(p, { attributes: true, attributeFilter: ["hidden"] });
+  }
+
+  /* ===== 4. 案内（寸法の決まっていない辺がある時だけ、1回） ===== */
+  function unk(){ try { return typeof unknown === "function" ? unknown() : 0; } catch(e){ return 0; } }
+  function hint(after){
+    if (!A || !usable() || busy() || editing) return;
+    var n = unk();
+    if (n > 0 && (!hinted || after)){ hinted = true; say("寸法の決まっていない辺があります。外壁の線をタップして、数字を入れてください"); }
+    else if (after && n === 0 && hinted){ hinted = false; say("寸法がそろいました"); }
+  }
+
+  /* ===== 5. 見張り ===== */
+  function sync(){
+    if (!sw()){ detach(); wasOpen = false; return; }
+    var o = zopen();
+    if (!o){ if (editing){ try { if (typeof closePad === "function") closePad(); } catch(e){} endEdit(true); } wasOpen = false; return; }
+    watchPad();
+    if (attach()){ if (!wasOpen){ wasOpen = true; hinted = false; setTimeout(function(){ hint(false); }, 400); } }
+  }
+  window.addEventListener("walk2-switch", function(e){ if (!(e && e.detail && e.detail.on)) detach(); setTimeout(sync, 0); });
+  setInterval(function(){ if (sw()) sync(); else if (A) detach(); }, 500);
+
+  window.KAKU3 = {
+    v: VER, stage: "描く3",
+    state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
+    open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }
+  };
+})();
+</script>
