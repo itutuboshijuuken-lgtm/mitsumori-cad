@@ -47088,7 +47088,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* ===== 7. 見張り ===== */
   function sync(){
     if (!sw()){ detach(); return; }
-    if (!zopen()){ if (A && tool) off(true); return; }
+    if (!zopen()){ if (A && tool) off(true); document.body.classList.remove("k2z"); return; }   /* CAD-682：閉じたら、選ぶ画面・数字パッドを手前に出す印も外す */
     if (attach()) refresh();
   }
   document.addEventListener("click", function(e){ var t = e.target; if (A && tool && t && t.closest && t.closest("#kakuRedraw")) off(true); }, true);   /* 描き直すを押したら道具を置く */
