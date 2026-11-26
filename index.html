@@ -1226,6 +1226,7 @@ const WORK = [
   ["rcTodoke478", "RC（マンション）管理組合への工事届・掲示・あいさつ（仮）", "円/式", 0, 10000],
   ["mikiri", "見切り材（1本）", "円/本", 0, 1800],
   ["siding", "外壁 サイディング", "円/㎡", 0, 9600],
+  ["sidingWork", "外壁 サイディング張り手間（材料を拾う時・全国平均の目安）（仮）", "円/㎡", 0, 3500],
   ["yakisugi", "外壁 焼杉", "円/㎡", 0, 9500],
   ["nuri", "外壁 塗り壁", "円/㎡", 0, 8000],
   ["yakumono", "外壁 コーナー役物", "円/㎡", 0, 500],
@@ -6656,6 +6657,8 @@ function renderGai(){
   const pick = S.gaiMode === "pick", two = S.floors === 2 && S.mode !== "rf", fls = two ? [1, 2] : [1];
   const gd = S.gaiDir || (S.gaiheki === "yakisugi" ? "tate" : "yoko");
   let h = S.gaiheki === "nuri" ? "" : `<div class="seg" style="margin-top:6px"><button data-gd="yoko" aria-pressed="${gd === "yoko"}" type="button">横貼り</button><button data-gd="tate" aria-pressed="${gd === "tate"}" type="button">縦貼り</button></div>${two ? (() => { const gx = S.gaiMid || "auto", on = gx === "yes" || (gx === "auto" && gd === "tate"); return `<div class="seg" style="margin-top:8px"><button data-gx="auto" aria-pressed="${gx === "auto"}" type="button">おまかせ</button><button data-gx="yes" aria-pressed="${gx === "yes"}" type="button">入れる</button><button data-gx="no" aria-pressed="${gx === "no"}" type="button">入れない</button></div><p class="hint">中間水切り（1階と2階の境）：${gx === "auto" ? (gd === "tate" ? "縦貼りなので、入れます。" : "横貼りなので、入れません。") : on ? "入れます。" : "入れません。"}</p>`; })() : `<p class="hint">${gd === "tate" ? "縦貼りは、2階建てのとき、1階と2階の境に「中間水切り」を入れます。" : "横貼りは、中間水切りを入れません（土台と窓の上だけ）。"}</p>`}`;
+  /* CAD-689：サイディングの出し方。㎡単価（材工）か、建材屋の値段で材料を拾う（板・出隅・金具・テープ・ジョイナー＋張り手間） */
+  if (S.gaiheki === "siding"){ const sm = S.sidMat || ""; h += `<div class="sub2" style="margin-top:8px">サイディングの出し方</div><div class="seg"><button data-sm="" aria-pressed="${!sm}" type="button">㎡単価</button><button data-sm="16" aria-pressed="${sm === "16"}" type="button">材料を拾う 16mm</button><button data-sm="14" aria-pressed="${sm === "14"}" type="button">材料を拾う 14mm</button></div>${sm ? `<p class="hint" style="margin:4px 2px 0">板（455×3030・ロス1割）・同質出隅・本体金具・防水テープ・目地ジョイナーを建材屋の値段で、張り手間を㎡で出します。胴縁・シートは「透湿防水シート・胴縁」の行のままです。</p>` : ""}`; }
   h += `<div class="seg" style="margin-top:6px"><button data-gm="all" aria-pressed="${!pick}" type="button">ぜんぶの面</button><button data-gm="pick" aria-pressed="${pick}" type="button">面・階を選ぶ</button></div>`;
   if (pick){
     h += `<p class="hint">張る面をタップ（青＝張る）。選んだ面だけ、面積・シート・胴縁・役物・コーキングを出します。</p>`;
@@ -6668,6 +6671,7 @@ function renderGai(){
   box.querySelectorAll("[data-gd]").forEach(b => b.onclick = () => { S.gaiDir = b.dataset.gd; save(); drawSpec(); });
   box.querySelectorAll("[data-gx]").forEach(b => b.onclick = () => { S.gaiMid = b.dataset.gx; save(); drawSpec(); });
   box.querySelectorAll("[data-gm]").forEach(b => b.onclick = () => { S.gaiMode = b.dataset.gm; save(); drawSpec(); });
+  box.querySelectorAll("[data-sm]").forEach(b => b.onclick = () => { S.sidMat = b.dataset.sm || ""; save(); drawSpec(); });
   box.querySelectorAll("[data-gf]").forEach(b => b.onclick = () => { S.gaiFace = S.gaiFace || {}; const k = b.dataset.gf; S.gaiFace[k] = S.gaiFace[k] === false; save(); drawSpec(); });
   box.querySelectorAll("[data-gg]").forEach(b => b.onclick = () => { S.gaiGable = !S.gaiGable; save(); drawSpec(); });
   box.querySelectorAll("[data-gq]").forEach(b => b.onclick = () => { const q = b.dataset.gq; S.gaiFace = {}; if (q !== "all") S.edges.forEach((e, i) => { fls.forEach(f => { if (q === "none" || +q !== f) S.gaiFace[i + "-" + f] = false; }); }); save(); drawSpec(); });
@@ -7070,7 +7074,7 @@ function drawExtras(){
     if (e.k === "eco") h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "base", "据置台（基礎）", "台そのまま") + tg(i, "denki", "電気配線", "配線そのまま");
     if ("noji" in e) h += tg(i, "noji", "野地合板 増し張り", "増し張りなし");
     if ("yaku" in e) h += tg(i, "yaku", "役物（棟・ケラバ・水切り）", "役物なし");
-    if (e.k === "parts"){ const DUPP = ["pTenkenF", "pTenkenC", "pDeSumi16", "pFloorOne", "pMadowakuA", "pMadowakuA2", "pMadowaku3900"]; h += `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#FFF4E0;border:1px solid #E8A33D;font-size:12.5px;line-height:1.5">自動で計算済みの物（点検口・出隅・フローリングなど）を、ここで足すと二重になります</div><select data-px="${i}" style="width:100%;margin-top:6px">${WORK.filter(w => /^p[A-Z]/.test(w[0])).map(w => `<option value="${w[0]}" ${e.key === w[0] ? "selected" : ""}>${w[1]}${DUPP.includes(w[0]) ? "（自動計算と重なります）" : ""}（${fmt(PR.work[w[0]] || w[4])}${w[2].replace("円", "円")}）</option>`).join("")}</select>`; }
+    if (e.k === "parts"){ const DUPP = ["pTenkenF", "pTenkenC", "pDeSumi16", "pFloorOne", "pMadowakuA", "pMadowakuA2", "pMadowaku3900"].concat(S.sidMat ? ["pSiding16", "pSiding14", "pKanagu", "pBousuiTape", "pJoiner"] : []); h += `<div style="margin-top:6px;padding:8px 10px;border-radius:8px;background:#FFF4E0;border:1px solid #E8A33D;font-size:12.5px;line-height:1.5">自動で計算済みの物（点検口・出隅・フローリングなど）を、ここで足すと二重になります</div><select data-px="${i}" style="width:100%;margin-top:6px">${WORK.filter(w => /^p[A-Z]/.test(w[0])).map(w => `<option value="${w[0]}" ${e.key === w[0] ? "selected" : ""}>${w[1]}${DUPP.includes(w[0]) ? "（自動計算と重なります）" : ""}（${fmt(PR.work[w[0]] || w[4])}${w[2].replace("円", "円")}）</option>`).join("")}</select>`; }
     if (e.k === "senmen") h += `<div class="seg" style="margin-top:6px">${[["750", "W750 三面鏡"], ["600", "W600 二面鏡"]].map(([v, n]) => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${n}</button>`).join("")}</div><div class="sub2">クリナップ ファンシオ</div>` + tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "cf", "床CF張替え", "床そのまま");
     if (e.k === "bousui") h += `<div class="seg" style="margin-top:6px">${[["top", "トップコート塗り替え"], ["frp", "FRPやり直し"]].map(([v, n]) => `<button data-ti="${i}" data-tk="type" data-tv="${v}" aria-pressed="${e.type === v}" type="button">${n}</button>`).join("")}</div>` + tg(i, "drain", "ドレン改修", "ドレンそのまま");
     if (e.k === "porch") h += `<div class="sub2" style="margin-top:6px">仕上げ</div><div class="seg" style="flex-wrap:wrap">${[["mortar", "モルタル金ゴテ"], ["brush", "刷毛引き"], ["araidashi", "洗い出し"], ["tile", "タイル張り"], ["stone", "石張り"], ["sanwado", "三和土"], ["ptile", "Pタイル"], ["stamp", "スタンプ"], ["color", "カラー"], ["tousui", "透水性"]].map(([v, n]) => `<button data-ti="${i}" data-tk="fin" data-tv="${v}" aria-pressed="${e.fin === v}" type="button">${n}</button>`).join("")}</div><p class="hint" style="margin:6px 2px 0">蹴上は約${e.dan > 0 ? Math.round(e.rise / e.dan) : 0}mm／段。コンクリートは全体の大きさ（㎡）、仕上げは天端と階段（踏み面・蹴上）で計算します。</p>`;
@@ -8784,7 +8788,25 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     S.edges.forEach((e, i) => { if (i === S.house) return; if (on(i, 1)) dL += e.v; if (two && S.gaiheki !== "nuri" && (S.gaiMid === "yes" || (S.gaiMid !== "no" && gaiTate)) && on(i, 2)) mL += e.v; });
     const wL = S.sashes.filter(q => sState(q) === "new" && !/室内ドア|クローゼット|玄関|勝手口|シャッター|開口/.test(q.cat) && on(q.wall, q.fl || 1)).reduce((x, q) => x + q.w * q.n, 0), tot = (dL + mL + wL) / 1000;
     if (tot > 0) work("mizukiri", "外壁 水切り" + gaiSfx, tot, "m", `土台 ${fmt(dL / 1000, 1)}m${mL > 0 ? ` ＋ 中間 ${fmt(mL / 1000, 1)}m` : ""} ＋ 窓上 ${fmt(wL / 1000, 1)}m ＝ ${fmt(tot, 1)}m × ${fmt(workP("mizukiri").p)}円`); }
-  if (S.gaiheki === "siding"){ work("siding", "外壁 サイディング" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 コーナー役物", wallNet, "㎡"); work("caulk", "外壁 コーキング（目地）", wallNet, "㎡"); }
+  if (S.gaiheki === "siding" && (S.sidMat === "16" || S.sidMat === "14") && wallNet > 0){
+    /* CAD-689：材料を拾う。板は 455×3030（1.38㎡）・ロス1割。出隅は外まわりの出角の数×（壁の高さ÷455）本（面を選ぶ時は役物の㎡のまま）。
+       金具は1袋で約10㎡、防水両面テープは窓・ドアのまわり20mで1巻、ジョイナーは板6枚に1本（どれも目安） */
+    const k16 = S.sidMat === "16", pk = k16 ? "pSiding16" : "pSiding14", nB = Math.ceil(wallNet * 1.1 / (0.455 * 3.03));
+    work(pk, (k16 ? "サイディング材 16mm（455×3030）" : "サイディング材 14mm スタッコ調（455×3030）") + gaiSfx, nB, "枚", `${fmt(wallNet, 1)}㎡ × 1.1 ÷ 1.38㎡ ＝ ${nB}枚 × ${fmt(workP(pk).p)}円`);
+    work("sidingWork", "外壁 サイディング張り手間" + gaiSfx, wallNet, "㎡");
+    if (S.gaiMode !== "pick"){
+      let nC = 0; try { const PP = pts(), n = PP.length; let ar = 0; for (let i = 0; i < n; i++){ const a = PP[i], b = PP[(i + 1) % n]; ar += a[0] * b[1] - b[0] * a[1]; }
+        for (let i = 0; i < n; i++){ if (S.house >= 0 && (i === S.house || i === (S.house + 1) % n)) continue; const a = PP[(i + n - 1) % n], b = PP[i], c = PP[(i + 1) % n], cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]); if (cr * ar > 0) nC++; } } catch(e){ nC = 4; }
+      const per = Math.ceil((Hk + 105) / 455), nD = nC * per;
+      if (nD > 0) work("pDeSumi16", "同質出隅（455×80×80）", nD, "本", `出角 ${nC}か所 × ${per}本（高さ ${fmt(Hk + 105)}mm ÷ 455）＝ ${nD}本 × ${fmt(workP("pDeSumi16").p)}円`);
+    } else work("yakumono", "外壁 コーナー役物", wallNet, "㎡");
+    const nK = Math.ceil(wallNet / 10); work("pKanagu", "サイディング 本体金具", nK, "袋", `${fmt(wallNet, 1)}㎡ ÷ 約10㎡ ＝ ${nK}袋 × ${fmt(workP("pKanagu").p)}円（目安）`);
+    const opL = S.sashes.filter(q => sState(q) === "new" && !/室内ドア|クローゼット|開口/.test(q.cat)).reduce((x, q) => x + 2 * (q.w + q.h) * (q.n || 1), 0) / 1000, nT = Math.max(1, Math.ceil(opL / 20));
+    work("pBousuiTape", "防水両面テープ 50mm×20m", nT, "巻", `窓・ドアのまわり ${fmt(opL, 1)}m ÷ 20m ＝ ${nT}巻 × ${fmt(workP("pBousuiTape").p)}円（目安）`);
+    const nJ = Math.ceil(nB / 6); work("pJoiner", "目地ジョイナー 3030", nJ, "本", `板 ${nB}枚 ÷ 6 ＝ ${nJ}本 × ${fmt(workP("pJoiner").p)}円（目安）`);
+    work("caulk", "外壁 コーキング（目地）", wallNet, "㎡");
+  }
+  else if (S.gaiheki === "siding"){ work("siding", "外壁 サイディング" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 コーナー役物", wallNet, "㎡"); work("caulk", "外壁 コーキング（目地）", wallNet, "㎡"); }
   else if (S.gaiheki === "metal"){ work("metalSiding", "外壁 金属サイディング" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 コーナー役物", wallNet, "㎡"); }   /* CAD-410：金属は目地のコーキングが少ないので役物まで */
   else if (S.gaiheki === "yakisugi"){ work("yakisugi", "外壁 焼杉" + gaiSfx, wallNet, "㎡"); work("yakumono", "外壁 役物", wallNet, "㎡"); }
   else work("nuri", "外壁 塗り壁" + gaiSfx, wallNet, "㎡");
