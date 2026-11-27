@@ -5558,15 +5558,22 @@
   },
   {
    "id": "remote-tan",
-   "name": "採風タイプ単機能リモコン加算額",
+   "name": "採風タイプのリモコン（標準は高機能リモコン）",
    "values": [
     {
+     "id": "std",
+     "name": "高機能リモコン（標準）",
+     "teika": 0,
+     "hinban": ""
+    },
+    {
      "id": "tanmado",
-     "name": "単窓",
+     "name": "単機能リモコン（単窓）",
      "teika": -73200,
      "hinban": ""
     }
-   ]
+   ],
+   "included": "std"
   },
   {
    "id": "home-device",
