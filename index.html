@@ -48038,13 +48038,31 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     { k: "open", n: "開口（建具なし）", icon: ["開口", "建具なし"], open: [["建具なし", "建具なし"]], cat: "開口" }
   ];
   function wzRows(g, o){ return SASH.map(function(x, j){ return [x, j]; }).filter(function(q){ var x = q[0]; return g.cat ? (x.cat === g.cat && x.name === o) : x.cat === o; }); }
+  /* CAD-711：触った壁で出す物を絞り、部屋で並びを予測する（外壁＝玄関・勝手口・窓・シャッター・開口／間仕切り＝室内ドア・引き戸・クローゼット・開口）。
+     開き方の並びも部屋で替える（リビングの窓は掃き出し、トイレ・洗面・浴室は小窓、寝室・洋室は腰窓）。外の帯から開いた時は全部出す */
+  function wzList(ctx){
+    var by = function(n){ return WZ.filter(function(g){ return g.n === n; })[0]; }, cl = function(g, o){ var c = {}; for (var k in g) c[k] = g[k]; if (o) c.open = o; return c; };
+    if (!ctx || !ctx.where) return WZ;
+    var rm = String(ctx.room || ""), L;
+    if (ctx.where === "part"){
+      L = /洋室|寝室|子供|和室|納戸/.test(rm) ? ["室内ドア", "クローゼット", "引き戸", "開口（建具なし）"] : /トイレ|洗面|脱衣|浴/.test(rm) ? ["室内ドア", "引き戸", "開口（建具なし）"] : /玄関|廊下|ホール/.test(rm) ? ["室内ドア", "引き戸", "開口（建具なし）", "クローゼット"] : ["室内ドア", "引き戸", "クローゼット", "開口（建具なし）"];
+      if (/トイレ|洗面|脱衣|浴/.test(rm)) return L.map(by);
+      return L.map(by);
+    }
+    var win = by("窓"), wo = win.open.slice();
+    var pri = /リビング|LDK|居間|ダイニング/.test(rm) ? "掃き出し" : /トイレ|洗面|脱衣|浴|階段|廊下|玄関/.test(rm) ? "小窓" : "腰窓";
+    wo.sort(function(a, b){ return (b[0] === pri) - (a[0] === pri); });
+    win = cl(win, wo);
+    L = /玄関|ホール/.test(rm) ? ["玄関", win, "勝手口", "開口（建具なし）"] : /台所|キッチン|勝手|洗面|脱衣/.test(rm) ? [win, "勝手口", "玄関", "開口（建具なし）"] : /車庫|ガレージ|倉庫/.test(rm) ? ["シャッター", win, "開口（建具なし）", "勝手口"] : [win, "玄関", "勝手口", "シャッター", "開口（建具なし）"];
+    return L.map(function(x){ return typeof x === "string" ? by(x) : x; });
+  }
   function wzIcon(c, n){ try { return sashIcon(c, n) || ""; } catch(e){ return ""; } }
-  function chooseSpec(){
+  function chooseSpec(ctx){
     if (!A || !usable()) return false;
     if (typeof SASH === "undefined"){ say("選ぶ画面の部品が見つかりません"); return false; }
     off(true);
     var mb = document.getElementById("mbox"), md = document.getElementById("modal"); if (!mb || !md) return false;
-    var st = { g: null, o: null };
+    var st = { g: null, o: null }, L = wzList(ctx);
     var T = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:92px;padding:8px;border-radius:12px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink,#18202A)";
     var G2 = "display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px";
     var SK = "flex:1;min-height:46px;border-radius:10px;border:1px solid var(--ai,#2563B0);background:#F3F7FC;font:inherit;font-size:14px;font-weight:800;color:var(--ai,#2563B0)";
@@ -48054,7 +48072,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var g = st.g, frame = "fixed";
       if (x.cat === "室内ドア" && /上吊り/.test(x.name)) frame = "outset";
       spec = { cat: x.cat, name: x.name, w: w || x.w, h: h || x.h, frame: frame, kind: g ? g.k : "door", label: (x.name && x.name !== x.cat ? x.cat + " " + x.name : x.cat) + " " + (w || x.w) };
-      tool = "put"; refresh(); pick2put();
+      tool = "put"; refresh();
+      if (ctx && ctx.p){ var r = null; try { r = window.KAKU2.placeAt(ctx.p[0], ctx.p[1]); } catch(e){} off(true); say(r && r.ok ? spec.label + "を付けました（戻すで戻せます・タップで向きが変わります）" : spec.label + "は、ここには付けられませんでした"); return; }
+      pick2put();
     }
     function foot(skip, back){
       return '<div style="display:flex;gap:8px;margin-top:12px">' + (back ? '<button type="button" id="k2wBack" style="' + BK + '">戻る</button>' : '<button type="button" id="k2wNo" style="' + BK + '">×</button>') + (skip ? '<button type="button" id="k2wSkip" style="' + SK + '">' + skip + '</button>' : "") + "</div>";
@@ -48066,9 +48086,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     function step(){
       md.hidden = false;
       if (!st.g){   /* ① 何を付ける */
-        mb.innerHTML = '<h3>何を付けますか</h3><div style="' + G2 + '">' + WZ.map(function(g, i){ return '<button type="button" data-wz="' + i + '" style="' + T + '">' + wzIcon(g.icon[0], g.icon[1]) + "<span>" + g.n + "</span></button>"; }).join("") + "</div>" + foot("スキップ（室内ドアで置く）", false);
-        mb.querySelectorAll("[data-wz]").forEach(function(b){ b.onclick = function(){ st.g = WZ[+b.dataset.wz]; st.o = st.g.open.length === 1 ? st.g.open[0][0] : null; step(); }; });
-        bindFoot(function(){ st.g = WZ[2]; var r = wzRows(st.g, "片開き")[0]; if (r) done(r[0]); }, null);
+        mb.innerHTML = '<h3>何を付けますか</h3><div style="' + G2 + '">' + L.map(function(g, i){ return '<button type="button" data-wz="' + i + '" style="' + T + '">' + wzIcon(g.icon[0], g.icon[1]) + "<span>" + g.n + "</span></button>"; }).join("") + "</div>" + foot("スキップ（" + L[0].n + "で置く）", false);
+        mb.querySelectorAll("[data-wz]").forEach(function(b){ b.onclick = function(){ st.g = L[+b.dataset.wz]; st.o = st.g.open.length === 1 ? st.g.open[0][0] : null; step(); }; });
+        bindFoot(function(){ st.g = L[0]; var r = wzRows(st.g, st.g.open[0][0])[0]; if (r) done(r[0]); }, null);
         return;
       }
       var g = st.g;
@@ -49089,12 +49109,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function closeAllBars(){ closePart(); closeRoom(); }
   /* 候補の帯の1段目（ここに置く：候補3つ＋その他）を bar に足す */
-  function kohoRow(bar, where, p, rm){
+  function kohoRow(bar, where, p, rm, wk){
     if (!window.KOHO || !p) return;
     var nm = rm ? roomNm(rm) : "", top = window.KOHO.cands({ where: where, room: nm, mode: isRf() ? "rf" : "zo" });
     var row = document.createElement("div"); row.style.cssText = "display:flex;gap:6px;align-items:center;width:100%";
     var B = "flex:1 1 0;min-width:0;min-height:44px;padding:0 4px;border-radius:10px;border:1px solid var(--ai,#2563B0);background:#F3F7FC;font:inherit;font-size:13px;font-weight:800;color:var(--ai,#2563B0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
     top.forEach(function(it){ kohoBtn(row, it[2].replace(/（.*?）/g, ""), B, function(){ putItem(it, p); closeAllBars(); }); });
+    if (wk && window.KAKU2 && KAKU2.choose) kohoBtn(row, "ドア・窓", B.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 8px"), function(){ closeAllBars(); KAKU2.choose({ where: wk, room: nm, p: p }); });   /* CAD-711：触った壁に付けられる建具だけ */
     kohoBtn(row, "その他", B.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 10px"), function(){ moreSheet(where, p, (nm ? nm + "の" : "") + (where === "wall" ? "壁に置く物" : "床・天井に置く物")); });
     bar.insertBefore(row, bar.firstChild);
     bar.style.flexWrap = "wrap";
@@ -49113,7 +49134,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     partBar.innerHTML = '<div style="flex:1 1 auto;font-size:12px;font-weight:700;color:var(--sub,#5B6673)">外壁　' + Math.round(L).toLocaleString("ja-JP") + "mm</div>";
     kohoBtn(partBar, "寸法", B.replace("flex:1 1 0", "flex:0 0 auto") + ";padding:0 14px", function(){ var j = wallObj ? wallObj.i : -1; closePart(); if (j >= 0){ tapT = Date.now(); open(j); } });
     var x = kohoBtn(partBar, "×", B + ";flex:0 0 44px", closePart); x.setAttribute("aria-label", "閉じる");
-    kohoRow(partBar, "wall", q, roomAtPt([q[0] + (q[0] - p[0]) * 4, q[1] + (q[1] - p[1]) * 4]));   /* 部屋の名前は、壁から少し奥（約200mm）の点で見る */
+    kohoRow(partBar, "wall", q, roomAtPt([q[0] + (q[0] - p[0]) * 4, q[1] + (q[1] - p[1]) * 4]), "ext");   /* 部屋の名前は、壁から少し奥（約200mm）の点で見る */
     try { while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel"); l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(l); } catch(e){}
     return { ok: true, i: i };
   }
@@ -49170,7 +49191,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (typeof partFormSheet292 === "function"){ var fb = document.createElement("button"); fb.type = "button"; fb.textContent = "形"; fb.style.cssText = B; fb.onclick = function(){ var j = partIdx(); if (j >= 0) partFormSheet292(j); }; partBar.appendChild(fb); }
     var x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "閉じる"); x.style.cssText = B + ";flex:0 0 44px"; x.onclick = closePart; partBar.appendChild(x);
     /* CAD-699：触った側の面に置く候補（タップした点を間仕切りから40mm、触った側へ） */
-    if (lastP && pState(q) !== "remove"){ var Lq = Math.hypot(q.x2 - q.x1, q.y2 - q.y1) || 1, nx = -(q.y2 - q.y1) / Lq, ny = (q.x2 - q.x1) / Lq, sd = ((lastP[0] - q.x1) * nx + (lastP[1] - q.y1) * ny) >= 0 ? 1 : -1, tq = ((lastP[0] - q.x1) * (q.x2 - q.x1) + (lastP[1] - q.y1) * (q.y2 - q.y1)) / (Lq * Lq), t2 = Math.max(.05, Math.min(.95, tq)); var pp = [q.x1 + (q.x2 - q.x1) * t2 + nx * sd * 40, q.y1 + (q.y2 - q.y1) * t2 + ny * sd * 40]; kohoRow(partBar, "wall", pp, roomAtPt([pp[0] + nx * sd * 160, pp[1] + ny * sd * 160])); }
+    if (lastP && pState(q) !== "remove"){ var Lq = Math.hypot(q.x2 - q.x1, q.y2 - q.y1) || 1, nx = -(q.y2 - q.y1) / Lq, ny = (q.x2 - q.x1) / Lq, sd = ((lastP[0] - q.x1) * nx + (lastP[1] - q.y1) * ny) >= 0 ? 1 : -1, tq = ((lastP[0] - q.x1) * (q.x2 - q.x1) + (lastP[1] - q.y1) * (q.y2 - q.y1)) / (Lq * Lq), t2 = Math.max(.05, Math.min(.95, tq)); var pp = [q.x1 + (q.x2 - q.x1) * t2 + nx * sd * 40, q.y1 + (q.y2 - q.y1) * t2 + ny * sd * 40]; kohoRow(partBar, "wall", pp, roomAtPt([pp[0] + nx * sd * 160, pp[1] + ny * sd * 160]), "part"); }
     markPart();
     return { ok: true, i: i, state: cur };
   }
@@ -49948,6 +49969,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var r = mk("div", "display:flex;gap:6px;align-items:center;width:100%");
       var top = window.KOHO ? KOHO.cands({ where: where, room: h.name || "", mode: isRf() ? "rf" : "zo" }) : [];
       top.forEach(function(it){ btn(r, it[2].replace(/（.*?）/g, ""), BTN, function(){ put(it, h); }); });
+      if (where === "wall" && window.KAKU2 && KAKU2.choose){   /* CAD-711：触った壁に付けられる建具だけ（外壁／間仕切りで分ける） */
+        var wt = "part"; try { var w0 = (MADO.read().walls || []).find(function(q){ return q.id === h.wall; }); if (w0 && w0.t === "e") wt = "ext"; } catch(e){}
+        btn(r, "ドア・窓", BTN.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 8px"), function(){
+          if (!KAKU2.state().usable){ say("付けるのは、平面図から立体を開いた時だけです"); return; }
+          var pt = ptOf(h); closeBand(); want3d = true; KAKU2.choose({ where: wt, room: h.name || "", p: pt });
+        });
+      }
       btn(r, "その他", BTN.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 10px"), function(){ more(h); });
       b.appendChild(r);
     });
@@ -49985,6 +50013,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function stop(){ on = false; last = null; try { RITTAI.mark(null); } catch(e){} try { RITTAI.touch(null); } catch(e){} try { RITTAI.bar(null); } catch(e){} band = null; }
   setInterval(function(){ try { if (!RITTAI.isOpen()) return; var want = mode() ? "walk" : "only"; if (RITTAI.touching() !== want) start(); } catch(e){} }, 1000);   /* 歩き方の設定を変えた時も合わせる */
   RITTAI.watch(function(ev){ if (ev === "open") setTimeout(start, 0); else if (ev === "close"){ on = false; last = null; band = null; } });
+  var want3d = false;
+  window.addEventListener("mado-change", function(){ if (!want3d) return; want3d = false; setTimeout(function(){ try { if (RITTAI.isOpen()) RITTAI.sync(); } catch(e){} }, 60); });
   window.TOUCH707 = { v: 1, start: start, stop: stop, isOn: function(){ return on; }, last: function(){ return last; }, put: put, ptOf: ptOf };
 })();
 </script>
