@@ -50469,7 +50469,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     back.style.display = v ? "" : "none";
   }
   function openPlan(){ showBack(false); try { ZUMEN.open(); } catch(e){} }
-  function toOld(n){ try { if (window.KAKU2) KAKU2.off(); } catch(e){} try { document.getElementById("modal").hidden = true; } catch(e){} try { ZUMEN.close(); } catch(e){} try { go(n); } catch(e){} try { window.scrollTo(0, 0); } catch(e){} showBack(true); }
+  function toOld(n){ if (n === 5 && window.EST721 && !toOld.raw){ try { document.getElementById("modal").hidden = true; } catch(e){} EST721.open(); return; } toOld.raw = false; try { if (window.KAKU2) KAKU2.off(); } catch(e){} try { document.getElementById("modal").hidden = true; } catch(e){} try { ZUMEN.close(); } catch(e){} try { go(n); } catch(e){} try { window.scrollTo(0, 0); } catch(e){} showBack(true); }
   function setMode(m){ try { if (typeof S === "undefined" || S.mode === m) return; S.mode = m; save(); go(typeof step !== "undefined" ? step : 1); document.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)); }); } catch(e){} try { toast(m === "rf" ? "内装リフォームにしました" : "新築・増築にしました"); } catch(e){} }
   function menu(){
     var md = document.getElementById("modal"), mb = document.getElementById("mbox"); if (!md || !mb) return;
@@ -50513,6 +50513,91 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   setInterval(function(){ try { bar(); if (back && back.style.display !== "none" && (zo() || !on())) showBack(false); } catch(e){} }, 700);
   window.addEventListener("load", function(){ setTimeout(boot, 900); });
   if (document.readyState === "complete") setTimeout(boot, 900);
-  window.HUB720 = { v: 1, menu: menu, toOld: toOld, openPlan: openPlan, boot: boot };
+  window.HUB720 = { v: 1, menu: menu, toOld: toOld, oldMitsu: function(){ toOld.raw = true; toOld(5); }, openPlan: openPlan, boot: boot };
+})();
+</script>
+<script>
+/* ---------- CAD-721：新しい画面の見積（2026-11-27 Claude/Opus）----------
+   ・図面の［見積］で開く1枚の画面。いちばん上に見積金額（税込）、下に税抜・原価・利益。
+   ・前に開いた時から金額が変わっていたら「＋○円」と、変わった行（いちばん大きい物から5つ）を出す＝何を足すといくら上がるか分かる。
+   ・工事の見出しごとに金額の合計。押すと中の行（数量・単価の根拠）が開く。単価が「仮」の行は印。
+   ・見積書（PDF）・利益率などの細かい設定は［見積書・細かい設定］（前の画面の見積）で。計算は calc() をそのまま使う。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.EST721) return;
+  var V = null, last = null, openG = {};
+  function fm(n){ return Math.round(n || 0).toLocaleString("ja-JP"); }
+  function esc(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function frame(){
+    if (V) return V;
+    var box = document.createElement("div"); box.id = "est721";
+    box.style.cssText = "position:fixed;inset:0;z-index:2147483050;display:none;flex-direction:column;background:var(--bg,#F7F9FC);color:var(--ink,#18202A);font-size:14px;line-height:1.45";
+    var top = document.createElement("div"); top.style.cssText = "padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:#fff;border-bottom:1px solid var(--line,#DCE3EB);font-size:12px;color:var(--sub,#5B6673);font-weight:700";
+    top.textContent = "見積即答CAD　見積";
+    var mid = document.createElement("div"); mid.style.cssText = "flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:10px 12px 16px";
+    var bot = document.createElement("div"); bot.style.cssText = "display:flex;gap:8px;align-items:center;padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px);background:#fff;border-top:1px solid var(--line,#DCE3EB)";
+    var B = "flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    var b1 = document.createElement("button"); b1.type = "button"; b1.textContent = "◀ 図面"; b1.style.cssText = B; b1.onclick = close;
+    var sp = document.createElement("span"); sp.style.flex = "1";
+    var b2 = document.createElement("button"); b2.type = "button"; b2.textContent = "見積書・細かい設定"; b2.style.cssText = B + ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)"; b2.onclick = function(){ close(); try { HUB720.oldMitsu(); } catch(e){} };
+    bot.appendChild(b1); bot.appendChild(sp); bot.appendChild(b2);
+    box.appendChild(top); box.appendChild(mid); box.appendChild(bot); document.body.appendChild(box);
+    V = { box: box, mid: mid }; return V;
+  }
+  function groups(C){
+    var G = [], cur = null;
+    (C.rows || []).forEach(function(r){
+      if (r.grp != null && r.grp !== ""){ var nm = String(r.grp).replace(/^■\s*/, "").replace(/　小計.*$/, ""); cur = { name: nm, rows: [], sum: 0 }; G.push(cur); return; }
+      if (r.hide) return;
+      if (!cur){ cur = { name: "工事", rows: [], sum: 0 }; G.push(cur); }
+      var c = (+r.cost || 0) * (+r.mk || 1); cur.rows.push({ r: r, c: c }); cur.sum += c;
+    });
+    return G.filter(function(g){ return g.rows.length; });
+  }
+  function snap(C){ var m = {}; (C.rows || []).forEach(function(r){ if (r.grp || r.hide || !r.name) return; var k = r.name; m[k] = (m[k] || 0) + (+r.cost || 0) * (+r.mk || 1); }); return { total: C.mitsu, rows: m }; }
+  function diffHtml(now){
+    if (!last) return "";
+    var d = now.total - last.total; if (Math.abs(d) < 1) return "";
+    var ch = [], keys = {}; Object.keys(now.rows).concat(Object.keys(last.rows)).forEach(function(k){ keys[k] = 1; });
+    Object.keys(keys).forEach(function(k){ var a = last.rows[k] || 0, b = now.rows[k] || 0; if (Math.abs(b - a) >= 1) ch.push([k, b - a]); });
+    ch.sort(function(x, y){ return Math.abs(y[1]) - Math.abs(x[1]); });
+    var up = d > 0, col = up ? "#B45309" : "#047857";
+    return '<div style="margin:10px 0 0;padding:10px 12px;border-radius:12px;background:' + (up ? "#FFF7ED" : "#ECFDF5") + ';border:1px solid ' + (up ? "#FED7AA" : "#A7F3D0") + '">'
+      + '<div style="font-size:14px;font-weight:800;color:' + col + '">前に見た時から ' + (up ? "＋" : "−") + fm(Math.abs(d * 1.1)) + '円（税込）<span style="font-size:11px;font-weight:700;color:var(--sub,#5B6673);margin-left:4px">下の行は税抜</span></div>'
+      + ch.slice(0, 5).map(function(c){ return '<div style="display:flex;gap:8px;font-size:12.5px;margin-top:3px"><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c[0]) + '</span><b style="color:' + (c[1] > 0 ? "#B45309" : "#047857") + '">' + (c[1] > 0 ? "＋" : "−") + fm(Math.abs(c[1])) + "</b></div>"; }).join("")
+      + (ch.length > 5 ? '<div style="font-size:11.5px;color:var(--sub,#5B6673);margin-top:3px">ほか ' + (ch.length - 5) + "行</div>" : "") + "</div>";
+  }
+  function draw(){
+    var v = frame(), C = null;
+    try { C = calc(); } catch(e){ v.mid.innerHTML = '<div style="padding:30px 10px;text-align:center;font-weight:700">見積を出せませんでした。外形と寸法を確かめてください。</div>'; return; }
+    if (!C || !C.rows || !(C.genka > 0)){ v.mid.innerHTML = '<div style="padding:30px 10px;text-align:center;font-weight:700">まだ見積がありません。図面で外形を描いてください。</div>'; return; }
+    var tax = Math.round(C.mitsu * 0.1), now = snap(C), G = groups(C), miss = (C.rows || []).filter(function(r){ return !r.grp && (r.miss || (r.avg && !r.note)); }).length;
+    var h = '<div style="padding:14px 14px 12px;border-radius:14px;background:#fff;border:1px solid var(--line,#DCE3EB)">'
+      + '<div style="font-size:12px;font-weight:800;color:var(--sub,#5B6673)">見積金額（税込）</div>'
+      + '<div style="font-size:30px;font-weight:800;letter-spacing:.01em;margin-top:2px">' + fm(C.mitsu + tax) + '<small style="font-size:15px;margin-left:2px">円</small></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px">'
+      + [["税抜", C.mitsu], ["原価", C.genkaReal || C.genka], ["利益", C.mitsu - (C.genkaReal || C.genka)]].map(function(x){ return '<div style="padding:6px 8px;border-radius:10px;background:var(--bg,#F3F6F9)"><div style="font-size:11px;color:var(--sub,#5B6673);font-weight:700">' + x[0] + '</div><div style="font-size:15px;font-weight:800">' + fm(x[1]) + "</div></div>"; }).join("")
+      + "</div>" + (miss ? '<div style="margin-top:8px;font-size:12px;color:#B45309;font-weight:700">● 「仮」の単価（全国の目安）が ' + miss + " 行あります</div>" : "") + "</div>";
+    h += diffHtml(now);
+    h += '<div style="margin:14px 2px 6px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">工事の内訳（見積・税抜）</div>';
+    h += G.map(function(g, gi){
+      var on = !!openG[g.name];
+      return '<div style="margin-bottom:8px;border-radius:12px;background:#fff;border:1px solid var(--line,#DCE3EB);overflow:hidden">'
+        + '<button type="button" data-g721="' + gi + '" style="display:flex;width:100%;align-items:center;gap:8px;min-height:50px;padding:8px 12px;border:0;background:#fff;font:inherit;text-align:left;color:var(--ink,#18202A)">'
+        + '<span style="flex:1;min-width:0;font-size:15px;font-weight:800">' + esc(g.name) + '<span style="font-size:11.5px;font-weight:700;color:var(--sub,#5B6673);margin-left:6px">' + g.rows.length + '行</span></span>'
+        + '<b style="font-size:15px">' + (g.sum ? fm(g.sum) : "") + '</b><span style="color:var(--sub,#5B6673);font-size:12px">' + (on ? "▲" : "▼") + "</span></button>"
+        + (on ? '<div style="border-top:1px solid var(--line,#DCE3EB)">' + g.rows.map(function(x){ var r = x.r, kari = r.miss || (r.avg && !r.note);
+            return '<div style="display:flex;gap:8px;padding:8px 12px;border-top:1px solid #EEF2F6"><div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:700">' + (kari ? '<span style="color:#B45309">● </span>' : "") + esc(r.name) + (r.qty ? '<span style="font-weight:700;color:var(--sub,#5B6673);margin-left:6px">' + esc(r.qty) + "</span>" : "") + "</div>"
+              + (r.spec ? '<div style="font-size:11.5px;color:var(--sub,#5B6673);margin-top:2px;word-break:break-all">' + esc(r.spec) + "</div>" : "") + '</div><b style="font-size:13.5px;white-space:nowrap">' + (x.c ? fm(x.c) : "") + "</b></div>"; }).join("") + "</div>" : "")
+        + "</div>";
+    }).join("");
+    h += '<p style="font-size:11.5px;color:var(--sub,#5B6673);margin:10px 2px 0">● は単価が「仮」（全国の目安）の行です。自分の単価は［見積書・細かい設定］の単価表で入れられます。</p>';
+    v.mid.innerHTML = h;
+    v.mid.querySelectorAll("[data-g721]").forEach(function(b){ b.onclick = function(){ var g = G[+b.dataset.g721]; if (!g) return; openG[g.name] = !openG[g.name]; var y = v.mid.scrollTop; draw(); v.mid.scrollTop = y; }; });
+    V.now = now;
+  }
+  function open(){ var v = frame(); v.box.style.display = "flex"; v.open = true; draw(); v.mid.scrollTop = 0; }
+  function close(){ if (!V) return; if (V.now) last = V.now; V.box.style.display = "none"; V.open = false; }
+  window.EST721 = { v: 1, open: open, close: close, isOpen: function(){ return !!(V && V.open); }, _groups: function(){ try { return groups(calc()).map(function(g){ return [g.name, g.rows.length, Math.round(g.sum)]; }); } catch(e){ return null; } } };
 })();
 </script>
