@@ -50088,7 +50088,29 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!s || /<image|url\(#/.test(s)) return false;   /* 絵（画像）を使う描き方は、印刷の図面には載せない */
     var wrap = E("g", { transform: "scale(" + k + ")" }, g);
     try { wrap.innerHTML = s; } catch(e){ wrap.remove(); return false; }
+    if (o.kind === "stair") stairMark(wrap, false);
     return true;
+  }
+  /* CAD-733：階段の字は段の中に「上り」（下の階の階段を描く時は「下り」）。外に出すと壁の線に重なるため。
+     下りは、歩く線の矢印を反対の端（上の階の側）に付け替える */
+  function stairMark(wrap, down){
+    try {
+      var walk = [].slice.call(wrap.querySelectorAll('line,path')).filter(function(e){ return e.getAttribute("stroke-width") === "1.5"; });
+      if (down && walk.length >= 2){
+        var head = walk[walk.length - 1], wl = walk[walk.length - 2], hp = (head.getAttribute("d") || "").match(/-?[\d.]+(?:e-?\d+)?/g) || [];
+        var r = hp.length >= 4 ? Math.hypot(hp[0] - hp[2], hp[1] - hp[3]) : 5, a, b;
+        if (wl.tagName.toLowerCase() === "line"){ a = [+wl.getAttribute("x1"), +wl.getAttribute("y1")]; b = [+wl.getAttribute("x2"), +wl.getAttribute("y2")]; }
+        else { var q = (wl.getAttribute("d") || "").match(/-?[\d.]+(?:e-?\d+)?/g) || []; a = [+q[0], +q[1]]; b = [+q[2], +q[3]]; }
+        if (isFinite(a[0]) && isFinite(b[0]) && (a[0] !== b[0] || a[1] !== b[1])){
+          var ang = Math.atan2(a[1] - b[1], a[0] - b[0]);
+          head.setAttribute("d", "M" + (a[0] + Math.cos(ang + 2.6) * r) + " " + (a[1] + Math.sin(ang + 2.6) * r) + " L" + a[0] + " " + a[1] + " L" + (a[0] + Math.cos(ang - 2.6) * r) + " " + (a[1] + Math.sin(ang - 2.6) * r));
+        }
+      }
+      var rc = wrap.querySelector("rect"), tx = [].slice.call(wrap.querySelectorAll("text"));
+      if (!rc || !tx.length) return;
+      var cx = +rc.getAttribute("x") + +rc.getAttribute("width") / 2, cy = +rc.getAttribute("y") + +rc.getAttribute("height") / 2;
+      tx.forEach(function(t, i){ if (i){ t.remove(); return; } t.textContent = down ? "下り" : "上り"; t.setAttribute("x", cx); t.setAttribute("y", cy + 3); t.setAttribute("style", "font-size:8px;font-weight:700;fill:#3E4A57"); t.setAttribute("paint-order", "stroke"); t.setAttribute("stroke", "#fff"); t.setAttribute("stroke-width", "2.4"); });
+    } catch(e){ warn("階段の字", e); }
   }
   function boxOne(o, g, f){   /* どの描き方も無い物：外形の四角と名前だけ */
     var col = colOf(o.state), h = (o.ext && fin(o.ext[0])) ? o.ext[0] : (o.w || 600) / 2, hy = (o.ext && fin(o.ext[1])) ? o.ext[1] : h;
@@ -50208,17 +50230,37 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         } catch(e){ warn("記号 " + t.list + ":" + t.kind, e); }
       });
     });
+    /* CAD-733：2階以上で、この階に自分の階段が無い時は、下の階の階段を「下り」として描く（前の版の CAD-578 と同じ。見るだけ・見積には関係しない） */
+    belowStairs().forEach(function(o){
+      try {
+        if (typeof tenkenSvg !== "function") return;
+        var k = 22 * f, s = tenkenSvg(Object.assign({}, o), -1, function(q){ return [q[0] / k, q[1] / k]; });
+        if (!s || /<image|url\(#/.test(s)) return;
+        s = s.replace(/ data-tk2="-1"/g, "");
+        var wrap = E("g", { transform: "scale(" + k + ")", "class": "zsymDown" }, g); wrap.innerHTML = s; stairMark(wrap, true); n++;
+      } catch(e){ warn("下の階の階段", e); }
+    });
     return n;
+  }
+  /* 下の階の階段（この階に自分の階段がある時は空） */
+  function belowStairs(){
+    try {
+      if (typeof S === "undefined" || !Array.isArray(S.fl) || !(S.fi > 0)) return [];
+      if ((S.tenken || []).some(function(o){ return o && o.k === "stair"; })) return [];
+      var sn = S.fl[S.fi - 1] && S.fl[S.fi - 1].snap; if (!sn) return [];
+      return (sn.tenken || []).filter(function(o){ return o && o.k === "stair" && fin(o.x) && fin(o.y); });
+    } catch(e){ return []; }
   }
 
   /* 記号が占める範囲（図面のmm）。部屋名の置き場所を決める時に避けてもらう */
   function boxes(rd, f){
     var out = [], W = Object.create(null), lab = 150 * (f || 1);
+    belowStairs().forEach(function(o){ try { var e = (typeof tkExt === "function") ? tkExt(o) : [(o.w || 910) / 2, (o.d || 1820) / 2]; out.push([o.x - e[0], o.y - e[1], o.x + e[0], o.y + e[1]]); } catch(eB){} });
     (rd.walls || []).forEach(function(w){ if (w.id) W[w.id] = w; });
     (rd.things || []).forEach(function(t){
       try {
         if (t.list === "tenken" && fin(t.x) && fin(t.y)){
-          var h = (t.ext && fin(t.ext[0])) ? t.ext[0] : (t.w || 600) / 2, hy = (t.ext && fin(t.ext[1])) ? t.ext[1] : h, under = /^(floor|ceil|yukaten|yukashu|stair)$/.test(t.kind) ? lab * 1.8 : 0;
+          var h = (t.ext && fin(t.ext[0])) ? t.ext[0] : (t.w || 600) / 2, hy = (t.ext && fin(t.ext[1])) ? t.ext[1] : h, under = /^(floor|ceil|yukaten|yukashu)$/.test(t.kind) ? lab * 1.8 : 0;
           out.push([t.x - h, t.y - hy, t.x + h, t.y + hy + under]);
         } else if (t.list === "lights" && fin(t.x) && fin(t.y)){
           if (t.kind === "rail"){ var L = t.len || 1500, hz = t.dir !== "v"; out.push(hz ? [t.x - L / 2, t.y - 70, t.x + L / 2, t.y + lab * 2] : [t.x - 70, t.y - L / 2, t.x + 70, t.y + L / 2 + lab * 2]); }
