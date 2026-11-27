@@ -1,0 +1,91 @@
+{
+ "v": 2,
+ "maker": "toli",
+ "series": "CFシート",
+ "group": "クッションフロア",
+ "year": "2024-2027",
+ "src": "東リ シートコレクション2024-2027 サンプル帳インフォメーション（2024年3月現在）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "type",
+   "name": "種類",
+   "values": [
+    {
+     "id": "h1820",
+     "name": "CFシート-H 1.8mm 1820mm幅"
+    },
+    {
+     "id": "h2000",
+     "name": "CFシート-H 1.8mm 2000mm幅"
+    },
+    {
+     "id": "pnw",
+     "name": "CFシート-P NW 2.3mm 1820mm幅（ペット・消臭）"
+    },
+    {
+     "id": "sd",
+     "name": "CFシート-SD 3.5mm 1820mm幅"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "type": "h1820",
+   "teika": 5460,
+   "unit": "m",
+   "perPrice": 3000,
+   "perUnit": "㎡",
+   "width": 1820,
+   "thickness": 1.8,
+   "hinban": "CF9***（柄ごとに異なる）",
+   "page": 1
+  },
+  {
+   "type": "h2000",
+   "teika": 6000,
+   "unit": "m",
+   "perPrice": 3000,
+   "perUnit": "㎡",
+   "width": 2000,
+   "thickness": 1.8,
+   "hinban": "CF9***（柄ごとに異なる）",
+   "page": 2
+  },
+  {
+   "type": "pnw",
+   "teika": 7550,
+   "unit": "m",
+   "perPrice": 4150,
+   "perUnit": "㎡",
+   "width": 1820,
+   "thickness": 2.3,
+   "hinban": "CF4***（柄ごとに異なる）",
+   "page": 2
+  },
+  {
+   "type": "sd",
+   "teika": 7550,
+   "unit": "m",
+   "perPrice": 4150,
+   "perUnit": "㎡",
+   "width": 1820,
+   "thickness": 3.5,
+   "hinban": "CF85**（柄ごとに異なる）",
+   "page": 1
+  }
+ ],
+ "adds": [],
+ "note": "teikaは1mあたり価格、perPriceは㎡単価。柄・色で価格は変わらない。pageはサンプル帳インフォメーションPDFのページ（1=SD/H、2=H2000幅/P NW）。",
+ "pages": [
+  {
+   "page": 1,
+   "rows": 2
+  },
+  {
+   "page": 2,
+   "rows": 2
+  }
+ ]
+}
