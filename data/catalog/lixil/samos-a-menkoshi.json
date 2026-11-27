@@ -4,7 +4,7 @@
  "series": "samos-a-menkoshi",
  "group": "サッシ",
  "year": "2026-10",
- "src": "LIXIL サーモスA・防火戸FG-A業務用資料集（完成品価格表・2026年10月価格改定版）面格子付引違い窓 価格表（在来・204）p.46〜",
+ "src": "LIXIL サーモスA・防火戸FG-A業務用資料集（完成品価格表・2026年10月価格改定版）面格子付引違い窓 価格表（在来・204）p.46〜57",
  "tax": "税抜",
  "pick": [
   {
@@ -14,87 +14,104 @@
     {
      "id": "060",
      "name": "060（内法基準寸法W 600mm・基本寸法W 640mm）",
-     "w": 600
+     "w": 600,
+     "outW": 640
     },
     {
      "id": "069",
      "name": "069（内法基準寸法W 690mm・基本寸法W 730mm）",
-     "w": 690
+     "w": 690,
+     "outW": 730
     },
     {
      "id": "074",
      "name": "074（内法基準寸法W 740mm・基本寸法W 780mm）",
-     "w": 740
+     "w": 740,
+     "outW": 780
     },
     {
      "id": "078",
      "name": "078（内法基準寸法W 780mm・基本寸法W 820mm）",
-     "w": 780
+     "w": 780,
+     "outW": 820
     },
     {
      "id": "080",
      "name": "080（内法基準寸法W 805mm・基本寸法W 845mm）",
-     "w": 805
+     "w": 805,
+     "outW": 845
     },
     {
      "id": "083",
      "name": "083（内法基準寸法W 830mm・基本寸法W 870mm）",
-     "w": 830
+     "w": 830,
+     "outW": 870
     },
     {
      "id": "114",
      "name": "114（内法基準寸法W 1145mm・基本寸法W 1185mm）",
-     "w": 1145
+     "w": 1145,
+     "outW": 1185
     },
     {
      "id": "119",
      "name": "119（内法基準寸法W 1195mm・基本寸法W 1235mm）",
-     "w": 1195
+     "w": 1195,
+     "outW": 1235
     },
     {
      "id": "128",
      "name": "128（内法基準寸法W 1280mm・基本寸法W 1320mm）",
-     "w": 1280
+     "w": 1280,
+     "outW": 1320
     },
     {
      "id": "133",
      "name": "133（内法基準寸法W 1330mm・基本寸法W 1370mm）",
-     "w": 1330
+     "w": 1330,
+     "outW": 1370
     },
     {
      "id": "150",
      "name": "150（内法基準寸法W 1500mm・基本寸法W 1540mm）",
-     "w": 1500
+     "w": 1500,
+     "outW": 1540
     },
     {
      "id": "160",
      "name": "160（内法基準寸法W 1600mm・基本寸法W 1640mm）",
-     "w": 1600
+     "w": 1600,
+     "outW": 1640
     },
     {
      "id": "165",
      "name": "165（内法基準寸法W 1650mm・基本寸法W 1690mm）",
-     "w": 1650
+     "w": 1650,
+     "outW": 1690
     },
     {
      "id": "174",
      "name": "174（内法基準寸法W 1740mm・基本寸法W 1780mm）",
-     "w": 1740
+     "w": 1740,
+     "outW": 1780
     },
     {
      "id": "176",
      "name": "176（内法基準寸法W 1760mm・基本寸法W 1800mm）",
-     "w": 1760
+     "w": 1760,
+     "outW": 1800
     },
     {
      "id": "180",
      "name": "180（内法基準寸法W 1805mm・基本寸法W 1845mm）",
-     "w": 1805
+     "w": 1805,
+     "outW": 1845
     },
     {
      "id": "186",
      "name": "186（内法基準寸法W 1860mm・基本寸法W 1900mm）",
-     "w": 1860
+     "w": 1860,
+     "outW": 1900
     }
    ]
   },
@@ -105,17 +122,38 @@
     {
      "id": "03",
      "name": "03（内法基準寸法h' 300mm・基本寸法H 370mm）",
-     "h": 300
+     "h": 300,
+     "outH": 370
     },
     {
      "id": "05",
      "name": "05（内法基準寸法h' 500mm・基本寸法H 570mm）",
-     "h": 500
+     "h": 500,
+     "outH": 570
     },
     {
      "id": "07",
      "name": "07（内法基準寸法h' 700mm・基本寸法H 770mm）",
-     "h": 700
+     "h": 700,
+     "outH": 770
+    },
+    {
+     "id": "09",
+     "name": "09（内法基準寸法h' 900mm・基本寸法H 970mm）",
+     "h": 900,
+     "outH": 970
+    },
+    {
+     "id": "11",
+     "name": "11（内法基準寸法h' 1100mm・基本寸法H 1170mm）",
+     "h": 1100,
+     "outH": 1170
+    },
+    {
+     "id": "13",
+     "name": "13（内法基準寸法h' 1300mm・基本寸法H 1370mm）",
+     "h": 1300,
+     "outH": 1370
     }
    ]
   },
@@ -7264,12 +7302,6496 @@
    "teika": 181700,
    "hinban": "@SAHM-18607",
    "page": 51
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 69800,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 69800,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 77600,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 77600,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 78700,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 86500,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 114400,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 114400,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 122200,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 122200,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 110000,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 110000,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 117800,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 117800,
+   "hinban": "@SAHM-06009",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 73000,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 73000,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 80800,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 80800,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 121400,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 121400,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 129200,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 129200,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 120400,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 120400,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 128200,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 128200,
+   "hinban": "@SAHM-06909",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 73000,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 73000,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 80800,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 80800,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 83100,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 90900,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 121400,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 121400,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 129200,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 129200,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 120400,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 120400,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 128200,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 128200,
+   "hinban": "@SAHM-07409",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 77200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 77200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 85600,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 85600,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 87900,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 96300,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 128800,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 128800,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 137200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 137200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 127800,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 127800,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 136200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "078",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 136200,
+   "hinban": "@SAHM-07809",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 77800,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 77800,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 86400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 86400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 88500,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 97100,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 129400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 129400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 138000,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 138000,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 128400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 128400,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 137000,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "080",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 137000,
+   "hinban": "@SAHM-08009",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 78400,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 78400,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 87200,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 87200,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 89100,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 97900,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 130000,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 130000,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 138800,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 138800,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 129000,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 129000,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 137800,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 137800,
+   "hinban": "@SAHM-08309",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 96000,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 96000,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 108400,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 108400,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 109800,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 122200,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 157900,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 157900,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 170300,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 170300,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 151900,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 151900,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 164300,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 164300,
+   "hinban": "@SAHM-11409",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 97000,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 97000,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 110000,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 110000,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 110800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 123800,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 158900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 158900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 171900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 171900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 152900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 152900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 165900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 165900,
+   "hinban": "@SAHM-11909",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 103100,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 103100,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 117100,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 117100,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 117600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 131600,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 169800,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 169800,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 183800,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 183800,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 163200,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 163200,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 177200,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 177200,
+   "hinban": "@SAHM-12809",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 104300,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 104300,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 118900,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 118900,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 118800,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 133400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 171000,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 171000,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 185600,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 185600,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 164400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 164400,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 179000,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 179000,
+   "hinban": "@SAHM-13309",
+   "page": 52
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 115000,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 115000,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 131600,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 131600,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 130500,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 130500,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 147100,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 147100,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 130500,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 130500,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 147100,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 147100,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 187800,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 187800,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 204400,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 204400,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 178200,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 178200,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 194800,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 194800,
+   "hinban": "@SAHM-15009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 118500,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 118500,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 136100,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 136100,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 135000,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 135000,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 152600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 152600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 135000,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 135000,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 152600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 152600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 196600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 196600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 214200,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 214200,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 183600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 183600,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 201200,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 201200,
+   "hinban": "@SAHM-16009",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 119700,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 119700,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 137700,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 137700,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 136200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 136200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 154200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 154200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 136200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 136200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 154200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 154200,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 197800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 197800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 215800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 215800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 184800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 184800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 202800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 202800,
+   "hinban": "@SAHM-16509",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 127000,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 127000,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 146000,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 146000,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 144600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 144600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 163600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 163600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 144600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 144600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 163600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 163600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 196600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 196600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 215600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 215600,
+   "hinban": "@SAHM-17409",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 127400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 127400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 146800,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 146800,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 145000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 145000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 164400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 164400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 145000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 145000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 164400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 164400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 197000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 197000,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 216400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 216400,
+   "hinban": "@SAHM-17609",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 128400,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 128400,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 148200,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 148200,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 146000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 146000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 165800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 165800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 146000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 146000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 165800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 165800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 198000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 198000,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 217800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 217800,
+   "hinban": "@SAHM-18009",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 129800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 129800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 150200,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 150200,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 147400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 147400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 167800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 167800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 147400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 147400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 167800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 167800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 199400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 199400,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 219800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "09",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 219800,
+   "hinban": "@SAHM-18609",
+   "page": 53
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 80900,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 80900,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 90700,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 90700,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 92200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 102000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 135000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 135000,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 144800,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 144800,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 136400,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 136400,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 146200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 146200,
+   "hinban": "@SAHM-07411",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 87100,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 87100,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 98100,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 98100,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 99500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 110500,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 145300,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 145300,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 156300,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 156300,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 146200,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 146200,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 157200,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "083",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 157200,
+   "hinban": "@SAHM-08311",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 107400,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 107400,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 122800,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 122800,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 122900,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 138300,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 177400,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 177400,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 192800,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 192800,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 176700,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 176700,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 192100,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 192100,
+   "hinban": "@SAHM-11411",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 109000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 109000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 125000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 125000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 124500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 140500,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 179000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 179000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 195000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 195000,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 178300,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 178300,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 194300,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 194300,
+   "hinban": "@SAHM-11911",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 116100,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 116100,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 133300,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 133300,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 132800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 150000,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 191300,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 191300,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 208500,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 208500,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 190600,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 190600,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 207800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "128",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 207800,
+   "hinban": "@SAHM-12811",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 117500,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 117500,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 135300,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 135300,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 134200,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 152000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 192700,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 192700,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 210500,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 210500,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 192000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 192000,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 209800,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "133",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 209800,
+   "hinban": "@SAHM-13311",
+   "page": 54
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 129400,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 129400,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 149600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 149600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 146600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 146600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 166800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 166800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 146600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 146600,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 166800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 166800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 211300,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 211300,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 231500,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 231500,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 206800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 206800,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 227000,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 227000,
+   "hinban": "@SAHM-15011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 133500,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 133500,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 155100,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 155100,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 151400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 151400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 173000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 173000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 151400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 151400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 173000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 173000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 221100,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 221100,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 242700,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 242700,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 213400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 213400,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 235000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 235000,
+   "hinban": "@SAHM-16011",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 134900,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 134900,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 157300,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 157300,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 152800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 152800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 175200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 175200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 152800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 152800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 175200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 175200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-clear",
+   "teika": 222500,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "pg-kata",
+   "teika": 222500,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-clear",
+   "teika": 244900,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "kokyodo",
+   "glass": "lowe-kata",
+   "teika": 244900,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 214800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 214800,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 237200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 237200,
+   "hinban": "@SAHM-16511",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 142900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 142900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 166500,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 166500,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 162300,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 162300,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 185900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 185900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 162300,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 162300,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 185900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 185900,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 228400,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 228400,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 252000,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "174",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 252000,
+   "hinban": "@SAHM-17411",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 143300,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 143300,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 167300,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 167300,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 162700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 162700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 186700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 186700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 162700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 162700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 186700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 186700,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 228800,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 228800,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 252800,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "176",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 252800,
+   "hinban": "@SAHM-17611",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 144700,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 144700,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 169100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 169100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 164100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 164100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 188500,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 188500,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 164100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 164100,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 188500,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 188500,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 230200,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 230200,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 254600,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "180",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 254600,
+   "hinban": "@SAHM-18011",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 146300,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 146300,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 171500,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 171500,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 165700,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 165700,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 190900,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 190900,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 165700,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 165700,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 190900,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 190900,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 231800,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 231800,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 257000,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "186",
+   "sizeH": "11",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 257000,
+   "hinban": "@SAHM-18611",
+   "page": 55
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 119300,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 119300,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 137700,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 137700,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 136400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 154800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 201400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 201400,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 219800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 219800,
+   "hinban": "@SAHM-11413",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 121100,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 121100,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 140100,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 140100,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "pg-clear",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "pg-kata",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "lowe-clear",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "yoko",
+   "glass": "lowe-kata",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 138200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 157200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 203200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 203200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 222200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 222200,
+   "hinban": "@SAHM-11913",
+   "page": 56
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 143700,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 143700,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 167900,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 167900,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 162800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 162800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 187000,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 187000,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 162800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 162800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 187000,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 187000,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 235600,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 235600,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 259800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "150",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 259800,
+   "hinban": "@SAHM-15013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 148300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 148300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 174100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 174100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 168300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 168300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 194100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 194100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 168300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 168300,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 194100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 194100,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 243200,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 243200,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 269000,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 269000,
+   "hinban": "@SAHM-16013",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-clear",
+   "teika": 149900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "pg-kata",
+   "teika": 149900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-clear",
+   "teika": 176700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "tate",
+   "glass": "lowe-kata",
+   "teika": 176700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-clear",
+   "teika": 169900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "pg-kata",
+   "teika": 169900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-clear",
+   "teika": 196700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "hishi",
+   "glass": "lowe-kata",
+   "teika": 196700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-clear",
+   "teika": 169900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "pg-kata",
+   "teika": 169900,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-clear",
+   "teika": 196700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "igeta",
+   "glass": "lowe-kata",
+   "teika": 196700,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-clear",
+   "teika": 244800,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "pg-kata",
+   "teika": 244800,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-clear",
+   "teika": 271600,
+   "hinban": "@SAHM-16513",
+   "page": 57
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "koshi": "mekakushi",
+   "glass": "lowe-kata",
+   "teika": 271600,
+   "hinban": "@SAHM-16513",
+   "page": 57
   }
  ],
  "adds": [
   {
    "id": "amido-nashi",
    "name": "引違い網戸（中桟無・標準ネット）",
+   "match": [
+    "sizeW",
+    "sizeH"
+   ],
    "values": [
     {
      "id": "06003",
@@ -7492,11 +14014,221 @@
      "name": "18607（呼称）",
      "teika": 9800,
      "hinban": "@SAHM-18607 網戸中桟無"
+    },
+    {
+     "id": "06009",
+     "name": "06009（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-06009 網戸中桟無"
+    },
+    {
+     "id": "06909",
+     "name": "06909（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-06909 網戸中桟無"
+    },
+    {
+     "id": "07409",
+     "name": "07409（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-07409 網戸中桟無"
+    },
+    {
+     "id": "07809",
+     "name": "07809（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-07809 網戸中桟無"
+    },
+    {
+     "id": "08009",
+     "name": "08009（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-08009 網戸中桟無"
+    },
+    {
+     "id": "08309",
+     "name": "08309（呼称）",
+     "teika": 7700,
+     "hinban": "@SAHM-08309 網戸中桟無"
+    },
+    {
+     "id": "11409",
+     "name": "11409（呼称）",
+     "teika": 8800,
+     "hinban": "@SAHM-11409 網戸中桟無"
+    },
+    {
+     "id": "11909",
+     "name": "11909（呼称）",
+     "teika": 8800,
+     "hinban": "@SAHM-11909 網戸中桟無"
+    },
+    {
+     "id": "12809",
+     "name": "12809（呼称）",
+     "teika": 9200,
+     "hinban": "@SAHM-12809 網戸中桟無"
+    },
+    {
+     "id": "13309",
+     "name": "13309（呼称）",
+     "teika": 9600,
+     "hinban": "@SAHM-13309 網戸中桟無"
+    },
+    {
+     "id": "15009",
+     "name": "15009（呼称）",
+     "teika": 9600,
+     "hinban": "@SAHM-15009 網戸中桟無"
+    },
+    {
+     "id": "16009",
+     "name": "16009（呼称）",
+     "teika": 9800,
+     "hinban": "@SAHM-16009 網戸中桟無"
+    },
+    {
+     "id": "16509",
+     "name": "16509（呼称）",
+     "teika": 9800,
+     "hinban": "@SAHM-16509 網戸中桟無"
+    },
+    {
+     "id": "17409",
+     "name": "17409（呼称）",
+     "teika": 10500,
+     "hinban": "@SAHM-17409 網戸中桟無"
+    },
+    {
+     "id": "17609",
+     "name": "17609（呼称）",
+     "teika": 10500,
+     "hinban": "@SAHM-17609 網戸中桟無"
+    },
+    {
+     "id": "18009",
+     "name": "18009（呼称）",
+     "teika": 10500,
+     "hinban": "@SAHM-18009 網戸中桟無"
+    },
+    {
+     "id": "18609",
+     "name": "18609（呼称）",
+     "teika": 11100,
+     "hinban": "@SAHM-18609 網戸中桟無"
+    },
+    {
+     "id": "07411",
+     "name": "07411（呼称）",
+     "teika": 9200,
+     "hinban": "@SAHM-07411 網戸中桟無"
+    },
+    {
+     "id": "08311",
+     "name": "08311（呼称）",
+     "teika": 9200,
+     "hinban": "@SAHM-08311 網戸中桟無"
+    },
+    {
+     "id": "11411",
+     "name": "11411（呼称）",
+     "teika": 9800,
+     "hinban": "@SAHM-11411 網戸中桟無"
+    },
+    {
+     "id": "11911",
+     "name": "11911（呼称）",
+     "teika": 9800,
+     "hinban": "@SAHM-11911 網戸中桟無"
+    },
+    {
+     "id": "12811",
+     "name": "12811（呼称）",
+     "teika": 10000,
+     "hinban": "@SAHM-12811 網戸中桟無"
+    },
+    {
+     "id": "13311",
+     "name": "13311（呼称）",
+     "teika": 10700,
+     "hinban": "@SAHM-13311 網戸中桟無"
+    },
+    {
+     "id": "15011",
+     "name": "15011（呼称）",
+     "teika": 10700,
+     "hinban": "@SAHM-15011 網戸中桟無"
+    },
+    {
+     "id": "16011",
+     "name": "16011（呼称）",
+     "teika": 10900,
+     "hinban": "@SAHM-16011 網戸中桟無"
+    },
+    {
+     "id": "16511",
+     "name": "16511（呼称）",
+     "teika": 10900,
+     "hinban": "@SAHM-16511 網戸中桟無"
+    },
+    {
+     "id": "17411",
+     "name": "17411（呼称）",
+     "teika": 11300,
+     "hinban": "@SAHM-17411 網戸中桟無"
+    },
+    {
+     "id": "17611",
+     "name": "17611（呼称）",
+     "teika": 11300,
+     "hinban": "@SAHM-17611 網戸中桟無"
+    },
+    {
+     "id": "18011",
+     "name": "18011（呼称）",
+     "teika": 11300,
+     "hinban": "@SAHM-18011 網戸中桟無"
+    },
+    {
+     "id": "18611",
+     "name": "18611（呼称）",
+     "teika": 12200,
+     "hinban": "@SAHM-18611 網戸中桟無"
+    },
+    {
+     "id": "11413",
+     "name": "11413（呼称）",
+     "teika": 11400,
+     "hinban": "@SAHM-11413 網戸中桟無"
+    },
+    {
+     "id": "11913",
+     "name": "11913（呼称）",
+     "teika": 11400,
+     "hinban": "@SAHM-11913 網戸中桟無"
+    },
+    {
+     "id": "15013",
+     "name": "15013（呼称）",
+     "teika": 12300,
+     "hinban": "@SAHM-15013 網戸中桟無"
+    },
+    {
+     "id": "16013",
+     "name": "16013（呼称）",
+     "teika": 12900,
+     "hinban": "@SAHM-16013 網戸中桟無"
+    },
+    {
+     "id": "16513",
+     "name": "16513（呼称）",
+     "teika": 12900,
+     "hinban": "@SAHM-16513 網戸中桟無"
     }
    ]
   }
  ],
- "note": "サーモスA 面格子付引違い窓の完成品価格（アングル付枠＋PG障子＋面格子）。面格子の種類（縦格子・横格子・ヒシクロス格子・井桁格子・高強度縦格子・目隠し可動ルーバー）が新しい選ぶ軸。ガラスは一般複層とLow-E複層、それぞれ透明と型の4種。目隠し可動ルーバーは小さい呼称高では設定がない。品番はおすすめ品番の形「@SAHM-呼称-色記号」から色記号を除いた形。表には「部材セット価格」もあるが今回は完成品価格だけを収録した。在来と204で同じ価格表のため1ファイルにまとめた。残りのページ（p.52〜57）は後から足す。",
+ "note": "サーモスA 面格子付引違い窓の完成品価格（アングル付枠＋PG障子＋面格子）。面格子の種類（縦格子・横格子・ヒシクロス格子・井桁格子・高強度縦格子・目隠し可動ルーバー）が新しい選ぶ軸。ガラスは一般複層とLow-E複層、それぞれ透明と型の4種。目隠し可動ルーバーは小さい呼称高では設定がない。品番はおすすめ品番の形「@SAHM-呼称-色記号」から色記号を除いた形。表には「部材セット価格」もあるが今回は完成品価格だけを収録した。在来と204で同じ価格表のため1ファイルにまとめた。",
  "pages": [
   {
    "page": 46,
@@ -7517,6 +14249,30 @@
   {
    "page": 51,
    "rows": 124
+  },
+  {
+   "page": 52,
+   "rows": 240
+  },
+  {
+   "page": 53,
+   "rows": 124
+  },
+  {
+   "page": 54,
+   "rows": 144
+  },
+  {
+   "page": 55,
+   "rows": 124
+  },
+  {
+   "page": 56,
+   "rows": 40
+  },
+  {
+   "page": 57,
+   "rows": 48
   }
  ]
 }
