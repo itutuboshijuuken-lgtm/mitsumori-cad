@@ -1,0 +1,725 @@
+{
+ "v": 2,
+ "maker": "lixil",
+ "series": "samos-a-hikichigai-terrace-204",
+ "group": "サッシ",
+ "year": "2026-10",
+ "src": "LIXIL サーモスA・防火戸FG-A業務用資料集（完成品価格表・2026年10月価格改定版）単体引違い窓 価格表（204）テラス p.12",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "sizeW",
+   "name": "幅（呼称）",
+   "values": [
+    {
+     "id": "160",
+     "name": "160（内法基準寸法W 1600mm・基本寸法W 1640mm）",
+     "w": 1600
+    },
+    {
+     "id": "178",
+     "name": "178（内法基準寸法W 1780mm・基本寸法W 1820mm）",
+     "w": 1780
+    },
+    {
+     "id": "243-2",
+     "name": "243-2（内法基準寸法W 2430mm・基本寸法W 2470mm）",
+     "w": 2430
+    },
+    {
+     "id": "243-4",
+     "name": "243-4（内法基準寸法W 2430mm・基本寸法W 2470mm）",
+     "w": 2430
+    }
+   ]
+  },
+  {
+   "id": "sizeH",
+   "name": "高さ（呼称）",
+   "values": [
+    {
+     "id": "18",
+     "name": "18（内法基準寸法h' 1800mm・基本寸法H 1845mm）",
+     "h": 1800
+    },
+    {
+     "id": "20",
+     "name": "20（内法基準寸法h' 2000mm・基本寸法H 2045mm）",
+     "h": 2000
+    },
+    {
+     "id": "22",
+     "name": "22（内法基準寸法h' 2200mm・基本寸法H 2245mm）",
+     "h": 2200
+    }
+   ]
+  },
+  {
+   "id": "sash",
+   "name": "障子",
+   "values": [
+    {
+     "id": "pg",
+     "name": "PG障子"
+    },
+    {
+     "id": "totte",
+     "name": "把手障子"
+    },
+    {
+     "id": "owabi",
+     "name": "大壁和室障子"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "pg-clear",
+     "name": "一般複層 透明"
+    },
+    {
+     "id": "lowe-clear",
+     "name": "Low-E複層 透明"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 147900,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 163100,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "owabi",
+   "glass": "pg-clear",
+   "teika": 152900,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 182700,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 197500,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "18",
+   "sash": "owabi",
+   "glass": "lowe-clear",
+   "teika": 187300,
+   "hinban": "@SAH-16018A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 161200,
+   "hinban": "@SAH-17818A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 176800,
+   "hinban": "@SAH-17818A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 200000,
+   "hinban": "@SAH-17818A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 215400,
+   "hinban": "@SAH-17818A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 255400,
+   "hinban": "@SAH-24318-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 272900,
+   "hinban": "@SAH-24318-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 294600,
+   "hinban": "@SAH-24318-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 311900,
+   "hinban": "@SAH-24318-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 243000,
+   "hinban": "@SAH-24318-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 275100,
+   "hinban": "@SAH-24318-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "18",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 294200,
+   "hinban": "@SAH-24318-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "18",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 326300,
+   "hinban": "@SAH-24318-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 162200,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 177700,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "owabi",
+   "glass": "pg-clear",
+   "teika": 167500,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 201000,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 216100,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "20",
+   "sash": "owabi",
+   "glass": "lowe-clear",
+   "teika": 205900,
+   "hinban": "@SAH-16020A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 176300,
+   "hinban": "@SAH-17820A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 192600,
+   "hinban": "@SAH-17820A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 219700,
+   "hinban": "@SAH-17820A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 235600,
+   "hinban": "@SAH-17820A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 305300,
+   "hinban": "@SAH-24320-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 323500,
+   "hinban": "@SAH-24320-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 348700,
+   "hinban": "@SAH-24320-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 366500,
+   "hinban": "@SAH-24320-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 265900,
+   "hinban": "@SAH-24320-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 299800,
+   "hinban": "@SAH-24320-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "20",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 323100,
+   "hinban": "@SAH-24320-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "20",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 356600,
+   "hinban": "@SAH-24320-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 175300,
+   "hinban": "@SAH-16022A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 192400,
+   "hinban": "@SAH-16022A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 217700,
+   "hinban": "@SAH-16022A",
+   "page": 12
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 234800,
+   "hinban": "@SAH-16022A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 191000,
+   "hinban": "@SAH-17822A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 208400,
+   "hinban": "@SAH-17822A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 238600,
+   "hinban": "@SAH-17822A",
+   "page": 12
+  },
+  {
+   "sizeW": "178",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 256000,
+   "hinban": "@SAH-17822A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 332000,
+   "hinban": "@SAH-24322-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 352100,
+   "hinban": "@SAH-24322-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 379600,
+   "hinban": "@SAH-24322-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-2",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 399700,
+   "hinban": "@SAH-24322-2A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "pg-clear",
+   "teika": 289000,
+   "hinban": "@SAH-24322-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "pg-clear",
+   "teika": 324700,
+   "hinban": "@SAH-24322-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "22",
+   "sash": "pg",
+   "glass": "lowe-clear",
+   "teika": 352200,
+   "hinban": "@SAH-24322-4A",
+   "page": 12
+  },
+  {
+   "sizeW": "243-4",
+   "sizeH": "22",
+   "sash": "totte",
+   "glass": "lowe-clear",
+   "teika": 387900,
+   "hinban": "@SAH-24322-4A",
+   "page": 12
+  }
+ ],
+ "adds": [
+  {
+   "id": "amido-ari",
+   "name": "引違い網戸（中桟付・標準ネット）",
+   "values": [
+    {
+     "id": "16018A",
+     "name": "16018A（呼称）",
+     "teika": 16800,
+     "hinban": "@SAH-16018A 網戸（中桟付）"
+    },
+    {
+     "id": "17818A",
+     "name": "17818A（呼称）",
+     "teika": 17500,
+     "hinban": "@SAH-17818A 網戸（中桟付）"
+    },
+    {
+     "id": "24318-2A",
+     "name": "24318-2A（呼称）",
+     "teika": 21300,
+     "hinban": "@SAH-24318-2A 網戸（中桟付）"
+    },
+    {
+     "id": "24318-4A",
+     "name": "24318-4A（呼称）",
+     "teika": 30700,
+     "hinban": "@SAH-24318-4A 網戸（中桟付）"
+    },
+    {
+     "id": "16020A",
+     "name": "16020A（呼称）",
+     "teika": 17800,
+     "hinban": "@SAH-16020A 網戸（中桟付）"
+    },
+    {
+     "id": "17820A",
+     "name": "17820A（呼称）",
+     "teika": 18600,
+     "hinban": "@SAH-17820A 網戸（中桟付）"
+    },
+    {
+     "id": "24320-2A",
+     "name": "24320-2A（呼称）",
+     "teika": 22400,
+     "hinban": "@SAH-24320-2A 網戸（中桟付）"
+    },
+    {
+     "id": "24320-4A",
+     "name": "24320-4A（呼称）",
+     "teika": 32900,
+     "hinban": "@SAH-24320-4A 網戸（中桟付）"
+    },
+    {
+     "id": "16022A",
+     "name": "16022A（呼称）",
+     "teika": 21800,
+     "hinban": "@SAH-16022A 網戸（中桟付）"
+    },
+    {
+     "id": "17822A",
+     "name": "17822A（呼称）",
+     "teika": 22400,
+     "hinban": "@SAH-17822A 網戸（中桟付）"
+    },
+    {
+     "id": "24322-2A",
+     "name": "24322-2A（呼称）",
+     "teika": 27200,
+     "hinban": "@SAH-24322-2A 網戸（中桟付）"
+    },
+    {
+     "id": "24322-4A",
+     "name": "24322-4A（呼称）",
+     "teika": 41000,
+     "hinban": "@SAH-24322-4A 網戸（中桟付）"
+    }
+   ]
+  },
+  {
+   "id": "amido-nashi",
+   "name": "引違い網戸（中桟無・標準ネット）",
+   "values": [
+    {
+     "id": "16018A",
+     "name": "16018A（呼称）",
+     "teika": 25400,
+     "hinban": "@SAH-16018A 網戸（中桟無）"
+    },
+    {
+     "id": "17818A",
+     "name": "17818A（呼称）",
+     "teika": 26200,
+     "hinban": "@SAH-17818A 網戸（中桟無）"
+    },
+    {
+     "id": "24318-2A",
+     "name": "24318-2A（呼称）",
+     "teika": 32700,
+     "hinban": "@SAH-24318-2A 網戸（中桟無）"
+    },
+    {
+     "id": "24318-4A",
+     "name": "24318-4A（呼称）",
+     "teika": 46900,
+     "hinban": "@SAH-24318-4A 網戸（中桟無）"
+    },
+    {
+     "id": "16020A",
+     "name": "16020A（呼称）",
+     "teika": 27200,
+     "hinban": "@SAH-16020A 網戸（中桟無）"
+    },
+    {
+     "id": "17820A",
+     "name": "17820A（呼称）",
+     "teika": 28300,
+     "hinban": "@SAH-17820A 網戸（中桟無）"
+    },
+    {
+     "id": "24320-2A",
+     "name": "24320-2A（呼称）",
+     "teika": 34300,
+     "hinban": "@SAH-24320-2A 網戸（中桟無）"
+    },
+    {
+     "id": "24320-4A",
+     "name": "24320-4A（呼称）",
+     "teika": 50300,
+     "hinban": "@SAH-24320-4A 網戸（中桟無）"
+    },
+    {
+     "id": "16022A",
+     "name": "16022A（呼称）",
+     "teika": 33800,
+     "hinban": "@SAH-16022A 網戸（中桟無）"
+    },
+    {
+     "id": "17822A",
+     "name": "17822A（呼称）",
+     "teika": 34300,
+     "hinban": "@SAH-17822A 網戸（中桟無）"
+    },
+    {
+     "id": "24322-2A",
+     "name": "24322-2A（呼称）",
+     "teika": 41100,
+     "hinban": "@SAH-24322-2A 網戸（中桟無）"
+    },
+    {
+     "id": "24322-4A",
+     "name": "24322-4A（呼称）",
+     "teika": 62700,
+     "hinban": "@SAH-24322-4A 網戸（中桟無）"
+    }
+   ]
+  }
+ ],
+ "note": "サーモスA 単体引違い窓 価格表（204）テラス p.12の完成品価格。テラス（掃出し）タイプはガラスが透明のみで、価格は障子の種類（PG障子・把手障子・大壁和室障子）でも変わる。大壁和室障子は一部の呼称だけに設定がある。品番はおすすめ品番の形「@SAH-呼称-色記号」から色記号を除いた形。表には「部材セット価格」もあるが今回は完成品価格だけを収録した。網戸は呼称ごとに価格が違うため、addsの値に呼称ごとの価格を入れた（中桟付・中桟無の2種、標準ネットの価格）。呼称の末尾のAは204テラスの印。204アタッチメントは掃出し納まり用と和室用が選べるが価格差はない。",
+ "pages": [
+  {
+   "page": 12,
+   "rows": 52
+  }
+ ]
+}
