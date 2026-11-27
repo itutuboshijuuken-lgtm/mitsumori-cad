@@ -22291,7 +22291,7 @@ applyTheme194();
   function geom205(z){
     var d = z.door; if (!d) return null;
     var r = rect205(z), horiz = d.side === 0 || d.side === 2, len = horiz ? r.x1 - r.x0 : r.y1 - r.y0;
-    var w = Math.min((TYPES205[d.type] || TYPES205.ore)[1], Math.max(300, len));
+    var w = Math.min(d.w > 0 ? d.w : (TYPES205[d.type] || TYPES205.ore)[1], Math.max(300, len));   /* CAD-734：幅を変えた時は d.w */
     var pos = d.pos == null ? len / 2 : d.pos;
     pos = Math.max(w / 2, Math.min(len - w / 2, pos));
     return { side: d.side, pos: pos, w: w, len: len, r: r };
@@ -45566,7 +45566,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     arr(rd.things).forEach(function(t){ if (t.list === "sashes" && t.wall && t.drawn && fin(t.u) && t.w > 0 && t.h > 0) (sashBy[t.wall] = sashBy[t.wall] || []).push(t); });
     arr(rd.things).forEach(function(t){   /* ユニットバスの入口（ゾーンに付いたドア）：その辺の上にある壁へ、開口として足す */
       var dr = (t.list === "zones" && t.kind === "ub" && t.raw && t.raw.door) ? t.raw.door : null; if (!dr || ![t.x0, t.y0, t.x1, t.y1].every(fin) || !fin(dr.pos)) return;
-      var x0 = Math.min(t.x0, t.x1), x1 = Math.max(t.x0, t.x1), y0 = Math.min(t.y0, t.y1), y1 = Math.max(t.y0, t.y1), wd = dr.type === "hiraki" ? 700 : 800, sd = dr.side | 0, hz = sd === 0 || sd === 2;
+      var x0 = Math.min(t.x0, t.x1), x1 = Math.max(t.x0, t.x1), y0 = Math.min(t.y0, t.y1), y1 = Math.max(t.y0, t.y1), wd = dr.w > 0 ? dr.w : dr.type === "hiraki" ? 700 : 800, sd = dr.side | 0, hz = sd === 0 || sd === 2;
       var c = sd === 0 ? [x0 + dr.pos, y0] : sd === 2 ? [x0 + dr.pos, y1] : sd === 3 ? [x0, y0 + dr.pos] : [x1, y0 + dr.pos], k, w;
       for (k = 0; k < solid.length; k++){
         w = solid[k]; if (w.form !== "full" || Math.abs(hz ? w.uy : w.ux) > .02) continue;
@@ -48775,11 +48775,49 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (L > 0) return [u - L / 2, u + L, z - 20, z + (H || 60)]; return [u - 45, u + 45, z - 45, z + 45 + H]; }
   function saBox(t){ return [+t.u || 0, (+t.u || 0) + (+t.w || 0), +t.sill || 0, (+t.sill || 0) + (+t.h || 0)]; }
   function hits(a, b){ return a[0] < b[1] - 10 && b[0] < a[1] - 10 && a[2] < b[3] - 10 && b[2] < a[3] - 10; }
+  /* CAD-734：片引き戸は、開口の半分と、扉が引き込まれる半分（戸袋・扉の走る所）に分けて見る。
+     開口＝両面とも付けられない／両側薄壁の戸袋＝壁の中に扉が入るので両面とも付けられない／
+     片側壁の戸袋・アウトセット＝扉が走る面だけ付けられない（反対側の面は付けられる） */
+  function kataOf(sa){ var raw = (sa.raw && typeof sa.raw === "object") ? sa.raw : sa; if (String(sa.kind || raw.cat || "") !== "室内ドア") return null;
+    var nmS = String(sa.name || raw.name || ""); if (!(nmS === "片引き戸" || /上吊り/.test(nmS))) return null;
+    var fl = (sa.flip != null ? sa.flip : raw.flip) || 0, u = +sa.u || 0, w = +sa.w || 0, half = w / 2;
+    return { open: (fl & 2) ? [u + half, u + w] : [u, u + half], run: (fl & 2) ? [u, u + half] : [u + half, u + w], side: (fl & 1) ? -1 : 1, both: raw.tob581 === "both" && raw.frame !== "outset", out: raw.frame === "outset" };
+  }
+  function blockWhy(fx, sa){
+    var fb = fxBox(fx), sb = saBox(sa); if (!hits(fb, sb)) return "";
+    var k = kataOf(sa); if (!k) return "clash";
+    if (hits(fb, [k.open[0], k.open[1], sb[2], sb[3]])) return "clash";
+    if (k.both) return "pocket";
+    if (fx.side == null) return "run";
+    return fx.side === k.side ? "run" : "";
+  }
   function clashOf(id){
     var m = mado(), r = m ? m.read() : null; if (!r || !r.things) return null;
     var me = r.things.filter(function(t){ return t.id === id; })[0]; if (!me || !me.wall) return null;
-    var mine = me.list === "sashes" ? saBox(me) : me.list === "fx" ? fxBox(me) : null; if (!mine) return null;
-    return r.things.filter(function(t){ return t !== me && t.wall === me.wall && ((me.list === "fx" && t.list === "sashes") || (me.list === "sashes" && t.list === "fx")) && hits(mine, t.list === "sashes" ? saBox(t) : fxBox(t)); })[0] || null;
+    if (me.list !== "sashes" && me.list !== "fx") return null;
+    var hit = null;
+    r.things.some(function(t){
+      if (t === me || t.wall !== me.wall) return false;
+      var why = me.list === "fx" && t.list === "sashes" ? blockWhy(me, t) : me.list === "sashes" && t.list === "fx" ? blockWhy(t, me) : "";
+      if (why){ hit = Object.assign({}, t, { why734: why }); return true; } return false;
+    });
+    return hit;
+  }
+  /* 置けない理由の文（CAD-734） */
+  function clashMsg(cl){
+    var w = cl && cl.why734;
+    if (w === "pocket") return "ここは引き戸の扉が壁の中に入る所（戸袋）なので、スイッチ・コンセントは付けられません。壁の中に扉があり、箱を入れる場所がないためです。戸袋の外の壁に付けてください";
+    if (w === "run") return "ここは引き戸の扉が走る面なので付けられません（開けると扉がぶつかります）。反対側の面なら付けられます";
+    return "ドア・窓（" + ((cl && cl.kind) || "") + "）がある所には付けられません。横の壁をタップしてください";
+  }
+  /* 壁のその点に、スイッチ・コンセントが付けられない理由（無ければ ""）。立体で壁を触った時に先に見せる */
+  function fxWhyAt(p){
+    try {
+      var nw = nearWall(p, wallsNow(), 25); if (!nw) return "";
+      var r = mado().read(), u = nw.t * nw.L, fx = { u: u, z: 1200, side: nw.w.t === "p" ? sideOf(nw.w, p) : null };
+      var hit = null; (r.things || []).some(function(t){ if (t.list !== "sashes" || t.wall !== nw.w.id) return false; var why = blockWhy(fx, t); if (why === "pocket" || why === "run"){ hit = Object.assign({}, t, { why734: why }); return true; } return false; });
+      return hit ? clashMsg(hit) : "";
+    } catch(e){ return ""; }
   }
   function wr(cmds, okMsg){
     var m = mado(); if (!m) return { ok: false, why: "no-mado" };
@@ -48810,7 +48848,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (spec.k === "demo" && !isRf()){ say("壁の一部を剥がすのは、リフォームの時だけです"); return { ok: false, why: "rf-only" }; }
     var r724 = wr([c]);
     if (r724.ok && spec.k !== "demo"){ var nid724 = (r724.r && r724.r.ids || [])[0], cl = nid724 ? clashOf(nid724) : null;   /* CAD-724：ドア・窓の開口の中には付けない */
-      if (cl){ try { mado().write([{ op: "remove", id: nid724 }]); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} say("ドア・窓（" + (cl.kind || "") + "）がある所には付けられません。横の壁をタップしてください"); return { ok: false, why: "clash" }; } }
+      if (cl){ try { mado().write([{ op: "remove", id: nid724 }]); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} say(clashMsg(cl)); return { ok: false, why: "clash", msg: clashMsg(cl) }; } }
     return r724;
   }
   function placeTk(p){
@@ -49043,6 +49081,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     choose: chooseSpec, put: choosePut, specPut: function(put, k, label){ spec = { put: put, k: k, label: label || k }; tool = "put"; refresh(); pick2put(); return spec; },
     spec: function(o){ if (o && typeof o === "object"){ spec = o; tool = "put"; refresh(); pick2put(); } return spec; },
     clashOf: function(id){ return clashOf(id); },
+    clashMsg: clashMsg, fxWhyAt: fxWhyAt,
     placeAt: function(x, y){ if (!A || tool !== "put" || !spec) return { ok: false }; var p = [x, y]; return !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p); },
     moveSash: function(i, wallId, pos, host){ return moveTo(i, { wall: wallId, pos: pos, host: host }); }, flip: function(i){ return flipAt(i); },
     tapAt: function(x, y){ if (!A || tool !== "del") return { ok: false }; var pk = thingAt([x, y]); return pk ? delThing(pk) : { ok: false, why: "nothing" }; }
@@ -49298,10 +49337,21 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       else if (o.k !== "pillar" && o.k !== "dansa" && o.k !== "rail") mk("回す", function(){ try { pushUndo(); o.dir = ({ n: "e", e: "s", s: "w", w: "n" })[o.dir] || "e"; if (typeof moveTenken === "function") moveTenken(o, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); say("向きを替えました（押すたびに90°）"); } catch(e){} });   /* CAD-723：キッチンなども回せる（立体と同じ） */
       if (o.k !== "pillar" && o.k !== "dansa") mk("幅", function(){ tkSize("w"); });
       if (typeof o.d === "number" && o.k !== "dansa") mk("奥行", function(){ tkSize("d"); });
+      if (o.k === "bath" && window.UBD734 && UBD734.zoneOf(o)) mk("入口", function(){ ubPlan(UBD734.zoneOf(o)); });   /* CAD-734 */
     }
     var x = mk("×", closeThing); x.style.padding = "0"; x.style.width = "44px";
     adjRow(thBar, B);   /* CAD-700：置いた後の微調整（位置・高さを数字で、矢印で10mmずつ、消す） */
     return { ok: true, kind: kind, label: lab };
+  }
+  /* CAD-734：平面図で浴室の入口を直す（同じ帯の中で。押すたびに書き直す） */
+  function ubPlan(z){
+    if (!thBar || !window.UBD734) return;
+    var B = "flex:0 0 auto;min-height:44px;padding:0 10px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:13.5px;font-weight:800;color:var(--ink,#18202A)";
+    var again = function(){ try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} ubPlan(z); };
+    thBar.style.flexWrap = "wrap";
+    thBar.innerHTML = '<div style="flex:1 1 100%;min-width:0;font-size:13px;font-weight:800">' + UBD734.label(z) + "</div>";
+    UBD734.acts(z, again).forEach(function(a){ var b = document.createElement("button"); b.type = "button"; b.textContent = a[0]; b.style.cssText = B + (a[2] ? ";color:#B91C1C" : ""); b.onclick = a[1]; thBar.appendChild(b); });
+    var x = document.createElement("button"); x.type = "button"; x.textContent = "戻る"; x.style.cssText = B; x.onclick = function(){ thBar.style.flexWrap = ""; var j = thIdx(); if (j >= 0) openThing("tk", j); }; thBar.appendChild(x);
   }
   function thList(){ return thKind === "lt" ? (S.lights || []) : thKind === "fx" ? (S.fx || []) : (S.tenken || []); }
   function thIdx(){ var L = thList(), j = L.indexOf(thObj); if (j < 0 && thNid){ for (var q = 0; q < L.length; q++) if (L[q] && L[q].nid === thNid){ thObj = L[q]; j = q; break; } } return j; }   /* 書く窓口で物が入れ替わっても、名札で同じ物を追う */
@@ -50682,6 +50732,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var t = mk("div", "display:flex;gap:6px;align-items:center");
       t.appendChild(mk("div", "flex:1 1 auto;font-size:13px;font-weight:800;color:var(--ink,#18202A)", (h.name ? h.name + "の" : "") + W(where) + "に置く"));
       btn(t, "閉じる", GRY, closeBand); b.appendChild(t);
+      if (where === "wall"){ var why734 = ""; try { why734 = KAKU2.fxWhyAt ? KAKU2.fxWhyAt(ptOf(h)) : ""; } catch(e){} if (why734) b.appendChild(mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", why734)); }   /* CAD-734：引き戸の戸袋・扉の走る面は、触った時に先に理由を見せる */
       var r = mk("div", "display:flex;gap:6px;align-items:center;width:100%");
       var top = window.KOHO ? KOHO.cands({ where: where, room: h.name || "", mode: isRf() ? "rf" : "zo" }) : [];
       try { var vw = RITTAI.view(); if (where === "floor" && h.room && vw && vw !== "eye"){ var r0 = mk("div", "display:flex;gap:6px"); btn(r0, "ここへ降りる（部屋の中を見る）", BTN.replace("flex:1 1 0", "flex:1 1 auto") + ";background:#2563B0;color:#fff", function(){ closeBand(); try { RITTAI.view("eye"); setTimeout(function(){ try { RITTAI.jump(h.room); } catch(e){} }, 850); } catch(e){} }); b.appendChild(r0); } } catch(e){}   /* CAD-727：上から見ている時は、触った部屋に降りられる */
@@ -50746,7 +50797,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!ok){ var i = idx(list, id); if (i >= 0) edit(function(){ S[list].splice(i, 1); }, "消しました（戻すで戻せます）"); else say("消せませんでした"); }
     else after("消しました（戻すで戻せます）");
     moving = null; closeBand(); }
-  function nm(list, o){ var K = { kitchen: "キッチン", wc: "トイレ", ub: "ユニットバス", senmen: "洗面化粧台", stair: "階段", down: "ダウンライト", ceil: "シーリング", outlet: "コンセント", switch: "スイッチ", tv: "テレビ端子" };
+  function nm(list, o){ var K = { bath: "ユニットバス（浴槽）", kitchen: "キッチン", wc: "トイレ", ub: "ユニットバス", senmen: "洗面化粧台", stair: "階段", down: "ダウンライト", ceil: "シーリング", outlet: "コンセント", switch: "スイッチ", tv: "テレビ端子" };
     if (list === "sashes") return (o.cat || "") + " " + (o.name || "") + "　" + o.w + "×" + o.h; return K[o.k] || o.k || "置いた物"; }
   function bandFor(title, btns){
     showBand(function(b){
@@ -50761,6 +50812,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function pick(h){
     moving = null;
     var list = h.kind === "sash" ? "sashes" : (h.list || ""), id = h.id, i = idx(list, id), o = i >= 0 ? S[list][i] : null;
+    if (!o && window.UBD734 && /:in$/.test(String(id || ""))){ var uz = UBD734.zoneById(String(id).replace(/:in$/, "")); if (uz){ try { RITTAI.mark(h, 300, 300); } catch(e){} ubBand(uz); return; } }   /* CAD-734：浴室の入口（ユニットバスのドア）を触った時 */
     if (!o){ say("この物は、ここでは直せません"); return; }
     try { RITTAI.mark(h, 300, 300); } catch(e){}
     if (list === "sashes"){
@@ -50779,9 +50831,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (list === "tenken" && o.dir != null || list === "tenken") B2.push(["回す", function(){ edit(function(){ o.dir = ({ n: "e", e: "s", s: "w", w: "n" })[o.dir] || "e"; try { moveTenken(o, 0, 0); } catch(e){} }, "向きを替えました（押すたびに90°）"); }]);
     B2.push(["動かす", function(){ moving = { list: list, id: id }; bandFor(nm(list, o) + "：動かす先をタップ", [["やめる", function(){ moving = null; closeBand(); }, 1]]); }]);
     if (list === "tenken" && o.w > 0) B2.push(["大きさ", function(){ if (typeof openPad !== "function") return; openPad({ title: "幅（mm）", unit: "mm", value: o.w, done: function(w){ if (!w) return; var d0 = o.d || o.w; openPad({ title: "奥行（mm）", unit: "mm", value: d0, done: function(d){ edit(function(){ o.w = Math.round(w); if (d) o.d = Math.round(d); try { moveTenken(o, 0, 0); } catch(e){} }, "大きさを変えました"); } }); } }); }]);
+    if (o.k === "bath" && window.UBD734){ var uz2 = UBD734.zoneOf(o); if (uz2) B2.push(["入口（ドア）", function(){ ubBand(uz2); }]); }   /* CAD-734 */
     B2.push(["消す", function(){ del(list, id); }, 1]);
     bandFor(nm(list, o), B2);
   }
+  /* CAD-734：浴室の入口の帯（形・ずらす・辺・幅・消す）。押すたびに帯を書き直す */
+  function ubBand(z){ var again = function(){ after(); ubBand(z); }; bandFor(UBD734.label(z), UBD734.acts(z, again)); }
   function moveTo(h){
     var mv = moving; moving = null; var i = idx(mv.list, mv.id), o = i >= 0 ? S[mv.list][i] : null; if (!o){ closeBand(); return; }
     if (mv.list === "fx"){
@@ -50790,7 +50845,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (!w0){ say("その壁には動かせません"); return; }
       var bk = { w: o.w, u: o.u, sd: o.sd };
       edit(function(){ o.w = w0.t === "e" ? w0.i : w0.key; o.u = Math.round(h.u); if (w0.t === "p") o.sd = h.side ? 1 : -1; else delete o.sd; }, "動かしました（戻すで戻せます）");
-      try { if (KAKU2.clashOf && KAKU2.clashOf(o.nid)){ o.w = bk.w; o.u = bk.u; if (bk.sd == null) delete o.sd; else o.sd = bk.sd; try { undoStack.pop(); } catch(x){} save(); after("ドア・窓がある所には動かせません"); } } catch(e){}   /* CAD-724 */
+      try { var cl734 = KAKU2.clashOf && KAKU2.clashOf(o.nid); if (cl734){ o.w = bk.w; o.u = bk.u; if (bk.sd == null) delete o.sd; else o.sd = bk.sd; try { undoStack.pop(); } catch(x){} save(); after(KAKU2.clashMsg ? KAKU2.clashMsg(cl734) : "ドア・窓がある所には動かせません"); } } catch(e){}   /* CAD-724 */
     } else {
       if (h.kind === "wall"){ say("床か天井をタップしてください"); moving = mv; return; }
       edit(function(){ if (mv.list === "tenken"){ try { moveTenken(o, Math.round(h.x - o.x), Math.round(h.y - o.y)); } catch(e){ o.x = Math.round(h.x); o.y = Math.round(h.y); } } else { o.x = Math.round(h.x); o.y = Math.round(h.y); } }, "動かしました（戻すで戻せます）");
@@ -51214,5 +51269,54 @@ window.WHY724 = function(why){
     try { if (window.ZUMEN && !ZUMEN.isOpen()) ZUMEN.open(); } catch(e){}
   }
   window.SPEC730 = { v: 2, open: open, close: close, isOpen: function(){ return !!(V && V.open); } };
+})();
+</script>
+<script id="ubd734js">
+/* ===== CAD-734（Opus）：浴室の入口（ユニットバスのドア）を、新しい画面（平面図の帯・立体の帯）から直す。
+   データは今のまま：浴室の部屋（S.zones の k:"ub"）の door = {side 0上 1右 2下 3左, pos 辺の端からの中心, type ore/hiki/hiraki, w 幅（無い時は形の標準）}。
+   見積は今までどおり形（type）で拾う。幅は図面と立体に効く ===== */
+(function(){
+  "use strict";
+  if (window.UBD734) return;
+  var TY = { ore: ["折れ戸", 800], hiki: ["引き戸", 800], hiraki: ["開き戸", 700] }, SD = ["上の辺", "右の辺", "下の辺", "左の辺"], STEP = 100;
+  function rect(z){ return { x0: Math.min(z.x0, z.x1), y0: Math.min(z.y0, z.y1), x1: Math.max(z.x0, z.x1), y1: Math.max(z.y0, z.y1) }; }
+  function lenOf(z, side){ var r = rect(z); return (side === 0 || side === 2) ? r.x1 - r.x0 : r.y1 - r.y0; }
+  function wOf(d){ return d.w > 0 ? d.w : (TY[d.type] || TY.ore)[1]; }
+  function fix(z){ var d = z.door; if (!d) return; var L = lenOf(z, d.side | 0), w = Math.min(wOf(d), Math.max(300, L)); d.pos = Math.round(Math.max(w / 2, Math.min(L - w / 2, d.pos == null ? L / 2 : d.pos))); }
+  function zoneOf(o){
+    var Z = (typeof S !== "undefined" && S && S.zones) || [], i, z;
+    if (o && o.fid) for (i = 0; i < Z.length; i++){ z = Z[i]; if (z && z.k === "ub" && z.fid === o.fid) return z; }
+    if (o && typeof o.x === "number") for (i = 0; i < Z.length; i++){ z = Z[i]; if (!z || z.k !== "ub") continue; var r = rect(z); if (o.x >= r.x0 - 50 && o.x <= r.x1 + 50 && o.y >= r.y0 - 50 && o.y <= r.y1 + 50) return z; }
+    return null;
+  }
+  function zoneById(id){
+    var Z = (typeof S !== "undefined" && S && S.zones) || [], m = /^zones#(\d+)$/.exec(id); if (m) return (Z[+m[1]] && Z[+m[1]].k === "ub") ? Z[+m[1]] : null;
+    for (var i = 0; i < Z.length; i++){ var z = Z[i]; if (z && z.k === "ub" && (z.nid === id || z.id === id)) return z; }
+    return null;
+  }
+  function label(z){ var d = z && z.door; return d ? "浴室の入口：" + (TY[d.type] || TY.ore)[0] + "・" + SD[d.side | 0] + "・幅" + Math.round(Math.min(wOf(d), lenOf(z, d.side | 0))) : "浴室の入口：まだ付いていません"; }
+  function ch(z, fn, again){ try { if (typeof pushUndo === "function") pushUndo(); fn(); fix(z); if (typeof save === "function") save(); } catch(e){ try { console.warn("CAD-734", e); } catch(x){} } try { if (window.RITTAI && RITTAI.sync) RITTAI.sync(); } catch(e){} if (again) again(); }
+  function say(t){ try { toast(t); } catch(e){} }
+  function acts(z, again){
+    var d = z.door, A = [];
+    if (!d){ A.push(["入口を付ける", function(){ ch(z, function(){ z.door = { side: 0, pos: null, type: "ore" }; }, again); }]); return A; }
+    Object.keys(TY).forEach(function(k){ A.push([(d.type === k ? "● " : "") + TY[k][0], function(){ ch(z, function(){ d.type = k; delete d.w; }, again); }]); });
+    var hz = (d.side | 0) === 0 || (d.side | 0) === 2;
+    A.push([(hz ? "◀" : "▲") + " ずらす", function(){ ch(z, function(){ d.pos = (d.pos || 0) - STEP; }, again); }]);
+    A.push(["ずらす " + (hz ? "▶" : "▼"), function(){ ch(z, function(){ d.pos = (d.pos || 0) + STEP; }, again); }]);
+    A.push(["辺を替える", function(){ ch(z, function(){ d.side = ((d.side | 0) + 1) % 4; d.pos = null; }, again); }]);
+    A.push(["幅", function(){
+      if (typeof openPad !== "function") return;
+      openPad({ title: "浴室の入口の幅", sub: "600〜1200mm（今は " + Math.round(wOf(d)) + "）。空のまま決定で、形の標準（" + (TY[d.type] || TY.ore)[1] + "）に戻ります", unit: "mm", value: d.w || "", done: function(v){
+        var L = lenOf(z, d.side | 0);
+        if (v && (v < 600 || v > 1200)){ say("幅は600〜1200mmで入れてください（浴室の入口として使える幅のため）"); return; }
+        if (v && v > L - 40){ say("その辺は " + Math.round(L) + "mmしかないので、幅" + v + "は入りません"); return; }
+        ch(z, function(){ if (v) d.w = Math.round(v); else delete d.w; }, again);
+      } });
+    }]);
+    A.push(["入口を消す", function(){ ch(z, function(){ delete z.door; }, again); }, 1]);
+    return A;
+  }
+  window.UBD734 = { v: 1, zoneOf: zoneOf, zoneById: zoneById, label: label, acts: acts };
 })();
 </script>
