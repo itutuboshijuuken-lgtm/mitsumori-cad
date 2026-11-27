@@ -866,9 +866,929 @@
      "hinban": "ZB-0012-DVAA／G-0012-DVAA"
     }
    ]
+  },
+  {
+   "id": "kotobira",
+   "name": "子扉・袖（開き方で自動）",
+   "always": true,
+   "match": [
+    "design",
+    "open",
+    "dan",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "P1110k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1110k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1110k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1110k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1120k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K11(R/L)-DHLC"
+    },
+    {
+     "id": "P1120k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K11(R/L)-DHLC"
+    },
+    {
+     "id": "P1120k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K11(R/L)-DHLG"
+    },
+    {
+     "id": "P1120k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K11(R/L)-DHLG"
+    },
+    {
+     "id": "P1140k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1140k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1140k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1140k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1145k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1145k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1145k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1145k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1120Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K11(R/L)-DHLC"
+    },
+    {
+     "id": "P1120Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K11(R/L)-DHLC"
+    },
+    {
+     "id": "P1120Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K11(R/L)-DHLG"
+    },
+    {
+     "id": "P1120Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K11(R/L)-DHLG"
+    },
+    {
+     "id": "P1210k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1210k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1210k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1210k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1220k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K12(R/L)-DHLC"
+    },
+    {
+     "id": "P1220k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K12(R/L)-DHLC"
+    },
+    {
+     "id": "P1220k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K12(R/L)-DHLG"
+    },
+    {
+     "id": "P1220k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K12(R/L)-DHLG"
+    },
+    {
+     "id": "P1240k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1240k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1240k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1240k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1245k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1245k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1245k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1245k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1220Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K12(R/L)-DHLC"
+    },
+    {
+     "id": "P1220Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K12(R/L)-DHLC"
+    },
+    {
+     "id": "P1220Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K12(R/L)-DHLG"
+    },
+    {
+     "id": "P1220Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K12(R/L)-DHLG"
+    },
+    {
+     "id": "P1310k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1310k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1310k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1310k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1320k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K13(R/L)-DHLC"
+    },
+    {
+     "id": "P1320k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K13(R/L)-DHLC"
+    },
+    {
+     "id": "P1320k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K13(R/L)-DHLG"
+    },
+    {
+     "id": "P1320k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K13(R/L)-DHLG"
+    },
+    {
+     "id": "P1340k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1340k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1340k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1340k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1345k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1345k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1345k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1345k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1320Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K13(R/L)-DHLC"
+    },
+    {
+     "id": "P1320Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K13(R/L)-DHLC"
+    },
+    {
+     "id": "P1320Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K13(R/L)-DHLG"
+    },
+    {
+     "id": "P1320Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K13(R/L)-DHLG"
+    },
+    {
+     "id": "P1410k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1410k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1410k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1410k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1420k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K14(R/L)-DHLC"
+    },
+    {
+     "id": "P1420k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K14(R/L)-DHLC"
+    },
+    {
+     "id": "P1420k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K14(R/L)-DHLG"
+    },
+    {
+     "id": "P1420k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K14(R/L)-DHLG"
+    },
+    {
+     "id": "P1440k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1440k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1440k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1440k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1445k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1445k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1445k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1445k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1420Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K14(R/L)-DHLC"
+    },
+    {
+     "id": "P1420Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K14(R/L)-DHLC"
+    },
+    {
+     "id": "P1420Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K14(R/L)-DHLG"
+    },
+    {
+     "id": "P1420Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K14(R/L)-DHLG"
+    },
+    {
+     "id": "P1510k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1510k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1510k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1510k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1520k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K15(R/L)-DHLC"
+    },
+    {
+     "id": "P1520k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K15(R/L)-DHLC"
+    },
+    {
+     "id": "P1520k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K15(R/L)-DHLG"
+    },
+    {
+     "id": "P1520k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K15(R/L)-DHLG"
+    },
+    {
+     "id": "P1540k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1540k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1540k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1540k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1545k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1545k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1545k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1545k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1520Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K15(R/L)-DHLC"
+    },
+    {
+     "id": "P1520Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K15(R/L)-DHLC"
+    },
+    {
+     "id": "P1520Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K15(R/L)-DHLG"
+    },
+    {
+     "id": "P1520Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K15(R/L)-DHLG"
+    },
+    {
+     "id": "P1610k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1610k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1610k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1610k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1620k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K16(R/L)-DHLC"
+    },
+    {
+     "id": "P1620k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K16(R/L)-DHLC"
+    },
+    {
+     "id": "P1620k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K16(R/L)-DHLG"
+    },
+    {
+     "id": "P1620k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K16(R/L)-DHLG"
+    },
+    {
+     "id": "P1640k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1640k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1640k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1640k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1645k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1645k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1645k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1645k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1620Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K16(R/L)-DHLC"
+    },
+    {
+     "id": "P1620Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K16(R/L)-DHLC"
+    },
+    {
+     "id": "P1620Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K16(R/L)-DHLG"
+    },
+    {
+     "id": "P1620Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K16(R/L)-DHLG"
+    },
+    {
+     "id": "P1710k2alu",
+     "teika": 0
+    },
+    {
+     "id": "P1710k2uki",
+     "teika": 0
+    },
+    {
+     "id": "P1710k4alu",
+     "teika": 0
+    },
+    {
+     "id": "P1710k4uki",
+     "teika": 0
+    },
+    {
+     "id": "P1720k2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K17(R/L)-DHLC"
+    },
+    {
+     "id": "P1720k2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K17(R/L)-DHLC"
+    },
+    {
+     "id": "P1720k4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K17(R/L)-DHLG"
+    },
+    {
+     "id": "P1720k4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K17(R/L)-DHLG"
+    },
+    {
+     "id": "P1740k2alu",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1740k2uki",
+     "teika": 116000,
+     "hinban": "Z-140A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1740k4alu",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1740k4uki",
+     "teika": 107000,
+     "hinban": "Z-140A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1745k2alu",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1745k2uki",
+     "teika": 138000,
+     "hinban": "Z-145A6-DHZP",
+     "page": 72
+    },
+    {
+     "id": "P1745k4alu",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1745k4uki",
+     "teika": 130000,
+     "hinban": "Z-145A2-DHZR",
+     "page": 72
+    },
+    {
+     "id": "P1720Ck2alu",
+     "teika": 174000,
+     "page": 46,
+     "hinban": "□□-K17(R/L)-DHLC"
+    },
+    {
+     "id": "P1720Ck2uki",
+     "teika": 195000,
+     "page": 46,
+     "hinban": "■■-K17(R/L)-DHLC"
+    },
+    {
+     "id": "P1720Ck4alu",
+     "teika": 160000,
+     "page": 46,
+     "hinban": "□□-K17(R/L)-DHLG"
+    },
+    {
+     "id": "P1720Ck4uki",
+     "teika": 180000,
+     "page": 46,
+     "hinban": "■■-K17(R/L)-DHLG"
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドルセット（標準）",
+   "always": true,
+   "match": [
+    "design",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "P11alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P11uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P12alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P12uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P13alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P13uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P14alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P14uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P15alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P15uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P16alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P16uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    },
+    {
+     "id": "P17alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DHPA",
+     "page": 50
+    },
+    {
+     "id": "P17uki",
+     "teika": 52000,
+     "hinban": "Z-1A1-DHPC",
+     "page": 50
+    }
+   ]
+  },
+  {
+   "id": "cylinder",
+   "name": "シリンダーセット（標準）",
+   "always": true,
+   "match": [
+    "entry"
+   ],
+   "values": [
+    {
+     "id": "shudo",
+     "teika": 11600,
+     "hinban": "Z-2A5-DHYD",
+     "page": 50
+    },
+    {
+     "id": "denchi",
+     "teika": 30000,
+     "hinban": "Z-1A5-DHYK",
+     "page": 50
+    },
+    {
+     "id": "ac100v",
+     "teika": 30000,
+     "hinban": "Z-1A5-DHYK",
+     "page": 50
+    }
+   ]
   }
  ],
- "note": "本体価格は鍵の種類（手動／電池式／AC100V式／テンキー付）では変わらず、デザイン×断熱仕様×色でのみ変わる。枠の価格は枠形状（フラット／立ち上がり）とアングル（付／無）では変わらず、商品コードの末尾記号（k2=A／B／C／D、k4=E／F／G／H）だけが変わる。枠の adds にはドアクローザ標準品（¥11,500）を含めた。キーセットの商品コードはハンドル型とハンドル色で変わる（例 Z-005(R/L)WW-DVGJ）。別途有償品（追加用カードキー¥2,300・追加タグキー¥7,500・追加標準キー収納リモコン¥35,000）とオプションプランのプラン別必須部材（パナソニック機器 合計¥59,440〜¥192,900）は未収録。P型の色記号：アルミ系□□はEAエクリュアイボリー・EDクリエラスク・CDミディアムチェリー・CFチェリーウッド・CAアイリッシュパイン・CCハンドダウンチェリー・CBクリエモカ・CEラスティックオーク・BAアンティークオーク・BEゼンオーク・BBクリエダーク・BCトリノパイン（型で組み合わせが違う）、木目系■■（浮造り調）はHDオーク・HCチーク。",
+ "note": "本体価格は鍵の種類（手動／電池式／AC100V式／テンキー付）では変わらず、デザイン×断熱仕様×色でのみ変わる。枠の価格は枠形状（フラット／立ち上がり）とアングル（付／無）では変わらず、商品コードの末尾記号（k2=A／B／C／D、k4=E／F／G／H）だけが変わる。枠の adds にはドアクローザ標準品（¥11,500）を含めた。キーセットの商品コードはハンドル型とハンドル色で変わる（例 Z-005(R/L)WW-DVGJ）。別途有償品（追加用カードキー¥2,300・追加タグキー¥7,500・追加標準キー収納リモコン¥35,000）とオプションプランのプラン別必須部材（パナソニック機器 合計¥59,440〜¥192,900）は未収録。P型の色記号：アルミ系□□はEAエクリュアイボリー・EDクリエラスク・CDミディアムチェリー・CFチェリーウッド・CAアイリッシュパイン・CCハンドダウンチェリー・CBクリエモカ・CEラスティックオーク・BAアンティークオーク・BEゼンオーク・BBクリエダーク・BCトリノパイン（型で組み合わせが違う）、木目系■■（浮造り調）はHDオーク・HCチーク。 子扉・袖・ハンドルセット・シリンダーセット・ドアガードは必須部材として自動加算（子扉はK型一覧の標準価格帯、特例：C72/C74/C92型の子扉はK72型・k4のみ、C73/C93型はK71型。M31/P20/P21型は採光なし子扉。採風タイプとM31系は袖・子扉の設定なし）。ハンドル標準は一般仕様（室内アルミ／室内樹脂）、シリンダー標準は手動=W錠・FamiLock=DN上下コンスキー。",
  "pages": [
   {
    "page": 30,
@@ -877,6 +1797,34 @@
   {
    "page": 31,
    "rows": 16
+  },
+  {
+   "page": 46,
+   "rows": 0
+  },
+  {
+   "page": 47,
+   "rows": 0
+  },
+  {
+   "page": 48,
+   "rows": 0
+  },
+  {
+   "page": 49,
+   "rows": 0
+  },
+  {
+   "page": 50,
+   "rows": 0
+  },
+  {
+   "page": 51,
+   "rows": 0
+  },
+  {
+   "page": 72,
+   "rows": 0
   }
  ]
 }
