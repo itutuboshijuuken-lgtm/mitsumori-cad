@@ -47118,6 +47118,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } else if (ty === "win"){
       sy.thin += ln(P(s0, -h), P(s1, -h)) + ln(P(s0, h), P(s1, h)) + ln(P(s0, 0), P(s1, 0));
       if (t.work === "ip") sy.thin += ln(P(s0, n * 110), P(s1, n * 110));   /* 内窓 */
+      /* CAD-704：窓の付属（sa.acc）を外側に描く。雨戸＝細い四角（窓シャッターは中に点線）、面格子＝格子（150ごと）、霧除け＝窓の上の庇なので点線（上にある物の書き方） */
+      if (raw.acc && typeof raw.acc === "object"){
+        var oo = -nIn, AC = raw.acc, rc = function(a0, a1, b0, b1){ return ln(P(a0, oo * b0), P(a1, oo * b0)) + ln(P(a1, oo * b0), P(a1, oo * b1)) + ln(P(a1, oo * b1), P(a0, oo * b1)) + ln(P(a0, oo * b1), P(a0, oo * b0)); }, gx = h + 20;
+        if (AC.amado){ sy.thin += rc(s0, s1, h + 20, h + 90); if (AC.amado === "e") sy.dash += ln(P(s0, oo * (h + 55)), P(s1, oo * (h + 55))); bx.push(P(s0, oo * (h + 90)), P(s1, oo * h)); gx = h + 110; }
+        if (AC.koshi){ var g1 = gx + 70; sy.thin += ln(P(s0, oo * g1), P(s1, oo * g1)); for (j = 0; j * 150 <= w + .5; j++) sy.thin += ln(P(Math.min(s1, s0 + j * 150), oo * gx), P(Math.min(s1, s0 + j * 150), oo * g1)); bx.push(P(s0, oo * g1), P(s1, oo * h)); }
+        if (AC.kiri){ var kd = h + 300; sy.dash += ln(P(s0 - 100, oo * kd), P(s1 + 100, oo * kd)) + ln(P(s0 - 100, oo * h), P(s0 - 100, oo * kd)) + ln(P(s1 + 100, oo * h), P(s1 + 100, oo * kd)); bx.push(P(s0 - 100, oo * kd), P(s1 + 100, oo * h)); }
+      }
     }
     if (bx.length) sy.box = bbox(bx);
     return sy;
@@ -48297,7 +48304,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* 検査用：図面の座標（mm）で、なぞった線・タップを渡す */
     trace: function(P){ if (!A || !tool || tool === "del" || !Array.isArray(P)) return { ok: false }; return tool === "add" ? finishAdd(P) : tool === "part" ? finishPart(P) : finishEra(P); },
     tapEdge: function(i){ if (!A || tool !== "del") return { ok: false }; return toggle(i); },
-    puts: function(){ return PUTS; }, fxAt: function(x, y){ if (!A) return -1; var pk = thingAt([x, y], "fx"); return pk ? pk.i : -1; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
+    puts: function(){ return PUTS; }, movePartBy: function(q, d){ if (!q || !(Math.abs(d) >= 1)) return { ok: false }; pdrag = { q: q, horiz: Math.abs(q.y1 - q.y2) < 1, d: d }; return endPdrag(true); },   /* CAD-703：内側の寸法の数字から（吸い付けない・T字も一緒） */ fxAt: function(x, y){ if (!A) return -1; var pk = thingAt([x, y], "fx"); return pk ? pk.i : -1; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
     choose: chooseSpec, put: choosePut, specPut: function(put, k, label){ spec = { put: put, k: k, label: label || k }; tool = "put"; refresh(); pick2put(); return spec; },
     spec: function(o){ if (o && typeof o === "object"){ spec = o; tool = "put"; refresh(); pick2put(); } return spec; },
     placeAt: function(x, y){ if (!A || tool !== "put" || !spec) return { ok: false }; var p = [x, y]; return !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p); },
@@ -48341,6 +48348,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
    CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-704（2026-11-27 Claude/Opus）：窓の付属を平面図に描く（ZUMEN の opSym。雨戸＝外の細い四角・窓シャッターは中に点線・面格子＝格子・霧除け＝点線の庇）。
+   CAD-703（2026-11-27 Claude/Opus）：内側の寸法の数字（間仕切りで分かれた区間）をタップ→数字パッド→間仕切りが動く。区間の右（下）の端が間仕切りならそれ、
+     無ければ左（上）の端。同じ線の間仕切りは全部・T字も一緒・吸い付けない・戻す1回（KAKU2.movePartBy）。
    CAD-701（2026-11-27 Claude/Opus）：外形の辺の数字を入れても図が変わらない不具合（翔伍の動画 10:43）。四角の上と下のように、その向きの辺が2本だけの時は
      向かいの辺も同じ長さにそろえる（戻す1回）。3本以上で合わない時は「合計が○mm合いません」を出す（今まで新しい図面では警告が見えなかった）。
    CAD-700（2026-11-27 Claude/Opus）：置いた後の微調整。置いた物（壁の物・照明・設備）をタップ→帯に、位置（壁の物＝壁の端から、照明・設備＝左の壁・上の壁から）と
@@ -48440,6 +48450,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var i = edgeAt(p);
     if (i >= 0 && window.KOHO && S.edges && S.edges[i] && !unk()){ closePart(); closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openWall(i, p); return; }   /* CAD-699：寸法がそろっている時の外壁は、触って候補の帯（［寸法］も帯の中）。決まっていない辺がある間は、今までどおりすぐ数字パッド */
     if (i < 0) i = dimEdgeAt(p);
+    if (i < 0){ var ds = dimSegAt(p); if (ds){ closePart(); closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); tapT = Date.now(); innerPad(ds); return; } }   /* CAD-703：間仕切りで分かれた内側の寸法の数字 */
     if (i < 0){ var ti = tareAt(p); if (ti >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openTare(ti); return; } }   /* CAD-687：垂れ壁（別の記録 S.tare）→帯［下がり］（今の tareEdit） */
     if (i < 0){ var pi = partAt(p); if (pi >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else { closePart(); setTimeout(roomAfterTap, 0); } return; }
     closeRoom();
@@ -48448,6 +48459,43 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     tapT = Date.now(); open(i);
   }
   /* 外側の寸法の数字 → 外形の辺（その数字とちょうど同じ長さで、向きが同じ、一番近い辺） */
+  /* CAD-703：寸法の数字の区間（dimEdgeAt と同じ見つけ方）。外形の辺と同じ区間でも返す（呼ぶ側が先に dimEdgeAt を見る） */
+  function dimSegAt(p){
+    var z = zumen(), L = null; try { L = z && z.layout ? z.layout() : null; } catch(e){ L = null; }
+    if (!L || !L.ok || !Array.isArray(L.labels)) return null;
+    var pad8 = 8 * pxmm(), hitL = null;
+    L.labels.forEach(function(q){ if (q.k !== "dim" || !q.bx) return; var b = q.bx; if (p[0] >= b[0] - pad8 && p[0] <= b[2] + pad8 && p[1] >= b[1] - pad8 && p[1] <= b[3] + pad8) hitL = q; });
+    if (!hitL) return null;
+    var v = parseFloat(String(hitL.text).replace(/,/g, "")); if (!(v > 0)) return null;
+    var seg = null, sd = Infinity, segHz = false, rows = Array.isArray(L.dims) ? L.dims : [], ticks = Array.isArray(L.ticks) ? L.ticks : [];
+    rows.forEach(function(r){
+      var hz = Math.abs(r[1] - r[3]) < 1; if (hitL.rot ? hz : !hz) return;
+      var at = hz ? r[1] : r[0], cs = [hz ? Math.min(r[0], r[2]) : Math.min(r[1], r[3]), hz ? Math.max(r[0], r[2]) : Math.max(r[1], r[3])];
+      ticks.forEach(function(t){ if (Math.abs((hz ? t[1] : t[0]) - at) < 1) cs.push(hz ? t[0] : t[1]); });
+      cs.sort(function(x, y){ return x - y; });
+      for (var q = 0; q + 1 < cs.length; q++){
+        var s0 = cs[q], s1 = cs[q + 1]; if (s1 - s0 < 1 || Math.abs((s1 - s0) - v) > 1) continue;
+        var mx = hz ? (s0 + s1) / 2 : at, my = hz ? at : (s0 + s1) / 2, dd = Math.hypot(hitL.cx - mx, hitL.cy - my);
+        if (dd < sd){ sd = dd; seg = [s0, s1]; segHz = hz; }
+      }
+    });
+    return seg ? { hz: segHz, s0: seg[0], s1: seg[1], v: v } : null;
+  }
+  /* 内側の寸法：区間の右（下）の端が間仕切りならそれを、無ければ左（上）の端の間仕切りを動かす。同じ線の上の間仕切りは全部（戻す1回） */
+  function partsOn(hz, at){ return (S.parts2D || []).filter(function(q){ if (pState(q) === "remove") return false; var vt = Math.abs(q.x1 - q.x2) < 1; return hz ? (vt && Math.abs(q.x1 - at) < 2) : (!vt && Math.abs(q.y1 - at) < 2 && Math.abs(q.y1 - q.y2) < 1); }); }
+  function innerPad(ds){
+    var right = partsOn(ds.hz, ds.s1), left = partsOn(ds.hz, ds.s0), useR = right.length > 0;
+    if (!right.length && !left.length){ say("この寸法の両端に間仕切りがありません。外壁の線をタップして直してください"); return; }
+    if (typeof openPad !== "function") return;
+    openPad({ title: (ds.hz ? "横" : "縦") + "の寸法 " + Math.round(ds.v).toLocaleString("ja-JP"), sub: "芯々。" + (useR ? (ds.hz ? "右" : "下") : (ds.hz ? "左" : "上")) + "側の間仕切りが動きます", unit: "mm", std: false, value: Math.round(ds.v), done: function(nv){
+      if (!(nv > 0)) return;
+      var dlt = Math.round(nv) - Math.round(ds.v); if (!dlt) return;
+      var L0 = undoStack.length, ok = 0, Q = useR ? right : left;
+      Q.forEach(function(q){ try { var r = window.KAKU2.movePartBy(q, useR ? dlt : -dlt); if (r && r.ok !== false) ok++; } catch(e){ warn("内側の寸法", e); } });
+      if (undoStack.length > L0 + 1) undoStack.splice(L0 + 1);   /* 何本動いても、戻すは1回 */
+      say(ok ? "寸法を " + Math.round(nv).toLocaleString("ja-JP") + "mm にしました（戻すで戻せます）" : "そこへは動かせませんでした（となりの部屋が狭くなりすぎる・外壁を越える時は止まります）");
+    } });
+  }
   function dimEdgeAt(p){
     var z = zumen(), L = null; try { L = z && z.layout ? z.layout() : null; } catch(e){ L = null; }
     if (!L || !L.ok || !Array.isArray(L.labels)) return -1;
