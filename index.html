@@ -48200,6 +48200,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
    CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-701（2026-11-27 Claude/Opus）：外形の辺の数字を入れても図が変わらない不具合（翔伍の動画 10:43）。四角の上と下のように、その向きの辺が2本だけの時は
+     向かいの辺も同じ長さにそろえる（戻す1回）。3本以上で合わない時は「合計が○mm合いません」を出す（今まで新しい図面では警告が見えなかった）。
    CAD-700（2026-11-27 Claude/Opus）：置いた後の微調整。置いた物（壁の物・照明・設備）をタップ→帯に、位置（壁の物＝壁の端から、照明・設備＝左の壁・上の壁から）と
      高さ（壁の点の物）を数字で、矢印で10mmずつ、［消す］。壁の物もタップで選べるようにした。書き方は今の MADO.write／moveTenken（戻す1回）。
    CAD-699（2026-11-27 Claude/Opus）：触って候補（翔伍の11/25・26の決め：触った場所から予想して候補3つ＋その他、決まった表で毎回同じ）。
@@ -48844,7 +48846,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function open(i){
     if (!usable() || busy() || !(i >= 0) || !S.edges[i]) return { ok: false };
     var z = zumen();
-    if (!editing){ vb0 = z ? z.view() : null; key0 = boxKey(); }
+    if (!editing){ vb0 = z ? z.view() : null; key0 = boxKey(); try { edSnap = S.edges.map(function(e){ return e.v + "|" + (e.set ? 1 : 0); }); } catch(e){ edSnap = null; } }
     editing = true; document.body.classList.add("k3pad"); say("");
     try { editEdge(i); } catch(e){ warn("editEdge", e); endEdit(true); return { ok: false }; }
     setTimeout(onPadShown, 30);
@@ -48877,13 +48879,40 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
     A.ov.appendChild(l);
   }
+  /* CAD-701：外形の辺を入れた時、向かいの辺と合わなくなったら（四角の上と下など、その向きの辺が2本だけの時）向かいの辺を同じ長さにそろえる。
+     今のアプリ（CAD-317）は合わない時に警告だけ出すが、新しい図面ではその警告が見えず「入れても変わらない」になっていた。
+     その向きの辺が3本以上（L字など）の時は、どの辺で合わせるか決められないので、合わないことと合計の差をはっきり出す */
+  var edSnap = null;
+  function fixClose(){
+    try {
+      if (!edSnap || !S.edges || typeof solve !== "function") return null;
+      var chg = []; S.edges.forEach(function(e, i){ if (edSnap[i] !== e.v + "|" + (e.set ? 1 : 0)) chg.push(i); });
+      edSnap = null; if (!chg.length) return null;
+      var done = [], msg = null;
+      [["R", "L", "横"], ["D", "U", "縦"]].forEach(function(ax){
+        var idx = []; S.edges.forEach(function(e, i){ if (e.d === ax[0] || e.d === ax[1]) idx.push(i); });
+        var sum = 0; idx.forEach(function(i){ sum += (S.edges[i].d === ax[0] ? 1 : -1) * S.edges[i].v; });
+        if (Math.abs(sum) <= .5) return;
+        var mine = chg.filter(function(i){ return idx.indexOf(i) >= 0; }); if (!mine.length) return;
+        if (idx.length === 2){
+          var me = mine[mine.length - 1], other = idx[0] === me ? idx[1] : idx[0];
+          S.edges[other].v = S.edges[me].v; S.edges[other].set = true; S.edges[other].usr = true; done.push([other, S.edges[me].v]);
+        } else msg = ax[2] + "の辺の合計が " + Math.round(Math.abs(sum)).toLocaleString("ja-JP") + "mm 合いません。ほかの" + ax[2] + "の辺の数字も直してください";
+      });
+      if (done.length){ solve(); save(); if (typeof drawPlan === "function") drawPlan(); return { fixed: done }; }
+      return msg ? { msg: msg } : null;
+    } catch(e){ warn("向かいの辺", e); return null; }
+  }
   function endEdit(quiet){
     clearTimeout(tmClose);
     if (!editing) return; editing = false;
+    var fc = fixClose();
     document.body.classList.remove("k3pad");
     if (A) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
     try { var z = zumen(); if (z && z.isOpen()){ if (boxKey() !== key0 || !vb0) z.home(); else z.view(vb0); } } catch(e){}
     vb0 = null;
+    if (fc && fc.fixed){ say("向かいの辺も " + fc.fixed.map(function(q){ return Math.round(q[1]).toLocaleString("ja-JP"); }).join("・") + "mm にそろえました（戻すで戻せます）"); return; }
+    if (fc && fc.msg){ say(fc.msg); return; }
     if (!quiet) hint(true);
   }
   /* パッドの開け閉めを見張る。前へ／次へは「閉じてすぐ開く」ので、少し待ってから閉じたと決める */
