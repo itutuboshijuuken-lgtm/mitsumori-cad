@@ -7794,11 +7794,11 @@ function calc00(){
     const nm = {s: ["kaidan", "階段（直階段）"], L: ["kaidanL", "階段（かね折れ）"], M: ["kaidanM", "階段（回り階段）"], D: ["kaidanM", "階段（下回り）"], U: ["kaidanM", "階段（上回り）"], B: ["kaidanM", "階段（上下回り）"]};   /* CAD-299：新形（下回り・上回り・上下回り）は回り系の単価 kaidanM に寄せ、行名だけ形の名前にする */
     const autoH = (S.ch || 2400) + (S.dosa || 240);
     const by = {};
-    st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, kk = t + "|" + H; if (!by[kk]) by[kk] = {t, H, c: 0, os: []}; by[kk].c++; by[kk].os.push(o); });   /* CAD-389：積み上げ用に階段そのものも集める */   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
-    Object.keys(by).forEach(kk => { const g = by[kk], n = Math.ceil(g.H / 190), R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
+    st.forEach(o => { const t = o.sf ? (({s: "s", k: o.tn === 1 ? "L" : "M", d: "D", u: "U", b: "B"})[o.sf] || "s") : ((o.st || "s") === "N" ? "M" : (o.st || "s")), H = o.kh || autoH, nn = stN741(o, H), kk = t + "|" + H + "|" + nn; if (!by[kk]) by[kk] = {t, H, n: nn, c: 0, os: []}; by[kk].c++; by[kk].os.push(o); });   /* CAD-389：積み上げ用に階段そのものも集める */   /* CAD-299：集計の型は形（sf）と段数（tn）から決める。sf の無い旧データは従来通り（N は M に寄せる）。かね折れ1段だけ L（踊り場の手すり +910 が従来通り残る） */
+    Object.keys(by).forEach(kk => { const g = by[kk], n = g.n, R = g.H / n, railL = Math.round(((n - 1) * Math.hypot(227.5, R) + (g.t === "L" ? 910 : 0)) / 100) / 10;   /* CAD-268：手すりの長さは、段先を結ぶ斜めの実長（かね折れは踊り場の分を足す）。片側1本 */
       /* CAD-389：部品定価の積み上げ（材料）＋取付手間（別行）。階段の単価を自分で入れている時（仮でない時）は割り直さず従来の1行のまま */
       if (typeof stairRows389 === "function" && workP(nm[g.t][0]).avg) stairRows389(rows, g, nm[g.t][1], n, railL);
-      else work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段 ／ 手すり 片側 約${railL}m）`);
+      else work(nm[g.t][0], nm[g.t][1], g.c, "か所", `${g.c}か所 × ${fmt(workP(nm[g.t][0]).p)}円（階高 約${fmt(g.H)} ÷ ${n}段 ＝ 蹴上げ 約${fmt(Math.round(g.H / n))} ／ 手すり 片側 約${railL}m）`);
       if (S.stairRailSep === true && !(S.extras || []).some(x => x && x.k === "kaidan" && x.rail > 0)){ const railN378 = Math.ceil(railL * 1000 / 910) + 1;   /* CAD-378：受け金具は流れごとに910mmピッチ・両端入り（翔伍の決定 2026-11-18）。手すりは片側1本＝1か所1流れ */
         work("kdBar35", "手すり丸棒35", Math.round(railL * g.c * 10) / 10, "m", `${g.c}か所 × 約${railL}m（段先を結ぶ斜めの実長${g.t === "L" ? "＋踊り場" : ""}）`);
         work("kdBracket", "手すり受け金具", railN378 * g.c, "個", `${g.c}か所 × ${railN378}個（910mmピッチ・両端入り）`); } });
@@ -35220,8 +35220,10 @@ return [{t: "s", n: Math.max(1, sn(len))}];
 }
 /* 1か所分の部品定価の合計と内訳を返す。段数 N は見積側（階高÷190）で数え、
 形の内訳（廻り段数 W・踊り場 D・直の区間）だけ絵から取る */
+/* CAD-741：段数＝段差（蹴上げ）の数＝上がり切りの数（翔伍の決定 2026-11-27・一般的な数え方）。図面に描いた階段は図面の合計段数、無い時だけ 階高÷190 切り上げ */
+function stN741(o, H){ try { var A = window.__st306; if (o && o.k === "stair" && A){ var T = A.totalOf(A.partsOf(o)); if (T > 0) return T; } } catch(e){} return Math.max(1, Math.ceil(H / 190)); }
 function stBuild389(o, H){
-const TD = 227.5, N = Math.max(1, Math.ceil(H / 190)), R = H / N;
+const TD = 227.5, N = stN741(o, H), R = H / N;
 const parts = stParts389(o);
 let W = 0, D = 0; const turns = [];
 parts.forEach(q => { if (q.t === "m"){ if (q.kind === 1){ D++; turns.push(1);} else { W += q.kind; turns.push(q.kind);}}});
@@ -35255,7 +35257,7 @@ let sum = 0, b0 = null;
 (g.os || []).forEach(o => { const b = stBuild389(o, g.H); sum += b.sum; if (!b0) b0 = b;});
 if (!b0) b0 = stBuild389({sf: "s"}, g.H);
 const per = g.c > 0? Math.round(sum / g.c): sum;
-rows.push({name: `${name}（材料）`, spec: `${g.c}か所 × ${fmt(Math.round(per * pct / 100))}円（部品定価 ${fmt(per)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b0.det}／階高 約${fmt(g.H)} ÷ 190 ＝ ${n}段・手すり 片側 約${railL}m）`, qty: "", cost: Math.round(sum * pct / 100), avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: g.c});
+rows.push({name: `${name}（材料）`, spec: `${g.c}か所 × ${fmt(Math.round(per * pct / 100))}円（部品定価 ${fmt(per)}円 × 掛率${fmt(pct, 1)}%・ノダ カナエル／${b0.det}／階高 約${fmt(g.H)} ÷ ${n}段 ＝ 蹴上げ 約${fmt(Math.round(g.H / n))}・手すり 片側 約${railL}m）`, qty: "", cost: Math.round(sum * pct / 100), avg: false, fix: {kind: "teika379", maker: "ノダ"}, q: g.c});
 const nin = g.t === "s"? 1: 1.5, np = workP("ninku"); /* 手間：直階段 1.0人工／その他 1.5人工（study-stair-labor）。金額は大工1人工の単価に連動 */
 if (S.mode === "zo"){ const dk = g.t === "s" ? "kdDanS" : "kdDanM", dw = workP(dk); rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${n}段 × ${fmt(dw.p)}円/段`, qty: `${n * g.c}段`, cost: dw.p * n * g.c, avg: dw.avg, miss: !dw.p, fix: {kind: "work", key: dk}, q: n * g.c}); }   /* CAD-391：取付手間は段単価（箇所側）。直 ¥1,700/段・その他 ¥2,500/段（study の換算・段数は材料と同じ見積段数） */
     else rows.push({name: `${name}（取付手間）`, spec: `${g.c}か所 × ${fmt(nin, 1)}人工 × ${fmt(np.p)}円`, qty: "", cost: nin * np.p * g.c, avg: np.avg, miss:!np.p, fix: {kind: "work", key: "ninku"}, q: g.c});
