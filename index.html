@@ -51466,7 +51466,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     go();
   }
   /* CAD-734：浴室の入口の帯（形・ずらす・辺・幅・消す）。押すたびに帯を書き直す */
-  function ubBand(z){ var again = function(){ after(); ubBand(z); }; bandFor(UBD734.label(z), UBD734.acts(z, again)); }
+  function ubBand(z){ var again = function(){ after(); ubBand(z); }, lb = UBD734.label(z), m = lb.match(/^(.*?)<span[^>]*>(.*)<\/span>$/); bandFor(m ? m[1] : lb, UBD734.acts(z, again)); if (m && band){ var w = mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", m[2]); band.insertBefore(w, band.children[1] || null); } }   /* CAD-745：壁の無い辺の時は理由を赤で */
   function moveTo(h){
     var mv = moving; moving = null; var i = idx(mv.list, mv.id), o = i >= 0 ? S[mv.list][i] : null; if (!o){ closeBand(); return; }
     if (mv.list === "fx"){
@@ -51924,7 +51924,17 @@ window.WHY724 = function(why){
     for (var i = 0; i < Z.length; i++){ var z = Z[i]; if (z && z.k === "ub" && (z.nid === id || z.id === id)) return z; }
     return null;
   }
-  function label(z){ var d = z && z.door; return d ? "浴室の入口：" + (TY[d.type] || TY.ore)[0] + "・" + SD[d.side | 0] + "・幅" + Math.round(Math.min(wOf(d), lenOf(z, d.side | 0))) : "浴室の入口：まだ付いていません"; }
+  /* CAD-745：入口の辺に壁があるか（立体は壁に開口として入れるので、壁の無い辺だと出ない） */
+  function onWall(z){
+    var d = z && z.door; if (!d) return true;
+    try {
+      var r = rect(z), sd = d.side | 0, hz = sd === 0 || sd === 2, L = lenOf(z, sd), w = Math.min(wOf(d), Math.max(300, L)), pos = d.pos == null ? L / 2 : d.pos;
+      var c = sd === 0 ? [r.x0 + pos, r.y0] : sd === 2 ? [r.x0 + pos, r.y1] : sd === 3 ? [r.x0, r.y0 + pos] : [r.x1, r.y0 + pos];
+      var md = window.MADO && MADO.read(); if (!md || !md.walls) return true;
+      return md.walls.some(function(q){ if (q.form && q.form !== "full") return false; if (Math.abs(hz ? q.uy : q.ux) > .02) return false; var dx = c[0] - q.a[0], dy = c[1] - q.a[1], s2 = dx * q.ux + dy * q.uy; return Math.abs(dx * q.uy - dy * q.ux) <= 90 && s2 - w / 2 >= 20 && s2 + w / 2 <= q.len - 20; });
+    } catch(e){ return true; }
+  }
+  function label(z){ var d = z && z.door; return d ? "浴室の入口：" + (TY[d.type] || TY.ore)[0] + "・" + SD[d.side | 0] + "・幅" + Math.round(Math.min(wOf(d), lenOf(z, d.side | 0))) + (onWall(z) ? "" : "<span style='display:block;color:#B91C1C;font-size:12px'>この辺のその位置には壁が無い（または壁の端にかかる）ので、立体には出ません。［辺を替える］か［ずらす］で壁のある所へ</span>") : "浴室の入口：まだ付いていません"; }
   function ch(z, fn, again){ try { if (typeof pushUndo === "function") pushUndo(); fn(); fix(z); if (typeof save === "function") save(); } catch(e){ try { console.warn("CAD-734", e); } catch(x){} } try { if (window.RITTAI && RITTAI.sync) RITTAI.sync(); } catch(e){} if (again) again(); }
   function say(t){ try { toast(t); } catch(e){} }
   function acts(z, again){
