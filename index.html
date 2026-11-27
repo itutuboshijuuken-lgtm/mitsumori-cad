@@ -50312,12 +50312,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* CAD-715：窓は、図面の窓の種類で出すシリーズを絞る（ツーバイフォーの「204」は出さない＝在来の家）。掃き出し＝テラス／腰窓＝引違いのマド／小窓＝引違い・すべり出し・倒し／FIX＝FIXのマド */
   function nm(e){ return String(e.seriesName || e.series || ""); }
   function winOk(sa, e){
+    var n = nm(e); if (/204/.test(n)) return false;   /* CAD-729：ツーバイフォー用はどの種類でも出さない */
     if (e.group !== "サッシ") return true;
-    var n = nm(e); if (/204/.test(n)) return false;
     var t = /テラス/.test(n);
     if (sa.cat === "掃き出し") return t;
-    if (sa.cat === "腰窓") return !t && /引違い/.test(n);
-    if (sa.cat === "小窓") return !t && /引違い|すべり出し|倒し/.test(n);
+    if (sa.cat === "腰窓") return !t && /引違い|上げ下げ|縦すべり出し/.test(n);
+    if (sa.cat === "小窓") return !t && /引違い|すべり出し|倒し|上げ下げ/.test(n);
     if (sa.cat === "FIX") return !t && /FIX/.test(n);
     return true;
   }
@@ -50407,7 +50407,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function draw(){
     var d = st.d, P = priced(d), h = "<h3>カタログから選ぶ</h3>";
-    if (st.L.length > 1 && st.ent.group === "サッシ"){   /* CAD-715：窓は「シリーズ」と「形」に分けて小分けに */
+    if (st.L.length > 1 && (st.ent.group === "サッシ" || st.ent.group === "勝手口ドア")){   /* CAD-715：窓は「シリーズ」と「形」に分けて小分けに */
       var lines = [], ln = lineOf(st.ent); st.L.forEach(function(e){ var l = lineOf(e); if (lines.indexOf(l) < 0) lines.push(l); });
       if (lines.length > 1) h += chips("__line", "シリーズ", lines.map(function(l){ return { id: l, name: l }; }), ln);
       var TY = st.L.filter(function(e){ return lineOf(e) === ln; });
