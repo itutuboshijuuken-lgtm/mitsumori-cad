@@ -1,0 +1,485 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "giesta2-g11-g15",
+ "seriesName": "ジエスタ2 G11〜G15型",
+ "group": "玄関ドア",
+ "year": "2026-09",
+ "src": "玄関ドア受発注資料集 IG4400（2026年09月）ジエスタ2 部材価格表 g16-g17／枠 g14-g15／FamiLock g6-g12",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "G11",
+     "name": "G11型",
+     "w": 864,
+     "h": 2317,
+     "shape": "?",
+     "shapeNote": "デザインの絵の種類は商品カタログで確認中"
+    },
+    {
+     "id": "G12",
+     "name": "G12型",
+     "w": 864,
+     "h": 2317,
+     "shape": "?",
+     "shapeNote": "デザインの絵の種類は商品カタログで確認中"
+    },
+    {
+     "id": "G13",
+     "name": "G13型",
+     "w": 864,
+     "h": 2317,
+     "shape": "?",
+     "shapeNote": "デザインの絵の種類は商品カタログで確認中"
+    },
+    {
+     "id": "G14",
+     "name": "G14型",
+     "w": 864,
+     "h": 2317,
+     "shape": "?",
+     "shapeNote": "デザインの絵の種類は商品カタログで確認中"
+    },
+    {
+     "id": "G15",
+     "name": "G15型",
+     "w": 864,
+     "h": 2317,
+     "shape": "?",
+     "shapeNote": "デザインの絵の種類は商品カタログで確認中"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "10",
+     "name": "片開き",
+     "outW": 924,
+     "outH": 2330
+    }
+   ]
+  },
+  {
+   "id": "entry",
+   "name": "鍵",
+   "values": [
+    {
+     "id": "shudo",
+     "name": "手動"
+    },
+    {
+     "id": "denchi",
+     "name": "FamiLock（電池式）"
+    },
+    {
+     "id": "ac100v",
+     "name": "FamiLock（AC100V式）"
+    }
+   ]
+  },
+  {
+   "id": "dan",
+   "name": "断熱仕様",
+   "values": [
+    {
+     "id": "k2",
+     "name": "k2仕様"
+    },
+    {
+     "id": "k4",
+     "name": "k4仕様"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "alu",
+     "name": "アルミ系の色"
+    },
+    {
+     "id": "uki",
+     "name": "木目系の色"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "G11",
+   "open": "10",
+   "dan": "k2",
+   "color": "alu",
+   "teika": 527000,
+   "hinban": "□□-G11(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G11",
+   "open": "10",
+   "dan": "k2",
+   "color": "uki",
+   "teika": 557000,
+   "hinban": "■■-G11(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G11",
+   "open": "10",
+   "dan": "k4",
+   "color": "alu",
+   "teika": 503000,
+   "hinban": "□□-G11(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G11",
+   "open": "10",
+   "dan": "k4",
+   "color": "uki",
+   "teika": 530000,
+   "hinban": "■■-G11(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G12",
+   "open": "10",
+   "dan": "k2",
+   "color": "alu",
+   "teika": 367000,
+   "hinban": "□□-G12(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G12",
+   "open": "10",
+   "dan": "k2",
+   "color": "uki",
+   "teika": 397000,
+   "hinban": "■■-G12(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G12",
+   "open": "10",
+   "dan": "k4",
+   "color": "alu",
+   "teika": 343000,
+   "hinban": "□□-G12(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G12",
+   "open": "10",
+   "dan": "k4",
+   "color": "uki",
+   "teika": 371000,
+   "hinban": "■■-G12(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G13",
+   "open": "10",
+   "dan": "k2",
+   "color": "alu",
+   "teika": 367000,
+   "hinban": "□□-G13(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G13",
+   "open": "10",
+   "dan": "k2",
+   "color": "uki",
+   "teika": 397000,
+   "hinban": "■■-G13(R/L)-DHLA",
+   "page": 16
+  },
+  {
+   "design": "G13",
+   "open": "10",
+   "dan": "k4",
+   "color": "alu",
+   "teika": 343000,
+   "hinban": "□□-G13(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G13",
+   "open": "10",
+   "dan": "k4",
+   "color": "uki",
+   "teika": 371000,
+   "hinban": "■■-G13(R/L)-DHLE",
+   "page": 16
+  },
+  {
+   "design": "G14",
+   "open": "10",
+   "dan": "k2",
+   "color": "alu",
+   "teika": 367000,
+   "hinban": "□□-G14(R/L)-DHLA",
+   "page": 17
+  },
+  {
+   "design": "G14",
+   "open": "10",
+   "dan": "k2",
+   "color": "uki",
+   "teika": 397000,
+   "hinban": "■■-G14(R/L)-DHLA",
+   "page": 17
+  },
+  {
+   "design": "G14",
+   "open": "10",
+   "dan": "k4",
+   "color": "alu",
+   "teika": 343000,
+   "hinban": "□□-G14(R/L)-DHLE",
+   "page": 17
+  },
+  {
+   "design": "G14",
+   "open": "10",
+   "dan": "k4",
+   "color": "uki",
+   "teika": 371000,
+   "hinban": "■■-G14(R/L)-DHLE",
+   "page": 17
+  },
+  {
+   "design": "G15",
+   "open": "10",
+   "dan": "k2",
+   "color": "alu",
+   "teika": 310000,
+   "hinban": "□□-G15(R/L)-DHLA",
+   "page": 17
+  },
+  {
+   "design": "G15",
+   "open": "10",
+   "dan": "k2",
+   "color": "uki",
+   "teika": 339000,
+   "hinban": "■■-G15(R/L)-DHLA",
+   "page": 17
+  },
+  {
+   "design": "G15",
+   "open": "10",
+   "dan": "k4",
+   "color": "alu",
+   "teika": 284000,
+   "hinban": "□□-G15(R/L)-DHLE",
+   "page": 17
+  },
+  {
+   "design": "G15",
+   "open": "10",
+   "dan": "k4",
+   "color": "uki",
+   "teika": 314000,
+   "hinban": "■■-G15(R/L)-DHLE",
+   "page": 17
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠（ドアクローザ込み）",
+   "always": true,
+   "match": [
+    "open",
+    "entry",
+    "dan",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10shudok2alu",
+     "teika": 100500,
+     "page": 14
+    },
+    {
+     "id": "10shudok2uki",
+     "teika": 112500,
+     "page": 14
+    },
+    {
+     "id": "10shudok4alu",
+     "teika": 84500,
+     "page": 14
+    },
+    {
+     "id": "10shudok4uki",
+     "teika": 95500,
+     "page": 14
+    },
+    {
+     "id": "10denchik2alu",
+     "teika": 100500,
+     "page": 14
+    },
+    {
+     "id": "10denchik2uki",
+     "teika": 112500,
+     "page": 14
+    },
+    {
+     "id": "10denchik4alu",
+     "teika": 84500,
+     "page": 14
+    },
+    {
+     "id": "10denchik4uki",
+     "teika": 95500,
+     "page": 14
+    },
+    {
+     "id": "10ac100vk2alu",
+     "teika": 100500,
+     "page": 14
+    },
+    {
+     "id": "10ac100vk2uki",
+     "teika": 112500,
+     "page": 14
+    },
+    {
+     "id": "10ac100vk4alu",
+     "teika": 84500,
+     "page": 14
+    },
+    {
+     "id": "10ac100vk4uki",
+     "teika": 95500,
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "keyset",
+   "name": "FamiLock キーセット",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "tag2",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコン2個）",
+     "teika": 139000,
+     "page": 6
+    },
+    {
+     "id": "tag1",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコン1個）",
+     "teika": 110000,
+     "page": 6
+    },
+    {
+     "id": "tag0",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコンなし）",
+     "teika": 75000,
+     "page": 6
+    },
+    {
+     "id": "card2",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコン2個）",
+     "teika": 139000,
+     "page": 7
+    },
+    {
+     "id": "card1",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコン1個）",
+     "teika": 110000,
+     "page": 7
+    },
+    {
+     "id": "card0",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコンなし）",
+     "teika": 75000,
+     "page": 7
+    },
+    {
+     "id": "otag2",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコン2個）",
+     "teika": 169000,
+     "page": 10
+    },
+    {
+     "id": "otag1",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコン1個）",
+     "teika": 140000,
+     "page": 10
+    },
+    {
+     "id": "otag0",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコンなし）",
+     "teika": 105000,
+     "page": 10
+    },
+    {
+     "id": "ocard2",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコン2個）",
+     "teika": 169000,
+     "page": 11
+    },
+    {
+     "id": "ocard1",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコン1個）",
+     "teika": 140000,
+     "page": 11
+    },
+    {
+     "id": "ocard0",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコンなし）",
+     "teika": 105000,
+     "page": 11
+    }
+   ]
+  },
+  {
+   "id": "tenkey",
+   "name": "テンキー付屋外リーダーセット",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "ari",
+     "name": "テンキー付屋外リーダー／ワイヤレス屋内ボタンセット",
+     "teika": 52000,
+     "hinban": "Z-101-DVCJ",
+     "page": 7
+    }
+   ]
+  }
+ ],
+ "note": "本体価格は鍵の種類（手動／電池式／AC100V式／テンキー付）では変わらず、デザイン×断熱仕様×色でのみ変わる。本体の商品コードの型は手動が「□□-G11(R/L)-DHLA」（k4仕様は末尾DHLE）、FamiLockは色記号の後にエントリー記号（電池式A・D・F型ハンドル=WW、S型=WS、AC100V式A・D・F型=YY、S型=YS、テンキー付はWT／YT）が入る。色記号：アルミ系□□=EDクリエラスク・CBクリエモカ・CJポートマホガニー・BEゼンオーク・BBクリエダーク・BCトリノパイン、木目系■■（浮造り調）=HCチーク・HBチェスナット・HAパイン。枠の価格は枠形状（フラット／立ち上がり）とアングル（付／無）では変わらず、商品コードの末尾記号（k2=A／B／C／D、k4=E／F／G／H）だけが変わる。枠の adds にはドアクローザ標準品（¥11,500）を含めた。クローザの選択品はフリーストップ仕様・バックチェック付など同額〜¥17,500。キーセットの商品コードはハンドル型とハンドル色で変わる（例 Z-005(R/L)WW-DVGJ）。別途有償品（追加用カードキー¥2,300・追加タグキー¥7,500・追加標準キー収納リモコン¥35,000）とオプションプランのプラン別必須部材（パナソニック機器、合計¥59,440〜¥192,900）は未収録。",
+ "pages": [
+  {
+   "page": 16,
+   "rows": 12
+  },
+  {
+   "page": 17,
+   "rows": 8
+  }
+ ]
+}
