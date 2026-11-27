@@ -1,0 +1,295 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rk",
+ "seriesName": "リシェント 勝手口ドア アルミPG/SG仕様",
+ "group": "勝手口ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600 RK-14・RK-15（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "仕様区分",
+   "values": [
+    {
+     "id": "PG",
+     "name": "PG仕様",
+     "wmin": 448,
+     "wmax": 848,
+     "shape": "full",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "SG",
+     "name": "SG仕様",
+     "wmin": 448,
+     "wmax": 848,
+     "shape": "full",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "10",
+     "name": "片開き",
+     "wmin": 506,
+     "wmax": 906,
+     "hmin": 1440,
+     "hmax": 2251
+    },
+    {
+     "id": "11",
+     "name": "片開き ランマ付",
+     "wmin": 506,
+     "wmax": 906,
+     "hmin": 1653,
+     "hmax": 2600
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "pgsg",
+     "name": "アルミPG/SG仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "std",
+     "name": "標準ガラス",
+     "note": "PG仕様は複層ガラス、SG仕様は単板ガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせガラス",
+     "note": "PG仕様は安全合わせ複層ガラス"
+    }
+   ]
+  },
+  {
+   "id": "key",
+   "name": "キー",
+   "values": [
+    {
+     "id": "std",
+     "name": "標準キー"
+    },
+    {
+     "id": "rev",
+     "name": "リバーシブルキー"
+    }
+   ]
+  },
+  {
+   "id": "thumb",
+   "name": "サムターン",
+   "values": [
+    {
+     "id": "std",
+     "name": "標準サムターン仕様"
+    },
+    {
+     "id": "sec",
+     "name": "セキュリティサムターン仕様"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "PG",
+   "spec": "pgsg",
+   "glass": "std",
+   "teika": 109000,
+   "page": 14
+  },
+  {
+   "design": "PG",
+   "spec": "pgsg",
+   "glass": "anzen",
+   "teika": 136000,
+   "page": 14
+  },
+  {
+   "design": "SG",
+   "spec": "pgsg",
+   "glass": "std",
+   "teika": 96000,
+   "page": 14
+  },
+  {
+   "design": "SG",
+   "spec": "pgsg",
+   "glass": "anzen",
+   "teika": 122000,
+   "page": 14
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "open",
+    "spec"
+   ],
+   "values": [
+    {
+     "id": "10pgsg",
+     "teika": 75000,
+     "page": 14
+    },
+    {
+     "id": "11pgsg",
+     "teika": 91000,
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "把手セット（必須）",
+   "always": true,
+   "match": [
+    "key",
+    "thumb"
+   ],
+   "values": [
+    {
+     "id": "stdstd",
+     "teika": 15100,
+     "hinban": "Z-0001-DRKA",
+     "page": 15
+    },
+    {
+     "id": "stdsec",
+     "teika": 22000,
+     "hinban": "Z-0011-DRKA",
+     "page": 15
+    },
+    {
+     "id": "revstd",
+     "teika": 20800,
+     "hinban": "Z-0101-DRKA",
+     "page": 15
+    },
+    {
+     "id": "revsec",
+     "teika": 27700,
+     "hinban": "Z-0111-DRKA",
+     "page": 15
+    }
+   ]
+  },
+  {
+   "id": "closer",
+   "name": "内付ドアクローザ",
+   "always": true,
+   "match": [
+    "open"
+   ],
+   "values": [
+    {
+     "id": "10",
+     "teika": 12800,
+     "hinban": "□-0001-DRKB",
+     "page": 14
+    },
+    {
+     "id": "11",
+     "teika": 12800,
+     "hinban": "□-0001-DRKB",
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "ranmaGlass",
+   "name": "ランマガラス（ランマ付用・別途）",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "pgAnzen",
+     "name": "PG仕様 安全ガラス",
+     "teika": 42100,
+     "page": 15
+    },
+    {
+     "id": "pgAwase",
+     "name": "PG仕様 安全合わせ複層ガラス",
+     "teika": 64000,
+     "page": 15
+    },
+    {
+     "id": "sgAwase",
+     "name": "SG仕様 安全合わせガラス",
+     "teika": 56000,
+     "page": 15
+    }
+   ]
+  },
+  {
+   "id": "koshi",
+   "name": "網付格子",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "A",
+     "name": "A型 井桁格子",
+     "teika": 23100,
+     "page": 14
+    },
+    {
+     "id": "B",
+     "name": "B型 横格子",
+     "teika": 23100,
+     "page": 14
+    },
+    {
+     "id": "C",
+     "name": "C型 ヒシクロス格子",
+     "teika": 23100,
+     "page": 14
+    },
+    {
+     "id": "E",
+     "name": "E型 パンチングメタル",
+     "teika": 58000,
+     "page": 14
+    }
+   ]
+  }
+ ],
+ "note": "勝手口ドアのアルミPG/SG仕様は製作範囲内のどの寸法でも一律価格で、色では価格が変わらない。PG仕様・SG仕様で枠は共通。鍵まわりは部品箱ではなく把手セット（キー種別×サムターン仕様の4種）が必須部材。ランマ付の場合はランマガラスが別途必要（市販ガラスも可）。網付格子は別途の選択部材。RK-15の価格はWEBカタログのビューア表示で読み取った。外額縁・内額縁・後付ビードは別途有償品で未収録。",
+ "pages": [
+  {
+   "page": 14,
+   "rows": 4
+  },
+  {
+   "page": 15,
+   "rows": 0
+  }
+ ]
+}
