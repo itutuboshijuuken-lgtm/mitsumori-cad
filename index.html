@@ -44840,7 +44840,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var ch = chOf(s), out = { ok: true, v: VER, rev: REV, pid: pid(), mode: String(s.mode || ""), view: String(s.__view208 || ""), fi: s.fi || 0, floors: [], ch: ch, base: {}, outline: [], box: null, walls: [], faces: [], rooms: [], things: [] };
     arr(s.fl).forEach(function(f, i){ out.floors.push({ i: i, name: (f && f.name) || "", cur: i === (s.fi || 0) }); });
     if (!out.floors.length) out.floors.push({ i: 0, name: "1階", cur: true });
-    ["rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType"].forEach(function(k){ if (s[k] !== undefined) out.base[k] = clone(s[k]); });
+    ["rfFloor", "rfWall", "rfCeil", "rfWallMat", "rfCeilMat", "flType", "dosa"].forEach(function(k){ if (s[k] !== undefined) out.base[k] = clone(s[k]); });   /* CAD-732：dosa（胴差の高さ）も＝立体の階の高さ（Fable の頼み） */
     if (!Array.isArray(s.edges) || !s.edges.length){ out.empty = true; return out; }
     var P = ptsNow(s), walls = wallsOf(s, P, ch), G = geoOf(s, P, walls), R = G.R, byKey = Object.create(null), roomIdx = Object.create(null);
     out.outline = P.map(function(p){ return [p[0], p[1]]; }); out.box = boxOf(P);
