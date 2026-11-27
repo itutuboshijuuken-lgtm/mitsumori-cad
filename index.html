@@ -51430,8 +51430,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (window.RITTAI && typeof RITTAI.rect === "function"){   /* CAD-755：Fable の「引っ張って決める」道具（翔伍 23:47） */
         $("modal").hidden = true;
         RITTAI.rect({ kind: "floor", x: pt[0], y: pt[1], name: nm, fk: fk }, function(r){ if (!r) return; var R = function(v){ return Math.round(v / 5) * 5; };
-          if (!putRect744({ x0: R(r.x0), y0: R(r.y0), x1: R(r.x1), y1: R(r.y1) }, fk, nm)) return;
-          var rec = (S.tatami || [])[S.tatami.length - 1]; merge755(rec, r.same); if (r.openLen > 0 && !r.sameBase) askMikiri755(rec, r.openLen); });
+          var rc5 = { x0: R(r.x0), y0: R(r.y0), x1: R(r.x1), y1: R(r.y1) };
+          if (!putRect744(rc5, fk, nm)) return;
+          var rec = null; for (var q = (S.tatami || []).length - 1; q >= 0; q--){ var tq = S.tatami[q]; if (tq && tq.part && tq.x0 === rc5.x0 && tq.y0 === rc5.y0 && tq.x1 === rc5.x1 && tq.y1 === rc5.y1){ rec = tq; break; } }   /* CAD-758：分け直しで切れ端が後ろに足される事がある（Fable の指摘）。置いた四角と同じ座標の記録を探す */
+          if (!rec) return; merge755(rec, r.same); if (r.openLen > 0 && !r.sameBase) askMikiri755(rec, r.openLen); });
         return;
       }
       size3d744(pt, fk, nm, { w: 1820, d: 910 }); }); } });
@@ -52534,6 +52536,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         closeBand(); RITTAI.adjust({ list: list, id: id, name: nm(list, o) }, function(r){ if (!r || !r.moved) return; r.fromAdjust = 1; moving = { list: list, id: id }; moveTo(r); }); return;
       }
       moving = { list: list, id: id }; bandFor(nm(list, o) + "：動かす先をタップ", [["やめる", function(){ moving = null; closeBand(); }, 1]]); }]);
+    if (window.RITTAI && typeof RITTAI.rect === "function" && ((list === "fx" && o.len > 0 && o.hgt > 0) || (list === "tatami" && o.part))) B2.push(["大きさ", function(){ closeBand(); RITTAI.rect({ edit: { list: list, id: id }, name: nm(list, o) }, function(r){ if (!r) return;   /* CAD-758：置いた後の大きさも同じ「引っ張って決める」手つきで */
+      edit(function(){ if (list === "fx"){ o.u = Math.round(r.u0); o.len = Math.round(r.w); o.z = Math.round(r.z0); o.hgt = Math.round(r.h); } else { var R5 = function(v){ return Math.round(v / 5) * 5; }; o.x0 = R5(r.x0); o.y0 = R5(r.y0); o.x1 = R5(r.x1); o.y1 = R5(r.y1); } }, "大きさを直しました（戻すで戻せます）"); }); }]);
     if (list === "tenken" && o.w > 0) B2.push(["大きさ", function(){ if (typeof openPad !== "function") return; openPad({ title: "幅（mm）", unit: "mm", value: o.w, done: function(w){ if (!w) return; var d0 = o.d || o.w; openPad({ title: "奥行（mm）", unit: "mm", value: d0, done: function(d){ edit(function(){ o.w = Math.round(w); if (d) o.d = Math.round(d); try { moveTenken(o, 0, 0); } catch(e){} }, "大きさを変えました"); } }); } }); }]);
     if (o.k === "stair" && typeof S !== "undefined" && Array.isArray(S.fl) && S.fl.length > (S.fi || 0) + 1) B2.unshift([(S.fi || 0) + 2 + "階へ", function(){ stairGo(h, 1); }]);   /* CAD-736 */
     if (o.k === "bath" && window.UBD734){ var uz2 = UBD734.zoneOf(o); if (uz2) B2.push(["入口（ドア）", function(){ ubBand(uz2); }]); }   /* CAD-734 */
