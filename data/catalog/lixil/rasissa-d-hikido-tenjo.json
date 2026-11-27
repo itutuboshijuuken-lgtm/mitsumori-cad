@@ -1,0 +1,629 @@
+{
+ "v": 2,
+ "maker": "lixil",
+ "series": "rasissa-d-hikido-tenjo",
+ "group": "室内ドア",
+ "year": "2025-07",
+ "src": "LIXIL 25ラシッサ商品カタログ セット価格一覧（ラシッサD 室内引戸 天井埋込方式）p.158-159",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "type",
+   "name": "種類",
+   "values": [
+    {
+     "id": "katahiki",
+     "name": "片引戸（標準タイプ）"
+    },
+    {
+     "id": "katahiki-lock",
+     "name": "片引戸（表示錠付）"
+    }
+   ]
+  },
+  {
+   "id": "label",
+   "name": "レーベル",
+   "values": [
+    {
+     "id": "palette",
+     "name": "パレット"
+    },
+    {
+     "id": "latteo",
+     "name": "ラテオ"
+    },
+    {
+     "id": "vintia",
+     "name": "ヴィンティア"
+    },
+    {
+     "id": "kinari",
+     "name": "キナリモダン"
+    },
+    {
+     "id": "north",
+     "name": "ノースフォレスト"
+    }
+   ]
+  },
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "LAA",
+     "name": "LAA",
+     "shape": "flush"
+    },
+    {
+     "id": "LBA",
+     "name": "LBA",
+     "shape": "flush",
+     "shapeNote": "ガラスなし・フラット（木目の見え方がLAAと異なる）"
+    },
+    {
+     "id": "LAH",
+     "name": "LAH",
+     "shape": "panel",
+     "shapeNote": "上下2段の鏡板"
+    },
+    {
+     "id": "LAY",
+     "name": "LAY",
+     "shape": "panel",
+     "shapeNote": "上下2段の鏡板"
+    },
+    {
+     "id": "LBB",
+     "name": "LBB",
+     "shape": "panel",
+     "shapeNote": "縦の溝"
+    },
+    {
+     "id": "LGA",
+     "name": "LGA",
+     "shape": "slitE",
+     "shapeNote": "中央やや右寄りの縦スリット"
+    },
+    {
+     "id": "LGH",
+     "name": "LGH",
+     "shape": "upper"
+    },
+    {
+     "id": "LGJ",
+     "name": "LGJ",
+     "shape": "upper"
+    },
+    {
+     "id": "LGM",
+     "name": "LGM",
+     "shape": "slitC"
+    },
+    {
+     "id": "LGY",
+     "name": "LGY",
+     "shape": "upper"
+    },
+    {
+     "id": "LGL",
+     "name": "LGL",
+     "shape": "slitE",
+     "shapeNote": "左端の細い縦スリット"
+    },
+    {
+     "id": "LGN",
+     "name": "LGN",
+     "shape": "full"
+    },
+    {
+     "id": "LGK",
+     "name": "LGK",
+     "shape": "grid",
+     "shapeNote": "大きなガラスに縦桟・横桟"
+    },
+    {
+     "id": "LHB",
+     "name": "LHB",
+     "shape": "grid",
+     "shapeNote": "小窓6つ（横3×縦2）が上部"
+    },
+    {
+     "id": "LZE",
+     "name": "LZE",
+     "shape": "grid",
+     "shapeNote": "アルミ枠の分割ガラス（キナリモダンのアルミタイプ）"
+    }
+   ]
+  },
+  {
+   "id": "func",
+   "name": "機能",
+   "values": [
+    {
+     "id": "w-sm",
+     "name": "Wソフトモーション"
+    }
+   ]
+  },
+  {
+   "id": "frame",
+   "name": "枠",
+   "values": [
+    {
+     "id": "noncasing",
+     "name": "ノンケーシング枠（固定枠）"
+    }
+   ]
+  },
+  {
+   "id": "size",
+   "name": "サイズ",
+   "price": false,
+   "values": [
+    {
+     "id": "W16",
+     "name": "W16（1636×2400）",
+     "w": 1636,
+     "h": 2400
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "type": "katahiki",
+   "label": "palette",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 98400,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "palette",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 107400,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "palette",
+   "design": "LAH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "palette",
+   "design": "LAH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "palette",
+   "design": "LGH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "palette",
+   "design": "LGJ",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "palette",
+   "design": "LGH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "palette",
+   "design": "LGJ",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "latteo",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 98400,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "latteo",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 107400,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "latteo",
+   "design": "LGA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "latteo",
+   "design": "LGA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "latteo",
+   "design": "LGL",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "latteo",
+   "design": "LGN",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "latteo",
+   "design": "LGM",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "latteo",
+   "design": "LGL",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "latteo",
+   "design": "LGN",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "latteo",
+   "design": "LGM",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 98400,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 107400,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LAH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LAH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LAY",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 158
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LAY",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 158
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LGA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LGH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LGJ",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LGA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LGH",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LGJ",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LGM",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LGM",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "vintia",
+   "design": "LGY",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 202400,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "vintia",
+   "design": "LGY",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 211400,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "kinari",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 98400,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "kinari",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 107400,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "kinari",
+   "design": "LBA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168900,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "kinari",
+   "design": "LBA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177900,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "kinari",
+   "design": "LGL",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 168600,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "kinari",
+   "design": "LGL",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 177600,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "kinari",
+   "design": "LZE",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 198800,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "north",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 98400,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "north",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 107400,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "north",
+   "design": "LBB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 115300,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "north",
+   "design": "LBB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 124300,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "north",
+   "design": "LGK",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 159
+  },
+  {
+   "type": "katahiki",
+   "label": "north",
+   "design": "LHB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 140000,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "north",
+   "design": "LGK",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 159
+  },
+  {
+   "type": "katahiki-lock",
+   "label": "north",
+   "design": "LHB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 149000,
+   "page": 159
+  }
+ ],
+ "adds": [],
+ "note": "価格は全てノンケーシング枠（固定枠）・プレシャスホワイト色・H24（2400mm）のセット価格。サイズはW16（1636mm）のみ。機能はWソフトモーションのみ。LZE（キナリモダンのアルミタイプ）は片引戸（標準タイプ）のみで、表示錠付の設定はない。天井埋込方式ではキナリモダンのLBAとLGLは別価格（LBA 168,900円／LGL 168,600円）。このセット価格一覧に品番の掲載はないため、baseの各行にhinbanは付けていない。色軸は未収録（価格はプレシャスホワイト色の価格）。",
+ "pages": [
+  {
+   "page": 158,
+   "rows": 24
+  },
+  {
+   "page": 159,
+   "rows": 25
+  }
+ ]
+}
