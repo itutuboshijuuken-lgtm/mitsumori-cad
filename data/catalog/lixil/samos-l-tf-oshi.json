@@ -1,0 +1,2277 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "samos-l-tf-oshi",
+ "seriesName": "サーモスL 縦すべり出し窓TF（FIX部 外押縁タイプ）",
+ "group": "サッシ",
+ "year": "2026-10",
+ "src": "LIXIL 業務用資料集 サーモスL（IS8900）完成品価格表 2026年10月価格改定版",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "sizeW",
+   "name": "呼称幅",
+   "values": [
+    {
+     "id": "114",
+     "name": "114（内法基準寸法W 1145mm）",
+     "w": 1145,
+     "outW": 1185
+    },
+    {
+     "id": "119",
+     "name": "119（内法基準寸法W 1195mm）",
+     "w": 1195,
+     "outW": 1235
+    },
+    {
+     "id": "160",
+     "name": "160（内法基準寸法W 1600mm）",
+     "w": 1600,
+     "outW": 1640
+    },
+    {
+     "id": "165",
+     "name": "165（内法基準寸法W 1650mm）",
+     "w": 1650,
+     "outW": 1690
+    }
+   ]
+  },
+  {
+   "id": "sizeH",
+   "name": "呼称高",
+   "values": [
+    {
+     "id": "09",
+     "name": "09（内法基準寸法h 900mm）",
+     "h": 900,
+     "outH": 970
+    },
+    {
+     "id": "11",
+     "name": "11（内法基準寸法h 1100mm）",
+     "h": 1100,
+     "outH": 1170
+    },
+    {
+     "id": "13",
+     "name": "13（内法基準寸法h 1300mm）",
+     "h": 1300,
+     "outH": 1370
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "pg-clear",
+     "name": "一般複層ガラス 透明"
+    },
+    {
+     "id": "pg-kata",
+     "name": "一般複層ガラス 型"
+    },
+    {
+     "id": "lowe-clear",
+     "name": "Low-E複層ガラス 透明"
+    },
+    {
+     "id": "lowe-kata",
+     "name": "Low-E複層ガラス 型"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色記号",
+   "values": [
+    {
+     "id": "tgkdw",
+     "name": "色記号 T/G/K/D/W"
+    },
+    {
+     "id": "h",
+     "name": "色記号 H"
+    }
+   ]
+  },
+  {
+   "id": "lr",
+   "name": "勝手（L/R）",
+   "values": [
+    {
+     "id": "L",
+     "name": "L"
+    },
+    {
+     "id": "R",
+     "name": "R"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 130800,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 130800,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 140600,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 140600,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 130800,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 130800,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 140600,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 140600,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 143600,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 143600,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 153400,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 153400,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 143600,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 143600,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 153400,
+   "hinban": "@SLVTFPZ2-11409L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 153400,
+   "hinban": "@SLVTFPZ2-11409R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 142700,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 142700,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 153200,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 153200,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 142700,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 142700,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 153200,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 153200,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 158100,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 158100,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 168600,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 168600,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 158100,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 158100,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 168600,
+   "hinban": "@SLVTFPZ2-11411L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 168600,
+   "hinban": "@SLVTFPZ2-11411R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 155000,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 155000,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 166200,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 166200,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 155000,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 155000,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 166200,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 166200,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 173300,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 173300,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 184500,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 184500,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 173300,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 173300,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 184500,
+   "hinban": "@SLVTFPZ2-11413L",
+   "page": 118
+  },
+  {
+   "sizeW": "114",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 184500,
+   "hinban": "@SLVTFPZ2-11413R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 131900,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 131900,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 141700,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 141700,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 131900,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 131900,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 141700,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 141700,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 145300,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 145300,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 155100,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 155100,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 145300,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 145300,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 155100,
+   "hinban": "@SLVTFPZ2-11909L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 155100,
+   "hinban": "@SLVTFPZ2-11909R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 144000,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 144000,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 154500,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 154500,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 144000,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 144000,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 154500,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 154500,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 160200,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 160200,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 170700,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 170700,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 160200,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 160200,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 170700,
+   "hinban": "@SLVTFPZ2-11911L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 170700,
+   "hinban": "@SLVTFPZ2-11911R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 156600,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 156600,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 167800,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 167800,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 156600,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 156600,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 167800,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 167800,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 175700,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 175700,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 186900,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 186900,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 175700,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 175700,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 186900,
+   "hinban": "@SLVTFPZ2-11913L",
+   "page": 118
+  },
+  {
+   "sizeW": "119",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 186900,
+   "hinban": "@SLVTFPZ2-11913R",
+   "page": 118
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 213700,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 213700,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 229800,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 229800,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 213700,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 213700,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 229800,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 229800,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 230800,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 230800,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 246900,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 246900,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 230800,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 230800,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 246900,
+   "hinban": "@SLVTFPZ2-16009L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 246900,
+   "hinban": "@SLVTFPZ2-16009R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 232400,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 232400,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 249800,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 249800,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 232400,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 232400,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 249800,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 249800,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 253100,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 253100,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 270500,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 270500,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 253100,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 253100,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 270500,
+   "hinban": "@SLVTFPZ2-16011L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 270500,
+   "hinban": "@SLVTFPZ2-16011R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 252200,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 252200,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 270900,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 270900,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 252200,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 252200,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 270900,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 270900,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 276700,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 276700,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 295400,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 295400,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 276700,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 276700,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 295400,
+   "hinban": "@SLVTFPZ2-16013L",
+   "page": 119
+  },
+  {
+   "sizeW": "160",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 295400,
+   "hinban": "@SLVTFPZ2-16013R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 214800,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 214800,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 230900,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 230900,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 214800,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 214800,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 230900,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 230900,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 232500,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 232500,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 248600,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 248600,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 232500,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 232500,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 248600,
+   "hinban": "@SLVTFPZ2-16509L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 248600,
+   "hinban": "@SLVTFPZ2-16509R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 233700,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 233700,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 251100,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 251100,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 233700,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 233700,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 251100,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 251100,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 255100,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 255100,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 255100,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 255100,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16511L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "11",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16511R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 253800,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 253800,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 253800,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 253800,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "pg-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 272500,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 279100,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 279100,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "L",
+   "teika": 297800,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-clear",
+   "color": "h",
+   "lr": "R",
+   "teika": 297800,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "L",
+   "teika": 279100,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "tgkdw",
+   "lr": "R",
+   "teika": 279100,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "L",
+   "teika": 297800,
+   "hinban": "@SLVTFPZ2-16513L",
+   "page": 119
+  },
+  {
+   "sizeW": "165",
+   "sizeH": "13",
+   "glass": "lowe-kata",
+   "color": "h",
+   "lr": "R",
+   "teika": 297800,
+   "hinban": "@SLVTFPZ2-16513R",
+   "page": 119
+  }
+ ],
+ "adds": [
+  {
+   "id": "kotei-amido",
+   "name": "固定式網戸（フレームレス）",
+   "match": [
+    "sizeW",
+    "sizeH"
+   ],
+   "values": [
+    {
+     "id": "11409-tgkdw",
+     "name": "呼称11409（色記号 T/G/K/D/W）",
+     "sizeW": "114",
+     "sizeH": "09",
+     "color": "tgkdw",
+     "teika": 8800,
+     "hinban": ""
+    },
+    {
+     "id": "11409-h",
+     "name": "呼称11409（色記号 H）",
+     "sizeW": "114",
+     "sizeH": "09",
+     "color": "h",
+     "teika": 8800,
+     "hinban": ""
+    },
+    {
+     "id": "11411-tgkdw",
+     "name": "呼称11411（色記号 T/G/K/D/W）",
+     "sizeW": "114",
+     "sizeH": "11",
+     "color": "tgkdw",
+     "teika": 9200,
+     "hinban": ""
+    },
+    {
+     "id": "11411-h",
+     "name": "呼称11411（色記号 H）",
+     "sizeW": "114",
+     "sizeH": "11",
+     "color": "h",
+     "teika": 9200,
+     "hinban": ""
+    },
+    {
+     "id": "11413-tgkdw",
+     "name": "呼称11413（色記号 T/G/K/D/W）",
+     "sizeW": "114",
+     "sizeH": "13",
+     "color": "tgkdw",
+     "teika": 9800,
+     "hinban": ""
+    },
+    {
+     "id": "11413-h",
+     "name": "呼称11413（色記号 H）",
+     "sizeW": "114",
+     "sizeH": "13",
+     "color": "h",
+     "teika": 9800,
+     "hinban": ""
+    },
+    {
+     "id": "11909-tgkdw",
+     "name": "呼称11909（色記号 T/G/K/D/W）",
+     "sizeW": "119",
+     "sizeH": "09",
+     "color": "tgkdw",
+     "teika": 8800,
+     "hinban": ""
+    },
+    {
+     "id": "11909-h",
+     "name": "呼称11909（色記号 H）",
+     "sizeW": "119",
+     "sizeH": "09",
+     "color": "h",
+     "teika": 8800,
+     "hinban": ""
+    },
+    {
+     "id": "11911-tgkdw",
+     "name": "呼称11911（色記号 T/G/K/D/W）",
+     "sizeW": "119",
+     "sizeH": "11",
+     "color": "tgkdw",
+     "teika": 9200,
+     "hinban": ""
+    },
+    {
+     "id": "11911-h",
+     "name": "呼称11911（色記号 H）",
+     "sizeW": "119",
+     "sizeH": "11",
+     "color": "h",
+     "teika": 9200,
+     "hinban": ""
+    },
+    {
+     "id": "11913-tgkdw",
+     "name": "呼称11913（色記号 T/G/K/D/W）",
+     "sizeW": "119",
+     "sizeH": "13",
+     "color": "tgkdw",
+     "teika": 9800,
+     "hinban": ""
+    },
+    {
+     "id": "11913-h",
+     "name": "呼称11913（色記号 H）",
+     "sizeW": "119",
+     "sizeH": "13",
+     "color": "h",
+     "teika": 9800,
+     "hinban": ""
+    },
+    {
+     "id": "16009-tgkdw",
+     "name": "呼称16009（色記号 T/G/K/D/W）",
+     "sizeW": "160",
+     "sizeH": "09",
+     "color": "tgkdw",
+     "teika": 17600,
+     "hinban": ""
+    },
+    {
+     "id": "16009-h",
+     "name": "呼称16009（色記号 H）",
+     "sizeW": "160",
+     "sizeH": "09",
+     "color": "h",
+     "teika": 17600,
+     "hinban": ""
+    },
+    {
+     "id": "16011-tgkdw",
+     "name": "呼称16011（色記号 T/G/K/D/W）",
+     "sizeW": "160",
+     "sizeH": "11",
+     "color": "tgkdw",
+     "teika": 18400,
+     "hinban": ""
+    },
+    {
+     "id": "16011-h",
+     "name": "呼称16011（色記号 H）",
+     "sizeW": "160",
+     "sizeH": "11",
+     "color": "h",
+     "teika": 18400,
+     "hinban": ""
+    },
+    {
+     "id": "16013-tgkdw",
+     "name": "呼称16013（色記号 T/G/K/D/W）",
+     "sizeW": "160",
+     "sizeH": "13",
+     "color": "tgkdw",
+     "teika": 19600,
+     "hinban": ""
+    },
+    {
+     "id": "16013-h",
+     "name": "呼称16013（色記号 H）",
+     "sizeW": "160",
+     "sizeH": "13",
+     "color": "h",
+     "teika": 19600,
+     "hinban": ""
+    },
+    {
+     "id": "16509-tgkdw",
+     "name": "呼称16509（色記号 T/G/K/D/W）",
+     "sizeW": "165",
+     "sizeH": "09",
+     "color": "tgkdw",
+     "teika": 17600,
+     "hinban": ""
+    },
+    {
+     "id": "16509-h",
+     "name": "呼称16509（色記号 H）",
+     "sizeW": "165",
+     "sizeH": "09",
+     "color": "h",
+     "teika": 17600,
+     "hinban": ""
+    },
+    {
+     "id": "16511-tgkdw",
+     "name": "呼称16511（色記号 T/G/K/D/W）",
+     "sizeW": "165",
+     "sizeH": "11",
+     "color": "tgkdw",
+     "teika": 18400,
+     "hinban": ""
+    },
+    {
+     "id": "16511-h",
+     "name": "呼称16511（色記号 H）",
+     "sizeW": "165",
+     "sizeH": "11",
+     "color": "h",
+     "teika": 18400,
+     "hinban": ""
+    },
+    {
+     "id": "16513-tgkdw",
+     "name": "呼称16513（色記号 T/G/K/D/W）",
+     "sizeW": "165",
+     "sizeH": "13",
+     "color": "tgkdw",
+     "teika": 19600,
+     "hinban": ""
+    },
+    {
+     "id": "16513-h",
+     "name": "呼称16513（色記号 H）",
+     "sizeW": "165",
+     "sizeH": "13",
+     "color": "h",
+     "teika": 19600,
+     "hinban": ""
+    }
+   ]
+  }
+ ],
+ "note": "縦すべり出し窓とFIX部の連窓（FIX部は外押縁タイプ、ノックダウン）。色記号で価格が変わる（T/G/K/D/W と H）。勝手（L/R）で価格は変わらない。後付ビードは同梱されていないため別途注文が必要。部材セット価格は入れていない。",
+ "pages": [
+  {
+   "page": 118,
+   "rows": 96
+  },
+  {
+   "page": 119,
+   "rows": 96
+  }
+ ]
+}
