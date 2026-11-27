@@ -30499,12 +30499,12 @@ function layoutGen395(parts){
     var h = HV[hi], r = HV[(hi + 1) % 4];
     entries.push({ a: [A[0], A[1]], b: [A[0] + MW * r[0], A[1] + MW * r[1]], idx: idx });
     if (q.t === "s"){
-      var len = TD * (q.n || 0);
+      var tdq = q.td > 0 ? q.td : TD, len = tdq * (q.n || 0);   /* CAD-751：踏面を割り直した直（q.td） */
       var cs = [[A[0], A[1]], [A[0] + MW * r[0], A[1] + MW * r[1]], [A[0] + MW * r[0] + len * h[0], A[1] + MW * r[1] + len * h[1]], [A[0] + len * h[0], A[1] + len * h[1]]];
       var xs = cs.map(function(c){ return c[0]; }), ys = cs.map(function(c){ return c[1]; });
       var xmn = Math.min.apply(null, xs), xmx = Math.max.apply(null, xs), ymn = Math.min.apply(null, ys), ymx = Math.max.apply(null, ys);
       rects.push({ x: xmn, y: ymn, w: xmx - xmn, h: ymx - ymn });
-      for (var k = 1; k < (q.n || 0); k++) lines.push([cs[0][0] + TD * k * h[0], cs[0][1] + TD * k * h[1], cs[1][0] + TD * k * h[0], cs[1][1] + TD * k * h[1], .9]);
+      for (var k = 1; k < (q.n || 0); k++) lines.push([cs[0][0] + tdq * k * h[0], cs[0][1] + tdq * k * h[1], cs[1][0] + tdq * k * h[0], cs[1][1] + tdq * k * h[1], .9]);
       if (idx === 0) pushW([A[0] + 455 * r[0] + len * .06 * h[0], A[1] + 455 * r[1] + len * .06 * h[1]]);
       pushW([A[0] + len * h[0] + 455 * r[0], A[1] + len * h[1] + 455 * r[1]]);
       A = [A[0] + len * h[0], A[1] + len * h[1]];
@@ -30575,17 +30575,17 @@ function layout306(parts){
   var sf = sfOfParts306(parts), lines = [], walk = [], head = null, fw, fd;
   var pushW = function(pts){ pts.forEach(function(p){ var l = walk[walk.length - 1]; if (!l || Math.abs(l[0] - p[0]) > .01 || Math.abs(l[1] - p[1]) > .01) walk.push(p); }); };
   if (sf === "s"){
-    var n0 = parts[0].n; fw = MW; fd = TD * n0;
-    for (var k = 1; k < n0; k++) lines.push([0, fd - TD * k, MW, fd - TD * k, .9]);
+    var n0 = parts[0].n, t0 = parts[0].td > 0 ? parts[0].td : TD; fw = MW; fd = t0 * n0;
+    for (var k = 1; k < n0; k++) lines.push([0, fd - t0 * k, MW, fd - t0 * k, .9]);
     walk = [[455, fd * .94], [455, fd * .08]]; head = [455, fd * .08, 0, -1];
   } else if (sf === "d" || sf === "u" || sf === "b"){
     fw = MW;
     var mB = sf !== "u" ? parts[0] : null;
     var mT = sf === "u" ? parts[1] : sf === "b" ? parts[2] : null;
-    var nS = sf === "u" ? parts[0].n : parts[1].n;
-    fd = (mB ? MW : 0) + TD * nS + (mT ? MW : 0);
+    var sP = sf === "u" ? parts[0] : parts[1], nS = sP.n, tS = sP.td > 0 ? sP.td : TD;
+    fd = (mB ? MW : 0) + tS * nS + (mT ? MW : 0);
     var runTop = mT ? MW : 0, runBot = fd - (mB ? MW : 0);
-    for (var k2 = 1; k2 < nS; k2++) lines.push([0, runBot - TD * k2, MW, runBot - TD * k2, .9]);
+    for (var k2 = 1; k2 < nS; k2++) lines.push([0, runBot - tS * k2, MW, runBot - tS * k2, .9]);
     var CB = null, CT = null;
     if (mB){
       lines.push([0, runBot, MW, runBot, 1.3]);
@@ -30609,15 +30609,15 @@ function layout306(parts){
       head = [455, runBot * .08 + runTop * .92, 0, -1];
     }
   } else {   /* かね折れ */
-    var nA = parts[0].n, m = parts[1], nB = parts[2].n;
-    fw = MW + TD * nB; fd = MW + TD * nA;
+    var nA = parts[0].n, m = parts[1], nB = parts[2].n, tA = parts[0].td > 0 ? parts[0].td : TD, tB = parts[2].td > 0 ? parts[2].td : TD;
+    fw = MW + tB * nB; fd = MW + tA * nA;
     var Lft = m.dir === "L", bx = Lft ? fw - MW : 0;
     var C = [Lft ? fw - MW : MW, MW], d0 = Lft ? [1, 0] : [-1, 0];
     lines.push([C[0], 0, C[0], fd, 1.3]);
     lines.push([0, MW, fw, MW, 1.3]);
     lines = lines.concat(fanLines306(C, d0, [0, -1], m.kind, {x: bx, y: 0, w: MW, h: MW}));
-    for (var k3 = 1; k3 < nA; k3++) lines.push([bx, fd - TD * k3, bx + MW, fd - TD * k3, .9]);
-    for (var k4 = 1; k4 < nB; k4++){ var x4 = Lft ? (fw - MW) - TD * k4 : MW + TD * k4; lines.push([x4, 0, x4, MW, .9]); }
+    for (var k3 = 1; k3 < nA; k3++) lines.push([bx, fd - tA * k3, bx + MW, fd - tA * k3, .9]);
+    for (var k4 = 1; k4 < nB; k4++){ var x4 = Lft ? (fw - MW) - tB * k4 : MW + tB * k4; lines.push([x4, 0, x4, MW, .9]); }
     var sxC = Lft ? fw - 455 : 455;
     walk = [[sxC, MW + (fd - MW) * .92], [sxC, MW]];
     pushW(arcPts306(C, d0, [0, -1]).slice(1));
@@ -30634,7 +30634,8 @@ function arrow306(x, y, dx, dy, lw, lh){
   return `<path d="M${x + Math.cos(a2 + 2.6) * r} ${y + Math.sin(a2 + 2.6) * r} L${x} ${y} L${x + Math.cos(a2 - 2.6) * r} ${y + Math.sin(a2 - 2.6) * r}" fill="none" stroke="${C}" stroke-width="1.5"/>`;
 }
 function stairSvg306(o, i, P){
-  var parts = partsOf306(o), lay = layout306(parts), fw = lay.fw, fd = lay.fd;
+  var parts = partsOf306(o); try { if (typeof stairCount750 === "function"){ var c750 = stairCount750(o); if (c750 && c750.parts) parts = c750.parts; } } catch(e){}   /* CAD-751：段の線は立体・見積と同じ割り方 */
+  var lay = layout306(parts), fw = lay.fw, fd = lay.fd;
   var ew = o.dir === "e" || o.dir === "w";
   var hx = ew ? fd / 2 : fw / 2, hy = ew ? fw / 2 : fd / 2;
   var a = P([o.x - hx, o.y - hy]), b = P([o.x + hx, o.y + hy]);
@@ -30954,7 +30955,7 @@ var B = null;   /* {o, bar, draft, q, pk:{kind, dir}} */
 function esc395(s){ return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
 function fd319(v){ try { if (typeof fmtD319 === "function") return fmtD319(v); } catch(e){} return fmt(v); }
 function H395(){ var o = B && B.o; return (o && o.kh) || ((typeof S !== "undefined" && S) ? (S.ch || 2400) + (S.dosa || 240) : 2640); }
-function T395(){ return Math.max(1, Math.ceil(H395() / 190)); }
+function T395(){ return Math.max(1, (typeof best200750 === "function" ? best200750(H395()) : Math.ceil(H395() / 190)) - 1); }   /* CAD-751：新しく置く階段の図面の段（踏み板）＝段数−1（段数は蹴上げ200に一番近い数） */
 function tot395(){ return (B ? B.draft : []).reduce(function(a, q){ return a + (q.t === "m" ? (q.kind || 0) : (q.n || 0)); }, 0); }
 function partLbl395(q){ return q.t === "s" ? "直" + q.n + "段" : (q.kind === 1 ? "踊り場" : (q.dir === "R" ? "右廻り" : "左廻り") + q.kind + "段"); }
 function cloneParts395(p){ return (p || []).map(function(q){ return q.t === "m" ? {t: "m", kind: q.kind, dir: q.dir} : {t: "s", n: q.n}; }); }
@@ -34111,8 +34112,10 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
     var parts = A.partsOf(o), sf = A.sfOfParts(parts);
     var T = A.totalOf(parts);
     var Hgt = o.kh || ((S.ch || 2400) + (S.dosa || 240));
-    var nE = Math.max(1, Math.ceil(Hgt / 190)), RE = Hgt / nE;
-    var R = T > 0 ? Hgt / T : 0;
+    var C751 = (typeof stairCount750 === "function") ? stairCount750(o, Hgt) : null;   /* CAD-751：見積・立体と同じ数え方 */
+    var nE = C751 ? C751.n : Math.max(1, Math.ceil(Hgt / 190)), RE = Hgt / nE;
+    var tds = C751 ? C751.parts.filter(function(q){ return q.t === "s"; }).map(function(q){ return Math.round(q.td || TD377); }) : [];
+    T = nE; var R = Hgt / nE;
     var dims = A.dimsOf(parts);
     var dirName = { n: "上", e: "右", s: "下", w: "左" }[o.dir || "n"] || "上";
     var railL = Math.round(((nE - 1) * Math.hypot(TD377, RE) + (sf === "k" && parts[1] && parts[1].kind === 1 ? 910 : 0)) / 100) / 10;
@@ -34122,10 +34125,10 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
     var rows = [
       ["形", A.name(o)],
       ["構成（下から）", compTxt377(parts)],
-      ["段数", T + "段"],
+      ["段数", T + "段（上がり切り）・踏み板 " + (T - 1) + " 枚＋一番上に階段框"],
       ["階高", i377(Hgt) + " mm" + (o.kh ? "（手入力）" : "（自動：天井高 " + i377(S.ch || 2400) + " ＋ 胴差 " + i377(S.dosa || 240) + "）")],
       ["蹴上", "約 " + n377(R) + " mm（階高 ÷ 段数）"],
-      ["踏面", "227.5 mm（直の部分）"],
+      ["踏面", (tds.length ? tds.join("・") : "227.5") + " mm（直の部分）"],
       ["幅（柱芯々）", "910 mm"],
       ["全体の大きさ", i377(dims[0]) + " × " + i377(dims[1]) + " mm"],
       ["向き", "平面図で " + dirName + " 方向へ上がる"],
@@ -34133,9 +34136,9 @@ body.gold #planBar #hideFxBtn369[aria-pressed="true"]{background:#C9A227;color:#
       ["参考", "手すり（片側）の長さ 約 " + n377(railL) + " m（見積の計算）"]
     ];
     var h = "<div class='pF'>階段 " + (idx + 1) + "：" + esc377(A.name(o)) + "</div>";
-    h += stairSvg377(o, parts, sf);
+    h += stairSvg377(o, C751 ? C751.parts : parts, sf);
     h += "<table class='pT'>" + rows.map(function(rw){ return "<tr><th>" + esc377(rw[0]) + "</th><td>" + esc377(rw[1]) + "</td></tr>"; }).join("") + "</table>";
-    if (nE !== T) h += "<div class='pWarn'>注意：見積では " + nE + " 段（蹴上 約 " + n377(RE) + " mm）で計算していて、図面の " + T + " 段と合っていません。発注の前に、段数をどちらかにそろえてください。</div>";
+    if (false) h += "<div class='pWarn'>注意：見積では " + nE + " 段（蹴上 約 " + n377(RE) + " mm）で計算していて、図面の " + T + " 段と合っていません。発注の前に、段数をどちらかにそろえてください。</div>";
     return h;
   }
 
@@ -35223,7 +35226,28 @@ return [{t: "s", n: Math.max(1, sn(len))}];
 /* 1か所分の部品定価の合計と内訳を返す。段数 N は見積側（階高÷190）で数え、
 形の内訳（廻り段数 W・踊り場 D・直の区間）だけ絵から取る */
 /* CAD-741：段数＝段差（蹴上げ）の数＝上がり切りの数（翔伍の決定 2026-11-27・一般的な数え方）。図面に描いた階段は図面の合計段数、無い時だけ 階高÷190 切り上げ */
-function stN741(o, H){ try { var A = window.__st306; if (o && o.k === "stair" && A){ var T = A.totalOf(A.partsOf(o)); if (T > 0) return T; } } catch(e){} return Math.max(1, Math.ceil(H / 190)); }
+function stN741(o, H){ try { if (o && o.k === "stair"){ var c = stairCount750(o, H); if (c && c.n > 0) return c.n; } } catch(e){} return best200750(H); }
+/* CAD-751：段数（上がり切り＝蹴上げの数）は「階高÷段数」が200に一番近い数（翔伍の決定 2026-11-27 23:30・Fable 700 と同じ）。
+   踏み板＝段数−1。廻りの枚数はそのまま、直の所の枚数を割り直す（直が2か所以上は長さに比例・どこも1枚以上）。踏面が200〜350に入らない時・直が無い時は、図面の段＝踏み板・段数＝図面の段＋1。
+   立体の RITTAI.stairCount があればそれを使う（同じ数を見積・平面図・立体で） */
+function best200750(H){ var b = 2, bd = Infinity; for (var n = 2; n <= 40; n++){ var d = Math.abs(H / n - 200); if (d < bd - 1e-9){ bd = d; b = n; } } return b; }
+function stairCount750(o, H){
+  H = +H || +o.kh || ((S.ch || 2400) + (+S.dosa || 240));
+  try { if (window.RITTAI && typeof RITTAI.stairCount === "function"){ var r0 = RITTAI.stairCount(o, H); if (r0 && r0.n > 0) return r0; } } catch(e){}
+  var A = window.__st306; if (!A) return null;
+  var P = A.partsOf(o), TDv = 227.5, wind = 0, sIdx = [], Ls = 0, drawn = A.totalOf(P);
+  P.forEach(function(q, i){ if (q.t === "m") wind += (q.kind || 0); else { sIdx.push(i); Ls += TDv * (q.n || 0); } });
+  var fall = { n: drawn + 1, treads: drawn, riser: H / (drawn + 1), parts: P };
+  var N = best200750(H), treads = N - 1, straight = treads - wind;
+  if (!sIdx.length || straight < sIdx.length || !(Ls > 0)) return fall;
+  var ns = sIdx.map(function(i){ return Math.max(1, Math.round(straight * TDv * P[i].n / Ls)); }), sum = ns.reduce(function(a, b){ return a + b; }, 0), guard = 0;
+  while (sum !== straight && guard++ < 50){ var j = 0; ns.forEach(function(v, k){ if (P[sIdx[k]].n > P[sIdx[j]].n) j = k; }); if (sum > straight){ var k2 = -1; ns.forEach(function(v, k){ if (v > 1 && (k2 < 0 || P[sIdx[k]].n > P[sIdx[k2]].n)) k2 = k; }); if (k2 < 0) break; ns[k2]--; sum--; } else { ns[j]++; sum++; } }
+  if (sum !== straight) return fall;
+  var out = P.map(function(q){ return Object.assign({}, q); }), ok = true;
+  sIdx.forEach(function(i, k){ var td = TDv * P[i].n / ns[k]; if (td < 200 || td > 350) ok = false; out[i] = { t: "s", n: ns[k], td: td }; });
+  if (!ok) return fall;
+  return { n: N, treads: treads, riser: H / N, parts: out };
+}
 function stBuild389(o, H){
 const TD = 227.5, N = stN741(o, H), R = H / N;
 const parts = stParts389(o);
@@ -39472,7 +39496,7 @@ function kozo478(C){
             var len = nTurn * MW748 + nS * 227.5, b2 = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 };
             if (len < full - 1){ if (top){ if (dir === "e") b2.x0 = b2.x1 - len; else if (dir === "w") b2.x1 = b2.x0 + len; else if (dir === "s") b2.y0 = b2.y1 - len; else b2.y1 = b2.y0 + len; } else { if (dir === "e") b2.x1 = b2.x0 + len; else if (dir === "w") b2.x0 = b2.x1 - len; else if (dir === "s") b2.y1 = b2.y0 + len; else b2.y0 = b2.y1 - len; } }
             so.parts = parts; so.x = (b2.x0 + b2.x1) / 2; so.y = (b2.y0 + b2.y1) / 2; so.d = Math.round(len); so.w = Math.round(Math.min(sw, Math.max(MW748, sw)));
-            var tot = nS + 3 * nTurn, rise = Hk / tot;
+            var c751 = (typeof stairCount750 === "function") ? stairCount750(so, Hk) : null, tot = c751 ? c751.n : nS + 3 * nTurn, rise = Hk / tot;   /* CAD-751：段数は蹴上げ200に一番近い数 */
             setTimeout(function(){ try { toast("階段を" + (bot && top ? "上下回り" : bot ? "下回り" : "上回り") + "（" + tot + "段・蹴上げ約" + Math.round(rise) + "mm）で置きました。" + (top ? "上がり切る先が外壁なので、上で向きを変える形にしています。" : "") + (rise > 230 ? "蹴上げが230を超えるので、段数か形を見直してください" : "") + "（階段をさわると変えられます）"); } catch(e){} }, 900);
           }
         }
@@ -52330,7 +52354,7 @@ window.WHY724 = function(why){
     if (topStraight && onOuter(E.top, segs)) W.push("上がり切る先が外壁です。まっすぐ上がると、2階へ出られません（上で向きを変える形＝上回り・上下回りに）");
     if (botStraight && onOuter(E.bot, segs)) W.push("上り始めが外壁です。まっすぐでは入れません（横から入って向きを変える形＝下回りに）");
     try { var fi = S.fi || 0, up = upWalls || (Array.isArray(S.fl) && S.fl[fi + 1] && S.fl[fi + 1].snap && S.fl[fi + 1].snap.parts2D); if (up && crosses(r, up)) W.push((fi + 2) + "階の間仕切りが、階段の上（吹き抜け）を通っています"); } catch(e){}
-    try { var T = window.__st306 ? __st306.totalOf(P) : 0, H = heightOf(o); if (T > 0 && H / T > 230) W.push("蹴上げが約" + Math.round(H / T) + "mmで、230mmを超えています（段数を増やすか、形を変える）"); } catch(e){}
+    try { var H = heightOf(o), C = (typeof stairCount750 === "function") ? stairCount750(o, H) : null, rz = C ? C.riser : 0; if (rz > 230) W.push("蹴上げが約" + Math.round(rz) + "mmで、230mmを超えています（段数を増やすか、形を変える）"); } catch(e){}   /* CAD-751：見積・立体と同じ段数で */
     return W;
   }
   /* 今の階の全部の階段と、2階なら下の階の階段（この階の間仕切りが上を通っていないか） */
