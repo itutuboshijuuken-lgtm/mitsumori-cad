@@ -44186,7 +44186,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.WALK2 = {
     key: KEY,
     stage: 0,
-    isOn: function(){ return read().on === 1; },
+    isOn: function(){ return read().on !== 0; },   /* CAD-720：新しい画面が標準（「前の画面に戻す」を押した人だけ切） */
     setOn: function(v){ var o = read(); o.v = 1; o.on = v ? 1 : 0; write(o); try { window.dispatchEvent(new CustomEvent("walk2-switch", { detail: { on: !!v } })); } catch(e){} },
     get: function(name){ return read()[name]; },
     set: function(name, val){ var o = read(); o.v = 1; o[name] = val; write(o); }
@@ -47867,7 +47867,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     [b.undo, b.redo, b.clear, b.fix, el("span", "flex:1"), b.redraw, b.cancel].forEach(function(x){ row.appendChild(x); });
     mid.appendChild(layer); mid.appendChild(msg); root.insertBefore(row, bot);
     A = { root: root, mid: mid, row: row, layer: layer, ink: ink, hint: hint, msg: msg, b: b, top: top, top0: top ? top.textContent : "" };
-    if (top) top.textContent = "試験中　新しい図面（" + ((typeof S !== "undefined" && S && Array.isArray(S.fl) && S.fl[S.fi || 0]) ? S.fl[S.fi || 0].name : "1階") + "）";   /* CAD-709：今の階 */   /* CAD-676：描く・置く・印刷まで入ったので、見出しは短く */
+    if (top) top.textContent = "見積即答CAD（" + ((typeof S !== "undefined" && S && Array.isArray(S.fl) && S.fl[S.fi || 0]) ? S.fl[S.fi || 0].name : "1階") + "）";   /* CAD-709：今の階 */   /* CAD-676：描く・置く・印刷まで入ったので、見出しは短く */
     bind(layer);
     if (obsRoot) obsRoot.disconnect();
     obsRoot = new MutationObserver(function(){ onState(); }); obsRoot.observe(root, { attributes: true, attributeFilter: ["style"] });
@@ -47884,10 +47884,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function say(t){ if (!A || !t) return; A.msg.textContent = t; A.msg.style.display = "block"; clearTimeout(tmMsg); tmMsg = setTimeout(function(){ if (A) A.msg.style.display = "none"; }, 1800); }
   function show(e, on){ e.style.display = on ? "" : "none"; }
   function able(e, on){ e.disabled = !on; e.style.opacity = on ? "" : ".4"; }
+  var autoT720 = false;
   function refresh(){
     if (!A) return;
     var r = rd(), good = !!(r && r.ok), empty = good && !!r.empty, f1 = true, ok = appOk(), st = stacks();
-    if (empty && ok && !tracing && zopen()){ tracing = true; mine = []; ink(); }   /* 外形が無い時は、開いたらすぐなぞる状態 */
+    if (empty && ok && !tracing && zopen()){ tracing = true; mine = []; ink(); autoT720 = true; }   /* 外形が無い時は、開いたらすぐなぞる状態 */
+    else if (tracing && autoT720 && !empty && !mine.length){ autoT720 = false; leave(); }   /* CAD-720：自動でなぞる状態にした後に家を読み込んだら（保存した家を開いた等）、なぞる状態をやめる */
     if (tracing && (!ok || !f1)) leave();
     show(A.b.undo, !tracing); show(A.b.redo, !tracing); show(A.b.redraw, !tracing && ok && f1);
     show(A.b.clear, tracing); show(A.b.fix, tracing); show(A.b.cancel, tracing && !empty);
@@ -50430,7 +50432,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function ensure(){
     var r = document.getElementById("zumenRoot"); if (!r || r.style.display === "none" || !ok()) return;
     var t = r.firstElementChild; if (!t) return;
-    var want = "試験中　新しい図面（" + nm() + "）", tn = t.firstChild;
+    var want = "見積即答CAD（" + nm() + "）", tn = t.firstChild;
     if (tn && tn.nodeType === 3 && tn.nodeValue !== want) tn.nodeValue = want;
     if (t.style.display !== "flex"){ t.style.display = "flex"; t.style.alignItems = "center"; t.style.gap = "6px"; t.style.paddingTop = "calc(env(safe-area-inset-top,0px) + 4px)"; t.style.paddingBottom = "4px"; }
     var g = document.getElementById("fl709"), key = S.fl.length + "|" + S.fi;
@@ -50443,5 +50445,74 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.addEventListener("mado-change", function(){ setTimeout(ensure, 0); });
   setInterval(ensure, 600);
   window.FLOOR709 = { v: 1, go: go, ensure: ensure };
+})();
+</script>
+<script>
+/* ---------- CAD-720：新しい画面に切り替え（2026-11-27 Claude/Opus）----------
+   翔伍さん「前の版は動かない・使いにくいで全く使っていない。早く切り替えたい」。
+   ・アプリを開いたら、新しい図面（ZUMEN）がすぐ出る（WALK2 の切が無い人＝標準で入）。
+   ・図面の下の列：［とじる］を［メニュー］に替え、［見積］を足す。メニューから 仕様・屋根・完成図・新築/リフォームの切り替え・家の保存と読み込み・前の画面に戻す。
+   ・見積・仕様などの前の画面に行った時は、右下の［◀ 図面］で新しい図面に戻る。
+   ・前の画面の部品はそのまま呼ぶ（go(n)）。見積の計算・保存の形は変えない。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.HUB720) return;
+  try { if (window.WALK2 && WALK2.isOn()){ window.TUT_AUTO_START = false; var cs = document.createElement("style"); cs.textContent = "#kindBox{z-index:2147483300!important}"; document.head.appendChild(cs); } } catch(e){}   /* 前の画面の練習は出さない／「何をつくりますか？」は新しい図面の上に */
+  var BTN = "flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+  function on(){ try { return window.WALK2 && WALK2.isOn(); } catch(e){ return false; } }
+  function zo(){ try { return window.ZUMEN && ZUMEN.isOpen(); } catch(e){ return false; } }
+  var back = null;
+  function showBack(v){
+    if (!back){ back = document.createElement("button"); back.type = "button"; back.id = "hub720Back"; back.textContent = "◀ 図面";
+      back.style.cssText = "position:fixed;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 150px);z-index:2147482900;min-height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--ai,#2563B0);background:#2563B0;color:#fff;font:inherit;font-size:15px;font-weight:800;box-shadow:0 3px 12px rgba(24,32,42,.25)";
+      back.onclick = function(){ openPlan(); }; document.body.appendChild(back); }
+    back.style.display = v ? "" : "none";
+  }
+  function openPlan(){ showBack(false); try { ZUMEN.open(); } catch(e){} }
+  function toOld(n){ try { if (window.KAKU2) KAKU2.off(); } catch(e){} try { document.getElementById("modal").hidden = true; } catch(e){} try { ZUMEN.close(); } catch(e){} try { go(n); } catch(e){} try { window.scrollTo(0, 0); } catch(e){} showBack(true); }
+  function setMode(m){ try { if (typeof S === "undefined" || S.mode === m) return; S.mode = m; save(); go(typeof step !== "undefined" ? step : 1); document.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)); }); } catch(e){} try { toast(m === "rf" ? "内装リフォームにしました" : "新築・増築にしました"); } catch(e){} }
+  function menu(){
+    var md = document.getElementById("modal"), mb = document.getElementById("mbox"); if (!md || !mb) return;
+    var T = "display:flex;align-items:center;justify-content:center;min-height:56px;padding:6px;border-radius:12px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink,#18202A)";
+    var ON = ";border-color:var(--ai,#2563B0);background:#E6EFFA;color:var(--ai,#2563B0)";
+    var m = (typeof S !== "undefined" && S) ? S.mode : "zo";
+    var items = [["5", "見積"], ["4", "仕様（床・壁・天井）"]].concat(m === "zo" ? [["3", "屋根"]] : []).concat([["6", "完成図"]]);
+    mb.innerHTML = "<h3>メニュー</h3>"
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + items.map(function(it){ return '<button type="button" data-h720="' + it[0] + '" style="' + T + '">' + it[1] + "</button>"; }).join("") + "</div>"
+      + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">工事の種類</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      + '<button type="button" data-m720="zo" style="' + T + (m === "zo" ? ON : "") + '">新築・増築</button><button type="button" data-m720="rf" style="' + T + (m === "rf" ? ON : "") + '">内装リフォーム</button></div>'
+      + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">家</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      + '<button type="button" id="h720Files" style="' + T + '">保存・開く・新しい家</button><button type="button" id="h720Old" style="' + T + ';font-size:13px;color:var(--sub,#5B6673)">前の画面に戻す</button></div>'
+      + '<div class="row" style="margin-top:12px"><button type="button" class="btn" id="h720x" style="width:100%;min-height:46px">閉じる</button></div>';
+    md.hidden = false;
+    document.getElementById("h720x").onclick = function(){ md.hidden = true; };
+    mb.querySelectorAll("[data-h720]").forEach(function(b){ b.onclick = function(){ toOld(+b.dataset.h720); }; });
+    mb.querySelectorAll("[data-m720]").forEach(function(b){ b.onclick = function(){ setMode(b.dataset.m720); menu(); }; });
+    document.getElementById("h720Files").onclick = function(){ md.hidden = true; try { ZUMEN.close(); } catch(e){} showBack(true); try { var d = document.querySelector("details.mo"); if (d){ d.open = true; window.scrollTo(0, 0); } } catch(e){} };
+    document.getElementById("h720Old").onclick = function(){ md.hidden = true; try { WALK2.setOn(false); } catch(e){} try { ZUMEN.close(); } catch(e){} showBack(false); try { toast("前の画面に戻しました（⋯の「新しい歩く画面」を入にすると新しい画面に戻ります）"); } catch(e){} };
+  }
+  /* 図面の下の列：［とじる］→［メニュー］、［見積］を足す */
+  function bar(){
+    var r = document.getElementById("zumenRoot"); if (!r) return;
+    var bot = r.lastElementChild; if (!bot || bot.dataset.h720) return;
+    var cl = [].filter.call(bot.querySelectorAll("button"), function(b){ return b.textContent.trim() === "とじる"; })[0]; if (!cl) return;
+    bot.dataset.h720 = "1";
+    cl.style.display = "none";
+    var mn = document.createElement("button"); mn.type = "button"; mn.id = "h720Menu"; mn.textContent = "メニュー"; mn.style.cssText = BTN; mn.onclick = menu;
+    var mt = document.createElement("button"); mt.type = "button"; mt.id = "h720Mitsu"; mt.textContent = "見積"; mt.style.cssText = BTN + ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)"; mt.onclick = function(){ toOld(5); };
+    bot.insertBefore(mt, cl); bot.insertBefore(mn, mt);
+  }
+  /* 開いたら新しい図面（WALK2 が入の人） */
+  var started = false;
+  function boot(){
+    if (started) return; started = true;
+    if (!on()) return;
+    try { if (!zo()) ZUMEN.open(); } catch(e){}
+    bar();
+  }
+  setInterval(function(){ try { bar(); if (back && back.style.display !== "none" && (zo() || !on())) showBack(false); } catch(e){} }, 700);
+  window.addEventListener("load", function(){ setTimeout(boot, 900); });
+  if (document.readyState === "complete") setTimeout(boot, 900);
+  window.HUB720 = { v: 1, menu: menu, toOld: toOld, openPlan: openPlan, boot: boot };
 })();
 </script>
