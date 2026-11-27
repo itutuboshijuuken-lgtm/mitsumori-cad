@@ -49313,7 +49313,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* ===== 1. 取り付け ===== */
   var css = document.createElement("style");
   css.textContent = "body.k3pad #pad{z-index:2147483100!important}" +
-    "@keyframes k3blink{0%,100%{opacity:1}50%{opacity:.25}}#k3Ov .k3sel{animation:k3blink 1s ease-in-out infinite}";
+    "#k3Ov .k3sel{animation:none}";
   document.head.appendChild(css);
   function attach(){
     var root = document.getElementById("zumenRoot"); if (!root) return null;
@@ -49664,7 +49664,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L];
       var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
       l.setAttribute("x1", sg[0][0] + u[0] * sa.pos); l.setAttribute("y1", sg[0][1] + u[1] * sa.pos); l.setAttribute("x2", sg[0][0] + u[0] * (sa.pos + sa.w)); l.setAttribute("y2", sg[0][1] + u[1] * (sa.pos + sa.w));
-      l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "6"); l.setAttribute("stroke-linecap", "butt"); l.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(l); });
+      l = box737(l); A.ov.appendChild(l); });
   }
   function multiEnd(){ multi = null; if (multiBar && multiBar.parentNode) multiBar.parentNode.removeChild(multiBar); if (A) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
   function multiShow(){
@@ -49752,13 +49752,23 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { if (window.RITTAI && RITTAI.isOpen && RITTAI.isOpen()) RITTAI.sync(); } catch(e){}
     say(err || (typeof msg === "function" ? msg() : msg));
   }
+  /* CAD-738：選んだ物の印は、点線で囲むだけ（点滅なし・細い線）。前のピンクの太い線は主張が強すぎた（翔伍さんの指摘） */
+  function box737(l){
+    var x1 = +l.getAttribute("x1"), y1 = +l.getAttribute("y1"), x2 = +l.getAttribute("x2"), y2 = +l.getAttribute("y2");
+    var D = Math.hypot(x2 - x1, y2 - y1) || 1, ux = (x2 - x1) / D, uy = (y2 - y1) / D, nx = -uy, ny = ux, h = 190, e = 70;
+    var P = [[x1 - ux * e + nx * h, y1 - uy * e + ny * h], [x2 + ux * e + nx * h, y2 + uy * e + ny * h], [x2 + ux * e - nx * h, y2 + uy * e - ny * h], [x1 - ux * e - nx * h, y1 - uy * e - ny * h]];
+    var g = document.createElementNS(NS, "polygon"); g.setAttribute("class", "k3sel");
+    g.setAttribute("points", P.map(function(q){ return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" "));
+    g.setAttribute("fill", "none"); g.setAttribute("stroke", "#2563B0"); g.setAttribute("stroke-width", "1.3"); g.setAttribute("stroke-dasharray", "5 4"); g.setAttribute("vector-effect", "non-scaling-stroke");
+    return g;
+  }
   function markSash(){
     if (!A) return; while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
     var sa = sashObj; if (!sa || typeof hostSeg !== "function") return; var sg = hostSeg(sa.host); if (!sg) return;
     var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L];
     var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
     l.setAttribute("x1", sg[0][0] + u[0] * sa.pos); l.setAttribute("y1", sg[0][1] + u[1] * sa.pos); l.setAttribute("x2", sg[0][0] + u[0] * (sa.pos + sa.w)); l.setAttribute("y2", sg[0][1] + u[1] * (sa.pos + sa.w));
-    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "butt"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    l = box737(l);
     A.ov.appendChild(l);
   }
   function closeSash(){ sashObj = null; if (sashBar && sashBar.parentNode) sashBar.parentNode.removeChild(sashBar); if (A && !editing && !partObj) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
@@ -49970,7 +49980,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     kohoBtn(partBar, "寸法", B.replace("flex:1 1 0", "flex:0 0 auto") + ";padding:0 14px", function(){ var j = wallObj ? wallObj.i : -1; closePart(); if (j >= 0){ tapT = Date.now(); open(j); } });
     var x = kohoBtn(partBar, "×", B + ";flex:0 0 44px", closePart); x.setAttribute("aria-label", "閉じる");
     kohoRow(partBar, "wall", q, roomAtPt([q[0] + (q[0] - p[0]) * 4, q[1] + (q[1] - p[1]) * 4]), "ext");   /* 部屋の名前は、壁から少し奥（約200mm）の点で見る */
-    try { while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel"); l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(l); } catch(e){}
+    try { while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel"); l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); l = box737(l); A.ov.appendChild(l); } catch(e){}
     return { ok: true, i: i };
   }
   var tareObj = null;
@@ -50043,7 +50053,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var pi1 = partIdx(), q = pi1 >= 0 ? S.parts2D[pi1] : ((S.tare || []).indexOf(tareObj) >= 0 ? tareObj : null); if (!q) return;
     var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
     l.setAttribute("x1", q.x1); l.setAttribute("y1", q.y1); l.setAttribute("x2", q.x2); l.setAttribute("y2", q.y2);
-    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    l = box737(l);
     A.ov.appendChild(l);
   }
   function closePart(){ partSel = -1; partObj = null; tareObj = null; wallObj = null; if (partBar && partBar.parentNode) partBar.parentNode.removeChild(partBar); if (A && !editing) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
@@ -50088,7 +50098,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var P = pts(), a = P[i], b = P[(i + 1) % P.length]; if (!a || !b) return;
     var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel");
     l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]);
-    l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
+    l = box737(l);
     A.ov.appendChild(l);
   }
   /* CAD-701：外形の辺を入れた時、向かいの辺と合わなくなったら（四角の上と下など、その向きの辺が2本だけの時）向かいの辺を同じ長さにそろえる。
