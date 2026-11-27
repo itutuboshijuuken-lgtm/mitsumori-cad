@@ -30986,7 +30986,7 @@ function ensureDom395(){
   if (document.getElementById("stBuild395")) return;
   /* 組み立て中は、浮動シート用の「閉じる」（z-index 9000）が画面の上に残らない様にする */
   var sty = document.createElement("style");
-  sty.textContent = "body.stB395open #closeAllFloat{display:none!important}";
+  sty.textContent = "body.stB395open #closeAllFloat{display:none!important}body.stB395open #stBuild395{z-index:2147483050!important}body.stB395open #pad{z-index:2147483150!important}body.stB395open #modal{z-index:2147483100!important}";   /* CAD-749：新しい平面図・立体の上でも見える */
   document.head.appendChild(sty);
   var ov = document.createElement("div");
   ov.id = "stBuild395";
@@ -49561,12 +49561,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (o.k === "rail") mk("縦横", railDir);
     } else {
       if (o.k === "stair") mk("回す", turnStair);
+      if (o.k === "stair" && window.__st395 && __st395.open) mk("形", function(){ try { __st395.open(o, null, false); } catch(e){ warn("階段の形", e); } });   /* CAD-749：直・下回り・上回り・上下回り・かね折れ、段数と廻りの向き（今までの階段の形の画面） */
       else if (o.k !== "pillar" && o.k !== "dansa" && o.k !== "rail") mk("回す", function(){ try { pushUndo(); o.dir = ({ n: "e", e: "s", s: "w", w: "n" })[o.dir] || "e"; if (typeof moveTenken === "function") moveTenken(o, 0, 0); save(); if (typeof drawPlan === "function") drawPlan(); say("向きを替えました（押すたびに90°）"); } catch(e){} });   /* CAD-723：キッチンなども回せる（立体と同じ） */
       if (o.k !== "pillar" && o.k !== "dansa") mk("幅", function(){ tkSize("w"); });
       if (typeof o.d === "number" && o.k !== "dansa") mk("奥行", function(){ tkSize("d"); });
       if (o.k === "bath" && window.UBD734 && UBD734.zoneOf(o)) mk("入口", function(){ ubPlan(UBD734.zoneOf(o)); });   /* CAD-734 */
     }
     var x = mk("×", closeThing); x.style.padding = "0"; x.style.width = "44px";
+    if (o.k === "stair" && window.stairWarn748){ var W749 = stairWarn748(o); if (W749.length){ thBar.style.flexWrap = "wrap"; thBar.insertAdjacentHTML("afterbegin", stairWarnHtml748(W749)); } }   /* CAD-749 */
     adjRow(thBar, B);   /* CAD-700：置いた後の微調整（位置・高さを数字で、矢印で10mmずつ、消す） */
     return { ok: true, kind: kind, label: lab };
   }
@@ -50073,6 +50075,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var B = "flex:1 1 0;min-width:0;min-height:44px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)", fl = (bs.fi | 0) + 1;
     partBar.innerHTML = "<div style='width:100%;font-size:12.5px;font-weight:700;color:var(--sub,#5B6673);line-height:1.4'>" + fl + "階の階段（ここは下りの吹き抜け）。記録は" + fl + "階にあるので、" + fl + "階で直します</div>";
     var mk2 = function(t, fn, css){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B + (css || ""); b.onclick = fn; partBar.appendChild(b); return b; };
+    try { if (window.stairWarnAll748){ var W749 = stairWarnAll748().filter(function(t){ return /この階の間仕切り/.test(t); }); if (W749.length) partBar.insertAdjacentHTML("beforeend", stairWarnHtml748(W749)); } } catch(e){}   /* CAD-749 */
     /* 下の階へ移って、その階の階段を選ぶ（帯が出るまで少し待つ）。then＝選べた後にすること */
     var go = function(then){ closePart(); var id = bs.id; try { flSwitch(bs.fi); } catch(e){ say("階を替えられませんでした"); return; }
       var n = 0, tick = function(){ n++; try { var z = zumen(); if (z && z.open && !(z.isOpen && z.isOpen())) z.open(); } catch(e){} try { sync(); } catch(e){}
@@ -51530,6 +51533,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       return;
     }
     var B2 = [];
+    if (o.k === "stair" && window.__st395 && __st395.open) B2.push(["形", function(){ try { __st395.open(o, null, false); } catch(e){} watchSync(); }]);   /* CAD-749 */
     if (list === "tenken" && o.dir != null || list === "tenken") B2.push(["回す", function(){ edit(function(){ o.dir = ({ n: "e", e: "s", s: "w", w: "n" })[o.dir] || "e"; try { moveTenken(o, 0, 0); } catch(e){} }, "向きを替えました（押すたびに90°）"); }]);
     B2.push(["動かす", function(){ moving = { list: list, id: id }; bandFor(nm(list, o) + "：動かす先をタップ", [["やめる", function(){ moving = null; closeBand(); }, 1]]); }]);
     if (list === "tenken" && o.w > 0) B2.push(["大きさ", function(){ if (typeof openPad !== "function") return; openPad({ title: "幅（mm）", unit: "mm", value: o.w, done: function(w){ if (!w) return; var d0 = o.d || o.w; openPad({ title: "奥行（mm）", unit: "mm", value: d0, done: function(d){ edit(function(){ o.w = Math.round(w); if (d) o.d = Math.round(d); try { moveTenken(o, 0, 0); } catch(e){} }, "大きさを変えました"); } }); } }); }]);
@@ -51537,6 +51541,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (o.k === "bath" && window.UBD734){ var uz2 = UBD734.zoneOf(o); if (uz2) B2.push(["入口（ドア）", function(){ ubBand(uz2); }]); }   /* CAD-734 */
     B2.push(["消す", function(){ del(list, id); }, 1]);
     bandFor(nm(list, o), B2);
+    if (o.k === "stair" && window.stairWarn748 && band){ var W749 = stairWarn748(o); if (W749.length){ var wd = document.createElement("div"); wd.innerHTML = stairWarnHtml748(W749); band.insertBefore(wd.firstChild, band.children[1] || null); } }   /* CAD-749 */
   }
   /* CAD-736：階段で上の階・下の階へ（Fable の RITTAI.stairs の立つ場所へ）。dir 1＝上へ／-1＝下へ */
   function stairGo(h, dir){
@@ -52060,5 +52065,53 @@ window.WHY724 = function(why){
     sa.tob581 = "both"; return "両側薄壁（扉が壁の中に入る形）にしました。戸袋の壁は下地が薄くなるので、どちらの面にもスイッチ・コンセントは付けられません";
   }
   window.KATA734 = { v: 1, ok: ok, toggle: toggle };
+})();
+</script>
+<script>
+/* ---------- CAD-749：あり得ない階段の収まりを警告（2026-11-27 Opus）----------
+   翔伍の頼み：読み込む時も、お客さんが置いた・変えた時も、あり得ない収まりなら警告して。
+   見る事：①上がり切る先が外壁でまっすぐ（2階へ出られない）②上り始めが外壁でまっすぐ（入れない）③上の階の間仕切りが階段の上を通る ④蹴上げが230を超える
+   出す所：変わった時（保存の知らせ mado-change）にトースト、階段の帯（平面図・立体）に赤い字。記録は変えない（見るだけ） */
+(function(){
+  "use strict";
+  if (window.stairWarn748) return;
+  var TD = 227.5;
+  function outlineSegs(){ try { var P = pts(); return P.map(function(a, i){ return [a, P[(i + 1) % P.length]]; }); } catch(e){ return []; } }
+  function sd(x, y, a, b){ var ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey, t = L2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / L2)) : 0; return Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t); }
+  function onOuter(p, segs){ return segs.some(function(s){ return sd(p[0], p[1], s[0], s[1]) < 90; }); }
+  function rectOf(o){ var e = (typeof tkExt === "function") ? tkExt(o) : [(o.w || 910) / 2, (o.d || 910) / 2]; return { x0: o.x - e[0], y0: o.y - e[1], x1: o.x + e[0], y1: o.y + e[1] }; }
+  /* 上る向きの先の端（中点）と、上り始めの端（中点） */
+  function ends(o, r){ var d = o.dir || "n", cx = (r.x0 + r.x1) / 2, cy = (r.y0 + r.y1) / 2;
+    if (d === "n") return { top: [cx, r.y0], bot: [cx, r.y1] }; if (d === "s") return { top: [cx, r.y1], bot: [cx, r.y0] };
+    if (d === "e") return { top: [r.x1, cy], bot: [r.x0, cy] }; return { top: [r.x0, cy], bot: [r.x1, cy] }; }
+  function partsOf(o){ try { return window.__st306 ? __st306.partsOf(o) : null; } catch(e){ return null; } }
+  function heightOf(o){ return +o.kh || ((typeof S !== "undefined" && S) ? ((S.ch || 2400) + (+S.dosa || 240) + (S.fuko > 0 ? S.fuko + 40 : 0)) : 2640); }
+  function crosses(r, walls){ var m = 40; return (walls || []).some(function(w){ if (!w || w.st === "remove") return false; var x1 = +w.x1, y1 = +w.y1, x2 = +w.x2, y2 = +w.y2; if (![x1, y1, x2, y2].every(isFinite)) return false;
+    if (Math.abs(x1 - x2) < 1){ var x = x1; return x > r.x0 + m && x < r.x1 - m && Math.max(y1, y2) > r.y0 + m && Math.min(y1, y2) < r.y1 - m; }
+    if (Math.abs(y1 - y2) < 1){ var y = y1; return y > r.y0 + m && y < r.y1 - m && Math.max(x1, x2) > r.x0 + m && Math.min(x1, x2) < r.x1 - m; } return false; }); }
+  /* o：階段の記録。upWalls：上の階の間仕切り（無ければ上の階の記録から） */
+  function warn(o, upWalls){
+    var W = []; if (!o || o.k !== "stair" || typeof o.x !== "number") return W;
+    var r = rectOf(o), segs = outlineSegs(), P = partsOf(o) || [], first = P[0], last = P[P.length - 1], E = ends(o, r);
+    var sf = null; try { sf = __st306.sfOfParts(P); } catch(e){}
+    var topStraight = last && last.t === "s" && (sf === "s" || sf === "d"), botStraight = first && first.t === "s" && (sf === "s" || sf === "u" || sf === "k");
+    if (topStraight && onOuter(E.top, segs)) W.push("上がり切る先が外壁です。まっすぐ上がると、2階へ出られません（上で向きを変える形＝上回り・上下回りに）");
+    if (botStraight && onOuter(E.bot, segs)) W.push("上り始めが外壁です。まっすぐでは入れません（横から入って向きを変える形＝下回りに）");
+    try { var fi = S.fi || 0, up = upWalls || (Array.isArray(S.fl) && S.fl[fi + 1] && S.fl[fi + 1].snap && S.fl[fi + 1].snap.parts2D); if (up && crosses(r, up)) W.push((fi + 2) + "階の間仕切りが、階段の上（吹き抜け）を通っています"); } catch(e){}
+    try { var T = window.__st306 ? __st306.totalOf(P) : 0, H = heightOf(o); if (T > 0 && H / T > 230) W.push("蹴上げが約" + Math.round(H / T) + "mmで、230mmを超えています（段数を増やすか、形を変える）"); } catch(e){}
+    return W;
+  }
+  /* 今の階の全部の階段と、2階なら下の階の階段（この階の間仕切りが上を通っていないか） */
+  function all(){
+    var out = []; if (typeof S === "undefined" || !S) return out;
+    (S.tenken || []).forEach(function(o){ if (o && o.k === "stair") warn(o).forEach(function(t){ out.push(t); }); });
+    try { var fi = S.fi || 0, dn = fi > 0 && S.fl && S.fl[fi - 1] && S.fl[fi - 1].snap; if (dn) (dn.tenken || []).forEach(function(o){ if (o && o.k === "stair" && crosses(rectOf(o), S.parts2D)) out.push("この階の間仕切りが、" + fi + "階の階段の上（吹き抜け）を通っています"); }); } catch(e){}
+    return out.filter(function(t, i, a){ return a.indexOf(t) === i; });
+  }
+  var lastKey = "", tmr = null;
+  function check(){ var L = all(), key = JSON.stringify([S && S.fi, L]); if (key === lastKey) return; lastKey = key; if (L.length) { try { toast("⚠ 階段：" + L.join(" ／ ")); } catch(e){} } }
+  window.addEventListener("mado-change", function(){ clearTimeout(tmr); tmr = setTimeout(function(){ try { check(); } catch(e){} }, 700); });
+  window.stairWarn748 = warn; window.stairWarnAll748 = all;
+  window.stairWarnHtml748 = function(L){ return L && L.length ? "<div style='flex:1 1 100%;font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px'>⚠ " + L.join("<br>⚠ ") + "</div>" : ""; };
 })();
 </script>
