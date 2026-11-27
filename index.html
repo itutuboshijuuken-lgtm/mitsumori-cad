@@ -50476,19 +50476,22 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var T = "display:flex;align-items:center;justify-content:center;min-height:56px;padding:6px;border-radius:12px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink,#18202A)";
     var ON = ";border-color:var(--ai,#2563B0);background:#E6EFFA;color:var(--ai,#2563B0)";
     var m = (typeof S !== "undefined" && S) ? S.mode : "zo";
-    var items = [["5", "見積"], ["4", "仕様（床・壁・天井）"]].concat(m === "zo" ? [["3", "屋根"]] : []).concat([["6", "完成図"]]);
+    var cust = window.SHARE722 && SHARE722.role() === "cust";
+    var items = (cust ? [] : [["5", "見積"], ["4", "仕様（床・壁・天井）"]]).concat(m === "zo" && !cust ? [["3", "屋根"]] : []).concat([["6", "完成図"]]);   /* CAD-722：お客さん（無料）は金額を出さない */
     mb.innerHTML = "<h3>メニュー</h3>"
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + items.map(function(it){ return '<button type="button" data-h720="' + it[0] + '" style="' + T + '">' + it[1] + "</button>"; }).join("") + "</div>"
       + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">工事の種類</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
       + '<button type="button" data-m720="zo" style="' + T + (m === "zo" ? ON : "") + '">新築・増築</button><button type="button" data-m720="rf" style="' + T + (m === "rf" ? ON : "") + '">内装リフォーム</button></div>'
       + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">家</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
       + '<button type="button" id="h720Files" style="' + T + '">保存・開く・新しい家</button><button type="button" id="h720Old" style="' + T + ';font-size:13px;color:var(--sub,#5B6673)">前の画面に戻す</button></div>'
+      + (window.SHARE722 ? '<button type="button" id="h720Share" style="' + T + ';width:100%;margin-top:8px;border-color:#EA580C;color:#C2410C;background:#FFF7ED">' + (SHARE722.role() === "cust" ? "業者さんに送り返す" : "お客さんに送る（家を見て・触ってもらう）") + "</button>" : "")
       + '<div class="row" style="margin-top:12px"><button type="button" class="btn" id="h720x" style="width:100%;min-height:46px">閉じる</button></div>';
     md.hidden = false;
     document.getElementById("h720x").onclick = function(){ md.hidden = true; };
     mb.querySelectorAll("[data-h720]").forEach(function(b){ b.onclick = function(){ toOld(+b.dataset.h720); }; });
     mb.querySelectorAll("[data-m720]").forEach(function(b){ b.onclick = function(){ setMode(b.dataset.m720); menu(); }; });
     document.getElementById("h720Files").onclick = function(){ md.hidden = true; try { ZUMEN.close(); } catch(e){} showBack(true); try { var d = document.querySelector("details.mo"); if (d){ d.open = true; window.scrollTo(0, 0); } } catch(e){} };
+    if (document.getElementById("h720Share")) document.getElementById("h720Share").onclick = function(){ md.hidden = true; SHARE722.send(); };
     document.getElementById("h720Old").onclick = function(){ md.hidden = true; try { WALK2.setOn(false); } catch(e){} try { ZUMEN.close(); } catch(e){} showBack(false); try { toast("前の画面に戻しました（⋯の「新しい歩く画面」を入にすると新しい画面に戻ります）"); } catch(e){} };
   }
   /* 図面の下の列：［とじる］→［メニュー］、［見積］を足す */
@@ -50599,5 +50602,158 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function open(){ var v = frame(); v.box.style.display = "flex"; v.open = true; draw(); v.mid.scrollTop = 0; }
   function close(){ if (!V) return; if (V.now) last = V.now; V.box.style.display = "none"; V.open = false; }
   window.EST721 = { v: 1, open: open, close: close, isOpen: function(){ return !!(V && V.open); }, _groups: function(){ try { return groups(calc()).map(function(g){ return [g.name, g.rows.length, Math.round(g.sum)]; }); } catch(e){ return null; } } };
+})();
+</script>
+<script>
+/* ---------- CAD-722：お客さんに家を見て・触ってもらう（2026-11-27 Claude/Opus）----------
+   ・業者：［メニュー］→［お客さんに送る］→ リンクができる（LINE などで送る）。家のデータはリンクの「#」の後ろに縮めて入れる＝どこのサーバーにも置かない。
+   ・お客さん：リンクを開くと、その家が新しい現場として入る（お客さん用）。図面・立体で置いたり変えたりできる。金額は出さない（無料は金額なし）。
+     終わったら［メニュー］→［業者さんに送り返す］→ リンクを送る。
+   ・業者：返ってきたリンクを開くと「○○様の案」として入る。お客さんが付けた物・変えた物はオレンジの丸、上の帯に数。［見る］の一覧で1つずつ［OK］→ 色が消える。
+   ・見分け方：送った時の物（記録の番号 nid と中身の印）を一緒に送り、返ってきた家とくらべる。どの置き方で足しても分かる。
+   ・保存キーは増やさない（現場は今の現場の保存と同じ所。S.share722 に役目と控え）。 */
+(function(){
+  "use strict";
+  if (window.SHARE722) return;
+  var LISTS = ["sashes", "lights", "tenken", "fx", "parts2D", "tare"];
+  var NAME = { sashes: "建具・窓", lights: "照明", tenken: "設備・点検口", fx: "壁の物（コンセント等）", parts2D: "間仕切り", tare: "垂れ壁" };
+  function h32(str){ var h = 5381; for (var i = 0; i < str.length; i++){ h = ((h << 5) + h + str.charCodeAt(i)) | 0; } return (h >>> 0).toString(36); }
+  function keyOf(o, k, i){ return o && (o.nid || o.id) ? String(o.nid || o.id) : k + "#" + i; }
+  function sig(o){ var c = {}; Object.keys(o || {}).sort().forEach(function(k){ if (k === "nid" || k === "id" || k === "drawn" || k.charAt(0) === "_") return; c[k] = o[k]; }); return h32(JSON.stringify(c)); }
+  function allFloors(d){ var out = []; var F = Array.isArray(d.fl) && d.fl.length > 1 ? d.fl : null;
+    if (!F){ out.push({ fi: 0, d: d }); return out; }
+    F.forEach(function(f, i){ out.push({ fi: i, d: i === (d.fi || 0) ? d : (f.snap || {}) }); }); return out; }
+  function baseOf(d){ var b = {}; allFloors(d).forEach(function(F){ LISTS.forEach(function(k){ (F.d[k] || []).forEach(function(o, i){ b[F.fi + ":" + k + ":" + keyOf(o, k, i)] = sig(o); }); }); }); return b; }
+  function diff(d, base){
+    var cur = {}, R = { added: [], changed: [], removed: [] };
+    allFloors(d).forEach(function(F){ LISTS.forEach(function(k){ (F.d[k] || []).forEach(function(o, i){ var key = F.fi + ":" + k + ":" + keyOf(o, k, i); cur[key] = 1; if (!(key in base)) R.added.push(key); else if (base[key] !== sig(o)) R.changed.push(key); }); }); });
+    Object.keys(base).forEach(function(key){ if (!cur[key]) R.removed.push(key); });
+    return R;
+  }
+  /* 縮める（deflate）→ URL に使える文字 */
+  function b64u(buf){ var s = "", a = new Uint8Array(buf); for (var i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  function unb64u(t){ t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; var s = atob(t), a = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i); return a; }
+  function pack(o){ var txt = JSON.stringify(o); if (typeof CompressionStream === "undefined") return Promise.resolve("j" + b64u(new TextEncoder().encode(txt)));
+    var cs = new CompressionStream("deflate-raw"), w = cs.writable.getWriter(); w.write(new TextEncoder().encode(txt)); w.close();
+    return new Response(cs.readable).arrayBuffer().then(function(b){ return "z" + b64u(b); }); }
+  function unpack(t){ var kind = t.charAt(0), a = unb64u(t.slice(1));
+    if (kind === "j") return Promise.resolve(JSON.parse(new TextDecoder().decode(a)));
+    var ds = new DecompressionStream("deflate-raw"), w = ds.writable.getWriter(); w.write(a); w.close();
+    return new Response(ds.readable).text().then(function(x){ return JSON.parse(x); }); }
+  function role(){ try { return (S && S.share722 && S.share722.role) || "pro"; } catch(e){ return "pro"; } }
+  function liveData(){ var d = JSON.parse(JSON.stringify(S)); try { if (Array.isArray(d.fl) && d.fl.length > 1){ d.fl[d.fi || 0].snap = null; } } catch(e){} return d; }
+  function linkFor(payload){ return pack(payload).then(function(t){ return location.origin + location.pathname + "#s722=" + t; }); }
+  function say(t){ try { toast(t); } catch(e){} }
+  function sheet(html){ var md = document.getElementById("modal"), mb = document.getElementById("mbox"); mb.innerHTML = html; md.hidden = false; return mb; }
+  function send(){
+    var r = role(), co = (typeof coInfo === "function" ? coInfo() : {}) || {}, d = liveData(), nm = S.genba || "お家";
+    var payload = r === "cust" ? { v: 1, kind: "to-pro", name: nm, from: (S.share722 && S.share722.cust) || "お客さん", to: S.share722 && S.share722.from, data: d, base: (S.share722 && S.share722.base) || {} }
+                               : { v: 1, kind: "to-cust", name: nm, from: co.name || "工務店", data: d, base: baseOf(d) };
+    if (r !== "cust"){ try { S.share722 = Object.assign({}, S.share722 || {}, { sent: Date.now() }); save(); } catch(e){} }
+    linkFor(payload).then(function(url){
+      var text = r === "cust" ? nm + "：変えたい所を付けました。開いて見てください。" : (co.name || "") + "より：" + nm + "の家です。開くと図面と家の中が見られます。変えたい所を付けたら、メニューの［業者さんに送り返す］で送ってください。";
+      var mb = sheet("<h3>" + (r === "cust" ? "業者さんに送り返す" : "お客さんに送る") + "</h3><p class='hint' style='margin:2px 0 8px'>このリンクを LINE などで送ってください。家のデータはリンクの中だけに入っていて、どこにも置きません（" + Math.round(url.length / 1000 * 10) / 10 + "千文字）。</p>"
+        + '<textarea readonly id="s722u" style="width:100%;height:84px;font-size:11px;border-radius:10px;border:1px solid var(--line,#DCE3EB);padding:6px">' + url.replace(/</g, "&lt;") + "</textarea>"
+        + '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn" id="s722sh" style="flex:1;min-height:46px">送る（LINE など）</button><button type="button" class="btn sub" id="s722cp" style="flex:1;min-height:46px">コピー</button></div>'
+        + '<div class="row" style="margin-top:8px"><button type="button" class="btn sub" id="s722x" style="width:100%;min-height:44px">閉じる</button></div>');
+      document.getElementById("s722x").onclick = function(){ document.getElementById("modal").hidden = true; };
+      document.getElementById("s722cp").onclick = function(){ var ta = document.getElementById("s722u"); try { navigator.clipboard.writeText(url).then(function(){ say("コピーしました"); }, function(){ ta.select(); document.execCommand("copy"); say("コピーしました"); }); } catch(e){ ta.select(); try { document.execCommand("copy"); } catch(x){} say("コピーしました"); } };
+      document.getElementById("s722sh").onclick = function(){ if (navigator.share) navigator.share({ title: nm, text: text, url: url }).catch(function(){}); else document.getElementById("s722cp").onclick(); };
+    }).catch(function(e){ say("リンクを作れませんでした"); try { console.warn("[SHARE722]", e); } catch(x){} });
+  }
+  /* 受け取り：新しい現場として入れる */
+  function importPayload(P){
+    var d = P.data || {}, id = "p" + Date.now().toString(36), isPro = P.kind === "to-pro";
+    var nm = isPro ? (P.name || "お家") + "（お客さんの案 " + new Date().toLocaleDateString("ja-JP") + "）" : (P.name || "お家");
+    d.genba = nm;
+    d.share722 = isPro ? { role: "pro", base: P.base || {}, review: diff(d, P.base || {}), cust: P.from || "お客さん" } : { role: "cust", from: P.from || "工務店", base: P.base || {} };
+    try { localStorage.setItem("zochiku-p-" + id, JSON.stringify(d)); PJ.list.unshift({ id: id, name: nm, upd: Date.now() }); PJ.cur = id; localStorage.setItem("zochiku-projects-v1", JSON.stringify(PJ)); loadProject(id); } catch(e){ say("家を入れられませんでした"); try { console.warn("[SHARE722] import", e); } catch(x){} return false; }
+    try { var kb = document.getElementById("kindBox"); if (kb) kb.remove(); document.getElementById("modal").hidden = true; } catch(e){}
+    try { if (typeof go === "function") go(typeof step !== "undefined" ? step : 1); } catch(e){}
+    try { if (window.ZUMEN){ ZUMEN.open(); setTimeout(function(){ try { ZUMEN.home(); } catch(e){} }, 200); } } catch(e){}
+    say(isPro ? "お客さんの案を入れました（オレンジがお客さんの付けた・変えた物）" : (P.from || "工務店") + "さんから家が届きました。触って変えたら、メニューから送り返してください");
+    band(); return true;
+  }
+  function fromHash(){
+    var m = String(location.hash || "").match(/#s722=([A-Za-z0-9_\-]+)/); if (!m) return;
+    var t = m[1];
+    try { history.replaceState(null, "", location.pathname + location.search); } catch(e){}
+    unpack(t).then(function(P){
+      if (!P || !P.data) throw new Error("empty");
+      var mb = sheet("<h3>" + (P.kind === "to-pro" ? "お客さんから案が届きました" : (P.from || "工務店") + "さんから家が届きました") + "</h3><p class='hint' style='margin:2px 0 10px'>「" + String(P.name || "お家").replace(/</g, "&lt;") + "」を新しい現場として開きます。今の現場はそのまま残ります。</p>"
+        + '<div style="display:flex;gap:8px"><button type="button" class="btn" id="s722in" style="flex:1;min-height:48px">開く</button><button type="button" class="btn sub" id="s722no" style="flex:0 0 auto;min-height:48px;padding:0 16px">やめる</button></div>');
+      document.getElementById("s722in").onclick = function(){ importPayload(P); };
+      document.getElementById("s722no").onclick = function(){ document.getElementById("modal").hidden = true; };
+    }).catch(function(){ say("リンクを読めませんでした（途中で切れているかもしれません）"); });
+  }
+  /* 業者：お客さんの案の帯と一覧 */
+  function rv(){ try { return (S.share722 && S.share722.role === "pro" && S.share722.review) || null; } catch(e){ return null; } }
+  function rvItems(){ var R = rv(); if (!R) return []; var L = []; ["added", "changed", "removed"].forEach(function(t){ (R[t] || []).forEach(function(key){ L.push({ t: t, key: key }); }); }); return L; }
+  function find(key){ var p = key.split(":"), fi = +p[0], k = p[1], id = p.slice(2).join(":"); if (fi !== (S.fi || 0)) return { fi: fi, k: k, i: -1 }; var arr = S[k] || [];
+    for (var i = 0; i < arr.length; i++){ if (keyOf(arr[i], k, i) === id) return { fi: fi, k: k, i: i, o: arr[i] }; } return { fi: fi, k: k, i: -1 }; }
+  function lab(it){ var f = find(it.key), o = f.o, t = it.t === "added" ? "付けた" : it.t === "changed" ? "変えた" : "消した";
+    var nm = NAME[f.k] || f.k; if (o){ if (f.k === "sashes") nm = (o.cat || "") + " " + (o.name || "") + " " + o.w + "×" + o.h; else if (o.k) nm = ({ down: "ダウンライト", ceil: "シーリング", rail: "ライティングレール", bracket: "ブラケット", pendant: "ペンダント", outlet: "コンセント", switch: "スイッチ", tv: "テレビ端子" })[o.k] || (NAME[f.k] + "（" + o.k + "）"); }
+    return { t: t, nm: nm + (f.fi ? "（" + (f.fi + 1) + "階）" : ""), f: f }; }
+  function ok(key){ var R = rv(); if (!R) return; ["added", "changed", "removed"].forEach(function(t){ R[t] = (R[t] || []).filter(function(x){ return x !== key; }); });
+    var f = find(key); if (f.o) S.share722.base[key] = sig(f.o); else delete S.share722.base[key]; try { save(); } catch(e){} rings(); band(); }
+  function listSheet(){
+    var L = rvItems();
+    if (!L.length){ document.getElementById("modal").hidden = true; return; }
+    var mb = sheet("<h3>お客さんの案（" + L.length + "）</h3><p class='hint' style='margin:2px 0 8px'>名前を押すと図面で光ります。確かめたら［OK］で色が消えます。</p>"
+      + L.map(function(it, n){ var l = lab(it), col = it.t === "removed" ? "#6B7280" : "#C2410C";
+        return '<div style="display:flex;gap:8px;align-items:center;padding:8px 0;border-top:1px solid #EEF2F6"><span style="flex:0 0 auto;font-size:11px;font-weight:800;color:#fff;background:' + col + ';border-radius:6px;padding:2px 6px">' + l.t + '</span><button type="button" data-s722go="' + n + '" style="flex:1;min-width:0;text-align:left;border:0;background:none;font:inherit;font-size:14px;font-weight:700;color:var(--ink,#18202A);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + String(l.nm).replace(/</g, "&lt;") + '</button><button type="button" data-s722ok="' + n + '" style="flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #15803D;background:#F0FDF4;color:#15803D;font:inherit;font-weight:800">OK</button></div>'; }).join("")
+      + '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn sub" id="s722all" style="flex:1;min-height:44px">全部OK</button><button type="button" class="btn" id="s722lx" style="flex:1;min-height:44px">閉じる</button></div>');
+    mb.querySelectorAll("[data-s722ok]").forEach(function(b){ b.onclick = function(){ ok(L[+b.dataset.s722ok].key); listSheet(); }; });
+    mb.querySelectorAll("[data-s722go]").forEach(function(b){ b.onclick = function(){ var f = lab(L[+b.dataset.s722go]).f; document.getElementById("modal").hidden = true;
+      try { if (f.fi !== (S.fi || 0) && typeof flSwitch === "function") flSwitch(f.fi); } catch(e){}
+      setTimeout(function(){ var g = find(L[+b.dataset.s722go].key); try { if (g.k === "sashes" && g.i >= 0) KAKU3.sash(g.i); else if ((g.k === "lights" || g.k === "tenken" || g.k === "fx") && g.i >= 0) KAKU3.thing(g.k === "lights" ? "lt" : g.k === "tenken" ? "k" : "fx", g.i); } catch(e){} }, 150); }; });
+    document.getElementById("s722all").onclick = function(){ L.forEach(function(it){ ok(it.key); }); document.getElementById("modal").hidden = true; say("お客さんの案を全部OKにしました"); };
+    document.getElementById("s722lx").onclick = function(){ document.getElementById("modal").hidden = true; };
+  }
+  /* 図面の上の帯 */
+  var bandEl = null;
+  function band(){
+    var r = document.getElementById("zumenRoot"), ro = role(), L = rvItems();
+    var want = r && r.style.display !== "none" && (ro === "cust" || L.length);
+    if (!want){ if (bandEl && bandEl.parentNode) bandEl.parentNode.removeChild(bandEl); return; }
+    var mid = r.children[1]; if (!mid) return;
+    if (!bandEl){ bandEl = document.createElement("div"); bandEl.id = "s722band"; }
+    bandEl.style.cssText = "position:absolute;left:8px;right:8px;top:8px;z-index:5;display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:12px;background:#FFF7ED;border:1px solid #FDBA74;box-shadow:0 2px 8px rgba(24,32,42,.1)";
+    if (ro === "cust"){ var fr = (S.share722 && S.share722.from) || "工務店";
+      bandEl.innerHTML = '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:800;color:#9A3412;line-height:1.35">' + String(fr).replace(/</g, "&lt;") + 'さんから届いた家<br><span style="font-weight:700;font-size:11.5px">置いたり変えたりして、終わったら送り返す</span></div><button type="button" id="s722back" style="flex:0 0 auto;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid #EA580C;background:#EA580C;color:#fff;font:inherit;font-size:13px;font-weight:800">送り返す</button>';
+    } else {
+      var R = rv(), na = (R.added || []).length, nc = (R.changed || []).length, nr = (R.removed || []).length;
+      bandEl.innerHTML = '<div style="flex:1;min-width:0;font-size:12.5px;font-weight:800;color:#9A3412;line-height:1.35">お客さんの案<br><span style="font-weight:700;font-size:11.5px">付けた ' + na + '・変えた ' + nc + '・消した ' + nr + '（オレンジの丸）</span></div><button type="button" id="s722see" style="flex:0 0 auto;min-height:40px;padding:0 14px;border-radius:10px;border:1px solid #EA580C;background:#fff;color:#C2410C;font:inherit;font-size:13px;font-weight:800">見る</button>';
+    }
+    if (bandEl.parentNode !== mid) mid.appendChild(bandEl);
+    var b1 = document.getElementById("s722back"), b2 = document.getElementById("s722see"); if (b1) b1.onclick = send; if (b2) b2.onclick = listSheet;
+    var mt = document.getElementById("h720Mitsu"); if (mt) mt.style.display = ro === "cust" ? "none" : "";
+  }
+  /* オレンジの丸：付けた・変えた物の場所 */
+  function posOf(f){
+    var o = f.o; if (!o) return null;
+    if (o.x != null && o.y != null) return [o.x, o.y];
+    if (f.k === "parts2D" || f.k === "tare") return o.x1 != null ? [(o.x1 + o.x2) / 2, (o.y1 + o.y2) / 2] : (o.x0 != null ? [(o.x0 + o.x1) / 2, (o.y0 + o.y1) / 2] : null);
+    try { var m = MADO.read(), w = null;
+      if (f.k === "sashes"){ var sg = hostSeg(o.host); if (!sg) return null; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = (o.pos || 0) + (o.w || 0) / 2; return [sg[0][0] + (sg[1][0] - sg[0][0]) * u / L, sg[0][1] + (sg[1][1] - sg[0][1]) * u / L]; }
+      if (f.k === "fx"){ w = (m.walls || []).filter(function(q){ return q.t === "e" ? q.i === o.w : q.key === o.w; })[0] || (m.walls || [])[o.w]; if (!w) return null; var uu = Math.max(0, Math.min(w.len, o.u || 0)); return [w.a[0] + w.ux * uu, w.a[1] + w.uy * uu]; }
+    } catch(e){}
+    return null;
+  }
+  function rings(){
+    var svg = document.querySelector('#zumenRoot svg[aria-label="平面図"]'); if (!svg) return;
+    var g = svg.querySelector("#s722g"); if (g) g.parentNode.removeChild(g);
+    var R = rv(); if (!R) return;
+    var NS = "http://www.w3.org/2000/svg"; g = document.createElementNS(NS, "g"); g.id = "s722g"; g.setAttribute("pointer-events", "none");
+    (R.added || []).concat(R.changed || []).forEach(function(key){ var f = find(key); if (f.i < 0) return; var p = posOf(f); if (!p) return;
+      var c = document.createElementNS(NS, "circle"); c.setAttribute("cx", p[0]); c.setAttribute("cy", p[1]); c.setAttribute("r", 330); c.setAttribute("fill", "rgba(234,88,12,.16)"); c.setAttribute("stroke", "#EA580C"); c.setAttribute("stroke-width", "2.5"); c.setAttribute("vector-effect", "non-scaling-stroke"); g.appendChild(c); });
+    svg.appendChild(g);
+  }
+  window.addEventListener("mado-change", function(){ setTimeout(function(){ rings(); band(); }, 140); });
+  setInterval(function(){ try { band(); var svg = document.querySelector('#zumenRoot svg[aria-label="平面図"]'); if (svg && rv() && !svg.querySelector("#s722g")) rings(); } catch(e){} }, 800);
+  window.addEventListener("hashchange", fromHash);
+  window.addEventListener("load", function(){ setTimeout(fromHash, 1500); });
+  if (document.readyState === "complete") setTimeout(fromHash, 1500);
+  window.SHARE722 = { v: 1, role: role, send: send, importPayload: importPayload, pack: pack, unpack: unpack, linkFor: linkFor, baseOf: baseOf, diff: diff, list: listSheet, ok: ok, items: rvItems };
 })();
 </script>
