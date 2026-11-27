@@ -48946,6 +48946,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var m = mado(), r = m ? m.read() : null; if (!r || !r.things) return null;
     var me = r.things.filter(function(t){ return t.id === id; })[0]; if (!me || !me.wall) return null;
     if (me.list !== "sashes" && me.list !== "fx") return null;
+    if (me.list === "fx" && /^(accent|board|tile|eco|shikkui|waist|demo|under)$/.test(String(me.kind || (me.raw && me.raw.k) || ""))) return null;   /* CAD-744：仕上げ材（板張り・タイル・腰壁など）は窓・ドアのまわりを切り欠いて貼るので、重なっても置ける（立体は窓をよけて張る） */
     var hit = null;
     r.things.some(function(t){
       if (t === me || t.wall !== me.wall) return false;
@@ -49817,8 +49818,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     roomBar.innerHTML = '<div style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:800">' + String(nm).replace(/[<&]/g, "") + '<span style="font-weight:600;font-size:12px;color:var(--sub,#5B6673)">　' + areaOf(cid, r).toFixed(1) + "㎡</span></div>";
     var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; roomBar.appendChild(b); return b; };
     mk("名前", function(){ var rr = roomObj(roomCid); if (rr && typeof roomNameSheet === "function") roomNameSheet(rr); });
-    if (isRf() && typeof roomFinSheet === "function") mk("仕上げ", function(){ var rr = roomObj(roomCid); if (rr) roomFinSheet(rr); });
-    if (!isRf() && HB && typeof HB.__ltSeg50 === "function") mk("床", function(){ floorSheet(); });   /* CAD-688：新築・増築の部屋の床 */
+    mk("仕上げ", function(){ finRoom(); });   /* CAD-744：床ぜんぶ（今の［床］／リフォームは部屋の仕上げ）と床の一部分を1つの［仕上げ］に */
     /* CAD-698：部屋の横幅・奥行を数字で（今の CAD-139 の仕組み）。動かせる間仕切りがある向きだけ出す */
     var dz = roomDims(r), seen = {};
     dz.forEach(function(en){ if (seen[en.dim]) return; seen[en.dim] = 1; var b = mk("", function(){ dimPad(en); }); b.innerHTML = '<span style="display:block;font-size:11px;font-weight:700;line-height:1.1">' + (en.dim === "w" ? "横幅" : "奥行") + '</span><span style="display:block;font-size:13px;line-height:1.2">' + Math.round(en.cur).toLocaleString("ja-JP") + "</span>"; b.style.padding = "0 8px"; });
@@ -49976,6 +49976,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     kohoBtn(row, "その他", B.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 10px"), function(){ moreSheet(where, p, (nm ? nm + "の" : "") + (where === "wall" ? "壁に置く物" : "床・天井に置く物")); });
     bar.insertBefore(row, bar.firstChild);
     bar.style.flexWrap = "wrap";
+    if (where === "wall"){ var cx = bar.querySelector('[aria-label="閉じる"]'), fb = document.createElement("button"); fb.type = "button"; fb.textContent = "仕上げ"; fb.style.cssText = B.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 12px"); fb.onclick = function(){ finWall(p); }; if (cx) bar.insertBefore(fb, cx); else row.appendChild(fb); }   /* CAD-744 */
   }
   /* 外壁の帯：候補＋［寸法］ */
   function openWall(i, p){
@@ -50205,7 +50206,169 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.addEventListener("walk2-switch", function(e){ if (!(e && e.detail && e.detail.on)) detach(); setTimeout(sync, 0); });
   setInterval(function(){ if (sw()) sync(); else if (A) detach(); }, 500);
 
+  /* ===== CAD-744：［仕上げ］（2026-11-27 Opus）翔伍の頼み：さわって床・壁の仕上げを変える。1面だけでなく一部分も（テレビ裏だけタイル、キッチンの足元だけCF、置き床の所だけ など）
+     ・壁：この面ぜんぶ＝アクセントクロス（柄）／一部分＝板張り・タイル・エコカラット・漆喰・腰壁（幅・高さ・下端を選ぶ／数字でも）。記録は今の壁の物（S.fx の面の物）と同じ＝見積・立体もそのまま
+     ・床：部屋ぜんぶ（今の［床］と同じ）／一部分＝指で四角に囲む（立体は触った所を真ん中に大きさを選ぶ）。記録は今の床の範囲（S.tatami、HB.__pushFloor）と同じ
+     ・天井の一部分は記録の仕組みがまだ無いので、あとで */
+  var FINW744 = ["accent", "board", "tile", "eco", "shikkui", "waist"];
+  var FLK744 = [["flComp", "フローリング"], ["flCF", "クッションフロア"], ["floorFin", "フロアタイル"], ["flOki", "置き床"], ["tatami", "畳"], ["flDoma", "土間"], ["flMuku", "無垢板15ミリ"], ["flMuku30", "無垢板30ミリ"], ["flAge", "小上がり"]];   /* 翔伍：床は全部の種類が一部分になり得る（綾羅木の畳など） */
+  var PRE744 = { board: { w: [910, 1820, 2730], h: [600, 900, 1200, 2000] }, tile: { w: [600, 910, 1200, 1820], h: [600, 900, 1200, 2000] }, eco: { w: [455, 910, 1820, 2730], h: [900, 1200, 2000, 2400] }, shikkui: { w: [910, 1820, 2730], h: [900, 1200, 2100] }, waist: { w: [910, 1820, 2730], h: [600, 900, 1200] } };
+  var DEF744 = { board: [1820, 900, 0], tile: [1200, 900, 900], eco: [1820, 1200, 900], shikkui: [1820, 2100, 0], waist: [1820, 900, 0] };
+  function finItems744(){ var g = []; try { g = (window.KAKU2 && KAKU2.puts) ? KAKU2.puts() : []; } catch(e){} var hit = null; g.forEach(function(x){ x[1].forEach(function(it){ if (it[0] === "fx" && FINW744.indexOf(it[1]) >= 0){ hit = hit || []; hit.push(it); } }); }); return hit || []; }
+  function esc744(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var BT744 = "min-height:48px;padding:6px 12px;font-size:15px;text-align:left;white-space:normal";
+  function sheet744(title, hint, rows, foot){
+    var h = "<h3 style='margin-bottom:4px'>" + esc744(title) + "</h3>" + (hint ? "<p class='hint' style='margin:0 0 8px'>" + hint + "</p>" : "");
+    h += rows.map(function(r){ return r.title != null ? "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc744(r.title) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + r.btns.map(function(b, i){ return "<button type='button' class='btn sub' data-f744='" + r.id + ":" + i + "' style='" + BT744 + ";width:auto;flex:0 1 auto" + (b.on ? ";background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : "") + "'>" + esc744(b.t) + (b.sub ? "<br><span style='font-size:12px;font-weight:600;color:var(--sub,#5B6673)'>" + esc744(b.sub) + "</span>" : "") + "</button>"; }).join("") + "</div>" : ""; }).join("");
+    h += "<div style='display:flex;gap:6px;margin-top:12px'>" + (foot ? "<button type='button' class='btn' id='f744ok' style='flex:1;min-height:46px'>" + esc744(foot.t) + "</button>" : "<span style='flex:1'></span>") + "<button type='button' class='btn sub' id='f744x' style='flex:0 0 auto;width:auto;min-height:46px'>やめる</button></div>";
+    $("mbox").innerHTML = h; $("modal").hidden = false;
+    $("mbox").querySelectorAll("[data-f744]").forEach(function(b){ b.onclick = function(){ var q = b.dataset.f744.split(":"), r = rows.filter(function(x){ return String(x.id) === q[0]; })[0]; var bb = r && r.btns[+q[1]]; if (bb && bb.fn) bb.fn(); }; });
+    $("f744x").onclick = function(){ $("modal").hidden = true; };
+    if (foot) $("f744ok").onclick = foot.fn;
+  }
+  function redraw744(){ try { save(); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} try { if (window.RITTAI && RITTAI.sync) RITTAI.sync(); } catch(e){} }
+  /* 壁：p は平面図の点（壁から40mm、置く面の側） */
+  function finWall(p, back){
+    closeAllBars();
+    var IT = finItems744();
+    var acc = IT.filter(function(it){ return it[1] === "accent"; })[0], parts = IT.filter(function(it){ return it[1] !== "accent"; });
+    var rows = [{ id: 0, title: "どこに貼る", btns: [] }];
+    if (acc) rows[0].btns.push({ t: "この面ぜんぶ", sub: "アクセントクロス（色・柄を選ぶ）", fn: function(){ accSheet744(acc, p, back); } });
+    if (parts.length) rows[0].btns.push({ t: "一部分だけ", sub: "板張り・タイル・エコカラット・漆喰・腰壁（大きさを選ぶ）", fn: function(){ partKind744(parts, p, back); } });
+    sheet744("壁の仕上げ", "", rows, null);
+  }
+  function accSheet744(it, p, back){
+    var A0 = (typeof ACC !== "undefined" && ACC) || { gray: ["グレー系"] };
+    sheet744("この面ぜんぶ（アクセントクロス）", "ほかの面は今の仕上げのままです", [{ id: 0, title: "色・柄", btns: Object.keys(A0).map(function(k){ return { t: A0[k][0], fn: function(){
+      $("modal").hidden = true; var n0 = (S.fx || []).length, r = putItem(it, p);
+      if (r && r.ok && (S.fx || []).length > n0){ S.fx[S.fx.length - 1].pat = k; redraw744(); say("この面をアクセントクロス（" + A0[k][0] + "）にしました（戻すで戻せます）"); }
+      if (back) back(r);
+    } }; }) }], null);
+  }
+  function partKind744(parts, p, back){
+    sheet744("一部分だけ貼る", "", [{ id: 0, title: "何を貼る", btns: parts.map(function(it){ return { t: it[2], fn: function(){ partSize744(it, p, back, null); } }; }) }], null);
+  }
+  function partSize744(it, p, back, cur){
+    var k = it[1], pr = PRE744[k] || { w: [910, 1820], h: [900, 1200] }, d = DEF744[k] || [1820, 900, 0];
+    cur = cur || { w: d[0], h: d[1], z: d[2] };
+    var Z = [0, 300, 600, 900, 1200];
+    var pad = function(key, title){ if (typeof openPad !== "function") return; $("modal").hidden = true; openPad({ title: title + "（mm）", unit: "mm", value: cur[key], done: function(v){ if (v != null && v >= 0){ cur[key] = Math.round(v); } partSize744(it, p, back, cur); } }); };
+    sheet744(it[2] + "の大きさ", "触った所を真ん中に貼ります。あとで動かしたり、大きさを直したりできます", [
+      { id: 0, title: "幅", btns: pr.w.map(function(v){ return { t: v.toLocaleString("ja-JP"), on: v === cur.w, fn: function(){ cur.w = v; partSize744(it, p, back, cur); } }; }).concat([{ t: pr.w.indexOf(cur.w) < 0 ? cur.w.toLocaleString("ja-JP") + "（数字）" : "数字で", on: pr.w.indexOf(cur.w) < 0, fn: function(){ pad("w", "幅"); } }]) },
+      { id: 1, title: "高さ", btns: pr.h.map(function(v){ return { t: v.toLocaleString("ja-JP"), on: v === cur.h, fn: function(){ cur.h = v; partSize744(it, p, back, cur); } }; }).concat([{ t: pr.h.indexOf(cur.h) < 0 ? cur.h.toLocaleString("ja-JP") + "（数字）" : "数字で", on: pr.h.indexOf(cur.h) < 0, fn: function(){ pad("h", "高さ"); } }]) },
+      { id: 2, title: "床から下の端まで", btns: Z.map(function(v){ return { t: v ? v.toLocaleString("ja-JP") : "床から", on: v === cur.z, fn: function(){ cur.z = v; partSize744(it, p, back, cur); } }; }).concat([{ t: Z.indexOf(cur.z) < 0 ? cur.z.toLocaleString("ja-JP") + "（数字）" : "数字で", on: Z.indexOf(cur.z) < 0, fn: function(){ pad("z", "床から下の端まで"); } }]) }
+    ], { t: "ここに貼る", fn: function(){
+      $("modal").hidden = true; var n0 = (S.fx || []).length, r = putItem(it, p);
+      if (r && r.ok && (S.fx || []).length > n0){
+        var f = S.fx[S.fx.length - 1], c = (+f.u || 0) + (+f.len || 0) / 2, wl = 0;
+        try { var md = MADO.read(), th = (md.things || []).filter(function(t){ return t.list === "fx" && t.id === f.nid; })[0], ww = th && (md.walls || []).filter(function(w){ return w.id === th.wall; })[0]; if (ww){ c = (p[0] - ww.a[0]) * ww.ux + (p[1] - ww.a[1]) * ww.uy; wl = ww.len; } } catch(e){}   /* 触った所を真ん中に */
+        f.len = cur.w; f.u = Math.max(0, Math.round(c - cur.w / 2)); if (wl > 0 && f.u + cur.w > wl) f.u = Math.max(0, Math.round(wl - cur.w)); f.hgt = cur.h; f.z = cur.z;
+        redraw744(); say(it[2] + "を貼りました　幅" + cur.w.toLocaleString("ja-JP") + "×高さ" + cur.h.toLocaleString("ja-JP") + "（戻すで戻せます）");
+      }
+      if (back) back(r);
+    } });
+  }
+  /* 床：部屋ぜんぶ（今の［床］）／一部分（平面図＝指で囲む、立体＝触った所を真ん中に大きさを選ぶ） */
+  function finRoom(){
+    var r = roomObj(roomCid); if (!r) return;
+    var rows = [{ id: 0, title: "どこを変える", btns: [] }];
+    if (isRf() && typeof roomFinSheet === "function") rows[0].btns.push({ t: "部屋の床・壁・天井", sub: "張り替えなど（部屋ぜんぶ）", fn: function(){ $("modal").hidden = true; roomFinSheet(r); } });
+    else if (HB && typeof HB.__ltSeg50 === "function") rows[0].btns.push({ t: "床をぜんぶ", sub: "この部屋の床（土間の下がりもここ）", fn: function(){ floorSheet(); } });
+    rows[0].btns.push({ t: "床の一部分だけ", sub: "キッチンの足元だけCF・置き床の所だけ など。指で四角に囲む", fn: function(){ kindSheet744(function(fk, nm){ $("modal").hidden = true; startRect744(fk, nm); }); } });
+    sheet744(roomNm(r) + "の仕上げ", "壁の仕上げは、壁を触って［仕上げ］", rows, null);
+  }
+  function kindSheet744(fn){ sheet744("床の一部分：何にする", "", [{ id: 0, title: "床の種類", btns: FLK744.map(function(f){ return { t: f[1], fn: function(){ fn(f[0], f[1]); } }; }) }], null); }
+  function putRect744(rc, fk, nm){
+    if (rc.x1 - rc.x0 < 200 || rc.y1 - rc.y0 < 200){ say("範囲が小さすぎます（200mm以上）"); return false; }
+    if (!HB || typeof HB.__pushFloor !== "function"){ say("この画面では床の範囲を置けません"); return false; }
+    try { pushUndo(); HB.__pushFloor(rc, fk); var last = (S.tatami || [])[S.tatami.length - 1]; if (last && last.x0 === rc.x0 && last.y1 === rc.y1) last.part = 1; try { if (typeof fixAssign === "function") fixAssign(); } catch(e){} } catch(e){ warn("床の一部分", e); return false; }   /* part＝一部分（平面図に点線と名前を描く） */
+    redraw744(); say(nm + "にしました　" + Math.round(rc.x1 - rc.x0).toLocaleString("ja-JP") + "×" + Math.round(rc.y1 - rc.y0).toLocaleString("ja-JP") + "（戻すで戻せます）");
+    return true;
+  }
+  /* 囲んだ所の部屋の内側（壁の面）。壁の面から150mm以内は壁ぎわに寄せる */
+  function inner744(rc){
+    var md = null; try { md = MADO.read(); } catch(e){} if (!md) return null;
+    var cx = (rc.x0 + rc.x1) / 2, cy = (rc.y0 + rc.y1) / 2;
+    var inPoly = function(P, x, y){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } return c; };
+    var rm = (md.rooms || []).filter(function(r){ return r.poly && inPoly(r.poly, cx, cy); }).sort(function(a, b){ return a.area - b.area; })[0];
+    if (!rm) return null;
+    /* 囲んだ所の高さ（縦の真ん中）で、部屋が続いている左右の範囲。横の真ん中で上下の範囲（L字の部屋でも隣へはみ出さない） */
+    var span = function(P, v, c, horiz){ var xs = []; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ var a = P[j], b = P[i]; if (horiz){ if ((a[1] > v) !== (b[1] > v)) xs.push(a[0] + (b[0] - a[0]) * (v - a[1]) / (b[1] - a[1])); } else { if ((a[0] > v) !== (b[0] > v)) xs.push(a[1] + (b[1] - a[1]) * (v - a[0]) / (b[0] - a[0])); } } xs.sort(function(p, q){ return p - q; }); for (var k = 0; k + 1 < xs.length; k += 2) if (c >= xs[k] && c <= xs[k + 1]) return [xs[k], xs[k + 1]]; return null; };
+    var sx = span(rm.poly, cy, cx, true) || [rm.box.x0, rm.box.x1], sy = span(rm.poly, cx, cy, false) || [rm.box.y0, rm.box.y1];
+    var half = function(x, vert){ var t = 0; (md.walls || []).forEach(function(w){ var ax = w.a, bx = w.b || [w.a[0] + w.ux * w.len, w.a[1] + w.uy * w.len]; if (vert ? (Math.abs(ax[0] - x) < 5 && Math.abs(bx[0] - x) < 5) : (Math.abs(ax[1] - x) < 5 && Math.abs(bx[1] - x) < 5)) t = Math.max(t, (+w.th || 0) / 2); }); return t || 60; };
+    return { name: rm.disp || rm.name || "", x0: sx[0] + half(sx[0], true), x1: sx[1] - half(sx[1], true), y0: sy[0] + half(sy[0], false), y1: sy[1] - half(sy[1], false) };
+  }
+  function snap744(rc, ib){ if (!ib) return rc; var S2 = 150; ["x0", "x1", "y0", "y1"].forEach(function(k){ if (Math.abs(rc[k] - ib[k]) < S2) rc[k] = ib[k]; }); return rc; }
+  /* 囲んだ後：数字で範囲を決めてから［OK］ */
+  function adjRect744(rc, fk, nm){
+    if (!A) return; var ib = inner744(rc); snap744(rc, ib);
+    var bar = document.createElement("div"); bar.id = "k3RectBar"; bar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:5;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)";
+    A.mid.appendChild(bar);
+    var el = document.createElementNS(NS, "rect"); el.setAttribute("fill", "rgba(37,99,176,.15)"); el.setAttribute("stroke", "#2563B0"); el.setAttribute("stroke-width", "1.5"); el.setAttribute("stroke-dasharray", "6 4"); el.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(el);
+    var B = "flex:1 1 0;min-width:0;min-height:44px;padding:0 2px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:12.5px;font-weight:800;color:var(--ink,#18202A);line-height:1.15";
+    var F = function(v){ return Math.round(v).toLocaleString("ja-JP"); };
+    var close = function(){ try { bar.remove(); } catch(e){} try { el.remove(); } catch(e){} };
+    var pad = function(title, val, extra, done){ if (typeof openPad !== "function") return; openPad({ title: title + "（mm）", unit: "mm", value: Math.round(val), extra: extra, done: function(v){ if (v != null && v >= 0) done(Math.round(v)); draw(); } }); };
+    function draw(){
+      el.setAttribute("x", rc.x0); el.setAttribute("y", rc.y0); el.setAttribute("width", rc.x1 - rc.x0); el.setAttribute("height", rc.y1 - rc.y0);
+      var w = rc.x1 - rc.x0, d = rc.y1 - rc.y0, lx = ib ? rc.x0 - ib.x0 : null, ty = ib ? rc.y0 - ib.y0 : null;
+      bar.innerHTML = "<div style='width:100%;font-size:13px;font-weight:800;color:var(--ink,#18202A)'>" + esc744(nm) + "の範囲：数字で直して［OK］</div>";
+      var mkb = function(lab, val, fn, css){ var b = document.createElement("button"); b.type = "button"; b.innerHTML = "<span style='display:block;font-size:11px;font-weight:700;color:var(--sub,#5B6673)'>" + lab + "</span>" + val; b.style.cssText = B + (css || ""); b.onclick = fn; bar.appendChild(b); return b; };
+      mkb("幅（横）", F(w), function(){ pad("幅（横）", w, ib ? [{ label: "部屋の幅いっぱい", fn: function(){ closePad(); rc.x0 = ib.x0; rc.x1 = ib.x1; draw(); } }] : null, function(v){ if (v >= 100) rc.x1 = rc.x0 + v; }); });
+      mkb("奥行（縦）", F(d), function(){ pad("奥行（縦）", d, ib ? [{ label: "部屋の奥行いっぱい", fn: function(){ closePad(); rc.y0 = ib.y0; rc.y1 = ib.y1; draw(); } }] : null, function(v){ if (v >= 100) rc.y1 = rc.y0 + v; }); });
+      if (ib){
+        mkb("左の壁から", F(lx), function(){ pad("左の壁から", lx, [{ label: "0（壁ぎわ）", fn: function(){ closePad(); var w0 = rc.x1 - rc.x0; rc.x0 = ib.x0; rc.x1 = ib.x0 + w0; draw(); } }], function(v){ var w0 = rc.x1 - rc.x0; rc.x0 = ib.x0 + v; rc.x1 = rc.x0 + w0; }); });
+        mkb("上の壁から", F(ty), function(){ pad("上の壁から", ty, [{ label: "0（壁ぎわ）", fn: function(){ closePad(); var d0 = rc.y1 - rc.y0; rc.y0 = ib.y0; rc.y1 = ib.y0 + d0; draw(); } }], function(v){ var d0 = rc.y1 - rc.y0; rc.y0 = ib.y0 + v; rc.y1 = rc.y0 + d0; }); });
+      }
+      var ok = mkb("", "OK", function(){ close(); putRect744({ x0: rc.x0, y0: rc.y0, x1: rc.x1, y1: rc.y1 }, fk, nm); }, ";flex:0 0 64px;background:#2563B0;color:#fff;border-color:#2563B0;font-size:15px");
+      mkb("", "やめる", close, ";flex:0 0 64px;font-size:13px");
+    }
+    draw();
+  }
+  /* 平面図：指で四角に囲む。囲む間は図面が動かない */
+  var rect744 = null;
+  function startRect744(fk, nm){
+    if (!A) return; closeAllBars(); stopRect744();
+    var bar = document.createElement("div"); bar.id = "k3RectBar"; bar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:5;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)";
+    bar.innerHTML = "<div style='flex:1 1 auto;font-size:13px;font-weight:800;color:var(--ink,#18202A)'>" + esc744(nm) + "にする所を、指で四角に囲んでください</div>";
+    var x = document.createElement("button"); x.type = "button"; x.textContent = "やめる"; x.style.cssText = "flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800"; x.onclick = stopRect744; bar.appendChild(x);
+    A.mid.appendChild(bar);
+    rect744 = { fk: fk, nm: nm, bar: bar, id: null, a: null, el: null };
+    document.addEventListener("pointerdown", rDown744, true); document.addEventListener("pointermove", rMove744, true); document.addEventListener("pointerup", rUp744, true); document.addEventListener("pointercancel", rUp744, true);
+  }
+  function stopRect744(){
+    document.removeEventListener("pointerdown", rDown744, true); document.removeEventListener("pointermove", rMove744, true); document.removeEventListener("pointerup", rUp744, true); document.removeEventListener("pointercancel", rUp744, true);
+    if (rect744){ try { rect744.bar.remove(); } catch(e){} try { if (rect744.el) rect744.el.remove(); } catch(e){} } rect744 = null;
+  }
+  function inPlan744(e){ var s = plan(); return !!(s && e.target && (s === e.target || s.contains(e.target))); }
+  function rDown744(e){ if (!rect744 || !inPlan744(e) || rect744.id != null) return; e.stopPropagation(); e.preventDefault(); var p = toPlan(e.clientX, e.clientY); if (!p) return; rect744.id = e.pointerId; rect744.a = p; rect744.b = p;
+    var el = document.createElementNS(NS, "rect"); el.setAttribute("fill", "rgba(37,99,176,.15)"); el.setAttribute("stroke", "#2563B0"); el.setAttribute("stroke-width", "1.5"); el.setAttribute("stroke-dasharray", "6 4"); el.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(el); rect744.el = el; rMove744(e); }
+  function rMove744(e){ if (!rect744 || rect744.id !== e.pointerId) return; e.stopPropagation(); e.preventDefault(); var p = toPlan(e.clientX, e.clientY); if (!p) return; rect744.b = p; var a = rect744.a; rect744.el.setAttribute("x", Math.min(a[0], p[0])); rect744.el.setAttribute("y", Math.min(a[1], p[1])); rect744.el.setAttribute("width", Math.abs(p[0] - a[0])); rect744.el.setAttribute("height", Math.abs(p[1] - a[1])); }
+  function rUp744(e){
+    if (!rect744 || rect744.id !== e.pointerId) return; e.stopPropagation(); e.preventDefault();
+    var a = rect744.a, b = rect744.b, o = (typeof S !== "undefined" && S.po) ? [+S.po[0] || 0, +S.po[1] || 0] : [0, 0], R = function(v){ return Math.round(v / 10) * 10; };
+    var rc = { x0: R(Math.min(a[0], b[0])), y0: R(Math.min(a[1], b[1])), x1: R(Math.max(a[0], b[0])), y1: R(Math.max(a[1], b[1])) }, fk = rect744.fk, nm = rect744.nm;
+    stopRect744();
+    if (rc.x1 - rc.x0 < 100 || rc.y1 - rc.y0 < 100){ say("もう少し大きく囲んでください"); startRect744(fk, nm); return; }
+    adjRect744(rc, fk, nm);
+  }
+  /* 立体から：床の一部分（触った点 pt を真ん中に、大きさを選ぶ） */
+  function finFloor3d(pt, roomName){
+    var rows = [{ id: 0, title: "どこを変える", btns: [] }];
+    if (HB && typeof HB.__ltSeg50 === "function" && !isRf()) rows[0].btns.push({ t: "この部屋の床をぜんぶ", fn: function(){ kindSheet744(function(fk, nm){ $("modal").hidden = true; var arm0 = HB.__floorArm; try { pushUndo(); HB.__floorArm = fk; HB.__ltSeg50([pt[0], pt[1]]); } catch(e){ warn("床ぜんぶ", e); } HB.__floorArm = arm0; redraw744(); say((roomName ? roomName + "の" : "") + "床を" + nm + "にしました（戻すで戻せます）"); }); } });
+    rows[0].btns.push({ t: "触った所だけ（一部分）", sub: "大きさを選んで、触った所を真ん中に", fn: function(){ kindSheet744(function(fk, nm){ size3d744(pt, fk, nm, { w: 1820, d: 910 }); }); } });
+    sheet744((roomName ? roomName + "の" : "") + "床の仕上げ", "", rows, null);
+  }
+  function size3d744(pt, fk, nm, cur){
+    var W = [910, 1820, 2730, 3640], D = [600, 910, 1820, 2730];
+    var pad = function(key, title){ if (typeof openPad !== "function") return; $("modal").hidden = true; openPad({ title: title + "（mm）", unit: "mm", value: cur[key], done: function(v){ if (v > 0) cur[key] = Math.round(v); size3d744(pt, fk, nm, cur); } }); };
+    sheet744(nm + "の大きさ", "触った所を真ん中に置きます。平面図では、指で四角に囲んでも置けます", [
+      { id: 0, title: "横（東西）", btns: W.map(function(v){ return { t: v.toLocaleString("ja-JP"), on: v === cur.w, fn: function(){ cur.w = v; size3d744(pt, fk, nm, cur); } }; }).concat([{ t: W.indexOf(cur.w) < 0 ? cur.w.toLocaleString("ja-JP") + "（数字）" : "数字で", on: W.indexOf(cur.w) < 0, fn: function(){ pad("w", "横"); } }]) },
+      { id: 1, title: "縦（南北）", btns: D.map(function(v){ return { t: v.toLocaleString("ja-JP"), on: v === cur.d, fn: function(){ cur.d = v; size3d744(pt, fk, nm, cur); } }; }).concat([{ t: D.indexOf(cur.d) < 0 ? cur.d.toLocaleString("ja-JP") + "（数字）" : "数字で", on: D.indexOf(cur.d) < 0, fn: function(){ pad("d", "縦"); } }]) }
+    ], { t: "ここに置く", fn: function(){ $("modal").hidden = true; var R = function(v){ return Math.round(v / 10) * 10; }; var rc = { x0: R(pt[0] - cur.w / 2), y0: R(pt[1] - cur.d / 2), x1: R(pt[0] + cur.w / 2), y1: R(pt[1] + cur.d / 2) }, ib = inner744(rc); if (ib){ var w0 = rc.x1 - rc.x0, d0 = rc.y1 - rc.y0; if (rc.x0 < ib.x0){ rc.x0 = ib.x0; rc.x1 = rc.x0 + w0; } if (rc.x1 > ib.x1){ rc.x1 = ib.x1; rc.x0 = Math.max(ib.x0, rc.x1 - w0); } if (rc.y0 < ib.y0){ rc.y0 = ib.y0; rc.y1 = rc.y0 + d0; } if (rc.y1 > ib.y1){ rc.y1 = ib.y1; rc.y0 = Math.max(ib.y0, rc.y1 - d0); } snap744(rc, ib); } putRect744(rc, fk, nm); } });   /* 部屋からはみ出さない・壁ぎわへ寄せる */
+  }
   window.KAKU3 = {
+    fin: { wall: function(p){ return finWall(p); }, floor3d: function(p, nm){ return finFloor3d(p, nm); }, stopRect: function(){ stopRect744(); } },   /* CAD-744 */
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
@@ -50455,6 +50618,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var f = L.f || 1, W = Object.create(null), n = 0;
     g.setAttribute("class", "zsym");
     (rd.walls || []).forEach(function(w){ if (w.id) W[w.id] = w; });
+    /* CAD-744：床の一部分（S.tatami の part）は点線の四角と名前 */
+    try { var FN = (typeof HB !== "undefined" && HB && HB.__FLN) || {}; (S.tatami || []).forEach(function(o){ if (!o || !o.part) return; var x0 = Math.min(o.x0, o.x1), y0 = Math.min(o.y0, o.y1), w = Math.abs(o.x1 - o.x0), h = Math.abs(o.y1 - o.y0);
+      E("rect", { x: x0, y: y0, width: w, height: h, fill: "none", stroke: "#3A4552", "stroke-width": 1, "stroke-dasharray": "5 3", "vector-effect": "non-scaling-stroke" }, g);
+      var SH = { flCF: "CF", floorFin: "フロアタイル", flComp: "フローリング", flOki: "置き床", flDoma: "土間", flMuku: "無垢板", flMuku30: "無垢板30", flAge: "小上がり" }, nm = o.fk ? (SH[o.fk] || FN[o.fk] || o.fk) : "畳", sz = Math.min(150 * f, h * .3, w / Math.max(2, nm.length) * .9);
+      text(g, x0 + w / 2, y0 + sz * 1.0, nm, sz, "#3A4552"); }); } catch(e){ warn("床の一部分", e); }   /* 名前は短く、範囲の上の端に（部屋名と重ねない） */
     ["tenken", "lights", "fx"].forEach(function(li){   /* 重ね順：設備 → 照明 → 電気（小さい記号を上に） */
       (rd.things || []).forEach(function(t){
         if (t.list !== li) return;
@@ -51160,6 +51328,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     showBand(function(b){
       var t = mk("div", "display:flex;gap:6px;align-items:center");
       t.appendChild(mk("div", "flex:1 1 auto;font-size:13px;font-weight:800;color:var(--ink,#18202A)", (h.name ? h.name + "の" : "") + W(where) + "に置く"));
+      if ((where === "wall" || where === "floor") && window.KAKU3 && KAKU3.fin) btn(t, "仕上げ", GRY.replace("color:var(--ink,#18202A)", "color:var(--ai,#2563B0);border-color:var(--ai,#2563B0)"), function(){ var pt = ptOf(h); closeBand(); if (where === "wall") KAKU3.fin.wall(pt); else KAKU3.fin.floor3d(pt, h.name || ""); watchSync(); });   /* CAD-744 */
       btn(t, "閉じる", GRY, closeBand); b.appendChild(t);
       if (where === "wall"){ var why734 = ""; try { why734 = KAKU2.fxWhyAt ? KAKU2.fxWhyAt(ptOf(h)) : ""; } catch(e){} if (why734) b.appendChild(mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", why734)); }   /* CAD-734：引き戸の戸袋・扉の走る面は、触った時に先に理由を見せる */
       var r = mk("div", "display:flex;gap:6px;align-items:center;width:100%");
