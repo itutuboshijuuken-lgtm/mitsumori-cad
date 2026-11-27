@@ -1690,6 +1690,7 @@ function sashRow(s, two){
   if (st === "ip"){ const pr = s.ipPrice || AVG_IP[s.cat] || 60000; return {name: `インプラス（内窓） ${s.cat} ${s.name}`, spec: `既存窓の内側・${where}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.ipPrice, fix: {kind: "sash"}}; }
   if (s.cat === "シャッター"){ const bp = shutterPrice(s), pr = s.price || bp.p; return {name: `シャッター ${s.name}`, spec: `${where}・${s.price ? "入れた単価" : bp.note}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && bp.avg, fix: {kind: "sash"}}; }
   const out = s.frame === "outset", oyako248 = s.cat === "玄関" && /親子/.test(s.name || "");   /* CAD-248：玄関の親子ドアは本体330,000＋取付50,000 */
+  if (s.cat705 && s.cat705.teika > 0 && typeof tkRowObj379 === "function") return tkRowObj379(s.cat705.label, {price: s.cat705.teika, maker: s.cat705.maker, name: s.cat705.label}, s.n);   /* CAD-705：カタログから選んだ物は「定価×掛率」の1行 */
   { const tk386 = s.tk386 ? tkEntry386(s.tk386) : null; if (tk386 && tkSashList386(s).includes(tk386)) return tkRowObj379(tk386.name, tk386, s.n); }   /* CAD-386：種類（定価）を選んだら本体行は定価×掛率の1行にする（今の種類に合う定価の時だけ） */
   const pr = s.price || (oyako248 && !out ? 380000 : (out ? AVG_OUTSET : MY_SASH[s.cat] || AVG_SASH[s.cat] || 50000));
   return {name: s.cat === "室内ドア" ? `室内 ${sashLabel(s)}` : `${s.cat} ${s.name}`, spec: oyako248 && !s.price && !out ? `${whereF}・本体330,000円＋取付50,000円` : whereF, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && (out || !MY_SASH[s.cat]), fix: {kind: "sash"}};
@@ -34759,7 +34760,7 @@ function tkSelHTML379(e, i){
 }
 function drawKake379(){
   const el = document.getElementById("kakeList379"); if (!el) return;
-  const makers = []; TEIKA379.concat(typeof TEIKA386!== "undefined"? TEIKA386: []).forEach(t => { if (!makers.includes(t.maker)) makers.push(t.maker);}); /* CAD-386：第2弾のメーカーも並べる */
+  const makers = []; TEIKA379.concat(typeof TEIKA386!== "undefined"? TEIKA386: []).forEach(t => { if (!makers.includes(t.maker)) makers.push(t.maker);}); try { (window.CAT705 ? window.CAT705.makers() : []).forEach(mk => { if (!makers.includes(mk)) makers.push(mk); }); } catch(e){}   /* CAD-705：カタログのメーカーも並べる */ /* CAD-386：第2弾のメーカーも並べる */
   let h = `<button class="set" data-kake379="__all" type="button"><span>全体の掛率<small>メーカー別が無い時に使う</small></span><b>${fmt(KAKE379.all, 1)}%</b></button>`;
   h += makers.map(mk => { const b = KAKE379.by[mk]; return `<button class="set" data-kake379="${esc(mk)}" type="button"><span>${esc(mk)}<small>${b ? "メーカー別の掛率" : "全体の掛率を使用中"}</small></span><b>${fmt(b || KAKE379.all, 1)}%</b></button>`; }).join("");
   h += `<p class="hint">種類（定価）を選んだ商品は、単価＝メーカー定価（税抜）×掛率 で計算します。材料屋との掛率に合わせて変えてください。</p>`;
@@ -48722,6 +48723,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; sashBar.appendChild(b); return b; };
     var idx = function(){ return (S.sashes || []).indexOf(sashObj); };
     mk("変える", function(){ var j = idx(); if (j >= 0 && typeof changeSheet === "function") changeSheet(j); });
+    if (window.CAT705 && window.CAT705.groupOf(sa)) mk("カタログ", function(){ var j = idx(); if (j >= 0) window.CAT705.open(j); });   /* CAD-705 */
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     if ((ty === "door" || ty === "hiki" || ty === "closet") && window.KAKU2 && window.KAKU2.flip) mk("向き", function(){ var j = idx(); if (j >= 0) window.KAKU2.flip(j); });
     try { if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(sa)) mk("状態", function(){ var j = idx(); if (j >= 0) sashAskState(j); }); } catch(e){}
@@ -49603,5 +49605,107 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return out;
   }
   window.KOHO = { v: 1, kind: kind, cands: cands, all: all, table: T, roomMix: ROOMMIX };
+})();
+</script>
+<script>
+/* ---------- CAD-705：カタログから選ぶ（定価×掛率）（2026-11-27 Claude/Opus）----------
+   翔伍の頼み：見積でカタログの品をそのまま選び、メーカー定価×掛率で出したい（建具だけでも種類が多い）。
+   データ：じゅうちゃんが集めたシリーズごとの値段の表（枝 data の data/catalog/index.json と lixil/〜.json、形 v2）。アプリが開いた時ではなく、［カタログ］を押した時に読む。
+   選んだ物は、その建具の記録に sa.cat705 = {file, maker, label, teika, sel, adds, year, src} として控える（値段が後で変わっても、その見積は控えた値段のまま。選び直せば新しい値段）。
+   見積は今の CAD-379 の「定価×掛率」の行（tkRowObj379）と同じ。掛率は単価表の「掛率の設定」（メーカー別）で、ここにカタログのメーカーも出る。
+   データの置き場所は CAT705.base で差し替えられる（売る時に正式なデータへつなぎ替えるため）。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.CAT705) return;
+  var BASE = window.CAT705_BASE || "https://raw.githubusercontent.com/itutuboshijuuken-lgtm/mitsumori-cad/data/data/catalog/";
+  var MK = { lixil: "LIXIL", daiken: "大建工業", panasonic: "Panasonic", noda: "ノダ", woodone: "ウッドワン", toto: "TOTO", ykk: "YKK AP", takara: "タカラスタンダード", sankyo: "三協アルミ", eidai: "永大産業", cleanup: "クリナップ" };
+  var GROUP = { "室内ドア": ["室内ドア"], "クローゼット": ["収納扉", "クローゼット"], "掃き出し": ["サッシ", "窓"], "腰窓": ["サッシ", "窓"], "小窓": ["サッシ", "窓"], "FIX": ["サッシ", "窓"], "玄関": ["玄関ドア"], "勝手口": ["勝手口ドア", "玄関ドア"] };
+  var idx = null, files = Object.create(null), seenMakers = [];
+  function mkName(id){ return MK[id] || String(id || "").toUpperCase(); }
+  function get(url){ return fetch(url, { cache: "no-cache" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }); }
+  function loadIndex(){ if (idx) return Promise.resolve(idx); return get(BASE + "index.json").then(function(j){ idx = Array.isArray(j) ? j : []; idx.forEach(function(e){ var n = mkName(e.maker); if (seenMakers.indexOf(n) < 0) seenMakers.push(n); }); return idx; }); }
+  function loadFile(f){ if (files[f]) return Promise.resolve(files[f]); return get(BASE + f).then(function(j){ files[f] = j; return j; }); }
+  function groupOf(sa){ if (!sa) return null; var g = GROUP[sa.cat]; return g || null; }
+  function list(sa){ var g = groupOf(sa) || []; return (idx || []).filter(function(e){ return g.indexOf(e.group) >= 0; }); }
+  /* 値段の表から：選んだ値で絞った行 */
+  function priced(d){ return (d.pick || []).filter(function(p){ return p.price !== false; }); }
+  function rowsFor(d, sel, upto){ var P = priced(d); return (d.base || []).filter(function(r){ for (var i = 0; i < P.length && (upto == null || i < upto); i++){ var id = P[i].id; if (sel[id] != null && r[id] !== sel[id]) return false; } return true; }); }
+  function fix(d, sel){   /* 選べない組み合わせになったら、選べる最初の値に寄せる */
+    var P = priced(d);
+    P.forEach(function(p, i){ var R = rowsFor(d, sel, i), ok = {}; R.forEach(function(r){ ok[r[p.id]] = 1; }); if (!ok[sel[p.id]]){ var f = (p.values || []).filter(function(v){ return ok[v.id]; })[0]; sel[p.id] = f ? f.id : null; } });
+    (d.pick || []).forEach(function(p){ if (p.price === false && sel[p.id] == null && p.values && p.values[0]) sel[p.id] = p.values[0].id; });
+    return sel;
+  }
+  function addDiff(a, vid){ var v = (a.values || []).filter(function(x){ return x.id === vid; })[0]; if (!v) return 0; if (a.included != null) return +v.teika || 0; if (a.id === "handle" && a.values[0]) return (+v.teika || 0) - (+a.values[0].teika || 0); return +v.teika || 0; }   /* ハンドルは差額（セットに標準が入っている）。included があればその値が差額 */
+  function addDefault(a){ return a.included != null ? a.included : (a.id === "handle" && a.values[0] ? a.values[0].id : ""); }
+  function total(d, sel, ad){ var R = rowsFor(d, sel); var r = R.length === 1 ? R[0] : null; if (!r) return null; var t = +r.teika || 0; (d.adds || []).forEach(function(a){ if (ad[a.id]) t += addDiff(a, ad[a.id]); }); return { teika: t, row: r }; }
+  function vname(d, pid, vid){ var p = (d.pick || []).filter(function(x){ return x.id === pid; })[0]; var v = p && (p.values || []).filter(function(x){ return x.id === vid; })[0]; return v ? v.name : (vid || ""); }
+  function label(d, ent, sel, ad){
+    var parts = [mkName(d.maker), (ent && ent.seriesName) || d.seriesName || d.seriesLabel || seriesTitle(d)];
+    (d.pick || []).forEach(function(p){ if (sel[p.id] != null && (p.values || []).length > 1) parts.push(vname(d, p.id, sel[p.id])); });
+    (d.adds || []).forEach(function(a){ if (ad[a.id] && ad[a.id] !== addDefault(a)) parts.push(vname({ pick: [a] }, a.id, ad[a.id])); });
+    return parts.join(" ");
+  }
+  function seriesTitle(d){ var s = String(d.src || ""); var m = s.match(/（([^）]+)）/); return m ? m[1] : (d.series || ""); }
+  function esc(t){ return String(t == null ? "" : t).replace(/[&<>"]/g, function(c){ return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function rate(maker){ try { return (typeof tkRatePct379 === "function") ? tkRatePct379(maker) : 65; } catch(e){ return 65; } }
+  /* サイズ（値段が同じ項目）は、図面のドアの幅に近い物を最初に選んでおく（値に w があれば w、無ければ型番の数字＝幅のcm） */
+  function sizeFromDoor(d, sel, sa){
+    var p = (d.pick || []).filter(function(x){ return x.id === "size"; })[0]; if (!p || sel.size != null || !(sa.w > 0)) return;
+    var best = null, bd = Infinity;
+    (p.values || []).forEach(function(v){ var w = v.w > 0 ? v.w : (function(){ var m = String(v.id).match(/(\d+)/); if (!m) return 0; var t = m[1]; return t.length >= 3 ? +t.slice(0, 3) * 10 : +t * 100; })(); if (w > 0 && Math.abs(w - sa.w) < bd){ bd = Math.abs(w - sa.w); best = v.id; } });
+    if (best) sel.size = best;
+  }
+  var st = null;   /* 開いているシートの状態 */
+  function open(si){
+    var sa = (S.sashes || [])[si]; if (!sa) return;
+    $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>読み込み中…</p>"; $("modal").hidden = false;
+    loadIndex().then(function(){
+      var L = list(sa);
+      if (!L.length){ $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>この種類（" + esc(sa.cat) + "）のカタログは、まだありません。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; return; }
+      var cur = sa.cat705 || null, ent = (cur && L.filter(function(e){ return e.file === cur.file; })[0]) || L[0];
+      return loadFile(ent.file).then(function(d){
+        st = { si: si, sa: sa, L: L, ent: ent, d: d, sel: Object.assign({}, cur && cur.file === ent.file ? cur.sel : {}), ad: Object.assign({}, cur && cur.file === ent.file ? cur.adds : {}) };
+        (d.adds || []).forEach(function(a){ if (st.ad[a.id] == null) st.ad[a.id] = addDefault(a); });
+        sizeFromDoor(d, st.sel, sa); fix(d, st.sel); draw();
+      });
+    }).catch(function(e){ $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>カタログを読み込めませんでした（電波を確かめてください）。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; });
+  }
+  function chips(pid, title, values, cur, okSet){
+    return "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc(title) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + values.map(function(v){ var on = v.id === cur, ok = !okSet || okSet[v.id]; return "<button type='button' class='btn sub' data-c705='" + esc(pid) + "' data-v='" + esc(v.id) + "'" + (ok ? "" : " disabled") + " style='flex:0 1 auto;width:auto;max-width:100%;white-space:normal;text-align:left;min-height:40px;padding:4px 12px;font-size:14px;" + (on ? "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0);" : "") + (ok ? "" : "opacity:.35;") + "'>" + esc(v.name) + "</button>"; }).join("") + "</div>";
+  }
+  function draw(){
+    var d = st.d, P = priced(d), h = "<h3>カタログから選ぶ</h3>";
+    if (st.L.length > 1) h += chips("__series", "シリーズ", st.L.map(function(e){ return { id: e.file, name: mkName(e.maker) + " " + (e.seriesName || e.series) }; }), st.ent.file);
+    else h += "<div style='font-size:13px;color:var(--sub,#5B6673)'>" + esc(mkName(d.maker) + "　" + seriesTitle(d)) + "</div>";
+    P.forEach(function(p, i){ if ((p.values || []).length < 2) return; var R = rowsFor(d, st.sel, i), ok = {}; R.forEach(function(r){ ok[r[p.id]] = 1; }); h += chips(p.id, p.name, p.values.filter(function(v){ return ok[v.id]; }), st.sel[p.id], null); });
+    (d.adds || []).forEach(function(a){ h += chips("__add:" + a.id, a.name, (a.included != null || a.id === "handle" ? [] : [{ id: "", name: "なし" }]).concat((a.values || []).map(function(v){ var df = addDiff(a, v.id); return { id: v.id, name: v.name + (df ? "（" + (df > 0 ? "+" : "−") + Math.abs(df).toLocaleString("ja-JP") + "）" : "") }; })), st.ad[a.id] || "", null); });
+    (d.pick || []).forEach(function(p){ if (p.price === false && (p.values || []).length > 1) h += chips(p.id, p.name + "（値段は同じ）", p.values, st.sel[p.id], null); });
+    var T = total(d, st.sel, st.ad), mk = mkName(d.maker), rt = rate(mk);
+    h += "<div style='margin-top:12px;padding:10px;border-radius:10px;background:#F3F7FC;font-size:14px;line-height:1.6'>" + (T ? "定価 <b>" + T.teika.toLocaleString("ja-JP") + "円</b> × 掛率 " + rt + "%（" + esc(mk) + "）＝ <b>" + Math.round(T.teika * rt / 100).toLocaleString("ja-JP") + "円</b>" : "この組み合わせはカタログにありません") + "<div style='font-size:11px;color:var(--sub,#5B6673)'>" + esc(d.src || "") + "（" + esc(d.year || "") + "・" + esc(d.tax || "") + "）　掛率は単価表の「掛率の設定」で変えられます</div></div>";
+    h += "<div class='row' style='margin-top:10px;display:flex;gap:8px'><button type='button' class='btn' id='c705ok' style='flex:1;min-height:46px'" + (T ? "" : " disabled") + ">これにする</button>" + (st.sa.cat705 ? "<button type='button' class='btn sub' id='c705rm' style='min-height:46px'>カタログを外す</button>" : "") + "<button type='button' class='btn sub' id='c705x' style='min-height:46px'>閉じる</button></div>";
+    $("mbox").innerHTML = h;
+    $("mbox").querySelectorAll("[data-c705]").forEach(function(b){ b.onclick = function(){
+      var pid = b.dataset.c705, v = b.dataset.v;
+      if (pid === "__series"){ var e = st.L.filter(function(x){ return x.file === v; })[0]; if (!e) return; loadFile(e.file).then(function(dd){ st.ent = e; st.d = dd; st.sel = {}; st.ad = {}; (dd.adds || []).forEach(function(a){ st.ad[a.id] = addDefault(a); }); fix(dd, st.sel); draw(); }); return; }
+      if (pid.indexOf("__add:") === 0) st.ad[pid.slice(6)] = v; else st.sel[pid] = v;
+      fix(st.d, st.sel); draw();
+    }; });
+    $("c705x").onclick = function(){ $("modal").hidden = true; st = null; };
+    if ($("c705rm")) $("c705rm").onclick = function(){ try { pushUndo(); delete st.sa.cat705; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} $("modal").hidden = true; st = null; };
+    $("c705ok").onclick = function(){
+      var T2 = total(st.d, st.sel, st.ad); if (!T2) return;
+      try {
+        pushUndo();
+        st.sa.cat705 = { file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
+        save(); if (typeof drawPlan === "function") drawPlan();
+      } catch(e){ try { console.warn("[CAT705] 選ぶ", e); } catch(x){} }
+      $("modal").hidden = true; st = null;
+      try { if (typeof toast === "function") toast("カタログの品にしました（見積は定価×掛率）"); } catch(e){}
+    };
+  }
+  window.CAT705 = { v: 1, base: function(){ return BASE; }, setBase: function(b){ BASE = b; idx = null; files = Object.create(null); }, groupOf: groupOf, open: open, loadIndex: loadIndex, loadFile: loadFile, makers: function(){ var m = seenMakers.slice(); (S && S.sashes || []).forEach(function(sa){ if (sa.cat705 && m.indexOf(sa.cat705.maker) < 0) m.push(sa.cat705.maker); }); return m; }, _total: total, _fix: fix };
+  /* 単価表の掛率の一覧にカタログのメーカーを早めに出すため、静かに一覧だけ読む（失敗しても何もしない） */
+  setTimeout(function(){ try { loadIndex().catch(function(){}); } catch(e){} }, 4000);
 })();
 </script>
