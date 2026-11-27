@@ -49783,8 +49783,21 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       });
     }).catch(function(e){ $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>カタログを読み込めませんでした（電波を確かめてください）。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; });
   }
+  /* CAD-708：デザインの絵（アプリが描く共通の線の絵。どのメーカーも同じ。データは value.shape に12種の記号） */
+  var SHAPE = { flush: "", panel: "<rect x='6' y='6' width='12' height='14' fill='none' stroke='#5B6673' stroke-width='1'/><rect x='6' y='24' width='12' height='14' fill='none' stroke='#5B6673' stroke-width='1'/>",
+    slitC: "<rect x='10.5' y='6' width='3' height='32' fill='#85B7EB'/>", slitE: "<rect x='5' y='6' width='3' height='32' fill='#85B7EB'/>",
+    slit2: "<rect x='7' y='6' width='2.5' height='32' fill='#85B7EB'/><rect x='14.5' y='6' width='2.5' height='32' fill='#85B7EB'/>",
+    hslit: "<rect x='5' y='12' width='14' height='2' fill='#85B7EB'/><rect x='5' y='20' width='14' height='2' fill='#85B7EB'/><rect x='5' y='28' width='14' height='2' fill='#85B7EB'/>",
+    upper: "<rect x='5' y='5' width='14' height='17' fill='#85B7EB'/>", small: "<rect x='8' y='7' width='8' height='8' fill='#85B7EB'/>",
+    full: "<rect x='5' y='5' width='14' height='34' fill='#85B7EB'/>",
+    grid: "<rect x='5' y='5' width='14' height='34' fill='#85B7EB'/><path d='M12 5V39M5 13.5H19M5 22H19M5 30.5H19' stroke='#fff' stroke-width='1.2'/>",
+    louver: "<path d='M6 30H18M6 33H18M6 36H18' stroke='#5B6673' stroke-width='1'/>", mirror: "<rect x='6' y='6' width='12' height='32' fill='#DDE4EC' stroke='#9AA6B2' stroke-width='.8'/><path d='M8 14L12 10M8 20L14 14' stroke='#fff' stroke-width='1'/>" };
+  function shapeSvg(k){
+    if (!k || !(k in SHAPE)) return "";
+    return "<svg width='22' height='40' viewBox='0 0 24 44' style='flex:0 0 auto;display:block' aria-hidden='true'><rect x='2' y='2' width='20' height='40' rx='1' fill='#fff' stroke='#18202A' stroke-width='1.2'/>" + SHAPE[k] + "<circle cx='19' cy='23' r='1.2' fill='#18202A'/></svg>";
+  }
   function chips(pid, title, values, cur, okSet){
-    return "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc(title) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + values.map(function(v){ var on = v.id === cur, ok = !okSet || okSet[v.id]; return "<button type='button' class='btn sub' data-c705='" + esc(pid) + "' data-v='" + esc(v.id) + "'" + (ok ? "" : " disabled") + " style='flex:0 1 auto;width:auto;max-width:100%;white-space:normal;text-align:left;min-height:40px;padding:4px 12px;font-size:14px;" + (on ? "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0);" : "") + (ok ? "" : "opacity:.35;") + "'>" + esc(v.name) + "</button>"; }).join("") + "</div>";
+    return "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc(title) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + values.map(function(v){ var on = v.id === cur, ok = !okSet || okSet[v.id]; return "<button type='button' class='btn sub' data-c705='" + esc(pid) + "' data-v='" + esc(v.id) + "'" + (ok ? "" : " disabled") + " style='flex:0 1 auto;width:auto;max-width:100%;white-space:normal;text-align:left;min-height:40px;padding:4px 12px;font-size:14px;" + (on ? "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0);" : "") + (ok ? "" : "opacity:.35;") + (v.shape && SHAPE.hasOwnProperty(v.shape) ? "display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;" : "") + "'>" + shapeSvg(v.shape) + esc(v.name) + "</button>"; }).join("") + "</div>";
   }
   function draw(){
     var d = st.d, P = priced(d), h = "<h3>カタログから選ぶ</h3>";
