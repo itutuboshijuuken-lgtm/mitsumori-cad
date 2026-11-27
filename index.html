@@ -48156,7 +48156,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* 検査用：図面の座標（mm）で、なぞった線・タップを渡す */
     trace: function(P){ if (!A || !tool || tool === "del" || !Array.isArray(P)) return { ok: false }; return tool === "add" ? finishAdd(P) : tool === "part" ? finishPart(P) : finishEra(P); },
     tapEdge: function(i){ if (!A || tool !== "del") return { ok: false }; return toggle(i); },
-    puts: function(){ return PUTS; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
+    puts: function(){ return PUTS; }, fxAt: function(x, y){ if (!A) return -1; var pk = thingAt([x, y], "fx"); return pk ? pk.i : -1; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
     choose: chooseSpec, put: choosePut, specPut: function(put, k, label){ spec = { put: put, k: k, label: label || k }; tool = "put"; refresh(); pick2put(); return spec; },
     spec: function(o){ if (o && typeof o === "object"){ spec = o; tool = "put"; refresh(); pick2put(); } return spec; },
     placeAt: function(x, y){ if (!A || tool !== "put" || !spec) return { ok: false }; var p = [x, y]; return !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p); },
@@ -48200,6 +48200,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
    CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-700（2026-11-27 Claude/Opus）：置いた後の微調整。置いた物（壁の物・照明・設備）をタップ→帯に、位置（壁の物＝壁の端から、照明・設備＝左の壁・上の壁から）と
+     高さ（壁の点の物）を数字で、矢印で10mmずつ、［消す］。壁の物もタップで選べるようにした。書き方は今の MADO.write／moveTenken（戻す1回）。
    CAD-699（2026-11-27 Claude/Opus）：触って候補（翔伍の11/25・26の決め：触った場所から予想して候補3つ＋その他、決まった表で毎回同じ）。
      部屋（床・天井）・外壁・間仕切りをタップ→帯の1段目に、その場所と部屋の種類で決まる候補3つ＋［その他］（押すとその場で置く）。
      外壁は帯に［寸法］（寸法がそろっていない間は今までどおりすぐ数字パッド）。候補の表は window.KOHO（立体と同じ物を使う）。
@@ -48284,6 +48286,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
     var li = ltAt(p), ki = li < 0 ? tkAt(p) : -1;
+    var fi = (li < 0 && ki < 0 && window.KAKU2 && window.KAKU2.fxAt) ? window.KAKU2.fxAt(p[0], p[1]) : -1;   /* CAD-700：置いた壁の物（コンセントなど）をタップ→その物の帯 */
+    if (fi >= 0){ closePart(); closeRoom(); closeSash(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openThing("fx", fi); return; }
     if (li >= 0 || ki >= 0){ closePart(); closeRoom(); closeSash(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openThing(li >= 0 ? "lt" : "k", li >= 0 ? li : ki); return; }
     closeThing();
     var si = sashAt(p);
@@ -48341,22 +48345,24 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function tkAt(p){ var best = -1, ba = Infinity; (S.tenken || []).forEach(function(o, i){ if (typeof tkExt !== "function" || typeof o.x !== "number") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1] && e[0] * e[1] < ba){ ba = e[0] * e[1]; best = i; } }); return best; }   /* 重なっている時は小さい方 */
   var ACT = { "new": "新設", remove: "撤去", swap: "交換" };
   function thLab(){
-    if (!thObj) return ""; if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : "");
+    if (!thObj) return ""; if (thKind === "fx"){ var it = fxName(thObj.k), A2 = adjInfo(); return it + (A2 && A2.z != null ? "　床から" + Math.round(A2.z) : "") + (A2 ? "　" + A2.posLab + Math.round(A2.pos) : ""); }
+    if (thKind === "lt") return (thObj.k === "down" ? "ダウンライト（DL）" : thObj.k === "ceil" ? "シーリング（CL）" : "ライティングレール") + (isRf() ? "　" + (ACT[thObj.act || "new"] || "") : "");
     var nm = ""; try { nm = (typeof TKN !== "undefined" && TKN[thObj.k]) || thObj.k; } catch(e){ nm = thObj.k; }
     var sz = (typeof thObj.d === "number") ? thObj.w + "×" + thObj.d : thObj.w + "角";
     return (thObj.k === "stair" ? "階段　上り：" + ({ n: "上", e: "右", s: "下", w: "左" }[thObj.dir || "n"] || "") + "　" : nm + "　") + sz;
   }
   function openThing(kind, i){
     if (!A || busy() || editing) return { ok: false };
-    var o = kind === "lt" ? (S.lights || [])[i] : (S.tenken || [])[i]; if (!o) return { ok: false };
-    thObj = o; thKind = kind;
+    var o = kind === "lt" ? (S.lights || [])[i] : kind === "fx" ? (S.fx || [])[i] : (S.tenken || [])[i]; if (!o) return { ok: false };
+    thObj = o; thKind = kind; thNid = o.nid || null;
     if (!thBar){ thBar = document.createElement("div"); thBar.id = "k3ThingBar"; thBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
     if (!A.mid.contains(thBar)) A.mid.appendChild(thBar);
     var lab = thLab(); thBar.dataset.lab = lab;
     var B = "flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
     thBar.innerHTML = '<div style="flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;font-weight:800">' + lab + "</div>";
     var mk = function(t, fn, on){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; if (on){ b.style.background = "#E6EFFA"; b.style.borderColor = "var(--ai,#2563B0)"; b.style.color = "var(--ai,#2563B0)"; } b.onclick = fn; thBar.appendChild(b); return b; };
-    if (kind === "lt"){
+    if (kind === "fx"){ /* 帯の動かす段で全部（位置・高さ・矢印・消す） */ }
+    else if (kind === "lt"){
       if (isRf()) ["new", "remove", "swap"].forEach(function(a){ mk(ACT[a], function(){ setAct(a); }, (o.act || "new") === a); });
       if (o.k === "rail") mk("縦横", railDir);
     } else {
@@ -48365,9 +48371,91 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (typeof o.d === "number" && o.k !== "dansa") mk("奥行", function(){ tkSize("d"); });
     }
     var x = mk("×", closeThing); x.style.padding = "0"; x.style.width = "44px";
+    adjRow(thBar, B);   /* CAD-700：置いた後の微調整（位置・高さを数字で、矢印で10mmずつ、消す） */
     return { ok: true, kind: kind, label: lab };
   }
-  function thIdx(){ return thKind === "lt" ? (S.lights || []).indexOf(thObj) : (S.tenken || []).indexOf(thObj); }
+  function thList(){ return thKind === "lt" ? (S.lights || []) : thKind === "fx" ? (S.fx || []) : (S.tenken || []); }
+  function thIdx(){ var L = thList(), j = L.indexOf(thObj); if (j < 0 && thNid){ for (var q = 0; q < L.length; q++) if (L[q] && L[q].nid === thNid){ thObj = L[q]; j = q; break; } } return j; }   /* 書く窓口で物が入れ替わっても、名札で同じ物を追う */
+  var thNid = null;
+  /* ===== CAD-700：置いた後の微調整 =====
+     壁の物：壁の端から（横の壁は左の端、縦の壁は上の端から）・床からの高さ（点の物だけ）・矢印で壁に沿って10mm。
+     照明・設備：左の壁から・上の壁から（壁の面まで。設備は外形の端から、照明は真ん中から）・矢印で上下左右に10mm。
+     書き方は今の書く窓口 MADO.write の set／remove（戻す1回で戻る）。設備は今の moveTenken で外形の中に収める */
+  function fxName(k){ var nm = k; try { (window.KAKU2.puts() || []).forEach(function(g){ g[1].forEach(function(it){ if (it[0] === "fx" && it[1] === k) nm = it[2]; }); }); } catch(e){} return nm; }
+  function rdNow(){ try { return window.MADO.read(); } catch(e){ return null; } }
+  function adjInfo(){
+    thIdx(); var o = thObj, r = rdNow(); if (!o || !r || !r.ok) return null;
+    if (thKind === "fx"){
+      var t = null; (r.things || []).forEach(function(q){ if (q.list === "fx" && q.id === o.nid) t = q; }); if (!t) return null;
+      var w = null; (r.walls || []).forEach(function(q){ if (q.id === t.wall) w = q; }); if (!w) return null;
+      var hz = Math.abs(w.uy) < .5, fwd = hz ? w.ux > 0 : w.uy > 0, len = typeof t.len === "number" ? t.len : 0, u = typeof t.u === "number" ? t.u : 0;
+      return { fx: true, t: t, w: w, hz: hz, fwd: fwd, len: len, u: u, pos: fwd ? u : w.len - u - len, posLab: hz ? "左の端から" : "上の端から", z: (typeof t.z === "number" && fxPt(t.kind)) ? t.z : null };
+    }
+    var ex = [0, 0]; if (thKind === "k" && typeof tkExt === "function"){ try { ex = tkExt(o); } catch(e){} }
+    var L = null, T = null;
+    (r.walls || []).forEach(function(w){
+      if (!w.a || w.state === "remove" || w.t === "z") return; var b = [w.a[0] + w.ux * w.len, w.a[1] + w.uy * w.len], th = (w.th || 120) / 2;
+      if (Math.abs(w.ux) < .01){ var y0 = Math.min(w.a[1], b[1]), y1 = Math.max(w.a[1], b[1]), xf = w.a[0] + th; if (o.y >= y0 - 1 && o.y <= y1 + 1 && xf <= o.x - ex[0] + 1 && (L == null || xf > L)) L = xf; }
+      else if (Math.abs(w.uy) < .01){ var x0 = Math.min(w.a[0], b[0]), x1 = Math.max(w.a[0], b[0]), yf = w.a[1] + th; if (o.x >= x0 - 1 && o.x <= x1 + 1 && yf <= o.y - ex[1] + 1 && (T == null || yf > T)) T = yf; }
+    });
+    return { fx: false, ex: ex, L: L, T: T, left: L == null ? null : o.x - ex[0] - L, top: T == null ? null : o.y - ex[1] - T };
+  }
+  function fxPt(k){ try { return !!(typeof FK !== "undefined" && FK[k] && FK[k][1] === "pt"); } catch(e){ return false; } }
+  function wrSet(c){ var m = window.MADO; if (!m || !thObj || !thObj.nid) return false; c.op = "set"; c.id = thObj.nid; var r = null; try { r = m.write([c]); } catch(e){ warn("微調整", e); } try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} return !!(r && r.ok); }
+  function nudge(dx, dy){
+    var A2 = adjInfo(); if (!A2) return { ok: false };
+    if (A2.fx){
+      var d = A2.hz ? dx : dy; if (!d) return { ok: false }; var du = A2.fwd ? d : -d, nu = Math.max(0, Math.min(A2.w.len - A2.len, A2.u + du));
+      if (Math.abs(nu - A2.u) < .5) return { ok: false }; var ok = wrSet({ u: Math.round(nu) }); reopenThing(); return { ok: ok };
+    }
+    var o = thObj, ok2 = false;
+    if (thKind === "k"){ try { pushUndo(); if (typeof moveTenken === "function") moveTenken(o, dx, dy); else { o.x += dx; o.y += dy; } save(); if (typeof drawPlan === "function") drawPlan(); ok2 = true; } catch(e){ warn("設備を動かす", e); } }
+    else ok2 = wrSet({ x: Math.round(o.x + dx), y: Math.round(o.y + dy) });
+    reopenThing(); return { ok: ok2 };
+  }
+  function setPos(which, v){
+    var A2 = adjInfo(); if (!A2 || !(v >= 0)) return { ok: false };
+    if (A2.fx){
+      if (which === "z") return { ok: wrSet({ z: Math.round(v) }) };
+      var nu = A2.fwd ? v : A2.w.len - v - A2.len; nu = Math.max(0, Math.min(A2.w.len - A2.len, nu)); return { ok: wrSet({ u: Math.round(nu) }) };
+    }
+    var o = thObj, dx = 0, dy = 0;
+    if (which === "left"){ if (A2.L == null) return { ok: false }; dx = A2.L + A2.ex[0] + v - o.x; }
+    else { if (A2.T == null) return { ok: false }; dy = A2.T + A2.ex[1] + v - o.y; }
+    if (thKind === "k"){ try { pushUndo(); if (typeof moveTenken === "function") moveTenken(o, Math.round(dx), Math.round(dy)); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ return { ok: false }; } return { ok: true }; }
+    return { ok: wrSet({ x: Math.round(o.x + dx), y: Math.round(o.y + dy) }) };
+  }
+  function padFor(which, title, cur){
+    if (typeof openPad !== "function") return;
+    openPad({ title: title, sub: which === "z" ? "床から物の真ん中まで" : thKind === "fx" ? "壁の端から物まで（芯ではなく、仕上がった壁の内側の目安）" : "壁の面から" + (thKind === "k" ? "設備の端" : "照明の真ん中") + "まで", unit: "mm", std: false, value: Math.round(cur || 0), done: function(v){ if (v == null) return; var r = setPos(which, v); say(r.ok ? title + "を " + Math.round(v).toLocaleString("ja-JP") + "mm にしました（戻すで戻せます）" : title + "は変えられませんでした"); reopenThing(); } });
+  }
+  function adjRow(bar, B){
+    var A2 = adjInfo(); if (!A2) return;
+    var row = document.createElement("div"); row.style.cssText = "display:flex;gap:6px;align-items:center;width:100%;margin-top:6px";
+    var S2 = B.replace("padding:0 12px", "padding:0 8px").replace("font-size:14px", "font-size:13px");
+    var mk2 = function(t, fn, wide){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = S2 + (wide ? ";flex:1 1 0;min-width:0" : ";flex:0 0 44px;padding:0"); b.onclick = fn; row.appendChild(b); return b; };
+    if (A2.fx){
+      mk2(A2.posLab.replace("の端から", "から") + " " + Math.round(A2.pos), function(){ padFor("pos", A2.posLab, adjInfo().pos); }, true);
+      if (A2.z != null) mk2("高さ " + Math.round(A2.z), function(){ padFor("z", "床からの高さ", adjInfo().z); }, true);
+      if (A2.hz){ mk2("◀", function(){ nudge(-10, 0); }); mk2("▶", function(){ nudge(10, 0); }); }
+      else { mk2("▲", function(){ nudge(0, -10); }); mk2("▼", function(){ nudge(0, 10); }); }
+    } else {
+      if (A2.left != null) mk2("左から " + Math.round(A2.left), function(){ padFor("left", "左の壁から", adjInfo().left); }, true);
+      if (A2.top != null) mk2("上から " + Math.round(A2.top), function(){ padFor("top", "上の壁から", adjInfo().top); }, true);
+      mk2("◀", function(){ nudge(-10, 0); }); mk2("▲", function(){ nudge(0, -10); }); mk2("▼", function(){ nudge(0, 10); }); mk2("▶", function(){ nudge(10, 0); });
+    }
+    var del = mk2("消す", function(){ delThing(); }); del.style.color = "#C62828"; del.style.flex = "0 0 auto"; del.style.padding = "0 10px";
+    bar.style.flexWrap = "wrap"; bar.appendChild(row);
+    bar.dataset.sig = adjSig();
+  }
+  function adjSig(){ var A2 = adjInfo(); return A2 ? [Math.round(A2.pos || 0), Math.round(A2.z || 0), Math.round(A2.left || 0), Math.round(A2.top || 0)].join(",") : ""; }
+  function delThing(){
+    var m = window.MADO, o = thObj; if (!o) return { ok: false };
+    var ok = false;
+    if (o.nid && m){ try { var r = m.write([{ op: "remove", id: o.nid }]); ok = !!(r && r.ok); } catch(e){ warn("消す", e); } }
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    say(ok ? "消しました（戻すで戻せます）" : "消せませんでした"); closeThing(); return { ok: ok };
+  }
   function setAct(a){
     var m = window.MADO; if (!thObj || !thObj.nid || !m) return { ok: false };
     if ((thObj.act || "new") === a) return { ok: true, same: true };
@@ -48397,7 +48485,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return { ok: true };
   }
   function reopenThing(){ var o = thObj, kd = thKind; setTimeout(function(){ if (thObj !== o) return; var j = thIdx(); if (j >= 0) openThing(kd, j); else closeThing(); }, 60); }
-  function closeThing(){ thObj = null; thKind = ""; if (thBar && thBar.parentNode) thBar.parentNode.removeChild(thBar); }
+  function closeThing(){ thObj = null; thKind = ""; thNid = null; if (thBar && thBar.parentNode) thBar.parentNode.removeChild(thBar); }
 
   /* ===== 3d. ドア・窓の帯（変える・向き・状態） ===== */
   var sashBar = null, sashObj = null;
@@ -48837,6 +48925,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     else if (partObj && partBar && partBar.dataset.lab !== formLab(partObj) + "|" + pState(partObj)) openPart(partIdx());   /* 形・状態を変えたら帯も変える */
     if (tareObj){ var tj = (S.tare || []).indexOf(tareObj); if (busy() || tj < 0) closePart(); else if (partBar && partBar.dataset.lab !== "t|" + tareLab(tareObj)) openTare(tj); }
     if (thObj && (busy() || thIdx() < 0)) closeThing();
+    else if (thObj && thBar && thBar.isConnected && !padOpen() && thBar.dataset.sig !== adjSig()) openThing(thKind, thIdx());   /* CAD-700：数字や矢印で動かしたら、帯の数字も変える */
     if (sashObj){
       var sj = (S.sashes || []).indexOf(sashObj);
       if (busy() || sj < 0) closeSash();
