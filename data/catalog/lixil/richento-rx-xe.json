@@ -1,0 +1,426 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rx",
+ "seriesName": "リシェント 玄関ドア3 XEモデル",
+ "group": "玄関ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600 RX-4〜RX-13（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "10A",
+     "name": "10A型",
+     "wmin": 879,
+     "wmax": 879,
+     "shape": "louver",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "20A",
+     "name": "20A型",
+     "wmin": 879,
+     "wmax": 879,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "20C",
+     "name": "20C型",
+     "wmin": 879,
+     "wmax": 879,
+     "shape": "flush",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "20",
+     "name": "親子",
+     "wmin": 1104,
+     "wmax": 1244,
+     "hmin": 2008,
+     "hmax": 2356
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "xe",
+     "name": "XEモデル"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "FK",
+     "name": "ブリュームメタルグレー"
+    },
+    {
+     "id": "BG",
+     "name": "ディープエルム"
+    },
+    {
+     "id": "HC",
+     "name": "チーク"
+    },
+    {
+     "id": "AA",
+     "name": "マットブラック",
+     "note": "枠・機能ユニットの色（本体色はFK・BG・HC）"
+    }
+   ]
+  },
+  {
+   "id": "entry",
+   "name": "鍵",
+   "values": [
+    {
+     "id": "denchi",
+     "name": "FamiLock（電池式）"
+    },
+    {
+     "id": "ac100v",
+     "name": "FamiLock（AC100V式）"
+    }
+   ]
+  },
+  {
+   "id": "kaihei",
+   "name": "開閉",
+   "values": [
+    {
+     "id": "shudo",
+     "name": "手動開閉仕様"
+    },
+    {
+     "id": "jido",
+     "name": "自動開閉仕様（AC100V式のみ）"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "10A",
+   "spec": "xe",
+   "color": "FK",
+   "teika": 554000,
+   "page": 12
+  },
+  {
+   "design": "10A",
+   "spec": "xe",
+   "color": "BG",
+   "teika": 554000,
+   "page": 12
+  },
+  {
+   "design": "10A",
+   "spec": "xe",
+   "color": "HC",
+   "teika": 554000,
+   "page": 12
+  },
+  {
+   "design": "20A",
+   "spec": "xe",
+   "color": "FK",
+   "teika": 508000,
+   "page": 12
+  },
+  {
+   "design": "20A",
+   "spec": "xe",
+   "color": "BG",
+   "teika": 508000,
+   "page": 12
+  },
+  {
+   "design": "20A",
+   "spec": "xe",
+   "color": "HC",
+   "teika": 508000,
+   "page": 12
+  },
+  {
+   "design": "20C",
+   "spec": "xe",
+   "color": "FK",
+   "teika": 254000,
+   "page": 12
+  },
+  {
+   "design": "20C",
+   "spec": "xe",
+   "color": "BG",
+   "teika": 254000,
+   "page": 12
+  },
+  {
+   "design": "20C",
+   "spec": "xe",
+   "color": "HC",
+   "teika": 254000,
+   "page": 12
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "color"
+   ],
+   "values": [
+    {
+     "id": "FK",
+     "teika": 241000,
+     "page": 12
+    },
+    {
+     "id": "BG",
+     "teika": 241000,
+     "page": 12
+    },
+    {
+     "id": "HC",
+     "teika": 241000,
+     "page": 12
+    },
+    {
+     "id": "AA",
+     "teika": 177000,
+     "page": 12
+    }
+   ]
+  },
+  {
+   "id": "unit",
+   "name": "機能ユニット",
+   "always": true,
+   "match": [
+    "color"
+   ],
+   "values": [
+    {
+     "id": "FK",
+     "teika": 347000,
+     "page": 13
+    },
+    {
+     "id": "BG",
+     "teika": 347000,
+     "page": 13
+    },
+    {
+     "id": "HC",
+     "teika": 347000,
+     "page": 13
+    },
+    {
+     "id": "AA",
+     "teika": 321000,
+     "page": 13
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドル",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "10A",
+     "teika": 162000,
+     "hinban": "AA1型（インテグレート・本体同色）",
+     "page": 13
+    },
+    {
+     "id": "20A",
+     "teika": 913000,
+     "hinban": "MM2型（ロングバーS・ブラックS）",
+     "page": 13
+    },
+    {
+     "id": "20C",
+     "teika": 174000,
+     "hinban": "JJ3型（ショートバー・シルバー）",
+     "page": 13
+    }
+   ]
+  },
+  {
+   "id": "cylinder",
+   "name": "シリンダー（DN）",
+   "always": true,
+   "match": [
+    "entry"
+   ],
+   "values": [
+    {
+     "id": "denchi",
+     "teika": 16200,
+     "hinban": "Z-1A7-DHYD",
+     "page": 13
+    },
+    {
+     "id": "ac100v",
+     "teika": 16200,
+     "hinban": "Z-1A7-DHYD",
+     "page": 13
+    }
+   ]
+  },
+  {
+   "id": "closer",
+   "name": "ドアクローザ（必須）",
+   "always": true,
+   "match": [
+    "kaihei"
+   ],
+   "values": [
+    {
+     "id": "shudo",
+     "teika": 23100,
+     "hinban": "T-0006-DVAZ（バックチェック付・2ストップ）",
+     "page": 13
+    },
+    {
+     "id": "jido",
+     "teika": 243100,
+     "hinban": "T-0001-DVCB（電動ドアクローザ）",
+     "page": 13
+    }
+   ]
+  },
+  {
+   "id": "keyset",
+   "name": "FamiLock キーセット（XEモデル用）",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0,
+     "page": 4
+    },
+    {
+     "id": "tagBasic2",
+     "name": "タグキーセット 基本プラン リモコン2個",
+     "teika": 162000,
+     "page": 4
+    },
+    {
+     "id": "tagBasic1",
+     "name": "タグキーセット 基本プラン リモコン1個",
+     "teika": 133000,
+     "page": 4
+    },
+    {
+     "id": "tagBasic0",
+     "name": "タグキーセット 基本プラン リモコンなし",
+     "teika": 98000,
+     "page": 4
+    },
+    {
+     "id": "cardBasic2",
+     "name": "カードキーセット 基本プラン リモコン2個",
+     "teika": 162000,
+     "page": 4
+    },
+    {
+     "id": "cardBasic1",
+     "name": "カードキーセット 基本プラン リモコン1個",
+     "teika": 133000,
+     "page": 4
+    },
+    {
+     "id": "cardBasic0",
+     "name": "カードキーセット 基本プラン リモコンなし",
+     "teika": 98000,
+     "page": 4
+    },
+    {
+     "id": "tagOpt2",
+     "name": "タグキーセット オプションプラン リモコン2個",
+     "teika": 192000,
+     "page": 4
+    },
+    {
+     "id": "tagOpt1",
+     "name": "タグキーセット オプションプラン リモコン1個",
+     "teika": 163000,
+     "page": 4
+    },
+    {
+     "id": "tagOpt0",
+     "name": "タグキーセット オプションプラン リモコンなし",
+     "teika": 128000,
+     "page": 4
+    },
+    {
+     "id": "cardOpt2",
+     "name": "カードキーセット オプションプラン リモコン2個",
+     "teika": 192000,
+     "page": 4
+    },
+    {
+     "id": "cardOpt1",
+     "name": "カードキーセット オプションプラン リモコン1個",
+     "teika": 163000,
+     "page": 4
+    },
+    {
+     "id": "cardOpt0",
+     "name": "カードキーセット オプションプラン リモコンなし",
+     "teika": 128000,
+     "page": 4
+    }
+   ]
+  },
+  {
+   "id": "tenkey",
+   "name": "テンキー付屋外リーダー",
+   "values": [
+    {
+     "id": "ari",
+     "name": "テンキー付屋外リーダー",
+     "teika": 52000
+    }
+   ]
+  }
+ ],
+ "note": "XEモデルはFamiLock専用の親子ドアで、子扉の位置は機能ユニット（Dw149〜289）になるため子扉の部材はない。本体はDw879固定・Dh1,967〜2,315で価格は色で変わらない（本体色はFK・BG・HCの3色。AAは枠・機能ユニットの色）。ハンドルはデザインで決まる（10A型=インテグレートAA1型 ¥162,000／20A型=ロングバーS MM2型 ¥913,000／20C型=ショートバー。標準はシルバーJJ3型 ¥174,000、ブラックJJ2型は ¥231,000）。自動開閉仕様はAC100V式のみで、電動ドアクローザ ¥243,100 が必須。キーセットはXEモデル専用価格（基本プラン ¥162,000／¥133,000／¥98,000、オプションプラン ¥192,000／¥163,000／¥128,000、手動開閉・自動開閉・電池式・AC100V式とも同額）。外額縁・内額縁は別途有償品（RD-38〜42と共通）で未収録。",
+ "pages": [
+  {
+   "page": 12,
+   "rows": 9
+  },
+  {
+   "page": 13,
+   "rows": 0
+  },
+  {
+   "page": 4,
+   "rows": 0
+  }
+ ]
+}
