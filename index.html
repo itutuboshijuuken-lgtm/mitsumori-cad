@@ -1416,6 +1416,13 @@ const WORK = [
   ["fxRod", "カーテンレール（材工）", "円/m", 0, 3500],
   ["fxBoard", "板張り（材工）", "円/㎡", 0, 6000],
   ["fxHisashi", "庇（アルミ・材工）", "円/か所", 0, 30000],
+  ["balcFloor695", "バルコニー 床組・FRP防水（木造・材工）（仮）", "円/㎡", 0, 45000],
+  ["balcRail695", "バルコニー 手すり（アルミ・材工）（仮）", "円/m", 0, 25000],
+  ["loftFloor695", "ロフト 床組・床仕上げ（材工）（仮）", "円/㎡", 0, 15000],
+  ["loftLadder695", "ロフト はしご（固定・既製品・取付）（仮）", "円/台", 0, 40000],
+  ["slope695", "スロープ（コンクリート・仕上げ・材工）（仮）", "円/m", 0, 35000],
+  ["slopeRail695", "スロープ 手すり（材工）（仮）", "円/m", 0, 12000],
+  ["battery695", "家庭用蓄電池（本体・設置・配線）（仮）", "円/台", 0, 1300000],
   ["amadoM694", "雨戸（アルミ・手動・窓1か所・材工）（仮）", "円/か所", 0, 45000],
   ["amadoE694", "窓シャッター（電動・窓1か所・材工・配線込み）（仮）", "円/か所", 0, 120000],
   ["menKoushi694", "面格子（アルミ・窓1か所・材工）（仮）", "円/か所", 0, 20000],
@@ -7010,6 +7017,10 @@ const EXT = {
   gaiko: {n: "外構工事（土間コン・フェンス・門まわり）", f: [["dt", "土間 縦", "m", 0], ["dy", "土間 横", "m", 0], ["doma", "土間（直接入力・縦×横が優先）", "㎡", 0], ["fence", "フェンス", "m", 0], ["fh", "フェンスの高さ", "m", 1.2], ["car", "カーポート", "台", 0], ["mon", "門まわり", "式", 0]], d: {}},
   denki: {n: "電気工事", f: [["kae", "コンセント・スイッチ取替", "か所", 0], ["hik", "天井引掛取替", "か所", 0], ["zou", "コンセント増設", "か所", 0], ["iso", "コンセント移設", "か所", 0], ["light", "照明取付", "か所", 0]], d: {panel: false, tekkyo: false}},
   aircon: {n: "エアコン本体 取付・取替", f: [["n", "台数", "台", 1]], d: {tear: true}},
+  balcony: {n: "バルコニー（木造・FRP防水・手すり）", f: [["a", "床の広さ", "㎡", 3.6], ["rail", "手すりの長さ", "m", 5.4]], d: {}},   /* CAD-695 */
+  loft: {n: "ロフト（床・はしご）", f: [["a", "ロフトの広さ", "㎡", 6.6], ["n", "はしご", "台", 1]], d: {}},
+  slope: {n: "スロープ（玄関まわり・手すり）", f: [["len", "長さ", "m", 3], ["rail", "手すり（1＝付ける）", "", 1]], d: {}},
+  battery: {n: "家庭用蓄電池（本体・設置・配線）", f: [["n", "台数", "台", 1]], d: {}},
   eco: {n: "エコキュート取替（日立 370L）", f: [["n", "台数", "台", 1]], d: {tear: true, base: true, denki: true}},
   yane: {n: "屋根", f: [["a", "屋根の面積", "㎡", 20], ["H", "軒の高さ", "m", 3]], d: {kaitai: true, noji: true, yaku: true, ashiba: true}},
   nokiten: {n: "軒天", f: [["len", "長さ", "m", 5], ["d", "出幅", "m", 0.45], ["H", "軒の高さ", "m", 3]], d: {kaitai: true, ashiba: true}},
@@ -8245,6 +8256,10 @@ function calc00(){
         if (e.car > 0) work("gaikoCar", "外構 カーポート（材工）", e.car, "台");
         if (e.mon > 0) work("gaikoMon", "外構 門まわり（門柱・ポスト・表札）", e.mon, "式");
       }
+      else if (e.k === "balcony"){ if (e.a > 0) work("balcFloor695", "バルコニー 床組・FRP防水", e.a, "㎡"); if (e.rail > 0) work("balcRail695", "バルコニー 手すり", e.rail, "m"); }   /* CAD-695 */
+      else if (e.k === "loft"){ if (e.a > 0) work("loftFloor695", "ロフト 床組・床仕上げ", e.a, "㎡"); if (e.n > 0) work("loftLadder695", "ロフト はしご", Math.round(e.n), "台"); }
+      else if (e.k === "slope"){ if (e.len > 0){ work("slope695", "スロープ", e.len, "m"); if (e.rail > 0) work("slopeRail695", "スロープ 手すり", e.len, "m"); } }
+      else if (e.k === "battery"){ if (e.n > 0) work("battery695", "家庭用蓄電池（本体・設置・配線）", Math.round(e.n), "台"); }
       else if (e.k === "aircon"){ const n2 = Math.max(1, Math.round(e.n)); work("eAircon", "エアコン本体（標準取付込み）", n2, "台"); if (e.tear) work("eAirconTear", "エアコン 既存撤去", n2, "台"); }
       else if (e.k === "hood"){ const n2 = Math.max(1, Math.round(e.n)); work("kHood", "レンジフード本体 取替", n2, "台"); }
       else if (e.k === "washlet"){ const n2 = Math.max(1, Math.round(e.n)); work("tWash", "ウォシュレット 取替（便座だけ）", n2, "台"); }
@@ -48014,7 +48029,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-691（2026-11-27 Claude/Opus）：ドア・窓の当たりを最大250mmに（引いて見ている時、ドアのとなりの部屋のタップまでドアに取られていた）。
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
-   CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。 */
+   CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-695（2026-11-27 Claude/Opus）：「工事を追加」にバルコニー（FRP防水・手すり）・ロフト（床・はしご）・スロープ（手すり）・家庭用蓄電池（全国平均の仮単価）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
