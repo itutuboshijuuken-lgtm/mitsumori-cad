@@ -1,0 +1,562 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rh",
+ "seriesName": "リシェント 玄関引戸2 4枚建 SG仕様",
+ "group": "玄関ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "S51",
+     "name": "S51型 千本格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S53",
+     "name": "S53型 千本格子横目",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S54",
+     "name": "S54型 板子格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S60",
+     "name": "S60型 千本格子腰付",
+     "shape": "upper",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "ランマ",
+   "values": [
+    {
+     "id": "10",
+     "name": "ランマなし",
+     "wmin": 2357,
+     "wmax": 3800,
+     "hmin": 1584,
+     "hmax": 2780
+    },
+    {
+     "id": "11",
+     "name": "ランマ付",
+     "wmin": 2357,
+     "wmax": 3800,
+     "hmin": 1584,
+     "hmax": 2780
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "SG",
+     "name": "SG仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "tanpan",
+     "name": "単板ガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせガラス"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "mokume",
+     "name": "木目調"
+    },
+    {
+     "id": "alu",
+     "name": "アルミ色"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 492000,
+   "page": 15
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 660000,
+   "page": 15
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 392000,
+   "page": 15
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 560000,
+   "page": 15
+  },
+  {
+   "design": "S53",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 564000,
+   "page": 15
+  },
+  {
+   "design": "S53",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 732000,
+   "page": 15
+  },
+  {
+   "design": "S54",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 608000,
+   "page": 15
+  },
+  {
+   "design": "S54",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 772000,
+   "page": 15
+  },
+  {
+   "design": "S60",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 492000,
+   "page": 15
+  },
+  {
+   "design": "S60",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 660000,
+   "page": 15
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "open",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10mokume",
+     "teika": 217000,
+     "page": 14
+    },
+    {
+     "id": "10alu",
+     "teika": 179000,
+     "page": 14
+    },
+    {
+     "id": "11mokume",
+     "teika": 250000,
+     "page": 14
+    },
+    {
+     "id": "11alu",
+     "teika": 228000,
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "buhinbako",
+   "name": "部品箱（ハンドル・シリンダーセット）",
+   "values": [
+    {
+     "id": "C",
+     "name": "引手 C型（ブラウン）",
+     "teika": 74000,
+     "hinban": "HG2Z32C",
+     "page": 14
+    },
+    {
+     "id": "D",
+     "name": "引手 D型（オータムブラウン）",
+     "teika": 67000,
+     "hinban": "HG2Z32D",
+     "page": 14
+    },
+    {
+     "id": "H",
+     "name": "把手 H型（ブラウン）",
+     "teika": 135000,
+     "hinban": "HG2Z32H",
+     "page": 14
+    },
+    {
+     "id": "S",
+     "name": "把手 S型（ブラウン）",
+     "teika": 135000,
+     "hinban": "HG2Z32S",
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "ranma",
+   "name": "ランマ（ガラス入り完成品）",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "tanA_M",
+     "name": "単板ガラス A型おさ 木目調",
+     "teika": 92400,
+     "page": 14
+    },
+    {
+     "id": "tanA_A",
+     "name": "単板ガラス A型おさ アルミ色",
+     "teika": 83200,
+     "page": 14
+    },
+    {
+     "id": "tanB_M",
+     "name": "単板ガラス B型面付 木目調",
+     "teika": 64600,
+     "page": 14
+    },
+    {
+     "id": "tanB_A",
+     "name": "単板ガラス B型面付 アルミ色",
+     "teika": 53200,
+     "page": 14
+    },
+    {
+     "id": "anzA_M",
+     "name": "安全合わせガラス A型おさ 木目調",
+     "teika": 112000,
+     "page": 14
+    },
+    {
+     "id": "anzA_A",
+     "name": "安全合わせガラス A型おさ アルミ色",
+     "teika": 106000,
+     "page": 14
+    },
+    {
+     "id": "anzB_M",
+     "name": "安全合わせガラス B型面付 木目調",
+     "teika": 85600,
+     "page": 14
+    },
+    {
+     "id": "anzB_A",
+     "name": "安全合わせガラス B型面付 アルミ色",
+     "teika": 74000,
+     "page": 14
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiOuter",
+   "name": "外額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "g150w2604m",
+     "name": "外額縁 150 W2,604 木目調",
+     "teika": 101000,
+     "page": 16
+    },
+    {
+     "id": "g150w2604a",
+     "name": "外額縁 150 W2,604 アルミ色",
+     "teika": 68000,
+     "page": 16
+    },
+    {
+     "id": "g100w2604m",
+     "name": "外額縁 100 W2,604 木目調",
+     "teika": 74000,
+     "page": 16
+    },
+    {
+     "id": "g100w2604a",
+     "name": "外額縁 100 W2,604 アルミ色",
+     "teika": 50000,
+     "page": 16
+    },
+    {
+     "id": "g100w3800m",
+     "name": "外額縁 100 W3,800 木目調",
+     "teika": 88000,
+     "page": 16
+    },
+    {
+     "id": "g100w3800a",
+     "name": "外額縁 100 W3,800 アルミ色",
+     "teika": 61000,
+     "page": 16
+    },
+    {
+     "id": "g75w2604m",
+     "name": "外額縁 75 W2,604 木目調",
+     "teika": 53000,
+     "page": 16
+    },
+    {
+     "id": "g75w2604a",
+     "name": "外額縁 75 W2,604 アルミ色",
+     "teika": 35200,
+     "page": 16
+    },
+    {
+     "id": "g75w3800m",
+     "name": "外額縁 75 W3,800 木目調",
+     "teika": 63000,
+     "page": 16
+    },
+    {
+     "id": "g75w3800a",
+     "name": "外額縁 75 W3,800 アルミ色",
+     "teika": 42100,
+     "page": 16
+    },
+    {
+     "id": "g50Lw2604m",
+     "name": "外額縁 50 長（分割） W2,604 木目調",
+     "teika": 49100,
+     "page": 16
+    },
+    {
+     "id": "g50Lw2604a",
+     "name": "外額縁 50 長（分割） W2,604 アルミ色",
+     "teika": 36400,
+     "page": 16
+    },
+    {
+     "id": "g50Lw3800m",
+     "name": "外額縁 50 長（分割） W3,800 木目調",
+     "teika": 61000,
+     "page": 16
+    },
+    {
+     "id": "g50Lw3800a",
+     "name": "外額縁 50 長（分割） W3,800 アルミ色",
+     "teika": 43300,
+     "page": 16
+    },
+    {
+     "id": "g50Sw2604m",
+     "name": "外額縁 50 短（一体） W2,604 木目調",
+     "teika": 46800,
+     "page": 16
+    },
+    {
+     "id": "g50Sw2604a",
+     "name": "外額縁 50 短（一体） W2,604 アルミ色",
+     "teika": 34100,
+     "page": 16
+    },
+    {
+     "id": "g50Sw3800m",
+     "name": "外額縁 50 短（一体） W3,800 木目調",
+     "teika": 56000,
+     "page": 16
+    },
+    {
+     "id": "g50Sw3800a",
+     "name": "外額縁 50 短（一体） W3,800 アルミ色",
+     "teika": 41000,
+     "page": 16
+    },
+    {
+     "id": "g25Lw2604m",
+     "name": "外額縁 25 長（分割） W2,604 木目調",
+     "teika": 36400,
+     "page": 16
+    },
+    {
+     "id": "g25Lw2604a",
+     "name": "外額縁 25 長（分割） W2,604 アルミ色",
+     "teika": 27200,
+     "page": 16
+    },
+    {
+     "id": "g25Lw3800m",
+     "name": "外額縁 25 長（分割） W3,800 木目調",
+     "teika": 43300,
+     "page": 16
+    },
+    {
+     "id": "g25Lw3800a",
+     "name": "外額縁 25 長（分割） W3,800 アルミ色",
+     "teika": 32900,
+     "page": 16
+    },
+    {
+     "id": "g25Sw2604m",
+     "name": "外額縁 25 短（一体） W2,604 木目調",
+     "teika": 29500,
+     "page": 16
+    },
+    {
+     "id": "g25Sw2604a",
+     "name": "外額縁 25 短（一体） W2,604 アルミ色",
+     "teika": 21300,
+     "page": 16
+    },
+    {
+     "id": "g25Sw3800m",
+     "name": "外額縁 25 短（一体） W3,800 木目調",
+     "teika": 35200,
+     "page": 16
+    },
+    {
+     "id": "g25Sw3800a",
+     "name": "外額縁 25 短（一体） W3,800 アルミ色",
+     "teika": 26000,
+     "page": 16
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiInner",
+   "name": "内額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "daiM",
+     "name": "内額縁 大 木目調",
+     "teika": 34700,
+     "page": 16
+    },
+    {
+     "id": "daiA",
+     "name": "内額縁 大 アルミ色",
+     "teika": 25400,
+     "page": 16
+    },
+    {
+     "id": "shoM",
+     "name": "内額縁 小 木目調",
+     "teika": 25400,
+     "page": 16
+    },
+    {
+     "id": "shoA",
+     "name": "内額縁 小 アルミ色",
+     "teika": 18500,
+     "page": 16
+    }
+   ]
+  },
+  {
+   "id": "amido",
+   "name": "網戸",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "chuM",
+     "name": "網戸 中桟付 木目調",
+     "teika": 118000,
+     "page": 16
+    },
+    {
+     "id": "chuA",
+     "name": "網戸 中桟付 アルミ色",
+     "teika": 92000,
+     "page": 16
+    },
+    {
+     "id": "nashiM",
+     "name": "網戸 中桟なし 木目調",
+     "teika": 106000,
+     "page": 16
+    },
+    {
+     "id": "nashiA",
+     "name": "網戸 中桟なし アルミ色",
+     "teika": 78000,
+     "page": 16
+    }
+   ]
+  }
+ ],
+ "note": "玄関引戸2の4枚建SG仕様。障子価格は外左・外右・内左・内右障子の合計で、製作範囲内のどの寸法でも一律。枠・障子・ランマ・部品箱が必須選択部材で、外額縁・内額縁も本来は必須選択（ここでは「なし」も選べる形にした）。4枚建の部品箱は手動用・ラッチ機構なしのみ。ランマ価格は2枚の合計。下枠まわり・汎用部材は未収録。",
+ "pages": [
+  {
+   "page": 14,
+   "rows": 0
+  },
+  {
+   "page": 15,
+   "rows": 10
+  },
+  {
+   "page": 16,
+   "rows": 0
+  }
+ ]
+}

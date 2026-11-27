@@ -1,0 +1,880 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rh",
+ "seriesName": "リシェント 玄関引戸2 4枚建 PG仕様",
+ "group": "玄関ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "P11",
+     "name": "P11型 千本格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "P13",
+     "name": "P13型 千本格子横目",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "P14",
+     "name": "P14型 板子格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "P20",
+     "name": "P20型",
+     "shape": "full",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "P23",
+     "name": "P23型 横太格子",
+     "shape": "hslit",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "P25",
+     "name": "P25型 井桁格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "ランマ",
+   "values": [
+    {
+     "id": "10",
+     "name": "ランマなし",
+     "wmin": 2357,
+     "wmax": 3800,
+     "hmin": 1584,
+     "hmax": 2780
+    },
+    {
+     "id": "11",
+     "name": "ランマ付",
+     "wmin": 2357,
+     "wmax": 3800,
+     "hmin": 1584,
+     "hmax": 2780
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "PG",
+     "name": "PG仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "fukuso",
+     "name": "複層ガラス"
+    },
+    {
+     "id": "lowe",
+     "name": "Low-E複層ガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせ複層ガラス"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "mokume",
+     "name": "木目調"
+    },
+    {
+     "id": "alu",
+     "name": "アルミ色"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 640000,
+   "page": 13
+  },
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 664000,
+   "page": 13
+  },
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 804000,
+   "page": 13
+  },
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "alu",
+   "teika": 536000,
+   "page": 13
+  },
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "alu",
+   "teika": 564000,
+   "page": 13
+  },
+  {
+   "design": "P11",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 704000,
+   "page": 13
+  },
+  {
+   "design": "P13",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 776000,
+   "page": 13
+  },
+  {
+   "design": "P13",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 804000,
+   "page": 13
+  },
+  {
+   "design": "P13",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 940000,
+   "page": 13
+  },
+  {
+   "design": "P14",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 776000,
+   "page": 13
+  },
+  {
+   "design": "P14",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 804000,
+   "page": 13
+  },
+  {
+   "design": "P14",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 940000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 580000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 612000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 748000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "alu",
+   "teika": 480000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "alu",
+   "teika": 512000,
+   "page": 13
+  },
+  {
+   "design": "P20",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 648000,
+   "page": 13
+  },
+  {
+   "design": "P23",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 640000,
+   "page": 13
+  },
+  {
+   "design": "P23",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 664000,
+   "page": 13
+  },
+  {
+   "design": "P23",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 804000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "mokume",
+   "teika": 776000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "mokume",
+   "teika": 804000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 940000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "fukuso",
+   "color": "alu",
+   "teika": 672000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "lowe",
+   "color": "alu",
+   "teika": 704000,
+   "page": 13
+  },
+  {
+   "design": "P25",
+   "spec": "PG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 840000,
+   "page": 13
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "open",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10mokume",
+     "teika": 259000,
+     "page": 12
+    },
+    {
+     "id": "10alu",
+     "teika": 220000,
+     "page": 12
+    },
+    {
+     "id": "11mokume",
+     "teika": 279000,
+     "page": 12
+    },
+    {
+     "id": "11alu",
+     "teika": 255000,
+     "page": 12
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドルセット",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "A2A0",
+     "name": "引手 A2A型 ラッチ機構なし",
+     "teika": 20800,
+     "page": 12
+    },
+    {
+     "id": "A2A1",
+     "name": "引手 A2A型 ラッチ機構付",
+     "teika": 43900,
+     "page": 12
+    },
+    {
+     "id": "A3A0",
+     "name": "引手 A3A型 ラッチ機構なし",
+     "teika": 20800,
+     "page": 12
+    },
+    {
+     "id": "A3A1",
+     "name": "引手 A3A型 ラッチ機構付",
+     "teika": 43900,
+     "page": 12
+    },
+    {
+     "id": "F2A0",
+     "name": "把手（アーチ）F2A型 ラッチ機構なし",
+     "teika": 51000,
+     "page": 12
+    },
+    {
+     "id": "F2A1",
+     "name": "把手（アーチ）F2A型 ラッチ機構付",
+     "teika": 74000,
+     "page": 12
+    },
+    {
+     "id": "F3A0",
+     "name": "把手（アーチ）F3A型 ラッチ機構なし",
+     "teika": 51000,
+     "page": 12
+    },
+    {
+     "id": "F3A1",
+     "name": "把手（アーチ）F3A型 ラッチ機構付",
+     "teika": 74000,
+     "page": 12
+    },
+    {
+     "id": "K2A0",
+     "name": "把手（ツートーン）K2A型 ラッチ機構なし",
+     "teika": 77000,
+     "page": 12
+    },
+    {
+     "id": "K2A1",
+     "name": "把手（ツートーン）K2A型 ラッチ機構付",
+     "teika": 100000,
+     "page": 12
+    },
+    {
+     "id": "L3A0",
+     "name": "把手（ツートーン）L3A型 ラッチ機構なし",
+     "teika": 88000,
+     "page": 12
+    },
+    {
+     "id": "L3A1",
+     "name": "把手（ツートーン）L3A型 ラッチ機構付",
+     "teika": 111000,
+     "page": 12
+    },
+    {
+     "id": "M2A0",
+     "name": "把手（ツートーン）M2A型 ラッチ機構なし",
+     "teika": 88000,
+     "page": 12
+    },
+    {
+     "id": "M2A1",
+     "name": "把手（ツートーン）M2A型 ラッチ機構付",
+     "teika": 111000,
+     "page": 12
+    },
+    {
+     "id": "F2F0",
+     "name": "室内側把手 把手（アーチ）F2F型 ラッチ機構なし",
+     "teika": 72000,
+     "page": 13
+    },
+    {
+     "id": "F2F1",
+     "name": "室内側把手 把手（アーチ）F2F型 ラッチ機構付",
+     "teika": 95000,
+     "page": 13
+    },
+    {
+     "id": "F3F0",
+     "name": "室内側把手 把手（アーチ）F3F型 ラッチ機構なし",
+     "teika": 72000,
+     "page": 13
+    },
+    {
+     "id": "F3F1",
+     "name": "室内側把手 把手（アーチ）F3F型 ラッチ機構付",
+     "teika": 95000,
+     "page": 13
+    },
+    {
+     "id": "K2K0",
+     "name": "室内側把手 把手（ツートーン）K2K型 ラッチ機構なし",
+     "teika": 123000,
+     "page": 13
+    },
+    {
+     "id": "K2K1",
+     "name": "室内側把手 把手（ツートーン）K2K型 ラッチ機構付",
+     "teika": 146000,
+     "page": 13
+    },
+    {
+     "id": "L3L0",
+     "name": "室内側把手 把手（ツートーン）L3L型 ラッチ機構なし",
+     "teika": 143000,
+     "page": 13
+    },
+    {
+     "id": "L3L1",
+     "name": "室内側把手 把手（ツートーン）L3L型 ラッチ機構付",
+     "teika": 166000,
+     "page": 13
+    },
+    {
+     "id": "M2M0",
+     "name": "室内側把手 把手（ツートーン）M2M型 ラッチ機構なし",
+     "teika": 143000,
+     "page": 13
+    },
+    {
+     "id": "M2M1",
+     "name": "室内側把手 把手（ツートーン）M2M型 ラッチ機構付",
+     "teika": 166000,
+     "page": 13
+    }
+   ]
+  },
+  {
+   "id": "cylinder",
+   "name": "シリンダーセット",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "P11",
+     "teika": 46200,
+     "page": 12
+    },
+    {
+     "id": "P13",
+     "teika": 46200,
+     "page": 12
+    },
+    {
+     "id": "P14",
+     "teika": 46200,
+     "page": 12
+    },
+    {
+     "id": "P20",
+     "teika": 46200,
+     "page": 12
+    },
+    {
+     "id": "P23",
+     "teika": 46200,
+     "page": 12
+    },
+    {
+     "id": "P25",
+     "teika": 46200,
+     "page": 12
+    }
+   ]
+  },
+  {
+   "id": "ranmaKazari",
+   "name": "ランマ飾り",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "aM",
+     "name": "A型おさ 木目調",
+     "teika": 89000,
+     "page": 12
+    },
+    {
+     "id": "aA",
+     "name": "A型おさ アルミ色",
+     "teika": 77000,
+     "page": 12
+    },
+    {
+     "id": "bM",
+     "name": "B型面付 木目調",
+     "teika": 63000,
+     "page": 12
+    },
+    {
+     "id": "bA",
+     "name": "B型面付 アルミ色",
+     "teika": 49700,
+     "page": 12
+    }
+   ]
+  },
+  {
+   "id": "ranmaGlass",
+   "name": "ランマガラス（別途有償品）",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "fukuso",
+     "name": "複層ガラス",
+     "teika": 47200,
+     "page": 12
+    },
+    {
+     "id": "lowe",
+     "name": "Low-E複層ガラス",
+     "teika": 52000,
+     "page": 12
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせ複層ガラス",
+     "teika": 67000,
+     "page": 12
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiOuter",
+   "name": "外額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "g150w2604m",
+     "name": "外額縁 150 W2,604 木目調",
+     "teika": 101000,
+     "page": 16
+    },
+    {
+     "id": "g150w2604a",
+     "name": "外額縁 150 W2,604 アルミ色",
+     "teika": 68000,
+     "page": 16
+    },
+    {
+     "id": "g100w2604m",
+     "name": "外額縁 100 W2,604 木目調",
+     "teika": 74000,
+     "page": 16
+    },
+    {
+     "id": "g100w2604a",
+     "name": "外額縁 100 W2,604 アルミ色",
+     "teika": 50000,
+     "page": 16
+    },
+    {
+     "id": "g100w3800m",
+     "name": "外額縁 100 W3,800 木目調",
+     "teika": 88000,
+     "page": 16
+    },
+    {
+     "id": "g100w3800a",
+     "name": "外額縁 100 W3,800 アルミ色",
+     "teika": 61000,
+     "page": 16
+    },
+    {
+     "id": "g75w2604m",
+     "name": "外額縁 75 W2,604 木目調",
+     "teika": 53000,
+     "page": 16
+    },
+    {
+     "id": "g75w2604a",
+     "name": "外額縁 75 W2,604 アルミ色",
+     "teika": 35200,
+     "page": 16
+    },
+    {
+     "id": "g75w3800m",
+     "name": "外額縁 75 W3,800 木目調",
+     "teika": 63000,
+     "page": 16
+    },
+    {
+     "id": "g75w3800a",
+     "name": "外額縁 75 W3,800 アルミ色",
+     "teika": 42100,
+     "page": 16
+    },
+    {
+     "id": "g50Lw2604m",
+     "name": "外額縁 50 長（分割） W2,604 木目調",
+     "teika": 49100,
+     "page": 16
+    },
+    {
+     "id": "g50Lw2604a",
+     "name": "外額縁 50 長（分割） W2,604 アルミ色",
+     "teika": 36400,
+     "page": 16
+    },
+    {
+     "id": "g50Lw3800m",
+     "name": "外額縁 50 長（分割） W3,800 木目調",
+     "teika": 61000,
+     "page": 16
+    },
+    {
+     "id": "g50Lw3800a",
+     "name": "外額縁 50 長（分割） W3,800 アルミ色",
+     "teika": 43300,
+     "page": 16
+    },
+    {
+     "id": "g50Sw2604m",
+     "name": "外額縁 50 短（一体） W2,604 木目調",
+     "teika": 46800,
+     "page": 16
+    },
+    {
+     "id": "g50Sw2604a",
+     "name": "外額縁 50 短（一体） W2,604 アルミ色",
+     "teika": 34100,
+     "page": 16
+    },
+    {
+     "id": "g50Sw3800m",
+     "name": "外額縁 50 短（一体） W3,800 木目調",
+     "teika": 56000,
+     "page": 16
+    },
+    {
+     "id": "g50Sw3800a",
+     "name": "外額縁 50 短（一体） W3,800 アルミ色",
+     "teika": 41000,
+     "page": 16
+    },
+    {
+     "id": "g25Lw2604m",
+     "name": "外額縁 25 長（分割） W2,604 木目調",
+     "teika": 36400,
+     "page": 16
+    },
+    {
+     "id": "g25Lw2604a",
+     "name": "外額縁 25 長（分割） W2,604 アルミ色",
+     "teika": 27200,
+     "page": 16
+    },
+    {
+     "id": "g25Lw3800m",
+     "name": "外額縁 25 長（分割） W3,800 木目調",
+     "teika": 43300,
+     "page": 16
+    },
+    {
+     "id": "g25Lw3800a",
+     "name": "外額縁 25 長（分割） W3,800 アルミ色",
+     "teika": 32900,
+     "page": 16
+    },
+    {
+     "id": "g25Sw2604m",
+     "name": "外額縁 25 短（一体） W2,604 木目調",
+     "teika": 29500,
+     "page": 16
+    },
+    {
+     "id": "g25Sw2604a",
+     "name": "外額縁 25 短（一体） W2,604 アルミ色",
+     "teika": 21300,
+     "page": 16
+    },
+    {
+     "id": "g25Sw3800m",
+     "name": "外額縁 25 短（一体） W3,800 木目調",
+     "teika": 35200,
+     "page": 16
+    },
+    {
+     "id": "g25Sw3800a",
+     "name": "外額縁 25 短（一体） W3,800 アルミ色",
+     "teika": 26000,
+     "page": 16
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiInner",
+   "name": "内額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "daiM",
+     "name": "内額縁 大 木目調",
+     "teika": 34700,
+     "page": 16
+    },
+    {
+     "id": "daiA",
+     "name": "内額縁 大 アルミ色",
+     "teika": 25400,
+     "page": 16
+    },
+    {
+     "id": "shoM",
+     "name": "内額縁 小 木目調",
+     "teika": 25400,
+     "page": 16
+    },
+    {
+     "id": "shoA",
+     "name": "内額縁 小 アルミ色",
+     "teika": 18500,
+     "page": 16
+    }
+   ]
+  },
+  {
+   "id": "amido",
+   "name": "網戸",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "chuM",
+     "name": "網戸 中桟付 木目調",
+     "teika": 118000,
+     "page": 16
+    },
+    {
+     "id": "chuA",
+     "name": "網戸 中桟付 アルミ色",
+     "teika": 92000,
+     "page": 16
+    },
+    {
+     "id": "nashiM",
+     "name": "網戸 中桟なし 木目調",
+     "teika": 106000,
+     "page": 16
+    },
+    {
+     "id": "nashiA",
+     "name": "網戸 中桟なし アルミ色",
+     "teika": 78000,
+     "page": 16
+    }
+   ]
+  }
+ ],
+ "note": "玄関引戸2の4枚建PG仕様。障子価格は外左・外右・内左・内右障子の合計で、製作範囲内のどの寸法でも一律。枠・障子・ハンドルセット・シリンダーセットが必須選択部材で、外額縁・内額縁も本来は必須選択（ここでは「なし」も選べる形にした）。4枚建の把手は合掌部のみに取り付く仕様で、戸先部は引手になる。4枚建にエントリーシステムの設定はない。外額縁は枠の基本寸法Wで価格が分かれる（150はW2,604のみ）。ランマガラスは市販ガラスも可。後付ビード・下枠まわり・汎用部材は未収録。",
+ "pages": [
+  {
+   "page": 12,
+   "rows": 0
+  },
+  {
+   "page": 13,
+   "rows": 27
+  },
+  {
+   "page": 16,
+   "rows": 0
+  }
+ ]
+}

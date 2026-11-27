@@ -1,0 +1,828 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rh",
+ "seriesName": "リシェント 玄関引戸2 2枚建 SG仕様",
+ "group": "玄関ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "S51",
+     "name": "S51型 千本格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S52",
+     "name": "S52型 万本格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S53",
+     "name": "S53型 千本格子横目",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S54",
+     "name": "S54型 板子格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S55",
+     "name": "S55型 縦通し",
+     "shape": "slit2",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S56",
+     "name": "S56型 横太格子",
+     "shape": "hslit",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S57",
+     "name": "S57型 井桁格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S58",
+     "name": "S58型 漣格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S59",
+     "name": "S59型 井桁格子",
+     "shape": "grid",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "S60",
+     "name": "S60型 千本格子腰付",
+     "shape": "upper",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "ランマ",
+   "values": [
+    {
+     "id": "10",
+     "name": "ランマなし",
+     "wmin": 1195,
+     "wmax": 2604,
+     "hmin": 1584,
+     "hmax": 2780
+    },
+    {
+     "id": "11",
+     "name": "ランマ付",
+     "wmin": 1195,
+     "wmax": 2604,
+     "hmin": 1584,
+     "hmax": 2780
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "SG",
+     "name": "SG仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "tanpan",
+     "name": "単板ガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせガラス"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "mokume",
+     "name": "木目調"
+    },
+    {
+     "id": "alu",
+     "name": "アルミ色"
+    }
+   ]
+  },
+  {
+   "id": "entry",
+   "name": "エントリー",
+   "values": [
+    {
+     "id": "manual",
+     "name": "手動"
+    },
+    {
+     "id": "touch",
+     "name": "簡易タッチキーシステム"
+    },
+    {
+     "id": "cazas",
+     "name": "CAZASシステム"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 278000,
+   "page": 9
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 360000,
+   "page": 9
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 226000,
+   "page": 9
+  },
+  {
+   "design": "S51",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 310000,
+   "page": 9
+  },
+  {
+   "design": "S52",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 286000,
+   "page": 9
+  },
+  {
+   "design": "S52",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 370000,
+   "page": 9
+  },
+  {
+   "design": "S52",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 236000,
+   "page": 9
+  },
+  {
+   "design": "S52",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 320000,
+   "page": 9
+  },
+  {
+   "design": "S53",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 314000,
+   "page": 9
+  },
+  {
+   "design": "S53",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 398000,
+   "page": 9
+  },
+  {
+   "design": "S54",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 332000,
+   "page": 9
+  },
+  {
+   "design": "S54",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 416000,
+   "page": 9
+  },
+  {
+   "design": "S55",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 278000,
+   "page": 9
+  },
+  {
+   "design": "S55",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 360000,
+   "page": 9
+  },
+  {
+   "design": "S56",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 278000,
+   "page": 9
+  },
+  {
+   "design": "S56",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 360000,
+   "page": 9
+  },
+  {
+   "design": "S56",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 226000,
+   "page": 9
+  },
+  {
+   "design": "S56",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 310000,
+   "page": 9
+  },
+  {
+   "design": "S57",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 236000,
+   "page": 9
+  },
+  {
+   "design": "S57",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 320000,
+   "page": 9
+  },
+  {
+   "design": "S58",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 236000,
+   "page": 9
+  },
+  {
+   "design": "S58",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 320000,
+   "page": 9
+  },
+  {
+   "design": "S59",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "mokume",
+   "teika": 286000,
+   "page": 9
+  },
+  {
+   "design": "S59",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "mokume",
+   "teika": 370000,
+   "page": 9
+  },
+  {
+   "design": "S60",
+   "spec": "SG",
+   "glass": "tanpan",
+   "color": "alu",
+   "teika": 278000,
+   "page": 9
+  },
+  {
+   "design": "S60",
+   "spec": "SG",
+   "glass": "anzen",
+   "color": "alu",
+   "teika": 360000,
+   "page": 9
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "open",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10mokume",
+     "teika": 121000,
+     "page": 8
+    },
+    {
+     "id": "10alu",
+     "teika": 100000,
+     "page": 8
+    },
+    {
+     "id": "11mokume",
+     "teika": 140000,
+     "page": 8
+    },
+    {
+     "id": "11alu",
+     "teika": 127000,
+     "page": 8
+    }
+   ]
+  },
+  {
+   "id": "entryUp",
+   "name": "システム取付障子（エントリー加算）",
+   "always": true,
+   "match": [
+    "entry"
+   ],
+   "values": [
+    {
+     "id": "manual",
+     "teika": 0,
+     "page": 5
+    },
+    {
+     "id": "touch",
+     "teika": 95000,
+     "page": 5
+    },
+    {
+     "id": "cazas",
+     "teika": 64000,
+     "page": 5
+    }
+   ]
+  },
+  {
+   "id": "buhinbako",
+   "name": "部品箱（ハンドル・シリンダーセット）",
+   "values": [
+    {
+     "id": "mA",
+     "name": "手動用 引手 A型（シャイングレー）",
+     "teika": 39300,
+     "page": 8
+    },
+    {
+     "id": "cA",
+     "name": "CAZAS用 引手 A型（シャイングレー） ラッチ機構付",
+     "teika": 51000,
+     "page": 8
+    },
+    {
+     "id": "tA",
+     "name": "簡易タッチ用 引手 A型（シャイングレー） ラッチ機構付",
+     "teika": 51000,
+     "page": 8
+    },
+    {
+     "id": "mC",
+     "name": "手動用 引手 C型（ブラウン）",
+     "teika": 42800,
+     "page": 8
+    },
+    {
+     "id": "cC",
+     "name": "CAZAS用 引手 C型（ブラウン） ラッチ機構付",
+     "teika": 54000,
+     "page": 8
+    },
+    {
+     "id": "tC",
+     "name": "簡易タッチ用 引手 C型（ブラウン） ラッチ機構付",
+     "teika": 54000,
+     "page": 8
+    },
+    {
+     "id": "mD",
+     "name": "手動用 引手 D型（オータムブラウン）",
+     "teika": 39300,
+     "page": 8
+    },
+    {
+     "id": "cD",
+     "name": "CAZAS用 引手 D型（オータムブラウン） ラッチ機構付",
+     "teika": 51000,
+     "page": 8
+    },
+    {
+     "id": "tD",
+     "name": "簡易タッチ用 引手 D型（オータムブラウン） ラッチ機構付",
+     "teika": 51000,
+     "page": 8
+    },
+    {
+     "id": "mF",
+     "name": "手動用 把手（弓）F型（シャイングレー）",
+     "teika": 89000,
+     "page": 8
+    },
+    {
+     "id": "mH",
+     "name": "手動用 把手（弓）H型（ブラウン）",
+     "teika": 100000,
+     "page": 8
+    },
+    {
+     "id": "mP",
+     "name": "手動用 把手（弓）P型（シャイングレー）",
+     "teika": 89000,
+     "page": 8
+    },
+    {
+     "id": "mS",
+     "name": "手動用 把手（弓）S型（ブラウン）",
+     "teika": 100000,
+     "page": 8
+    },
+    {
+     "id": "mK",
+     "name": "手動用 把手（ツートーン）K型（シャイングレー）",
+     "teika": 136000,
+     "page": 8
+    },
+    {
+     "id": "mL",
+     "name": "手動用 把手（ツートーン）L型（ブラウン）",
+     "teika": 155000,
+     "page": 8
+    },
+    {
+     "id": "mV",
+     "name": "手動用 把手（ツートーン）V型（シャイングレー）",
+     "teika": 136000,
+     "page": 8
+    },
+    {
+     "id": "mW",
+     "name": "手動用 把手（ツートーン）W型（ブラウン）",
+     "teika": 155000,
+     "page": 8
+    },
+    {
+     "id": "cP",
+     "name": "CAZAS用 把手（弓）P型（シャイングレー） ラッチ機構付",
+     "teika": 100000,
+     "page": 9
+    },
+    {
+     "id": "tP",
+     "name": "簡易タッチ用 把手（弓）P型（シャイングレー） ラッチ機構付",
+     "teika": 100000,
+     "page": 9
+    },
+    {
+     "id": "cS",
+     "name": "CAZAS用 把手（弓）S型（ブラウン） ラッチ機構付",
+     "teika": 112000,
+     "page": 9
+    },
+    {
+     "id": "tS",
+     "name": "簡易タッチ用 把手（弓）S型（ブラウン） ラッチ機構付",
+     "teika": 112000,
+     "page": 9
+    }
+   ]
+  },
+  {
+   "id": "ranma",
+   "name": "ランマ（ガラス入り完成品）",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "tanA_M",
+     "name": "単板ガラス A型おさ 木目調",
+     "teika": 64000,
+     "page": 8
+    },
+    {
+     "id": "tanA_A",
+     "name": "単板ガラス A型おさ アルミ色",
+     "teika": 55000,
+     "page": 8
+    },
+    {
+     "id": "tanB_M",
+     "name": "単板ガラス B型面付 木目調",
+     "teika": 43900,
+     "page": 8
+    },
+    {
+     "id": "tanB_A",
+     "name": "単板ガラス B型面付 アルミ色",
+     "teika": 34700,
+     "page": 8
+    },
+    {
+     "id": "anzA_M",
+     "name": "安全合わせガラス A型おさ 木目調",
+     "teika": 85000,
+     "page": 8
+    },
+    {
+     "id": "anzA_A",
+     "name": "安全合わせガラス A型おさ アルミ色",
+     "teika": 76000,
+     "page": 8
+    },
+    {
+     "id": "anzB_M",
+     "name": "安全合わせガラス B型面付 木目調",
+     "teika": 65000,
+     "page": 8
+    },
+    {
+     "id": "anzB_A",
+     "name": "安全合わせガラス B型面付 アルミ色",
+     "teika": 55000,
+     "page": 8
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiOuter",
+   "name": "外額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "g150m",
+     "name": "外額縁 150 木目調",
+     "teika": 84000,
+     "page": 10
+    },
+    {
+     "id": "g150a",
+     "name": "外額縁 150 アルミ色",
+     "teika": 57000,
+     "page": 10
+    },
+    {
+     "id": "g100m",
+     "name": "外額縁 100 木目調",
+     "teika": 61000,
+     "page": 10
+    },
+    {
+     "id": "g100a",
+     "name": "外額縁 100 アルミ色",
+     "teika": 42100,
+     "page": 10
+    },
+    {
+     "id": "g75m",
+     "name": "外額縁 75 木目調",
+     "teika": 43300,
+     "page": 10
+    },
+    {
+     "id": "g75a",
+     "name": "外額縁 75 アルミ色",
+     "teika": 29500,
+     "page": 10
+    },
+    {
+     "id": "g50Lm",
+     "name": "外額縁 50 長（分割タイプ） 木目調",
+     "teika": 41000,
+     "page": 10
+    },
+    {
+     "id": "g50La",
+     "name": "外額縁 50 長（分割タイプ） アルミ色",
+     "teika": 29500,
+     "page": 10
+    },
+    {
+     "id": "g50Sm",
+     "name": "外額縁 50 短（一体タイプ） 木目調",
+     "teika": 38700,
+     "page": 10
+    },
+    {
+     "id": "g50Sa",
+     "name": "外額縁 50 短（一体タイプ） アルミ色",
+     "teika": 28300,
+     "page": 10
+    },
+    {
+     "id": "g25Lm",
+     "name": "外額縁 25 長（分割タイプ） 木目調",
+     "teika": 29500,
+     "page": 10
+    },
+    {
+     "id": "g25La",
+     "name": "外額縁 25 長（分割タイプ） アルミ色",
+     "teika": 21300,
+     "page": 10
+    },
+    {
+     "id": "g25Sm",
+     "name": "外額縁 25 短（一体タイプ） 木目調",
+     "teika": 24900,
+     "page": 10
+    },
+    {
+     "id": "g25Sa",
+     "name": "外額縁 25 短（一体タイプ） アルミ色",
+     "teika": 17900,
+     "page": 10
+    }
+   ]
+  },
+  {
+   "id": "gakubuchiInner",
+   "name": "内額縁",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "daiM",
+     "name": "内額縁 大 木目調",
+     "teika": 28900,
+     "page": 10
+    },
+    {
+     "id": "daiA",
+     "name": "内額縁 大 アルミ色",
+     "teika": 20800,
+     "page": 10
+    },
+    {
+     "id": "shoM",
+     "name": "内額縁 小 木目調",
+     "teika": 20800,
+     "page": 10
+    },
+    {
+     "id": "shoA",
+     "name": "内額縁 小 アルミ色",
+     "teika": 15100,
+     "page": 10
+    }
+   ]
+  },
+  {
+   "id": "amido",
+   "name": "網戸",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "chuM",
+     "name": "網戸 中桟付 木目調",
+     "teika": 65000,
+     "page": 10
+    },
+    {
+     "id": "chuA",
+     "name": "網戸 中桟付 アルミ色",
+     "teika": 51000,
+     "page": 10
+    },
+    {
+     "id": "nashiM",
+     "name": "網戸 中桟なし 木目調",
+     "teika": 57000,
+     "page": 10
+    },
+    {
+     "id": "nashiA",
+     "name": "網戸 中桟なし アルミ色",
+     "teika": 43900,
+     "page": 10
+    }
+   ]
+  },
+  {
+   "id": "option",
+   "name": "別途有償品",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "remote",
+     "name": "専用リモコン（簡易タッチキー用）",
+     "teika": 11200,
+     "page": 5
+    },
+    {
+     "id": "cardkey",
+     "name": "CAZAS追加用カードキー",
+     "teika": 2500,
+     "page": 5
+    },
+    {
+     "id": "tagkey",
+     "name": "CAZAS追加用タグキー",
+     "teika": 2500,
+     "page": 5
+    }
+   ]
+  }
+ ],
+ "note": "玄関引戸2の2枚建SG仕様。障子価格は内障子と外障子の合計で、製作範囲内のどの寸法でも一律。枠・障子・ランマ・部品箱が必須選択部材で、外額縁・内額縁も本来は必須選択（ここでは「なし」も選べる形にした）。部品箱はエントリーの区分（手動用／CAZAS用／簡易タッチ用）と形で価格が決まるので、エントリーの選択と合う物を選ぶこと。エントリーを選ぶと外障子がシステム取付障子になり加算額がかかる。SG仕様は網戸とエントリーシステムの併用不可。Wが2,357以上の場合、ランマは2枚になり吊束がつく。下枠まわり・汎用部材（RH-11）は未収録。",
+ "pages": [
+  {
+   "page": 8,
+   "rows": 0
+  },
+  {
+   "page": 9,
+   "rows": 26
+  },
+  {
+   "page": 5,
+   "rows": 0
+  },
+  {
+   "page": 10,
+   "rows": 0
+  }
+ ]
+}
