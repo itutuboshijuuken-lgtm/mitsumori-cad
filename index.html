@@ -49464,7 +49464,15 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var thBar = null, thObj = null, thKind = "";
   /* 照明の当たり方は今の ltNear と同じ（中心・レールの線から260mm以内）。小さく見えている時も指で押せるよう、最低12px */
   function ltAt(p){ var best = -1, bd = Math.max(260, 12 * pxmm()); (S.lights || []).forEach(function(l, i){ var d; if (l.k === "rail"){ var L = l.len || 1500, hz = l.dir !== "v"; d = segD(p[0], p[1], hz ? [l.x - L / 2, l.y] : [l.x, l.y - L / 2], hz ? [l.x + L / 2, l.y] : [l.x, l.y + L / 2]); } else d = Math.hypot(p[0] - l.x, p[1] - l.y); if (d < bd){ bd = d; best = i; } }); return best; }
-  function tkAt(p){ var best = -1, ba = Infinity; (S.tenken || []).forEach(function(o, i){ if (typeof tkExt !== "function" || typeof o.x !== "number") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1] && e[0] * e[1] < ba){ ba = e[0] * e[1]; best = i; } }); return best; }   /* 重なっている時は小さい方 */
+  function tkAt(p){   /* CAD-743：押せる範囲は最低でも指の大きさ（半分 22px＝約44pt）。エアコン用コンセントは下の「天井コ」の字まで（2階の外壁ぎわで、細い四角と字を押すと外壁が選ばれていた） */
+    var best = -1, ba = Infinity, f = 22 * pxmm();
+    (S.tenken || []).forEach(function(o, i){
+      if (typeof tkExt !== "function" || typeof o.x !== "number") return;
+      var e = tkExt(o), ex = Math.max(e[0], f), up = Math.max(e[1], f), dn = o.k === "acout" ? Math.max(e[1] + 20 * pxmm(), f) : up;
+      if (p[0] >= o.x - ex && p[0] <= o.x + ex && p[1] >= o.y - up && p[1] <= o.y + dn){ var a = e[0] * e[1] + Math.hypot(p[0] - o.x, p[1] - o.y); if (a < ba){ ba = a; best = i; } }
+    });
+    return best;   /* 重なっている時は小さい方（同じ大きさなら近い方） */
+  }
   var ACT = { "new": "新設", remove: "撤去", swap: "交換" };
   function thLab(){
     if (!thObj) return ""; if (thKind === "fx"){ var it = fxName(thObj.k), A2 = adjInfo(); return it + (A2 && A2.z != null ? "　床から" + Math.round(A2.z) : "") + (A2 ? "　" + A2.posLab + Math.round(A2.pos) : ""); }
