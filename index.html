@@ -45233,7 +45233,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-731：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（2026-11-27 Claude Fable）----------
+/* ---------- CAD-734：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり）（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45273,7 +45273,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・階段（Fable の作業番号 695）：本物の段の形にした（前は高さ20cmの木の台）。平面図と同じ並び（o.parts＝直の段数／廻り 910×910 の踊り場・2段・3段。window.__st306.partsOf）から段を作る。
      段の高さ＝階の高さ÷段数（階の高さ＝階段の記録の kh。無い時は 天井高＋240）。天井は階段の所だけ穴をあけ、上の階の天井までの吹き抜けの壁を作る（四角い部屋の時。ななめの辺がある部屋は、段を天井で止める）。
      階段の所は歩けない（通り抜けない）。古い記録（並びも形も無い）で曲がる階段は、今までの台のまま。RITTAI.steps(部品の名前)＝検査用（段の形）。見積・保存は変えない（表示だけ）。
-     RITTAI.v は 14。
+   ・階段の一番上（Fable の作業番号 696。翔伍さんの決まり 2026-11-27）：図面の段は全部「踏み板」。その上に階段框（上の階の床のふち）を入れ、框の下にも蹴込みを付ける。
+     だから 蹴上げ＝階の高さ÷（図面の段の数＋1）（695 では ÷段の数 で、一番上の段が上の階の床と同じ高さだった）。階の高さ＝記録の kh、無ければ 天井高＋MADO.read().base.dosa（無ければ 240）。
+   ・2階から見た階段（Fable の作業番号 697）：MADO.read() に below.stairs（下の階の階段：id・x・y・dir・raw・kh）がある時、この階の床に穴をあけ、下りていく段・穴のまわりの壁・壁の無い辺の落下防止の手すり（下り口は空ける）を作る。穴の所は歩けない。
+     触ると {kind:"thing", list:"below", id:"below:階段のid", k:"stair"}。below が無い時は、今までと同じ（何も作らない）。かかる部屋が四角くない時も、今までと同じ。
+     1階の階段の手すり：まっすぐの所の壁側（両側に壁がある時は廻りの外側）に、径35の丸い木の棒。段の鼻の線から 800。受け金物つき。
+     RITTAI.stairs()＝階段ごとの立つ場所 [{id, key, below, kh, foot:{x,y,yaw}, top:{x,y,yaw}}]（foot＝下の階で上り口の手前、top＝上の階で下り口の先。そのまま RITTAI.cam() に渡せる。「階段を触ると2階へ」用）。
+     RITTAI.v は 16。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45290,7 +45296,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 14, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 16, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45359,17 +45365,21 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* 階段の段の形（Fable 695）。平面図と同じ並び（window.__st306.partsOf＝直の段数／廻り 910×910 の踊り場・2段・3段）から作る。
      歩く枠で組み立てる（アプリの絵 layoutGen395 と同じ進み方）：入口の辺の左の角 A と進む向き h。直は h へ 227.5 ずつ、廻りは角を中心に扇に割って向きを90°変える。
      返す物＝{ kh: 階の高さ, ch2: 上の階の天井高, bb: 外形, hb: 天井の穴（外形から壁の半分 60 だけ内）, tr: [[出口の辺の番号, [x,y]…]…] }。段は下から順、1つ目の辺が入口（蹴込みの面） */
-  function stairGeo(o, cx, cy, dir, chDef){
-    var A3 = window.__st306, MW = 910, TD = 227.5, HV = [[0, -1], [1, 0], [0, 1], [-1, 0]], hi = 0, A = [0, 0], tr = [], k;
+  function stairGeo(o, cx, cy, dir, chDef, ds){
+    var A3 = window.__st306, MW = 910, TD = 227.5, HV = [[0, -1], [1, 0], [0, 1], [-1, 0]], hi = 0, A = [0, 0], tr = [], rn = [], k;
     if (!A3 || typeof A3.partsOf !== "function" || !o || typeof o !== "object") return null;
     if (!o.parts && !o.sf && o.st && String(o.st).toLowerCase() !== "s") return null;   /* 古い記録（並びも形も無い）で曲がる階段は、平面図の絵が前の描き方なので、今までの台のまま */
     var parts = A3.partsOf(o); if (!Array.isArray(parts) || !parts.length) return null;
     if (parts[0].t === "m") hi = parts[0].dir === "R" ? 3 : 1;   /* 最初が廻りの時は、箱へ横から入る */
-    parts.forEach(function(q){
+    parts.forEach(function(q, qi){
       var h = HV[hi], r = HV[(hi + 1) % 4], P = function(a, b){ return [A[0] + r[0] * a + h[0] * b, A[1] + r[1] * a + h[1] * b]; };   /* a＝入口の辺に沿って、b＝進む向きへ */
       if (q.t === "s"){
         var n = Math.max(0, Math.min(40, Math.round(+q.n || 0)));
         for (k = 0; k < n; k++) tr.push([2, P(0, TD * k), P(MW, TD * k), P(MW, TD * (k + 1)), P(0, TD * (k + 1))]);
+        if (n >= 3){   /* まっすぐの所（Fable 697：手すり用）＝[最初の段の番号, 段数, 手すりを付けたい側（廻りの外側。1＝左・2＝右・0＝どちらでも）, 左の辺の始めと終わり, 右の辺の始めと終わり] */
+          var pb = parts[qi - 1], pa = parts[qi + 1], tn = (pb && pb.t === "m") ? pb : (pa && pa.t === "m") ? pa : null;
+          rn.push([tr.length - n, n, tn ? (tn.dir === "R" ? 1 : 2) : 0, P(0, 0), P(0, TD * n), P(MW, 0), P(MW, TD * n)]);
+        }
         A = P(0, TD * n);
       } else {
         var kd = (q.kind === 1 || q.kind === 2) ? q.kind : 3, R = q.dir === "R";
@@ -45392,8 +45402,51 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!RT) RT = function(x, y){ return [x, y]; };
     var bb = [1e18, 1e18, -1e18, -1e18];
     tr = tr.map(function(q){ return [q[0]].concat(q.slice(1).map(function(p){ var v = RT(p[0] - mx, p[1] - my), X = r1(cx + v[0]), Y = r1(cy + v[1]); bb[0] = Math.min(bb[0], X); bb[1] = Math.min(bb[1], Y); bb[2] = Math.max(bb[2], X); bb[3] = Math.max(bb[3], Y); return [X, Y]; })); });
-    var ch = (fin(chDef) && chDef > 1500) ? chDef : 2400, kh = (fin(+o.kh) && +o.kh > 1500) ? +o.kh : ch + 240;   /* 階の高さ：記録の kh。無い時は 天井高＋胴差240（アプリの階段の決まりと同じ） */
-    return { kh: r1(kh), ch2: ch, bb: bb, hb: [bb[0] + 60, bb[1] + 60, bb[2] - 60, bb[3] - 60], tr: tr };
+    rn = rn.map(function(q){ return q.slice(0, 3).concat(q.slice(3).map(function(p){ var v = RT(p[0] - mx, p[1] - my); return [r1(cx + v[0]), r1(cy + v[1])]; })); });
+    var ch = (fin(chDef) && chDef > 1500) ? chDef : 2400, kh = (fin(+o.kh) && +o.kh > 1500) ? +o.kh : ch + ((fin(+ds) && +ds >= 50 && +ds <= 1000) ? +ds : 240);   /* 階の高さ：記録の kh。無い時は 天井高＋胴差（base.dosa。無ければ 240。アプリの階段の決まりと同じ） */
+    return { kh: r1(kh), ch2: ch, bb: bb, hb: [bb[0] + 60, bb[1] + 60, bb[2] - 60, bb[3] - 60], tr: tr, rn: rn };
+  }
+  /* 丸棒（Fable 697）：3次元の2点（m）の間。8角 */
+  function rod(acc, mk, a, b, r, tag){
+    var dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], L = Math.hypot(dx, dy, dz); if (!(L > 1e-5)) return;
+    dx /= L; dy /= L; dz /= L;
+    var ux, uy, uz, vx, vy, vz, m, i, N = 8, UV0 = [0, 0], UV4 = [UV0, UV0, UV0, UV0];
+    if (Math.abs(dy) < .9){ ux = -dz; uy = 0; uz = dx; } else { ux = 1; uy = 0; uz = 0; }
+    m = ux * dx + uy * dy + uz * dz; ux -= m * dx; uy -= m * dy; uz -= m * dz; m = Math.hypot(ux, uy, uz) || 1; ux /= m; uy /= m; uz /= m;
+    vx = dy * uz - dz * uy; vy = dz * ux - dx * uz; vz = dx * uy - dy * ux;
+    var P = function(c, q){ var cs = Math.cos(q) * r, sn = Math.sin(q) * r; return [c[0] + ux * cs + vx * sn, c[1] + uy * cs + vy * sn, c[2] + uz * cs + vz * sn]; };
+    for (i = 0; i < N; i++){
+      var q0 = i / N * 6.2832, q1 = (i + 1) / N * 6.2832, qm = (q0 + q1) / 2, cm = Math.cos(qm), sm = Math.sin(qm);
+      acc.quad(mk, [P(a, q0), P(b, q0), P(b, q1), P(a, q1)], [ux * cm + vx * sm, uy * cm + vy * sm, uz * cm + vz * sm], UV4, tag);
+      acc.tri(mk, a, P(a, q0), P(a, q1), [-dx, -dy, -dz], UV0, UV0, UV0, tag); acc.tri(mk, b, P(b, q0), P(b, q1), [dx, dy, dz], UV0, UV0, UV0, tag);
+    }
+  }
+  /* 階段の手すりを付ける所（Fable 697）：まっすぐの所で、壁のある側（両側にある時は廻りの外側）。壁の面から 45 離す。返す物＝[始めの x, y, 終わりの x, y, 最初の段の番号, 段数, 壁への向き x, y] */
+  function handRuns(M, st){
+    var out = [];
+    arr(st.rn).forEach(function(q){
+      var L0 = q[3], L1 = q[4], R0 = q[5], R1 = q[6], wl = function(a, b){ return [.25, .5, .75].every(function(f){ return colD(M, a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f) < 20; }); };
+      var wL = wl(L0, L1), wR = wl(R0, R1), side = (q[2] === 1 && wL) ? 1 : (q[2] === 2 && wR) ? 2 : wR ? 2 : wL ? 1 : 0;
+      if (!side) return;
+      var a = side === 1 ? L0 : R0, b = side === 1 ? L1 : R1, o = side === 1 ? R0 : L0, w = Math.hypot(o[0] - a[0], o[1] - a[1]) || 1, ix = (o[0] - a[0]) / w, iy = (o[1] - a[1]) / w;
+      var fo = Math.max(40, Math.min(110, -colD(M, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2))) + 45, r1 = function(v){ return Math.round(v * 10) / 10; };
+      out.push([r1(a[0] + ix * fo), r1(a[1] + iy * fo), r1(b[0] + ix * fo), r1(b[1] + iy * fo), q[0], q[1], -ix, -iy]);
+    });
+    return out;
+  }
+  /* 床の穴のまわりで、落下防止の手すりを付ける辺（Fable 697）：壁の無い所。下り口（一番上の段の出口の辺）は空ける */
+  function guardRuns(M, g){
+    var hb = g.hb, last = g.tr[g.tr.length - 1], pg = last.slice(1), ex = last[0], E0 = pg[ex], E1 = pg[(ex + 1) % pg.length], out = [];
+    [[hb[0], hb[1], hb[2], hb[1]], [hb[2], hb[1], hb[2], hb[3]], [hb[2], hb[3], hb[0], hb[3]], [hb[0], hb[3], hb[0], hb[1]]].forEach(function(s){
+      var L = Math.hypot(s[2] - s[0], s[3] - s[1]); if (!(L > 1)) return;
+      var n = Math.max(1, Math.round(L / 50)), k, run = null;
+      for (k = 0; k <= n; k++){
+        var x = s[0] + (s[2] - s[0]) * k / n, y = s[1] + (s[3] - s[1]) * k / n, need = segD(x, y, E0[0], E0[1], E1[0], E1[1]) > 70 && colD(M, x, y) > 70;
+        if (need){ if (!run) run = [x, y, x, y]; else { run[2] = x; run[3] = y; } }
+        if ((!need || k === n) && run){ if (Math.hypot(run[2] - run[0], run[3] - run[1]) >= 250) out.push(run.map(function(v){ return Math.round(v); })); run = null; }
+      }
+    });
+    return out;
   }
   function model(rd){
     var M = { rev: rd.rev, pid: rd.pid, fi: rd.fi || 0, mode: rd.mode, ch: rd.ch, box: rd.box, units: [], rooms: [], segs: [], blocks: [], col: [], doors: [], nodes: [], entry: null, warn: [], note: [], n: { walls: 0, ghosts: 0, ops: 0, things: 0, doors: 0 } };
@@ -45403,7 +45456,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var STG = Object.create(null), STH = [];
     arr(rd.things).forEach(function(t){
       if (t.list !== "tenken" || t.kind !== "stair" || t.state === "remove" || !fin(t.x) || !fin(t.y)) return;
-      var g = null; try { g = stairGeo((t.raw && typeof t.raw === "object") ? t.raw : t, t.x, t.y, String(t.dir || "n"), rd.ch); } catch(e){ g = null; }
+      var g = null; try { g = stairGeo((t.raw && typeof t.raw === "object") ? t.raw : t, t.x, t.y, String(t.dir || "n"), rd.ch, rd.base && rd.base.dosa); } catch(e){ g = null; }
       if (!g) return;
       var hb = g.hb, sq = hb[2] - hb[0] > 300 && hb[3] - hb[1] > 300, any = false;
       arr(rd.rooms).forEach(function(r){
@@ -45415,6 +45468,24 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       });
       if (sq && any){ g.hole = 1; STH.push(hb); }
       STG[t.id || (t.list + "#" + t.i)] = g;
+    });
+    /* 下の階の階段（Fable 697）：MADO.read() の below.stairs がある時だけ。この階の床に穴をあけ、下りていく段を作る（かかる部屋が全部四角い時） */
+    var BST = [], FHO = [];
+    arr(rd.below && typeof rd.below === "object" ? rd.below.stairs : null).forEach(function(b, bi){
+      if (!b || typeof b !== "object" || !fin(b.x) || !fin(b.y)) return;
+      var g = null; try { g = stairGeo((b.raw && typeof b.raw === "object") ? b.raw : b, b.x, b.y, String(b.dir || "n"), rd.ch, rd.base && rd.base.dosa); } catch(e){ g = null; }
+      if (!g) return;
+      if (fin(+b.kh) && +b.kh > 1500) g.kh = Math.round(+b.kh * 10) / 10;
+      var hb = g.hb, sq = hb[2] - hb[0] > 300 && hb[3] - hb[1] > 300, any = false;
+      arr(rd.rooms).forEach(function(r){
+        if (!Array.isArray(r.poly) || r.poly.length < 3 || !r.poly.every(function(p){ return fin(p[0]) && fin(p[1]); })) return;
+        var xs = r.poly.map(function(p){ return p[0]; }), ys = r.poly.map(function(p){ return p[1]; });
+        if (!(hb[0] < Math.max.apply(null, xs) - 1 && hb[2] > Math.min.apply(null, xs) + 1 && hb[1] < Math.max.apply(null, ys) - 1 && hb[3] > Math.min.apply(null, ys) + 1)) return;
+        any = true;
+        if (!axisPoly([ring(r.poly)].concat(arr(r.holes).filter(function(h){ return Array.isArray(h) && h.length >= 3; }).map(ring)))) sq = false;
+      });
+      if (!sq || !any) return;   /* 四角い部屋でない時・部屋の外：この階は今までどおり */
+      g.hole = 1; FHO.push(hb); BST.push({ id: "below:" + (b.id || bi), sid: b.id || null, g: g });
     });
     var UBZ = arr(rd.things).filter(function(t){ return t.list === "zones" && t.kind === "ub" && [t.x0, t.y0, t.x1, t.y1].every(fin); });
     function isUb(r){ return !!r && Array.isArray(r.poly) && r.poly.length >= 3 && (/浴|UB|ＵＢ|ユニットバス|バスルーム/i.test(r.disp || r.name || r.label || "") || UBZ.some(function(z){ return inPoly((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2, r.poly) && Math.abs((z.x1 - z.x0) * (z.y1 - z.y0)) >= Math.abs(polyArea(r.poly)) * .6; })); }   /* 浴室：壁と天井をパネルの見え方にする。部屋の名前か、浴室の区画が部屋の6割以上を占める時だけ（広い部屋の一部に浴室の区画がある時は、変えない） */
@@ -45492,6 +45563,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (RLV[r.id]) d.dz = RLV[r.id];
       var cho = STH.filter(function(b){ return b[0] < rbb[2] - 1 && b[2] > rbb[0] + 1 && b[1] < rbb[3] - 1 && b[3] > rbb[1] + 1; });
       if (cho.length) d.cho = cho;   /* 階段の上は、天井に穴（Fable 695） */
+      var fho = FHO.filter(function(b){ return b[0] < rbb[2] - 1 && b[2] > rbb[0] + 1 && b[1] < rbb[3] - 1 && b[3] > rbb[1] + 1; });
+      if (fho.length) d.fho = fho;   /* 下の階の階段の上は、床に穴（Fable 697） */
       M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a, fr: d.fr ? 1 : 0 });
       unit("r:" + r.id, "room", d);
     });
@@ -45650,6 +45723,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         if (t.kind === "kitchen") [-fw / 3, 0, fw / 3].forEach(function(s){ var tt = (rw.fb ? 1 : -1) * (fd / 2 + 70); if (colD(M, t.x + fux * s - fuy * tt, t.y + fuy * s + fux * tt) < 40) bwn++; });   /* 奥のすぐ後ろが壁か（壁付けのキッチン） */
         d = { id: id, list: "tenken", k: t.kind, state: t.state, x: t.x, y: t.y, hx: hx, hy: hy, ch: roomCh(t.room), dir: dr2, w: fw, dd: fd, fb: rw.fb ? 1 : 0, lr: rw.lr ? 1 : 0, gs: String(rw.gs || ""), bw: bwn >= 2 ? 1 : 0 };
         if (t.kind === "stair" && STG[id]){ d.st = STG[id]; M.blocks.push([d.st.bb[0] - 120, d.st.bb[1] - 120, d.st.bb[2] + 120, d.st.bb[3] + 120]); }   /* 段の形（Fable 695）。階段は通り抜けない */
+        if (d.st && d.st.hole){ var hr0 = []; try { hr0 = handRuns(M, d.st); } catch(e){ hr0 = []; } if (hr0.length) d.hr = hr0; }   /* 手すり（Fable 697） */
         var tdz = lvOf(M, t.x, t.y); if (tdz) d.dz = tdz;   /* 土間や小上がりの上の器具は、その床の高さに置く */
         var tz = TKH[t.kind] || [0, 500]; if (t.state !== "remove" && tz[0] >= 0 && tz[0] < EYE && (tz[1] < 0 || tz[1] > 300)) M.blocks.push([t.x - hx - 120, t.y - hy - 120, t.x + hx + 120, t.y + hy + 120]);
       } else if (t.list === "tatami"){
@@ -45664,7 +45738,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         d = { id: id, list: "zones", k: ZK[t.kind], x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };
         var zz2 = lvOf(M, (t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2); if (zz2) d.z = zz2;
       }
+      if (d && FHO.length && (t.list === "tatami" || t.list === "zones") && [d.x0, d.y0, d.x1, d.y1].every(fin)){   /* 階段の穴にかかる床の仕上げ（Fable 697） */
+        var fh2 = FHO.filter(function(b){ return b[0] < Math.max(d.x0, d.x1) - 1 && b[2] > Math.min(d.x0, d.x1) + 1 && b[1] < Math.max(d.y0, d.y1) - 1 && b[3] > Math.min(d.y0, d.y1) + 1; });
+        if (fh2.length) d.fho = fh2;
+      }
       if (d){ M.n.things++; unit((t.list === "fx" ? "f:" : "t:") + id, "thing", d); }
+    });
+    BST.forEach(function(q){   /* 下の階の階段：この階では「下りていく段」（Fable 697） */
+      var g = q.g, bb = g.bb, gr = []; try { gr = guardRuns(M, g); } catch(e){ gr = []; }
+      (M.ti || (M.ti = Object.create(null)))[q.id] = { list: "below", i: null, k: "stair" };
+      M.blocks.push([bb[0] - 120, bb[1] - 120, bb[2] + 120, bb[3] + 120]);
+      M.n.things++; unit("t:" + q.id, "thing", { id: q.id, sid: q.sid, list: "below", k: "stair", state: "new", x: (bb[0] + bb[2]) / 2, y: (bb[1] + bb[3]) / 2, hx: (bb[2] - bb[0]) / 2, hy: (bb[3] - bb[1]) / 2, ch: rd.ch, st: g, dn: 1, gr: gr });
     });
     if (LV.length || M.doma) M.units.forEach(function(u){
       if (u.kind !== "room") return;
@@ -45898,7 +45982,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     grid: { g: [[.15, .075, .85, .925]], bu: [.5], bv: [.2875, .5, .7125] }, panel: { p: [[.2, .1, .8, .45], [.2, .55, .8, .9]] }, louver: { l: [.7, .775, .85] }, mirror: { m: [.2, .1, .8, .9] } };
   var SOLID = {   /* 名前：[色, ざらつき, 柄] */
     cloth: [0xffffff, .96, "cloth"], ceil: [0xffffff, 1, "cloth"], bare: [0xdedad1, .9], cap: [0xf0ece3, .9], ext: [0xffffff, .85, "siding"],
-    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5], chrome: [0xb2b8bd, .24, null, .8], railW: [0xcda571, .5], plateS: [0xc6c9ca, .9], screen: [0xe3ded2, .95], stairT: [0xdcbe8c, .56, "grainV"], stairR: [0xc2a472, .62, "grainV"],
+    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5], chrome: [0xb2b8bd, .24, null, .8], railW: [0xcda571, .5], plateS: [0xc6c9ca, .9], screen: [0xe3ded2, .95], stairT: [0xdcbe8c, .56, "grainV"], stairR: [0xc2a472, .62, "grainV"], stairK: [0xdcbe8c, .56, "grainV"],
       accD: [0x4a4640, .95, "cloth"], accT: [0xeae5db, .55, "tileS"], accP: [0xeadfc8, .95, "cloth"], accW: [0xd7b88a, .8, "grainV"],
     porc: [0xfafafa, .25], cab: [0xece7dc, .6], wood: [0xffffff, .65, "ply"], tile: [0xffffff, .35, "tileS"], accent: [0x7d8a96, .95, "cloth"],
     shikkui: [0xf2eee4, 1], under: [0xd8c9a8, .9], mark: [0x8a9099, .7], base: [0xf2efe8, .55], crown: [0xf5f3ee, .8], cut: [0x3b4149, .95], ubd: [0xeef2f3, .3],
@@ -46057,20 +46141,22 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     [pts].concat(holes).forEach(function(Q){ Q.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); });
     var bx0 = Math.min.apply(null, xs), bx1 = Math.max.apply(null, xs), by0 = Math.min.apply(null, ys), by1 = Math.max.apply(null, ys);
     L.forEach(function(q){ if (q[0] > bx0 && q[0] < bx1) xs.push(q[0]); if (q[2] > bx0 && q[2] < bx1) xs.push(q[2]); if (q[1] > by0 && q[1] < by1) ys.push(q[1]); if (q[3] > by0 && q[3] < by1) ys.push(q[3]); });
+    (d.fho || []).forEach(function(c){ if (c[0] > bx0 && c[0] < bx1) xs.push(c[0]); if (c[2] > bx0 && c[2] < bx1) xs.push(c[2]); if (c[1] > by0 && c[1] < by1) ys.push(c[1]); if (c[3] > by0 && c[3] < by1) ys.push(c[3]); });   /* 階段の穴（Fable 697） */
     var WL = d.wl || [];
     WL.forEach(function(w){ [w[0], w[2]].forEach(function(v){ if (v > bx0 && v < bx1) xs.push(v); }); [w[1], w[3]].forEach(function(v){ if (v > by0 && v < by1) ys.push(v); }); });
     function underWall(x, y){ return WL.some(function(w){ return segD(x, y, w[0], w[1], w[2], w[3]) < 40; }); }
     xs = uniq(xs); ys = uniq(ys);
     var nx = xs.length - 1, ny = ys.length - 1, C = [], E = [];
-    function lvP(x, y){ if (!inPoly(x, y, pts) || holes.some(function(h){ return inPoly(x, y, h); })) return null; for (var m = L.length - 1; m >= 0; m--){ var q = L[m]; if (x > q[0] && x < q[2] && y > q[1] && y < q[3]) return q[4]; } return d.dz || 0; }
+    function lvP(x, y){ if (!inPoly(x, y, pts) || holes.some(function(h){ return inPoly(x, y, h); })) return null; if (d.fho && d.fho.some(function(c){ return x > c[0] && x < c[2] && y > c[1] && y < c[3]; })) return false; for (var m = L.length - 1; m >= 0; m--){ var q = L[m]; if (x > q[0] && x < q[2] && y > q[1] && y < q[3]) return q[4]; } return d.dz || 0; }
     function at(a, b){ return (a < 0 || b < 0 || a >= nx || b >= ny) ? null : C[b * nx + a]; }
     for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) C.push(lvP((xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2));
     for (j = 0; j < ny; j++) for (i = 0; i < nx; i++){
-      var lv = C[j * nx + i]; if (lv === null) continue;
+      var lv = C[j * nx + i]; if (lv === null || lv === false) continue;   /* false＝階段の穴 */
       var x0 = xs[i], x1 = xs[i + 1], y0 = ys[j], y1 = ys[j + 1], z = lv * K;
       quadF(acc, fm, x0, y0, x1, y1, z, d.fr, tf);
       [[i - 1, j, 0, x0, y0, y1, -1], [i + 1, j, 0, x1, y0, y1, 1], [i, j - 1, 1, y0, x0, x1, -1], [i, j + 1, 1, y1, x0, x1, 1]].forEach(function(e){   /* [となりのます, 縦0・横1, 線の位置, 始まり, 終わり, となりの向き] */
         var nb = at(e[0], e[1]);
+        if (nb === false) return;   /* 階段の穴のふち：陰の帯も框も作らない */
         if (nb === null){   /* 部屋のふち：陰の帯 */
           var c0 = e[3] - e[6] * 62, c1 = e[3] - e[6] * 300, q = e[2] === 0 ? [[c0, e[4]], [c0, e[5]], [c1, e[5]], [c1, e[4]]] : [[e[4], c0], [e[5], c0], [e[5], c1], [e[4], c1]];
           acc.quad("ao", q.map(function(p){ return [p[0] * K, z + .004, p[1] * K]; }), [0, 1, 0], [[0, 0], [0, 0], [0, 1], [0, 1]], null);
@@ -46081,7 +46167,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var runs = [];
     E.forEach(function(e){ var p = runs[runs.length - 1]; if (p && p[0] === e[0] && p[1] === e[1] && p[4] === e[4] && p[5] === e[5] && p[6] === e[6] && Math.abs(p[3] - e[2]) < .5) p[3] = e[3]; else runs.push(e.slice()); });
     runs.forEach(function(e){   /* 変わり目ごとに框。出隅（上の床がそこで終わる角）では、框の出の分だけ伸ばして角をふさぐ */
-      var a = e[2], b = e[3], hi = e[1] - e[4] * 6, ext = function(c){ var v = e[0] === 0 ? lvP(hi, c) : lvP(c, hi); return (v === null || v < e[6] - 8) ? 1 : 0; }, ea = ext(a - 6), eb = ext(b + 6), rev = (e[0] === 0) === (e[4] > 0), fr;   /* rev＝線の向きが、数の大きい方から小さい方へ */
+      var a = e[2], b = e[3], hi = e[1] - e[4] * 6, ext = function(c){ var v = e[0] === 0 ? lvP(hi, c) : lvP(c, hi); return (v === null || v === false || v < e[6] - 8) ? 1 : 0; }, ea = ext(a - 6), eb = ext(b + 6), rev = (e[0] === 0) === (e[4] > 0), fr;   /* rev＝線の向きが、数の大きい方から小さい方へ */
       if (e[0] === 0) fr = rev ? { a: [e[1], b], ux: 0, uy: -1 } : { a: [e[1], a], ux: 0, uy: 1 };
       else fr = rev ? { a: [b, e[1]], ux: -1, uy: 0 } : { a: [a, e[1]], ux: 1, uy: 0 };
       kamachi(acc, fr, 0, b - a, e[5], e[6], { k: "step", room: d.id }, rev ? eb : ea, rev ? ea : eb);
@@ -46211,7 +46297,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     holes.forEach(function(hh){ all = all.concat(hh); });
     function v2(p){ return new T.Vector2(p[0], p[1]); }
     var tris = T.ShapeUtils.triangulateShape(pts.map(v2), holes.map(function(hh){ return hh.map(v2); }));
-    var lvg = !!(d.lv || d.dz) && axisPoly([pts].concat(holes)), z00 = (!lvg && d.dz) ? d.dz * K : 0;   /* lvg＝高さのちがう床を、ます目で張る（CAD-687）。ななめの辺がある部屋は、部屋まるごとの高さだけ */
+    var lvg = !!(d.lv || d.dz || d.fho) && axisPoly([pts].concat(holes)), z00 = (!lvg && d.dz) ? d.dz * K : 0;   /* lvg＝高さのちがう床を、ます目で張る（CAD-687）。ななめの辺がある部屋は、部屋まるごとの高さだけ */
     if (lvg) floorGrid(acc, d, pts, holes, fm, tf);
     var tat = false;
     if (!lvg && d.ins){ var bxs = d.poly.map(function(p){ return p[0]; }), bys = d.poly.map(function(p){ return p[1]; }); tat = tatamiDraw(acc, Math.min.apply(null, bxs), Math.min.apply(null, bys), Math.max.apply(null, bxs), Math.max.apply(null, bys), d.ins, (d.dz || 0), tf); }   /* 四角い畳の部屋：畳を敷く（Fable 690） */
@@ -46341,9 +46427,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var FIXK = { wc: 1, bath: 1, senmen: 1, tearai: 1, kitchen: 1, geta: 1, senpan: 1 };
   /* 階段の段（Fable 695）：段板の上（木目は段の幅の向き）・蹴込み（入口の辺）・外まわりの側面。天井に穴がある時は上の階まで、無い時は天井まで */
   function stairBuild(acc, d, tag){
-    var st = d.st, n = st.tr.length, base = d.dz || 0, H = st.kh - base, R = H / n, top = st.hole ? H : Math.min(H, d.ch - base - 2), i;
+    var st = d.st, n = st.tr.length, base = d.dn ? 0 : (d.dz || 0), H = st.kh - base, R = H / (n + 1), top = (st.hole || d.dn) ? H : Math.min(H, d.ch - base - 2), off = d.dn ? -st.kh - 3 : 0, i;   /* dn＝上の階から見た階段：一番上の段が、この階の床のすぐ下（3mm）に来るように下げる */   /* 蹴上げ＝階の高さ÷（段の数＋1）：図面の段は全部踏み板で、その上に階段框（Fable 696。翔伍さんの決まり） */
     if (!(n > 0) || !(R > 30) || !(top > 100)) return false;
-    var V = function(p, z){ return [p[0] * K, z * K, p[1] * K]; };
+    var V = function(p, z){ return [p[0] * K, (z + off) * K, p[1] * K]; };
     for (i = 0; i < n; i++){
       var q = st.tr[i], ex = q[0], pg = q.slice(1), m = pg.length, z0 = Math.min(i * R, top), z1 = Math.min((i + 1) * R, top), j, gx = 0, gy = 0;
       if (z1 - z0 < .5) break;   /* 天井より上の段は作らない */
@@ -46358,6 +46444,33 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         else if (j === ex && i < n - 1 && z1 < top - .5) continue;                                                                                                                     /* 出口の辺：次の段の蹴込みが作る */
         else acc.quad("cloth", [V(a, 0), V(b, 0), V(b, z1), V(a, z1)], [nx, 0, ny], [[0, 0], [L * K, 0], [L * K, z1 * K], [0, z1 * K]], tag);                                          /* 外まわり：床から段の上まで */
       }
+    }
+    if (top >= H - .5){   /* 一番上（Fable 696）：階段框（上の階の床のふち。見付 36・奥行 110）と、その下の蹴込み。出口の辺の 62 内側（吹き抜けの壁の面のすぐ手前）に立てる */
+      var lq = st.tr[n - 1], lp = lq.slice(1), ex2 = lq[0], E0 = lp[ex2], E1 = lp[(ex2 + 1) % lp.length], Le = Math.hypot(E1[0] - E0[0], E1[1] - E0[1]);
+      if (Le > 1){
+        var cgx = 0, cgy = 0; lp.forEach(function(p){ cgx += p[0] / lp.length; cgy += p[1] / lp.length; });
+        var tx = (E1[0] - E0[0]) / Le, ty = (E1[1] - E0[1]) / Le, inx = -ty, iny = tx; if ((cgx - E0[0]) * inx + (cgy - E0[1]) * iny < 0){ inx = -inx; iny = -iny; }   /* inx, iny＝出口の辺から、段の中への向き */
+        var fr2 = { a: [E0[0], E0[1]], ux: tx, uy: ty }, sgn = (-ty * inx + tx * iny) > 0 ? 1 : -1, a2 = [E0[0] + inx * 62, E0[1] + iny * 62], b2 = [E1[0] + inx * 62, E1[1] + iny * 62];
+        acc.quad("stairR", [V(a2, n * R), V(b2, n * R), V(b2, H - 34), V(a2, H - 34)], [inx, 0, iny], [[n * R * K, 0], [n * R * K, Le * K], [(H - 34) * K, Le * K], [(H - 34) * K, 0]], tag);
+        fbox(acc, fr2, 0, Le, sgn > 0 ? -30 : -80, sgn > 0 ? 80 : 30, d.dn ? -37 : H - 34, d.dn ? 2 : H + 2, "stairK", tag);   /* 上の階から見る時は、框の上の面を床の2mm上に（床のふちを框がおおう） */
+      }
+    }
+    if (d.hr && st.hole && !d.dn) d.hr.forEach(function(h){   /* 手すり（Fable 697）：径35の丸い木の棒。段の鼻の線から 800 上を、段と同じ勾配で。受け金物は両端から 150、間は 900 以下 */
+      var A = [h[0] * K, ((h[4] + 1) * R + 800) * K, h[1] * K], B = [h[2] * K, ((h[4] + h[5] + 1) * R + 800) * K, h[3] * K], Ln = Math.hypot(h[2] - h[0], h[3] - h[1]), nb = Math.max(2, Math.ceil((Ln - 300) / 900) + 1), k;
+      rod(acc, "railW", A, B, 17.5 * K, tag);
+      for (k = 0; k < nb; k++){
+        var t = (150 + (Ln - 300) * k / (nb - 1)) / Ln, c = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t - .014, A[2] + (B[2] - A[2]) * t];
+        rod(acc, "chrome", c, [c[0] + h[6] * 45 * K, c[1] - .03, c[2] + h[7] * 45 * K], 6 * K, tag);
+      }
+    });
+    if (d.dn){   /* 上の階から見た階段（Fable 697）：穴のまわりの壁（床から下の階の床まで）と、落下防止の手すり（高さ 1000。柱は 900 以下ごと） */
+      var hb = st.hb, zb = -st.kh * K, W = function(xa, ya, xb, yb, nx, ny){ var L2 = Math.hypot(xb - xa, yb - ya) * K; acc.quad("cloth", [[xa * K, zb, ya * K], [xb * K, zb, yb * K], [xb * K, 0, yb * K], [xa * K, 0, ya * K]], [nx, 0, ny], [[0, zb], [L2, zb], [L2, 0], [0, 0]], tag); };
+      W(hb[0], hb[1], hb[2], hb[1], 0, 1); W(hb[0], hb[3], hb[2], hb[3], 0, -1); W(hb[0], hb[1], hb[0], hb[3], 1, 0); W(hb[2], hb[1], hb[2], hb[3], -1, 0);
+      arr(d.gr).forEach(function(s){
+        var L3 = Math.hypot(s[2] - s[0], s[3] - s[1]), np = Math.max(2, Math.ceil(L3 / 900) + 1), k2;
+        rod(acc, "railW", [s[0] * K, 1, s[1] * K], [s[2] * K, 1, s[3] * K], .02, tag); rod(acc, "railW", [s[0] * K, .5, s[1] * K], [s[2] * K, .5, s[3] * K], .012, tag);
+        for (k2 = 0; k2 < np; k2++){ var px = s[0] + (s[2] - s[0]) * k2 / (np - 1), py = s[1] + (s[3] - s[1]) * k2 / (np - 1); fbox(acc, FR0, px - 20, px + 20, py - 20, py + 20, 0, 1000, "railW", tag); }
+      });
     }
     return true;
   }
@@ -46620,6 +46733,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
           if (d.k === "ceil") acc.quad(gh ? "ghost" : "plate", [pa, pb, [pb[0], (d.ch - 1) * K, pb[2]], [pa[0], (d.ch - 1) * K, pa[2]]], [Math.cos((a + b) / 2), 0, Math.sin((a + b) / 2)], [[0, 0], [0, 0], [0, 0], [0, 0]], tag);
         }
       }
+    } else if (d.list === "below"){   /* 下の階の階段（Fable 697）：下りていく段 */
+      try { if (d.st) stairBuild(acc, d, tag); } catch(e){}
     } else if (d.list === "tenken"){
       var rg = TKH[d.k] || [0, 500], z0 = rg[0], zt = rg[1];
       if (z0 < 0){ z0 = d.ch - 8; zt = d.ch - 1; } else if (zt < 0) zt = d.ch;
@@ -46627,10 +46742,19 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } else {
       var fk = FLOORS[d.k] ? d.k : "floorFin";
       var fx0 = Math.min(d.x0, d.x1), fx1 = Math.max(d.x0, d.x1), fy0 = Math.min(d.y0, d.y1), fy1 = Math.max(d.y0, d.y1), ft = oz + (d.list === "zones" ? 2 : 3), ftag = { k: "floor", id: d.id, list: d.list };
-      if (!(fk === "tatami" && d.ins && tatamiDraw(acc, fx0, fy0, fx1, fy1, d.ins, ft, ftag))) quadF(acc, "fl:" + fk, fx0, fy0, fx1, fy1, ft * K, d.fr, ftag);   /* 畳は敷き、板は部屋の向きに流す（Fable 690） */
+      if (d.fho){   /* 階段の穴をよけて、升目で張る（Fable 697） */
+        var gxs = [fx0, fx1], gys = [fy0, fy1], gi, gj;
+        d.fho.forEach(function(c){ if (c[0] > fx0 && c[0] < fx1) gxs.push(c[0]); if (c[2] > fx0 && c[2] < fx1) gxs.push(c[2]); if (c[1] > fy0 && c[1] < fy1) gys.push(c[1]); if (c[3] > fy0 && c[3] < fy1) gys.push(c[3]); });
+        gxs = uniq(gxs); gys = uniq(gys);
+        for (gj = 0; gj + 1 < gys.length; gj++) for (gi = 0; gi + 1 < gxs.length; gi++){
+          var mx2 = (gxs[gi] + gxs[gi + 1]) / 2, my2 = (gys[gj] + gys[gj + 1]) / 2;
+          if (d.fho.some(function(c){ return mx2 > c[0] && mx2 < c[2] && my2 > c[1] && my2 < c[3]; })) continue;
+          quadF(acc, "fl:" + fk, gxs[gi], gys[gj], gxs[gi + 1], gys[gj + 1], ft * K, d.fr, ftag);
+        }
+      } else if (!(fk === "tatami" && d.ins && tatamiDraw(acc, fx0, fy0, fx1, fy1, d.ins, ft, ftag))) quadF(acc, "fl:" + fk, fx0, fy0, fx1, fy1, ft * K, d.fr, ftag);   /* 畳は敷き、板は部屋の向きに流す（Fable 690） */
     }
     var gm = acc.mesh();
-    if (gm && d.st && d.st.hole && !gh){   /* 階段の吹き抜け（Fable 695） */
+    if (gm && d.st && d.st.hole && !gh && !d.dn){   /* 階段の吹き抜け（Fable 695） */
       var gs = null; try { gs = stairShaft(d); } catch(e){ gs = null; }
       if (gs){ gs.userData.ceil = 1; gs.visible = CEILON; gm.add(gs); gm.userData.tris = (gm.userData.tris || 0) + (gs.userData.tris || 0); }
     }
@@ -47631,6 +47755,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     here: here,
     box: boxOf,   /* 検査用（CAD-668）：部品の外形 */
     steps: function(key){ var u = MODEL ? MODEL.units.filter(function(q){ return q.key === key; })[0] : null, st = u && u.d && u.d.st; return st ? JSON.parse(JSON.stringify(st)) : null; },   /* 検査用（Fable 695）：階段の段の形 */
+    stairs: function(){   /* 階段ごとの「立つ場所」（Fable 697）。foot＝階段の下の階で、上り口の手前（階段を向く）。top＝上の階で、下り口の先（進む向き）。そのまま RITTAI.cam() に渡せる。below＝1 は、下の階の階段（この階では下りていく段） */
+      if (!MODEL) return [];
+      var yawOf = function(nx, ny){ return Math.round(Math.atan2(nx, -ny) * 1800 / Math.PI) / 10; };
+      return MODEL.units.filter(function(u){ return u.kind === "thing" && u.d && u.d.st && u.d.k === "stair"; }).map(function(u){
+        var st = u.d.st, f = st.tr[0].slice(1), l = st.tr[st.tr.length - 1], lp = l.slice(1), ex = l[0];
+        var nrm = function(a, b, P){ var gx = 0, gy = 0, L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = (b[1] - a[1]) / L, ny = -(b[0] - a[0]) / L; P.forEach(function(p){ gx += p[0] / P.length; gy += p[1] / P.length; }); if (((a[0] + b[0]) / 2 - gx) * nx + ((a[1] + b[1]) / 2 - gy) * ny < 0){ nx = -nx; ny = -ny; } return [nx, ny]; };   /* その辺の、段の外への向き */
+        var n0 = nrm(f[0], f[1], f), e0 = lp[ex], e1 = lp[(ex + 1) % lp.length], n1 = nrm(e0, e1, lp);
+        return { id: u.d.sid || u.d.id, key: u.key, below: u.d.dn ? 1 : 0, kh: st.kh, hand: (u.d.hr || []).map(function(h){ return h.slice(0, 4); }), guard: (u.d.gr || []).map(function(g){ return g.slice(); }),   /* hand＝階段の手すりの線、guard＝落下防止の手すりの線（検査用） */
+          foot: { x: Math.round((f[0][0] + f[1][0]) / 2 + n0[0] * 600), y: Math.round((f[0][1] + f[1][1]) / 2 + n0[1] * 600), yaw: yawOf(-n0[0], -n0[1]) },
+          top: { x: Math.round((e0[0] + e1[0]) / 2 + n1[0] * 600), y: Math.round((e0[1] + e1[1]) / 2 + n1[1] * 600), yaw: yawOf(n1[0], n1[1]) } };
+      });
+    },
     nodes: function(){ return NODES.map(function(n, i){ return { i: i, x: n.x, y: n.y, room: n.room, kind: n.kind, pair: n.pair, lv: n.lv || 0 }; }); },
     go: function(i){ return walkTo(i); },
     route: function(i){ return (fp && MODEL && NODES[i]) ? route(i) : null; },
