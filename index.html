@@ -37968,6 +37968,21 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
       var sw = function(v, o, edges){ var g = sn(v, o, 455), best = g; edges.forEach(function(e){ if (Math.abs(e - v) < Math.abs(best - v) && Math.abs(e - v) <= 240) best = e; }); return best; };
       var fixW = function(W){ return (W || []).map(function(w){ if (!Array.isArray(w) || w.length < 4) return w; return [sw(+w[0], mx, ex), sw(+w[1], my, ey), sw(+w[2], mx, ex), sw(+w[3], my, ey)]; }); };
       D.walls = fixW(D.walls); if (D.floors2 && D.floors2.walls) D.floors2.walls = fixW(D.floors2.walls);
+      /* CAD-747：壁の端と外壁（または別の壁）の間のすき間に、開口・ドア・引き戸が描いてある時は、AI が開口の所を壁なしで読んだ物なので、壁をつないで開口にする（綾羅木の2階：下り口の所が抜けて、階段と洋室①が1つの部屋になっていた） */
+      var closeGap = function(W, O2){
+        if (!Array.isArray(W) || !Array.isArray(O2)) return W;
+        var ops = O2.filter(function(o){ return o && /^(opening|door|sliding)$/.test(o.type) && isFinite(+o.x) && isFinite(+o.y); });
+        return W.map(function(w){
+          if (!Array.isArray(w) || w.length < 4) return w; var hz = Math.abs(w[1] - w[3]) < 1, vt = Math.abs(w[0] - w[2]) < 1; if (!hz && !vt) return w;
+          var at = hz ? w[1] : w[0], a = hz ? Math.min(w[0], w[2]) : Math.min(w[1], w[3]), b = hz ? Math.max(w[0], w[2]) : Math.max(w[1], w[3]);
+          var stops = (hz ? ex : ey).slice(); W.forEach(function(q){ if (!Array.isArray(q) || q === w) return; var qv = hz ? Math.abs(q[0] - q[2]) < 1 : Math.abs(q[1] - q[3]) < 1; if (!qv) return; var lo = hz ? Math.min(q[1], q[3]) : Math.min(q[0], q[2]), hi = hz ? Math.max(q[1], q[3]) : Math.max(q[0], q[2]); if (at >= lo - 1 && at <= hi + 1) stops.push(hz ? q[0] : q[1]); });
+          var gapOp = function(lo, hi){ return ops.some(function(o){ var u = hz ? +o.x : +o.y, v = hz ? +o.y : +o.x; return Math.abs(v - at) <= 60 && u > lo && u < hi; }); };
+          var left = stops.filter(function(x){ return x < a - 1 && a - x <= 1200; }).sort(function(x, y){ return y - x; })[0], right = stops.filter(function(x){ return x > b + 1 && x - b <= 1200; }).sort(function(x, y){ return x - y; })[0];
+          if (left != null && gapOp(left, a)) a = left; if (right != null && gapOp(b, right)) b = right;
+          return hz ? [a, at, b, at] : [at, a, at, b];
+        });
+      };
+      D.walls = closeGap(D.walls, D.openings); if (D.floors2 && D.floors2.walls) D.floors2.walls = closeGap(D.floors2.walls, D.floors2.openings);
       /* 窓・ドア：割り付けの柱の間に納まる位置へ（幅を455で切り上げた柱の間の真ん中に置く。例：1690の窓→1820の柱の間の真ん中） */
       var fixO = function(OP, W){ var hy = ey.slice(), vx = ex.slice(); (W || []).forEach(function(w){ if (!Array.isArray(w)) return; if (Math.abs(w[1] - w[3]) < 1) hy.push(w[1]); else if (Math.abs(w[0] - w[2]) < 1) vx.push(w[0]); });
         return (OP || []).map(function(op){ if (!op || !(+op.w > 0)) return op; var x = +op.x, y = +op.y, dH = Math.min.apply(null, hy.map(function(v){ return Math.abs(v - y); })), dV = Math.min.apply(null, vx.map(function(v){ return Math.abs(v - x); }));
@@ -39395,9 +39410,23 @@ function kozo478(C){
       if (hz && p[0] > Math.min(g[0], g[2]) && p[0] < Math.max(g[0], g[2])){ if (g[1] > p[1]) r.y1 = Math.min(r.y1, g[1]); else if (g[1] < p[1]) r.y0 = Math.max(r.y0, g[1]); } });
     if (!isFinite(r.x0 + r.x1 + r.y0 + r.y1)) return null; return r;
   }
+  /* 別の階の記録（snap）で、点 p を囲む壁の四角（rectAround と同じ考え方。外形は今の階と同じ） */
+  function rectIn747(sn, p){
+    var lb2 = (sn.roomNames || []).find(function(r){ return /階段/.test(r.name || ""); }); var q = lb2 ? lb2.p : p;
+    var segs = [], P = pts();
+    P.forEach(function(a, i){ var c = P[(i + 1) % P.length]; segs.push([a[0], a[1], c[0], c[1]]); });
+    (sn.parts2D || []).forEach(function(w){ if (w && w.st !== "remove") segs.push([w.x1, w.y1, w.x2, w.y2]); });
+    var r = {x0: -Infinity, x1: Infinity, y0: -Infinity, y1: Infinity};
+    segs.forEach(function(g){ var vt = Math.abs(g[0] - g[2]) < 1, hz = Math.abs(g[1] - g[3]) < 1;
+      if (vt && q[1] > Math.min(g[1], g[3]) && q[1] < Math.max(g[1], g[3])){ if (g[0] > q[0]) r.x1 = Math.min(r.x1, g[0]); else if (g[0] < q[0]) r.x0 = Math.max(r.x0, g[0]); }
+      if (hz && q[0] > Math.min(g[0], g[2]) && q[0] < Math.max(g[0], g[2])){ if (g[1] > q[1]) r.y1 = Math.min(r.y1, g[1]); else if (g[1] < q[1]) r.y0 = Math.max(r.y0, g[1]); } });
+    if (!isFinite(r.x0 + r.x1 + r.y0 + r.y1)) return null; return r;
+  }
   function applyFloor(t, first){
     var lb = stairLabel(); if (!lb) return "この階に「階段」の部屋がありません";
     var R = rectAround(lb.p); if (!R) return "階段の部屋の壁が見つかりません";
+    /* CAD-747：上の階の「階段」の部屋（吹き抜け）からはみ出さない。1階は壁が無くて部屋が長く読めても、2階の階段の部屋に収める（綾羅木：1階は4550まで続き、2階のトイレの壁を突き抜けた） */
+    if (first){ try { var up = Array.isArray(S.fl) && S.fl[(S.fi || 0) + 1] && S.fl[(S.fi || 0) + 1].snap; if (up){ var R2 = rectIn747(up, lb.p); if (R2){ var I = { x0: Math.max(R.x0, R2.x0), y0: Math.max(R.y0, R2.y0), x1: Math.min(R.x1, R2.x1), y1: Math.min(R.y1, R2.y1) }; if (I.x1 - I.x0 >= 600 && I.y1 - I.y0 >= 600) R = I; } } } catch(e){} }
     var W = R.x1 - R.x0, H = R.y1 - R.y0;
     var ds = [["U", Math.abs(t[1] - R.y0)], ["D", Math.abs(t[1] - R.y1)], ["L", Math.abs(t[0] - R.x0)], ["R", Math.abs(t[0] - R.x1)]].sort(function(a, b){ return a[1] - b[1]; });
     var side = ds[0][0];
@@ -39417,7 +39446,11 @@ function kozo478(C){
       var dir, sw, sd, perp = hz ? H : W, par = hz ? W : H;
       if (perp >= 1820 || par < 1820){ dir = {D: "n", U: "s", R: "w", L: "e"}[side]; sw = par; sd = perp; }
       else { if (hz){ dir = (t[0] - R.x0) > (R.x1 - t[0]) ? "w" : "e"; } else { dir = (t[1] - R.y0) > (R.y1 - t[1]) ? "n" : "s"; } sw = perp; sd = par; }
-      S.tenken.push({k: "stair", x: (R.x0 + R.x1) / 2, y: (R.y0 + R.y1) / 2, w: Math.round(sw), d: Math.round(sd), dir: dir, st: "s", isNew: true, state: "new"});
+      /* CAD-747：長さは階高から出した段数の分だけ（上り口の側から）。階高は取り込んだ値（天井高＋胴差＋天井懐＋40）があればそれ */
+      var kh = (S.fuko > 0) ? Math.round((S.ch || 2400) + (+S.dosa || 240) + S.fuko + 40) : 0, Hk = kh || ((S.ch || 2400) + (+S.dosa || 240)), need = Math.max(1, Math.ceil(Hk / 190)) * 227.5, bx = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 };
+      if (sd > need + 1){ if (dir === "e") bx.x1 = bx.x0 + need; else if (dir === "w") bx.x0 = bx.x1 - need; else if (dir === "s") bx.y1 = bx.y0 + need; else bx.y0 = bx.y1 - need; sd = need; }
+      var so = {k: "stair", x: (bx.x0 + bx.x1) / 2, y: (bx.y0 + bx.y1) / 2, w: Math.round(sw), d: Math.round(sd), dir: dir, st: "s", isNew: true, state: "new"}; if (kh) so.kh = kh;
+      S.tenken.push(so);
     }
     save(); try { solve(); } catch(e){} try { drawPlan(); } catch(e){}
     return null;
@@ -39443,6 +39476,7 @@ function kozo478(C){
     };
     window.addEventListener("pointerdown", arm, true);
   }
+  HB.__stairApply747 = applyFloor;   /* 確かめ用 */
   HB.__stairAsk480 = function(){
     try {
       var stepBtn = [].slice.call(document.querySelectorAll(".steps button")).find(function(x){ return /間取り/.test(x.textContent); });
@@ -49370,6 +49404,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (e.type !== "pointerup" || Date.now() - d.t > 500 || busy() || !usable()) return;
     var p = toPlan(e.clientX, e.clientY); if (!p) return;
     if (multi){ var mi = sashAt(p); if (mi >= 0) multiTap(mi); return; }   /* CAD-713：まとめて変える物を選んでいる間は、窓・ドアのタップは選ぶだけ */
+    var bs = belowAt747(p); if (bs){ closePart(); closeRoom(); closeSash(); closeThing(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openBelow747(bs); return; }   /* CAD-747：2階で、下の階の階段（下り） */
     var li = ltAt(p), ki = li < 0 ? tkAt(p) : -1;
     var fi = (li < 0 && ki < 0 && window.KAKU2 && window.KAKU2.fxAt) ? window.KAKU2.fxAt(p[0], p[1]) : -1;   /* CAD-700：置いた壁の物（コンセントなど）をタップ→その物の帯 */
     if (fi >= 0){ closePart(); closeRoom(); closeSash(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openThing("fx", fi); return; }
@@ -49995,6 +50030,31 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     kohoRow(partBar, "wall", q, roomAtPt([q[0] + (q[0] - p[0]) * 4, q[1] + (q[1] - p[1]) * 4]), "ext");   /* 部屋の名前は、壁から少し奥（約200mm）の点で見る */
     try { while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel"); l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); l = box737(l); A.ov.appendChild(l); } catch(e){}
     return { ok: true, i: i };
+  }
+  /* CAD-747：2階に描いている「下の階の階段」。記録は下の階の物なので、帯から［1階で直す］［消す］ */
+  function belowAt747(p){
+    var md = null; try { md = MADO.read(); } catch(e){} var L = md && md.below && md.below.stairs; if (!L || !L.length || typeof tkExt !== "function") return null;
+    var hit = null; L.forEach(function(q){ var o = q.raw || q; if (typeof o.x !== "number") return; var e = tkExt(o); if (Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1]) hit = { fi: md.below.fi, id: q.id || o.nid, raw: o }; });
+    return hit;
+  }
+  function openBelow747(bs){
+    if (!A) return;
+    if (!partBar){ partBar = document.createElement("div"); partBar.id = "k3PartBar"; partBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
+    if (!A.mid.contains(partBar)) A.mid.appendChild(partBar);
+    partBar.dataset.lab = "b|" + bs.id; partBar.style.flexWrap = "wrap";
+    var B = "flex:1 1 0;min-width:0;min-height:44px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)", fl = (bs.fi | 0) + 1;
+    partBar.innerHTML = "<div style='width:100%;font-size:12.5px;font-weight:700;color:var(--sub,#5B6673);line-height:1.4'>" + fl + "階の階段（ここは下りの吹き抜け）。記録は" + fl + "階にあるので、" + fl + "階で直します</div>";
+    var mk2 = function(t, fn, css){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B + (css || ""); b.onclick = fn; partBar.appendChild(b); return b; };
+    /* 下の階へ移って、その階の階段を選ぶ（帯が出るまで少し待つ）。then＝選べた後にすること */
+    var go = function(then){ closePart(); var id = bs.id; try { flSwitch(bs.fi); } catch(e){ say("階を替えられませんでした"); return; }
+      var n = 0, tick = function(){ n++; try { var z = zumen(); if (z && z.open && !(z.isOpen && z.isOpen())) z.open(); } catch(e){} try { sync(); } catch(e){}
+        var j = (S.tenken || []).findIndex(function(o){ return o && o.k === "stair" && o.nid === id; }); if (j < 0) j = (S.tenken || []).findIndex(function(o){ return o && o.k === "stair"; });
+        var r = (A && j >= 0) ? openThing("k", j) : null; if (r && r.ok !== false){ then(j); return; } if (n < 12) setTimeout(tick, 250); else say(fl + "階に移りました。階段をさわってください"); };
+      setTimeout(tick, 250); };
+    mk2(fl + "階で直す", function(){ go(function(){ say(fl + "階の階段です。大きさ・向き・動かす・消すができます"); }); }, ";color:var(--ai,#2563B0);border-color:var(--ai,#2563B0)");
+    mk2("消す", function(){ go(function(j){ try { pushUndo(); S.tenken.splice(j, 1); save(); if (typeof drawPlan === "function") drawPlan(); closeThing(); } catch(e){ warn("階段を消す", e); return; } say(fl + "階の階段を消しました（戻すで戻せます）"); }); }, ";color:#B91C1C");
+    var x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "閉じる"); x.style.cssText = B + ";flex:0 0 44px"; x.onclick = closePart; partBar.appendChild(x);
+    return { ok: true };
   }
   var tareObj = null;
   function tareLab(q){ return "垂れ壁 下がり" + (q.h || 400) + "|" + Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)); }
