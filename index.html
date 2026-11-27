@@ -47997,7 +47997,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-688（2026-11-27 Claude/Opus）：新築・増築で部屋をタップ→帯に［床］。フローリング・フロアタイル・クッションフロア・無垢板15・畳から選ぶ。
      適用は今の「床を構えて部屋をタップ」（HB.__ltSeg50）を1回呼ぶだけ（部屋の形どおり・二重取りの引き算・戻す1回は今と同じ）。
      囲みで置いた床だけで部屋が埋まっていて今の仕組みが守って置かない時は、この部屋の中だけにある床に部屋タップの印を付けて置き換える（小上がりは除く）。
-   CAD-691（2026-11-27 Claude/Opus）：ドア・窓の当たりを最大250mmに（引いて見ている時、ドアのとなりの部屋のタップまでドアに取られていた）。 */
+   CAD-691（2026-11-27 Claude/Opus）：ドア・窓の当たりを最大250mmに（引いて見ている時、ドアのとなりの部屋のタップまでドアに取られていた）。
+   CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
+     記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
@@ -48273,7 +48275,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   /* ===== CAD-688：新築・増築の部屋の床。今の「床を構えて部屋をタップ」（HB.__ltSeg50）をそのまま1回呼ぶ
      （部屋の形どおりに四角で置く・囲みで置いた土間や畳は守る・二重取りの引き算・戻す1回、まで今と同じ） ===== */
-  var FLK = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "クッションフロア"], ["flMuku", "無垢板15ミリ"], ["tatami", "畳"]];
+  var FLK = [["flComp", "フローリング"], ["floorFin", "フロアタイル"], ["flCF", "クッションフロア"], ["flMuku", "無垢板15ミリ"], ["tatami", "畳"], ["flDoma", "土間"]];
   function floorNow(r){
     var p = r && r.p, fk = null; if (!p) return "";
     (S.tatami || []).forEach(function(o){ if (o && !o.h && p[0] >= o.x0 && p[0] <= o.x1 && p[1] >= o.y0 && p[1] <= o.y1) fk = o.fk || (/^fl:/.test(String(o.st || "")) ? String(o.st).slice(3) : "tatami"); });
@@ -48285,11 +48287,23 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var cur = floorNow(r), nm = roomNm(r);
     $("mbox").innerHTML = "<h3>" + String(nm).replace(/[<&]/g, "") + "の床</h3><p class='hint' style='margin:2px 0 8px'>今は <b>" + cur + "</b>。選ぶとこの部屋の床がそれになります。</p>"
       + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">' + FLK.map(function(f){ return '<button type="button" class="btn sub" data-k688="' + f[0] + '" style="min-height:48px' + (f[1] === cur ? ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : "") + '">' + f[1] + "</button>"; }).join("") + "</div>"
+      + domaRow(r)
       + '<div class="row" style="margin-top:10px"><button type="button" class="btn" id="k688Ok" style="width:100%;min-height:46px">閉じる</button></div>';
     $("modal").hidden = false;
+    $("mbox").querySelectorAll("[data-dz692]").forEach(function(b){ b.onclick = function(){ var v = b.dataset.dz692; if (v === "pad"){ $("modal").hidden = true; if (typeof openPad === "function") openPad({ title: "土間の下がり", sub: "まわりの床から土間の面まで（上がり框の高さ）", unit: "mm", std: false, value: domaDz(r) || 180, done: function(nv){ if (nv != null && nv >= 0 && nv <= 600) setDz(Math.round(nv)); floorSheet(); } }); } else { setDz(+v); floorSheet(); } }; });
     $("k688Ok").onclick = function(){ $("modal").hidden = true; };
     $("mbox").querySelectorAll("[data-k688]").forEach(function(b){ b.onclick = function(){ $("modal").hidden = true; setFloor(b.dataset.k688); }; });
   }
+  /* CAD-692：土間の下がり（まわりの床から土間の面までの mm）。この部屋の土間の床の記録に dz として持つ（MADO.read の things の raw.dz で立体が読む）。無い時は 180 を目安に表示 */
+  function domaRecs(r){ var p = r && r.p; if (!p) return []; return (S.tatami || []).filter(function(o){ if (!o || o.fk !== "flDoma") return false; var c = roomAt((o.x0 + o.x1) / 2, (o.y0 + o.y1) / 2); return c && c.cid === r.cid; }); }
+  function domaDz(r){ var L = domaRecs(r); for (var i = 0; i < L.length; i++) if (typeof L[i].dz === "number") return L[i].dz; return null; }
+  function domaRow(r){
+    if (!domaRecs(r).length) return "";
+    var v = domaDz(r);
+    return '<div style="margin-top:12px;font-size:14px;font-weight:800">土間の下がり：' + (v == null ? "180mm（目安）" : v + "mm") + '</div><p class="hint" style="margin:2px 0 6px">まわりの床から土間の面まで。上がり框の高さです（立体の段差に使います。見積は変わりません）</p>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">' + [150, 180, 200].map(function(n){ return '<button type="button" class="btn sub" data-dz692="' + n + '" style="min-height:44px' + (v === n ? ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : "") + '">' + n + "</button>"; }).join("") + '<button type="button" class="btn sub" data-dz692="pad" style="min-height:44px">数字</button></div>';
+  }
+  function setDz(v){ var r = roomObj(roomCid), L = domaRecs(r); if (!L.length) return { ok: false }; try { pushUndo(); L.forEach(function(o){ o.dz = v; }); save(); } catch(e){ warn("土間の下がり", e); return { ok: false }; } return { ok: true, dz: v }; }
   function setFloor(fk){
     var r = roomObj(roomCid); if (!r || !r.p || !HB || typeof HB.__ltSeg50 !== "function") return { ok: false };
     var arm0 = HB.__floorArm, sel0 = sel, ok = false, pt = [r.p[0], r.p[1]], before = JSON.stringify(S.tatami || []);
@@ -48507,7 +48521,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
     room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, thing: function(kind, i){ return openThing(kind, i); }, thingClose: closeThing, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; },
-    floor: function(fk){ return setFloor(fk); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
+    floor: function(fk){ return setFloor(fk); }, domaDz: function(v){ return setDz(v); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
   };
 })();
 </script>
