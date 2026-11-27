@@ -45092,12 +45092,16 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-686：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し（2026-11-27 Claude Fable）----------
+/* ---------- CAD-687：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ（土間の段・玄関框・小上がり）（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
      main の CAD-667〜669（新しい図面の物）とは別物。main では、この3つをまとめて CAD-685。
-   ・CAD-686 の直し：立体の［図面］で図面へ移る時、先に立体をとじてから図面を開く（図面に「立っていた所」の印が出るように）。RITTAI.v は 5。
+   ・CAD-686 の直し：立体の［図面］で図面へ移る時、先に立体をとじてから図面を開く（図面に「立っていた所」の印が出るように）。
+   ・床の高さ（CAD-687）：土間（床の範囲 flDoma・土間の区画・名前が玄関／土間／ポーチの部屋）を FL から下げる。下がりは立体の設定「土間の段」
+     （walk2-v1 の dh。初めは 180＝床の厚み40＋土台120＋基礎パッキン20）。小上がり（flAge の h と上の仕上げ fin）は上げる。
+     高さの変わり目と、高さのちがう出入口の低い側に、框（面取りつき）と蹴込み。土間の壁の足元は立ち上がり。扉・器具・足あと・目の高さも、その床に合わせる。
+     表示だけ（見積は変えない）。図面（CAD-662）が読む開口の z0・z1 は今までどおりで、立体での下端・上端は v0・v1 に持つ。RITTAI.v は 6。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45110,11 +45114,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・⋯の「新しい歩く画面（試験中）」が「入」の時だけ、⋯に「新しい立体を見る」が出る。切なら何も足さない・何も変わらない。
    ・覚える物は walk2-v1 の中だけ（画質・歩き方の選び・最後に立っていた所）。ほかの保存キーは読まない・書かない・増やさない。
    ・見積・数量・耐力壁の計算、保存データには触れない。1つの画面枠（#rittaiRoot）の中だけで動く。
-   ・まだ入っていない物：階段の形、勾配天井、土間の段差・小上がり、2階、触って候補（段階6）。 */
+   ・まだ入っていない物：階段の形、勾配天井、2階、触って候補（段階6）。 */
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 5, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 6, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null;   /* 描く仕組み（起動中1つを使い続ける） */
@@ -45126,7 +45130,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var need = false, raf = 0, tmSync = 0, times = [], isMoving = false, speedAt = 0, noteOrg = null;
   var VIEW = "eye", TV = null, POSE = null, FOVT = 0;                           /* 見方：eye＝目線／top＝上から。TV＝上からのカメラ。POSE＝切り替えの途中 */
   var NODES = [], DOORS = [], footObj = null, ringObj = null, RING = -1, hereNode = -1;   /* 足あと・開く扉 */
-  var TW = null, LOOP = 0, LT = 0, LOOPACT = false, NPTR = 0, JL = null, JR = null;                    /* 歩いている最中の動き・スティック */
+  var TW = null, LOOP = 0, LT = 0, LOOPACT = false, NPTR = 0, JL = null, JR = null, LVY = 0, LVT = 0;                    /* 歩いている最中の動き・スティック */
   var CTL = "foot", SHOWR = true, SHOWF = true, tmPos = 0, hinted = false, topHint = false, missed = 0, HOLD = null;    /* 操作の選び（端末に覚える）。HOLD＝検査用（扉を開けたまま・閉めたまま） */
 
   function mado(){ var m = window.MADO; return (m && typeof m.read === "function") ? m : null; }
@@ -45168,11 +45172,32 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   var ZK = { ub: "ub", toilet: "wcF", doma: "flDoma", closet: "ply" };
 
+  /* 床の高さの違い（CAD-687）。土間は FL から下げ、小上がりは上げる。DH＝土間の下がり（mm）。
+     家ごとの記録の字がまだ無いので、立体の設定（walk2-v1 の dh）に持つ。初めの 180 は「床の厚み40＋土台120＋基礎パッキン20」＝基礎の天端の高さ */
+  var DH0 = 180;
+  function dhGet(){ var v = DH0; try { var g = window.WALK2.get("dh"); if (fin(g) && g >= 0 && g <= 600) v = Math.round(g); } catch(e){} return v; }
+  function lvOf(M, x, y){   /* その点の床の高さ（FL＝0、mm）。後から置いた範囲が勝つ。範囲の外は、部屋ごとの高さ */
+    var L = M.lv || [], i, q;
+    for (i = L.length - 1; i >= 0; i--){ q = L[i]; if (x > q[0] && x < q[2] && y > q[1] && y < q[3]) return q[4]; }
+    var r = roomAt(M, x, y); return (r && M.rlv && M.rlv[r.id]) || 0;
+  }
+  function uniq(a){ a.sort(function(p, q){ return p - q; }); var o = []; a.forEach(function(v){ if (!o.length || v - o[o.length - 1] > .5) o.push(v); }); return o; }
+  function axisPoly(R){ return R.every(function(Q){ for (var i = 0; i < Q.length; i++){ var a = Q[i], b = Q[(i + 1) % Q.length]; if (Math.abs(a[0] - b[0]) > .5 && Math.abs(a[1] - b[1]) > .5) return false; } return true; }); }
+
   function model(rd){
     var M = { rev: rd.rev, pid: rd.pid, fi: rd.fi || 0, mode: rd.mode, ch: rd.ch, box: rd.box, units: [], rooms: [], segs: [], blocks: [], col: [], doors: [], nodes: [], entry: null, warn: [], note: [], n: { walls: 0, ghosts: 0, ops: 0, things: 0, doors: 0 } };
     var OUT = (Array.isArray(rd.outline) && rd.outline.length >= 3) ? rd.outline : null;
     var UBZ = arr(rd.things).filter(function(t){ return t.list === "zones" && t.kind === "ub" && [t.x0, t.y0, t.x1, t.y1].every(fin); });
     function isUb(r){ return !!r && Array.isArray(r.poly) && r.poly.length >= 3 && (/浴|UB|ＵＢ|ユニットバス|バスルーム/i.test(r.disp || r.name || r.label || "") || UBZ.some(function(z){ return inPoly((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2, r.poly) && Math.abs((z.x1 - z.x0) * (z.y1 - z.y0)) >= Math.abs(polyArea(r.poly)) * .6; })); }   /* 浴室：壁と天井をパネルの見え方にする。部屋の名前か、浴室の区画が部屋の6割以上を占める時だけ（広い部屋の一部に浴室の区画がある時は、変えない） */
+    var DH = dhGet(), LV = [], RLV = Object.create(null);   /* LV＝高さの違う四角の範囲 [x0, y0, x1, y1, 高さ]／RLV＝部屋まるごとの高さ */
+    arr(rd.things).forEach(function(t){
+      if ((t.list !== "tatami" && t.list !== "zones") || t.state === "remove" || ![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
+      var rw0 = (t.raw && typeof t.raw === "object") ? t.raw : {}, dz = 0;
+      if ((t.list === "tatami" && t.kind === "flDoma") || (t.list === "zones" && t.kind === "doma")){ M.doma = 1; dz = -DH; }
+      else if (t.list === "tatami" && t.kind === "flAge") dz = clamp(Math.round(fin(rw0.h) ? rw0.h : 300), 0, 900);
+      if (dz) LV.push([Math.min(t.x0, t.x1), Math.min(t.y0, t.y1), Math.max(t.x0, t.x1), Math.max(t.y0, t.y1), dz]);
+    });
+    M.lv = LV; M.rlv = RLV; M.dh = DH;
     var roomBy = Object.create(null), wallBy = Object.create(null), facesBy = Object.create(null), used = Object.create(null);
     function unit(key, kind, d){ while (used[key]){ M.warn.push("同じ名前の部品：" + key); key += "~"; } used[key] = 1; M.units.push({ key: key, kind: kind, d: d, sig: kind + JSON.stringify(d) }); }
     function roomCh(id){ var r = id ? roomBy[id] : null; return (r && r.ch) || rd.ch; }
@@ -45187,6 +45212,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var holes = arr(r.holes).filter(function(h){ return Array.isArray(h) && h.length >= 3; }), fk = floorKind(r, rd.base), a = Math.abs(polyArea(r.poly));
       holes.forEach(function(h){ a -= Math.abs(polyArea(h)); });
       var d = { id: r.id, poly: r.poly, holes: holes, ch: r.ch || rd.ch, fk: fk, cf: isUb(r) ? "ubc" : (r.fin && r.fin.c === "none") ? "bare" : "ceil" };
+      if (fk === "flDoma"){ M.doma = 1; if (DH > 0) RLV[r.id] = -DH; }
+      var rxs = r.poly.map(function(p){ return p[0]; }), rys = r.poly.map(function(p){ return p[1]; }), rbb = [Math.min.apply(null, rxs), Math.min.apply(null, rys), Math.max.apply(null, rxs), Math.max.apply(null, rys)];
+      var rlv = LV.filter(function(q){ return q[0] < rbb[2] - 1 && q[2] > rbb[0] + 1 && q[1] < rbb[3] - 1 && q[3] > rbb[1] + 1; });
+      if (rlv.length) d.lv = rlv;
+      if (RLV[r.id]) d.dz = RLV[r.id];
       M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
       unit("r:" + r.id, "room", d);
     });
@@ -45230,9 +45260,23 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     function sideSegs(w, side){
       var out = arr(facesBy[w.id]).filter(function(f){ return f.side === side; }).sort(function(a, b){ return a.s0 - b.s0; }).map(function(f){
         var rm = f.room ? roomBy[f.room] : null, bare = !!(rm && rm.fin && rm.fin.w === "none"), inr = !!rm && !f.out && Array.isArray(rm.poly), ub = !f.out && isUb(rm);
-        return { s0: f.s0, s1: f.s1, q0: f.s0, q1: f.s1, room: f.room || null, m: f.out ? "ext" : ub ? "ubw" : bare ? "bare" : "cloth", ch: inr ? (rm.ch || rd.ch) : 0, c0: inr && isIn(rm, w, f.s0) ? 1 : 0, c1: inr && isIn(rm, w, f.s1) ? 1 : 0, tr: inr && !bare && !ub ? 1 : 0 };
+        var sgm = { s0: f.s0, s1: f.s1, q0: f.s0, q1: f.s1, room: f.room || null, m: f.out ? "ext" : ub ? "ubw" : bare ? "bare" : "cloth", ch: inr ? (rm.ch || rd.ch) : 0, c0: inr && isIn(rm, w, f.s0) ? 1 : 0, c1: inr && isIn(rm, w, f.s1) ? 1 : 0, tr: inr && !bare && !ub ? 1 : 0 };
+        if (inr && (LV.length || RLV[f.room])){   /* 床の高さがちがう所（CAD-687）：[始まり, 終わり, 高さ] */
+          var off = side * (w.th / 2 + 40), bp = [f.s0, f.s1], lr = [];
+          LV.forEach(function(q){ [[q[0], q[1]], [q[2], q[1]], [q[2], q[3]], [q[0], q[3]]].forEach(function(c){ var sc = (c[0] - w.a[0]) * w.ux + (c[1] - w.a[1]) * w.uy; if (sc > f.s0 + 1 && sc < f.s1 - 1) bp.push(sc); }); });
+          bp = uniq(bp);
+          for (var bi = 0; bi < bp.length - 1; bi++){
+            var sm2 = (bp[bi] + bp[bi + 1]) / 2, lz = lvOf(M, w.a[0] + w.ux * sm2 - w.uy * off, w.a[1] + w.uy * sm2 + w.ux * off);
+            if (!lz) continue;
+            if (lr.length && lr[lr.length - 1][2] === lz && Math.abs(lr[lr.length - 1][1] - bp[bi]) < .5) lr[lr.length - 1][1] = bp[bi + 1]; else lr.push([bp[bi], bp[bi + 1], lz]);
+          }
+          if (lr.length) sgm.lv = lr;
+        }
+        return sgm;
       });
       if (!out.length) out.push({ s0: 0, s1: w.len, q0: 0, q1: w.len, room: null, m: "cloth", ch: 0, c0: 0, c1: 0, tr: 0 });
+      if (out[0].lv && out[0].lv[0][0] <= out[0].q0 + 1) out[0].lv[0][0] = -1e7;
+      var olv = out[out.length - 1].lv; if (olv && olv[olv.length - 1][1] >= out[out.length - 1].q1 - 1) olv[olv.length - 1][1] = 1e7;
       out[0].s0 = -1e7; out[out.length - 1].s1 = 1e7;
       return out;
     }
@@ -45264,14 +45308,24 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         if (!gone && !t.ub) M.n.ops++;
         var id = t.id || ("sashes#" + t.i), cat = String(t.kind || ""), name = String(t.name || ""), raw = (t.raw && typeof t.raw === "object") ? t.raw : {}, ty = tyOf(cat, name), fl = t.flip || 0, ext = w.t === "e" ? 1 : 0, mid = (s0 + s1) / 2;
         var o = { id: id, cat: cat, s0: s0, s1: s1, z0: z0, z1: z1, flip: fl, gone: gone, ty: ty, c0: s0, c1: s1, w0: s0, w1: s1, n: t.ub ? t.ub : ((fl & 1) ? -nIn : nIn), pk: 0, walk: 0 };   /* c0・c1＝壁を抜く範囲／w0・w1＝歩いて通れる範囲 */
+        var v0 = z0, v1 = z1;   /* 立体での下端・上端（CAD-687：床の高さに合わせる）。図面が読む z0・z1 は今までどおり */
+        if (!gone && !t.ub && !low && ty !== "win" && (t.sill || 0) <= 1 && (LV.length || M.doma)){
+          var omx = w.a[0] + w.ux * mid, omy = w.a[1] + w.uy * mid, oof = w.th / 2 + 120, opx = omx - w.uy * oof, opy = omy + w.ux * oof, onx = omx + w.uy * oof, ony = omy - w.ux * oof;
+          var lp = roomAt(M, opx, opy) ? lvOf(M, opx, opy) : null, lm = roomAt(M, onx, ony) ? lvOf(M, onx, ony) : null;
+          var zb = (lp !== null && lm !== null) ? Math.max(lp, lm) : lp !== null ? lp : lm !== null ? lm : 0;
+          if (zb < 0){ v0 = zb; v1 = Math.min(top, zb + t.h); } else if (zb > 0) v0 = Math.min(zb, z1 - 600);
+          if (v0 !== z0 || v1 !== z1){ o.v0 = v0; o.v1 = v1; }
+          if (lp !== null && lp < v0 - 8) o.rp = lp;
+          if (lm !== null && lm < v0 - 8) o.rm = lm;
+        }
         (t.ub ? xop : ops).push(o);
         if (gone || ty === "win") return;
         var kata = cat === "室内ドア" && ty === "hiki";
         if (kata){ o.pk = (fl & 2) ? 1 : -1; if (o.pk > 0) o.c0 = mid; else o.c1 = mid; o.w0 = o.c0; o.w1 = o.c1; }   /* 片引き戸：開口の半分だけ壁を抜く。残りの半分は戸袋 */
         else if (t.ub && ty === "hiki") o.pk = 1;                                                                   /* 浴室の引き戸：開口は全幅。扉は浴室の側の壁の面を走る */
         else if (ty === "chigai" || ty === "hiki") o.w1 = mid;                                                      /* 引違い：開くのは片側 */
-        o.walk = (!ext && z0 <= 250 && z1 - z0 >= 1700 && o.w1 - o.w0 >= 500) ? 1 : 0;                                /* 歩いて通れる開口（外へは出ない） */
-        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: z0, z1: z1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0 }); }
+        o.walk = (!ext && z0 <= 250 && v1 - v0 >= 1700 - Math.max(0, v0) && o.w1 - o.w0 >= 500) ? 1 : 0;                                /* 歩いて通れる開口（外へは出ない） */
+        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: v0, z1: v1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0 }); }
         M.doors.push({ id: id, ty: ty, x: w.a[0] + w.ux * (o.w0 + o.w1) / 2, y: w.a[1] + w.uy * (o.w0 + o.w1) / 2, ux: w.ux, uy: w.uy, half: w.th / 2, w: o.w1 - o.w0, nIn: nIn, walk: o.walk, ext: ext, entry: (ext && /玄関/.test(cat)) ? 1 : 0 });
       });
       M.n.walls++;
@@ -45298,6 +45352,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var lr = t.room ? roomBy[t.room] : null, rb = null;
         if (lr && Array.isArray(lr.poly) && lr.poly.length >= 3){ var lx = lr.poly.map(function(q){ return q[0]; }), ly = lr.poly.map(function(q){ return q[1]; }); rb = [Math.min.apply(null, lx), Math.min.apply(null, ly), Math.max.apply(null, lx), Math.max.apply(null, ly)]; }
         d = { id: id, list: "lights", k: t.kind, state: t.state, x: t.x, y: t.y, len: t.len, dir: t.dir, ch: roomCh(t.room), rb: rb };
+        var lfz = lvOf(M, t.x, t.y); if (lfz) d.fz = lfz;
       } else if (t.list === "tenken"){
         if (!fin(t.x) || !fin(t.y)) return;
         var hx = t.ext ? t.ext[0] : (t.w || 600) / 2, hy = t.ext ? t.ext[1] : (t.d || t.w || 600) / 2;
@@ -45305,15 +45360,46 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var rw = (t.raw && typeof t.raw === "object") ? t.raw : {}, dr2 = String(t.dir || "n"), ro = { n: 0, e: 1, s: 2, w: 3 }[dr2] || 0, fux = [1, 0, -1, 0][ro], fuy = [0, 1, 0, -1][ro], fw = (fin(t.w) && t.w > 0) ? t.w : hx * 2, fd = (fin(t.d) && t.d > 0) ? t.d : hy * 2, bwn = 0;
         if (t.kind === "kitchen") [-fw / 3, 0, fw / 3].forEach(function(s){ var tt = (rw.fb ? 1 : -1) * (fd / 2 + 70); if (colD(M, t.x + fux * s - fuy * tt, t.y + fuy * s + fux * tt) < 40) bwn++; });   /* 奥のすぐ後ろが壁か（壁付けのキッチン） */
         d = { id: id, list: "tenken", k: t.kind, state: t.state, x: t.x, y: t.y, hx: hx, hy: hy, ch: roomCh(t.room), dir: dr2, w: fw, dd: fd, fb: rw.fb ? 1 : 0, lr: rw.lr ? 1 : 0, gs: String(rw.gs || ""), bw: bwn >= 2 ? 1 : 0 };
+        var tdz = lvOf(M, t.x, t.y); if (tdz) d.dz = tdz;   /* 土間や小上がりの上の器具は、その床の高さに置く */
         var tz = TKH[t.kind] || [0, 500]; if (t.state !== "remove" && tz[0] >= 0 && tz[0] < EYE && (tz[1] < 0 || tz[1] > 300)) M.blocks.push([t.x - hx - 120, t.y - hy - 120, t.x + hx + 120, t.y + hy + 120]);
       } else if (t.list === "tatami"){
         if (![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
-        d = { id: id, list: "tatami", k: t.kind, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };
+        var rw2 = (t.raw && typeof t.raw === "object") ? t.raw : {};
+        d = { id: id, list: "tatami", k: t.kind === "flAge" ? (FLOORS[rw2.fin] ? rw2.fin : "tatami") : t.kind, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };   /* 小上がりは、上の仕上げ（畳・フローリングなど）で張る */
+        var tz2 = lvOf(M, (t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2); if (tz2) d.z = tz2;
       } else if (t.list === "zones"){
         if (!ZK[t.kind] || ![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
         d = { id: id, list: "zones", k: ZK[t.kind], x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };
+        var zz2 = lvOf(M, (t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2); if (zz2) d.z = zz2;
       }
       if (d){ M.n.things++; unit((t.list === "fx" ? "f:" : "t:") + id, "thing", d); }
+    });
+    if (LV.length || M.doma) M.units.forEach(function(u){
+      if (u.kind !== "room") return;
+      var ob = [];
+      function wallAt(x, y){ return solid.some(function(w){ if (w.form === "tare") return false; var dx = x - w.a[0], dy = y - w.a[1], s = dx * w.ux + dy * w.uy; return s > -80 && s < w.len + 80 && Math.abs(dx * w.uy - dy * w.ux) < 60; }); }
+      [u.d.poly].concat(u.d.holes).forEach(function(Q0, qi){
+        var Q = ring(Q0), n = Q.length, sg = (polyArea(Q) > 0 ? 1 : -1) * (qi === 0 ? 1 : -1);
+        for (var i = 0; i < n; i++){
+          var a = Q[i], b = Q[(i + 1) % n], Ln = Math.hypot(b[0] - a[0], b[1] - a[1]); if (Ln < 40) continue;
+          var ux = (b[0] - a[0]) / Ln, uy = (b[1] - a[1]) / Ln, nx = -uy * sg, ny = ux * sg, st = 25, cur = null;   /* (nx,ny)＝部屋の内向き */
+          var flush = function(){ if (!cur) return; var sA = cur[0], sB = cur[1]; ob.push(sg < 0 ? [Math.round(a[0] + ux * sA), Math.round(a[1] + uy * sA), ux, uy, Math.round(sB - sA), cur[2], cur[3]] : [Math.round(a[0] + ux * sB), Math.round(a[1] + uy * sB), -ux, -uy, Math.round(sB - sA), cur[2], cur[3]]); cur = null; };
+          for (var s = st / 2; s < Ln; s += st){
+            var px = a[0] + ux * s, py = a[1] + uy * s, ox = px - nx * 30, oy = py - ny * 30, q = roomAt(M, ox, oy), hit = null;
+            if (q && q.id !== u.d.id && !wallAt(px, py)){ var mine = lvOf(M, px + nx * 30, py + ny * 30), nb = lvOf(M, ox, oy); if (nb < mine - 8) hit = [nb, mine]; }
+            if (hit && cur && cur[2] === hit[0] && cur[3] === hit[1]) cur[1] = s + st / 2;
+            else { flush(); if (hit) cur = [s - st / 2, s + st / 2, hit[0], hit[1]]; }
+          }
+          flush();
+        }
+      });
+      if (ob.length) u.d.ob = ob;
+      if (u.d.lv){   /* 部屋に立つ壁の線（芯）。その下になる高さの変わり目には、框を付けない */
+        var px = u.d.poly.map(function(q){ return q[0]; }), py = u.d.poly.map(function(q){ return q[1]; }), bb = [Math.min.apply(null, px) - 10, Math.min.apply(null, py) - 10, Math.max.apply(null, px) + 10, Math.max.apply(null, py) + 10];
+        var wl = solid.filter(function(w){ return w.form !== "tare" && Math.max(w.a[0], w.b[0]) >= bb[0] && Math.min(w.a[0], w.b[0]) <= bb[2] && Math.max(w.a[1], w.b[1]) >= bb[1] && Math.min(w.a[1], w.b[1]) <= bb[3]; }).map(function(w){ return [Math.round(w.a[0]), Math.round(w.a[1]), Math.round(w.b[0]), Math.round(w.b[1])]; });
+        if (wl.length) u.d.wl = wl;
+      }
+      if (u.d.ob || u.d.wl) u.sig = u.kind + JSON.stringify(u.d);
     });
     M.nodes = mkNodes(M);
     return M;
@@ -45335,7 +45421,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* 足あとの場所：各ドアの手前と向こう／部屋の真ん中／広い部屋は 1.7m 以上あけて何か所か。決まりで出るので、毎回同じ */
   function mkNodes(M){
     var N = [], isCl = Object.create(null);
-    function add(x, y, room, kind, yaw){ N.push({ x: Math.round(x), y: Math.round(y), room: room, kind: kind, yaw: yaw, pair: -1 }); return N.length - 1; }
+    function add(x, y, room, kind, yaw){ N.push({ x: Math.round(x), y: Math.round(y), room: room, kind: kind, yaw: yaw, pair: -1, lv: lvOf(M, Math.round(x), Math.round(y)) }); return N.length - 1; }
     M.rooms.forEach(function(r){ isCl[r.id] = nameMat(r.name) === "Ply"; });   /* 収納の中には足あとを置かない */
     M.doors.forEach(function(d){
       var nx = -d.uy, ny = d.ux;
@@ -45404,6 +45490,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     tatami: [256, .25, function(g, n, r){ g.fillStyle = "#c9c98f"; g.fillRect(0, 0, n, n); for (var i = 0; i < n; i += 2){ g.fillStyle = "rgba(90,95,40," + (.08 + r() * .1).toFixed(3) + ")"; g.fillRect(i, 0, 1, n); } speck(g, n, r, 1800, .05); }],
     cf: [256, .6, function(g, n, r){ g.fillStyle = "#d8d5cd"; g.fillRect(0, 0, n, n); speck(g, n, r, 4200, .05); grid(g, n, 128, "rgba(110,105,95,.32)"); }],
     conc: [256, 1.2, function(g, n, r){ g.fillStyle = "#b6b4ad"; g.fillRect(0, 0, n, n); speck(g, n, r, 9000, .07); }],
+    kam: [512, 1.2, function(g, n, r){   /* 框の木目（長手＝横に流れる） */
+      g.fillStyle = "rgb(178,137,92)"; g.fillRect(0, 0, n, n);
+      for (var k = 0; k < 6; k++){ g.fillStyle = "rgba(110,70,30,.06)"; g.fillRect(0, Math.floor(r() * n), n, 6 + Math.floor(r() * 16)); }
+      for (var i = 0; i < 300; i++){ var y = Math.floor(r() * n), x = Math.floor(r() * n), l = Math.floor(n * (.3 + r() * .7)); g.fillStyle = (r() < .6 ? "rgba(92,58,24," : "rgba(236,204,156,") + (.04 + r() * .09).toFixed(3) + ")"; g.fillRect(x, y, l, 1); if (x + l > n) g.fillRect(0, y, x + l - n, 1); }
+    }],
     carpet: [256, .5, function(g, n, r){ g.fillStyle = "#b9ac96"; g.fillRect(0, 0, n, n); speck(g, n, r, 14000, .09); }],
     tileS: [256, .4, function(g, n, r){ g.fillStyle = "#c7ccd0"; g.fillRect(0, 0, n, n); speck(g, n, r, 2600, .04); grid(g, n, 64, "rgba(90,96,102,.45)"); }],
     ubPanel: [256, .9, function(g, n, r){ g.fillStyle = "#ffffff"; g.fillRect(0, 0, n, n); speck(g, n, r, 1500, .02); g.fillStyle = "rgba(60,70,80,.25)"; g.fillRect(0, 0, 2, n); g.fillStyle = "rgba(255,255,255,.6)"; g.fillRect(2, 0, 1, n); }],
@@ -45425,7 +45516,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     porc: [0xfafafa, .25], cab: [0xece7dc, .6], wood: [0xffffff, .65, "ply"], tile: [0xffffff, .35, "tileS"], accent: [0x7d8a96, .95, "cloth"],
     shikkui: [0xf2eee4, 1], under: [0xd8c9a8, .9], mark: [0x8a9099, .7], base: [0xf2efe8, .55], crown: [0xf5f3ee, .8], cut: [0x3b4149, .95], ubd: [0xeef2f3, .3],
     seat: [0xece8de, .42], tub: [0xf4f6f7, .2], tubRim: [0xcfd9de, .3], tubIn: [0xe9f0f3, .15], sink: [0xaab0b5, .26, null, .85], ktop: [0xe2e4e6, .3], hob: [0x16181b, .1, null, .2], hobRing: [0x767c84, .4],
-    cabF: [0xf4f1ea, .38], kick: [0x3b3e42, .7], kpanel: [0xf3f3f0, .22], mirror: [0xc4d6e2, .05], drain: [0x50565c, .4], ubw: [0xdde2e4, .3, "ubPanel"], ubc: [0xf2f3f3, .4]   /* 4つ目＝金属らしさ（「きれい」の時だけ効かせる） */
+    cabF: [0xf4f1ea, .38], kick: [0x3b3e42, .7], kamachi: [0xffffff, .38, "kam"], keko: [0xf1eadd, .5, "kam"], domaW: [0xdddbd4, .92, "conc"], kpanel: [0xf3f3f0, .22], mirror: [0xc4d6e2, .05], drain: [0x50565c, .4], ubw: [0xdde2e4, .3, "ubPanel"], ubc: [0xf2f3f3, .4]   /* 4つ目＝金属らしさ（「きれい」の時だけ効かせる） */
   };
   var HQM = { ao: 1, pool: 1, base: 1, crown: 1 };   /* 「きれい」の時だけ見せる材料 */
   /* 足あとの絵と、歩く先の輪 */
@@ -45521,6 +45612,60 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (ms[5]) acc.quad(ms[5], [fpt(fr, s0, t0, z0), fpt(fr, s1, t0, z0), fpt(fr, s1, t1, z0), fpt(fr, s0, t1, z0)], [0, -1, 0], uF, tag);
   }
 
+  /* 段の見切り（CAD-687）：框（上の床のふち。角に面を取る）と、蹴込み（框の下の板）。
+     fr＝境目の線（s＝線の向き、＋t＝低い側）。zl＝下の床、zh＝上の床の高さ。段が 200 までなら框が段いっぱい、それより高い時は框 150 ＋ 蹴込み。
+     框の上面は、床の仕上げ（厚み3）より少し上。見込み 105、床のふちから 12 出る、面取り 7 */
+  function kamachi(acc, fr, s0, s1, zl, zh, tag, c0, c1){   /* c0・c1＝始まり・終わりが出隅か（框は出の分だけ伸ばして角をふさぎ、蹴込みは引っこみの分だけ縮める） */
+    var hh = zh - zl; if (!(hh > 8) || !(s1 - s0 > 1)) return;
+    var fh = hh <= 200 ? hh : 150, top = zh + 4.5, zb = zh - fh, D = 105, N = 12, B = 7, nf = [-fr.uy, 0, fr.ux], nv = [-fr.uy * .7071, .7071, fr.ux * .7071], k0 = s0 + (c0 ? 3 : 0), k1 = s1 - (c1 ? 3 : 0);
+    var u = function(s, v){ return [s * K, v * K]; };
+    s0 -= c0 ? N : 0; s1 += c1 ? N : 0;
+    acc.quad("kamachi", [fpt(fr, s0, -D, top), fpt(fr, s1, -D, top), fpt(fr, s1, N - B, top), fpt(fr, s0, N - B, top)], [0, 1, 0], [u(s0, -D), u(s1, -D), u(s1, N - B), u(s0, N - B)], tag);        /* 上面 */
+    acc.quad("kamachi", [fpt(fr, s0, N - B, top), fpt(fr, s1, N - B, top), fpt(fr, s1, N, top - B), fpt(fr, s0, N, top - B)], nv, [u(s0, N - B), u(s1, N - B), u(s1, N + 3), u(s0, N + 3)], tag);   /* 面取り */
+    acc.quad("kamachi", [fpt(fr, s0, N, zb), fpt(fr, s1, N, zb), fpt(fr, s1, N, top - B), fpt(fr, s0, N, top - B)], nf, [u(s0, zb), u(s1, zb), u(s1, top - B), u(s0, top - B)], tag);               /* 見付け（正面） */
+    [[s0, -1], [s1, 1]].forEach(function(e){ acc.quad("kamachi", [fpt(fr, e[0], -D, zb), fpt(fr, e[0], N, zb), fpt(fr, e[0], N, top - B), fpt(fr, e[0], -D, top)], [fr.ux * e[1], 0, fr.uy * e[1]], [u(-D, zb), u(N, zb), u(N, top - B), u(-D, top)], tag); });   /* 木口（両端） */
+    if (hh > fh){
+      acc.quad("kamachi", [fpt(fr, s0, -3, zb), fpt(fr, s1, -3, zb), fpt(fr, s1, N, zb), fpt(fr, s0, N, zb)], [0, -1, 0], [u(s0, -3), u(s1, -3), u(s1, N), u(s0, N)], tag);   /* 框の下端（蹴込みより出ている分） */
+      acc.quad("keko", [fpt(fr, k0, -3, zl), fpt(fr, k1, -3, zl), fpt(fr, k1, -3, zb), fpt(fr, k0, -3, zb)], nf, [u(k0, zl), u(k1, zl), u(k1, zb), u(k0, zb)], tag);        /* 蹴込み */
+    }
+  }
+  /* 高さのちがう床（CAD-687）：部屋をます目に割り、ますごとの高さで床を張る。高さの変わり目には框と蹴込み。壁ぎわの陰の帯も、その高さに敷く */
+  function floorGrid(acc, d, pts, holes, fm, tf){
+    var xs = [], ys = [], L = d.lv || [], i, j;
+    [pts].concat(holes).forEach(function(Q){ Q.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); });
+    var bx0 = Math.min.apply(null, xs), bx1 = Math.max.apply(null, xs), by0 = Math.min.apply(null, ys), by1 = Math.max.apply(null, ys);
+    L.forEach(function(q){ if (q[0] > bx0 && q[0] < bx1) xs.push(q[0]); if (q[2] > bx0 && q[2] < bx1) xs.push(q[2]); if (q[1] > by0 && q[1] < by1) ys.push(q[1]); if (q[3] > by0 && q[3] < by1) ys.push(q[3]); });
+    var WL = d.wl || [];
+    WL.forEach(function(w){ [w[0], w[2]].forEach(function(v){ if (v > bx0 && v < bx1) xs.push(v); }); [w[1], w[3]].forEach(function(v){ if (v > by0 && v < by1) ys.push(v); }); });
+    function underWall(x, y){ return WL.some(function(w){ return segD(x, y, w[0], w[1], w[2], w[3]) < 40; }); }
+    xs = uniq(xs); ys = uniq(ys);
+    var nx = xs.length - 1, ny = ys.length - 1, C = [], E = [];
+    function lvP(x, y){ if (!inPoly(x, y, pts) || holes.some(function(h){ return inPoly(x, y, h); })) return null; for (var m = L.length - 1; m >= 0; m--){ var q = L[m]; if (x > q[0] && x < q[2] && y > q[1] && y < q[3]) return q[4]; } return d.dz || 0; }
+    function at(a, b){ return (a < 0 || b < 0 || a >= nx || b >= ny) ? null : C[b * nx + a]; }
+    for (j = 0; j < ny; j++) for (i = 0; i < nx; i++) C.push(lvP((xs[i] + xs[i + 1]) / 2, (ys[j] + ys[j + 1]) / 2));
+    for (j = 0; j < ny; j++) for (i = 0; i < nx; i++){
+      var lv = C[j * nx + i]; if (lv === null) continue;
+      var x0 = xs[i], x1 = xs[i + 1], y0 = ys[j], y1 = ys[j + 1], z = lv * K;
+      acc.quad(fm, [[x0 * K, z, y0 * K], [x1 * K, z, y0 * K], [x1 * K, z, y1 * K], [x0 * K, z, y1 * K]], [0, 1, 0], [[x0 * K, y0 * K], [x1 * K, y0 * K], [x1 * K, y1 * K], [x0 * K, y1 * K]], tf);
+      [[i - 1, j, 0, x0, y0, y1, -1], [i + 1, j, 0, x1, y0, y1, 1], [i, j - 1, 1, y0, x0, x1, -1], [i, j + 1, 1, y1, x0, x1, 1]].forEach(function(e){   /* [となりのます, 縦0・横1, 線の位置, 始まり, 終わり, となりの向き] */
+        var nb = at(e[0], e[1]);
+        if (nb === null){   /* 部屋のふち：陰の帯 */
+          var c0 = e[3] - e[6] * 62, c1 = e[3] - e[6] * 300, q = e[2] === 0 ? [[c0, e[4]], [c0, e[5]], [c1, e[5]], [c1, e[4]]] : [[e[4], c0], [e[5], c0], [e[5], c1], [e[4], c1]];
+          acc.quad("ao", q.map(function(p){ return [p[0] * K, z + .004, p[1] * K]; }), [0, 1, 0], [[0, 0], [0, 0], [0, 1], [0, 1]], null);
+        } else if (nb < lv - 8 && !(e[2] === 0 ? underWall(e[3], (e[4] + e[5]) / 2) : underWall((e[4] + e[5]) / 2, e[3]))) E.push([e[2], e[3], e[4], e[5], e[6], nb, lv]);
+      });
+    }
+    E.sort(function(p, q){ return p[0] - q[0] || p[1] - q[1] || p[4] - q[4] || p[5] - q[5] || p[6] - q[6] || p[2] - q[2]; });
+    var runs = [];
+    E.forEach(function(e){ var p = runs[runs.length - 1]; if (p && p[0] === e[0] && p[1] === e[1] && p[4] === e[4] && p[5] === e[5] && p[6] === e[6] && Math.abs(p[3] - e[2]) < .5) p[3] = e[3]; else runs.push(e.slice()); });
+    runs.forEach(function(e){   /* 変わり目ごとに框。出隅（上の床がそこで終わる角）では、框の出の分だけ伸ばして角をふさぐ */
+      var a = e[2], b = e[3], hi = e[1] - e[4] * 6, ext = function(c){ var v = e[0] === 0 ? lvP(hi, c) : lvP(c, hi); return (v === null || v < e[6] - 8) ? 1 : 0; }, ea = ext(a - 6), eb = ext(b + 6), rev = (e[0] === 0) === (e[4] > 0), fr;   /* rev＝線の向きが、数の大きい方から小さい方へ */
+      if (e[0] === 0) fr = rev ? { a: [e[1], b], ux: 0, uy: -1 } : { a: [e[1], a], ux: 0, uy: 1 };
+      else fr = rev ? { a: [b, e[1]], ux: -1, uy: 0 } : { a: [a, e[1]], ux: 1, uy: 0 };
+      kamachi(acc, fr, 0, b - a, e[5], e[6], { k: "step", room: d.id }, rev ? eb : ea, rev ? ea : eb);
+    });
+  }
+
   /* 開口の枠と窓。扉そのものは、開く動きのために別の部品（buildDoor）で作る */
   function fitting(acc, fr, d, o){
     var h = d.th / 2, tag = { k: "sash", id: o.id }, s0 = o.s0, s1 = o.s1, z0 = o.z0, z1 = o.z1, w = s1 - s0, mid = (s0 + s1) / 2, f;
@@ -45547,18 +45692,24 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var g = sg[i], a = Math.max(s0, g.s0), b = Math.min(s1, g.s1);
         if (!(b - a > .5)) continue;
         acc.quad(g.m, [fpt(fr, a, t, z0), fpt(fr, b, t, z0), fpt(fr, b, t, z1), fpt(fr, a, t, z1)], n, [[a * K, z0 * K], [b * K, z0 * K], [b * K, z1 * K], [a * K, z1 * K]], { k: "face", wall: d.id, side: sd, room: g.room });
+        var runs = [[a, b, 0]];   /* 床の高さで区切る（CAD-687）：[始まり, 終わり, 床の高さ] */
+        if (g.lv && z0 <= .5){ runs = []; var at2 = a; g.lv.forEach(function(q){ var ra = Math.max(a, q[0]), rb = Math.min(b, q[1]); if (!(rb - ra > .5)) return; if (ra - at2 > .5) runs.push([at2, ra, 0]); runs.push([ra, rb, q[2]]); at2 = rb; }); if (b - at2 > .5) runs.push([at2, b, 0]); }
+        runs.forEach(function(q){ if (q[2] < 0) fbox(acc, fr, q[0], q[1], sd > 0 ? t : t - 9, sd > 0 ? t + 9 : t, q[2], 0, "domaW", { k: "face", wall: d.id, side: sd, room: g.room, low: 1 }); });   /* 土間の立ち上がり（壁の足元。巾木と同じ出） */
         if (!g.ch) continue;
         var tt = t + sd * 1.2, zc = Math.min(z1, g.ch), zf = Math.max(z0, 0);
         var ao = function(a2, b2, za, zb, va, vb, alongS){
           if (!(b2 - a2 > .5) || !(zb - za > .5)) return;
           acc.quad("ao", [fpt(fr, a2, tt, za), fpt(fr, b2, tt, za), fpt(fr, b2, tt, zb), fpt(fr, a2, tt, zb)], n, alongS ? [[0, va], [0, vb], [0, vb], [0, va]] : [[0, va], [0, va], [0, vb], [0, vb]], null);
         };
-        ao(a, b, zf, Math.min(zc, RB), zf / RB, Math.min(zc, RB) / RB, false);                                              /* 床ぎわ */
+        runs.forEach(function(q){                                                                                                 /* 床ぎわ */
+          if (q[2] < 0){ if (z0 <= .5){ var tb = t + sd * 10.2; acc.quad("ao", [fpt(fr, q[0], tb, q[2]), fpt(fr, q[1], tb, q[2]), fpt(fr, q[1], tb, 0), fpt(fr, q[0], tb, 0)], n, [[0, 0], [0, 0], [0, -q[2] / RB], [0, -q[2] / RB]], null); } return; }
+          var zq = Math.max(zf, q[2]), zr = Math.min(zc, q[2] + RB); ao(q[0], q[1], zq, zr, (zq - q[2]) / RB, (zr - q[2]) / RB, false);
+        });
         ao(a, b, Math.max(zf, g.ch - RT), zc, (g.ch - Math.max(zf, g.ch - RT)) / RT, (g.ch - zc) / RT, false);              /* 天井ぎわ */
         if (g.c0){ var e0 = g.q0 + CO, a2 = Math.max(a, e0), b2 = Math.min(b, e0 + RC); ao(a2, b2, zf, zc, (a2 - e0) / RC, (b2 - e0) / RC, true); }     /* 入隅 */
         if (g.c1){ var e1 = g.q1 - CO, a3 = Math.max(a, e1 - RC), b3 = Math.min(b, e1); ao(a3, b3, zf, zc, (e1 - a3) / RC, (e1 - b3) / RC, true); }
         if (!g.tr) continue;
-        if (z0 <= .5) fbox(acc, fr, a, b, sd > 0 ? t : t - 9, sd > 0 ? t + 9 : t, 0, 60, "base", null);                                          /* 巾木 */
+        if (z0 <= .5) runs.forEach(function(q){ if (q[2] >= 0) fbox(acc, fr, q[0], q[1], sd > 0 ? t : t - 9, sd > 0 ? t + 9 : t, q[2], q[2] + 60, "base", null); });   /* 巾木（小上がりの上は、その床から） */
         if (z1 >= g.ch - .5 && z0 < g.ch - 22) fbox(acc, fr, a, b, sd > 0 ? t : t - 14, sd > 0 ? t + 14 : t, g.ch - 22, g.ch, "crown", null);   /* 廻り縁 */
       }
     }
@@ -45568,7 +45719,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       fbox(acc, fr, s0, s1, -h, h, z0, z1, [null, null, endL ? "cloth" : null, endR ? "cloth" : null, top || null, bot ? "cap" : null], { k: "edge", wall: d.id });
     }
     /* 開口の左右の端で壁を縦に区切り、区切りごとに「開口でない高さ」だけ壁を立てる（上下に並ぶ窓もそのまま抜ける） */
-    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: o.z0, z1: o.z1 }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
+    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: fin(o.v0) ? o.v0 : o.z0, z1: fin(o.v1) ? o.v1 : o.z1, rp: o.rp, rm: o.rm }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
     carve.forEach(function(o){ xs.push(o.s0, o.s1); });
     xs = xs.filter(function(x){ return x >= sA - .01 && x <= sB + .01; }).sort(function(a, b){ return a - b; });
     function open2(x, za, zb, right){ return carve.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
@@ -45582,6 +45733,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       }
     }
     carve.forEach(function(o){ fitting(acc, fr, d, o); });
+    carve.forEach(function(o){   /* 床の高さがちがう出入口（CAD-687）：低い側に、框と蹴込み */
+      if (fin(o.rp)) kamachi(acc, { a: [fr.a[0] - fr.uy * h, fr.a[1] + fr.ux * h], ux: fr.ux, uy: fr.uy }, o.s0, o.s1, o.rp, o.z0, { k: "step", id: o.id });
+      if (fin(o.rm)) kamachi(acc, { a: [fr.a[0] + fr.ux * o.s1 + fr.uy * h, fr.a[1] + fr.uy * o.s1 - fr.ux * h], ux: -fr.ux, uy: -fr.uy }, 0, o.s1 - o.s0, o.rm, o.z0, { k: "step", id: o.id });
+    });
     d.ops.forEach(function(o){   /* 撤去する建具：開口は抜かず、両側に赤い印 */
       if (!o.gone) return; var tg = { k: "gone", id: o.id };
       fbox(acc, fr, o.s0, o.s1, h + 1, h + 3, o.z0, o.z1, ["ghost", null, null, null, null, null], tg);
@@ -45596,9 +45751,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     holes.forEach(function(hh){ all = all.concat(hh); });
     function v2(p){ return new T.Vector2(p[0], p[1]); }
     var tris = T.ShapeUtils.triangulateShape(pts.map(v2), holes.map(function(hh){ return hh.map(v2); }));
+    var lvg = !!(d.lv || d.dz) && axisPoly([pts].concat(holes)), z00 = (!lvg && d.dz) ? d.dz * K : 0;   /* lvg＝高さのちがう床を、ます目で張る（CAD-687）。ななめの辺がある部屋は、部屋まるごとの高さだけ */
+    if (lvg) floorGrid(acc, d, pts, holes, fm, tf);
+    if (d.ob) d.ob.forEach(function(e){ kamachi(acc, { a: [e[0], e[1]], ux: e[2], uy: e[3] }, 0, e[4], e[5], e[6], { k: "step", room: d.id }); });
     tris.forEach(function(t){
       var a = all[t[0]], b = all[t[1]], c = all[t[2]], ua = [a[0] * K, a[1] * K], ub = [b[0] * K, b[1] * K], uc = [c[0] * K, c[1] * K];
-      acc.tri(fm, [ua[0], 0, ua[1]], [ub[0], 0, ub[1]], [uc[0], 0, uc[1]], [0, 1, 0], ua, ub, uc, tf);
+      if (!lvg) acc.tri(fm, [ua[0], z00, ua[1]], [ub[0], z00, ub[1]], [uc[0], z00, uc[1]], [0, 1, 0], ua, ub, uc, tf);
       accC.tri(d.cf, [ua[0], y1, ua[1]], [ub[0], y1, ub[1]], [uc[0], y1, uc[1]], [0, -1, 0], ua, ub, uc, tc);
     });
     [pts].concat(holes).forEach(function(Q, qi){   /* 壁ぎわの陰の帯（床と天井） */
@@ -45606,7 +45764,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       for (var i = 0; i < n; i++){
         var a = Q[i], b = Q[(i + 1) % n], dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy); if (L < 1) continue;
         var nx = -dy / L * sg, ny = dx / L * sg, q = [[a[0] + nx * 62, a[1] + ny * 62], [b[0] + nx * 62, b[1] + ny * 62], [b[0] + nx * 300, b[1] + ny * 300], [a[0] + nx * 300, a[1] + ny * 300]], uvq = [[0, 0], [0, 0], [0, 1], [0, 1]];
-        acc.quad("ao", q.map(function(p){ return [p[0] * K, .004, p[1] * K]; }), [0, 1, 0], uvq, null);
+        if (!lvg) acc.quad("ao", q.map(function(p){ return [p[0] * K, z00 + .004, p[1] * K]; }), [0, 1, 0], uvq, null);
         accC.quad("ao", q.map(function(p){ return [p[0] * K, y1 - .0015, p[1] * K]; }), [0, -1, 0], uvq, null);
       }
     });
@@ -45801,7 +45959,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var TKH = { kitchen: [0, 850], senmen: [0, 800], wc: [0, 420], bath: [0, 520], tearai: [650, 820], geta: [0, 900], senpan: [0, 60], makura: [1820, 1845], chudan: [850, 875], pillar: [0, -1], counter: [700, 735], stair: [0, 200], floor: [0, 6], yukaten: [0, 6], yukashu: [0, 6], dansa: [0, 6], ceil: [-1, -1], acout: [-1, -1] };
   var TKM = { kitchen: "cab", senmen: "cab", wc: "porc", bath: "porc", tearai: "porc", geta: "cab", senpan: "porc", makura: "wood", chudan: "wood", pillar: "wood", counter: "wood", stair: "wood" };
   function buildThing(d){
-    var acc = new Acc(), tag = { k: "thing", id: d.id, list: d.list }, gh = d.state === "remove";
+    var acc = new Acc(), tag = { k: "thing", id: d.id, list: d.list }, gh = d.state === "remove", pz6 = (d.fz || 0) * K + .006, oz = d.z || 0;
     if (d.list === "fx"){
       var fr = d, h = d.th / 2, sd = d.side, u = d.u, z = d.z || 0, L = d.wlen, top = d.top, k = d.k;
       var on = function(s0, s1, z0, z1, dep, mk){ fbox(acc, fr, s0, s1, sd > 0 ? h : -h - dep, sd > 0 ? h + dep : -h, Math.max(0, z0), Math.min(top, z1), (gh || mk === "ghost") ? "ghost" : mk, tag); };
@@ -45824,7 +45982,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } else if (d.list === "lights"){
       if (!gh && d.k !== "rail" && d.rb){   /* 光の輪（部屋の中だけ） */
         var R2 = d.k === "ceil" ? 1500 : 800, px0 = Math.max(d.x - R2, d.rb[0] + 70), px1 = Math.min(d.x + R2, d.rb[2] - 70), py0 = Math.max(d.y - R2, d.rb[1] + 70), py1 = Math.min(d.y + R2, d.rb[3] - 70), uu = function(v, c){ return (v - c + R2) / (2 * R2); };
-        if (px1 - px0 > 50 && py1 - py0 > 50) acc.quad("pool", [[px0 * K, .006, py0 * K], [px1 * K, .006, py0 * K], [px1 * K, .006, py1 * K], [px0 * K, .006, py1 * K]], [0, 1, 0], [[uu(px0, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py1, d.y)], [uu(px0, d.x), uu(py1, d.y)]], null);
+        if (px1 - px0 > 50 && py1 - py0 > 50) acc.quad("pool", [[px0 * K, pz6, py0 * K], [px1 * K, pz6, py0 * K], [px1 * K, pz6, py1 * K], [px0 * K, pz6, py1 * K]], [0, 1, 0], [[uu(px0, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py0, d.y)], [uu(px1, d.x), uu(py1, d.y)], [uu(px0, d.x), uu(py1, d.y)]], null);
       }
       if (d.k === "rail"){ var L2 = (d.len || 1500) / 2, hz = d.dir !== "v"; fbox(acc, FR0, d.x - (hz ? L2 : 17), d.x + (hz ? L2 : 17), d.y - (hz ? 17 : L2), d.y + (hz ? 17 : L2), d.ch - 30, d.ch - 1, gh ? "ghost" : "mark", tag); }
       else {
@@ -45841,9 +45999,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (gh || !fixture(acc, d, tag)) fbox(acc, FR0, d.x - d.hx, d.x + d.hx, d.y - d.hy, d.y + d.hy, z0, zt, gh ? "ghost" : (TKM[d.k] || "mark"), tag);   /* 形の決まっていない物と、撤去する物は箱 */
     } else {
       var fk = FLOORS[d.k] ? d.k : "floorFin";
-      fbox(acc, FR0, Math.min(d.x0, d.x1), Math.max(d.x0, d.x1), Math.min(d.y0, d.y1), Math.max(d.y0, d.y1), 0, d.list === "zones" ? 2 : 3, [null, null, null, null, "fl:" + fk, null], { k: "floor", id: d.id, list: d.list });
+      fbox(acc, FR0, Math.min(d.x0, d.x1), Math.max(d.x0, d.x1), Math.min(d.y0, d.y1), Math.max(d.y0, d.y1), oz, oz + (d.list === "zones" ? 2 : 3), [null, null, null, null, "fl:" + fk, null], { k: "floor", id: d.id, list: d.list });
     }
-    return acc.mesh();
+    var gm = acc.mesh(); if (gm && d.dz) gm.position.y = d.dz * K;   /* 土間や小上がりの上の器具（CAD-687） */
+    return gm;
   }
   function build(u){ return u.kind === "room" ? buildRoom(u.d) : u.kind === "wall" ? buildWall(u.d) : u.kind === "door" ? buildDoor(u.d) : buildThing(u.d); }
 
@@ -45952,10 +46111,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (CTL === "stick") s.appendChild(seg("向きの丸", [[1, "出す"], [0, "しまう"]], SHOWR ? 1 : 0, function(v){ SHOWR = !!v; keep("jr", v ? 1 : 0); joyShow(); }));
     s.appendChild(seg("足あと", [[1, "出す"], [0, "消す"]], SHOWF ? 1 : 0, function(v){ SHOWF = !!v; keep("ft", v ? 1 : 0); footBuild(); ask(); }));
     s.appendChild(seg("画質", [["hq", "きれい"], ["lt", "軽い"]], QUAL, function(v){ setQual(v, true); }));
+    if (MODEL && MODEL.doma) s.appendChild(seg("土間の段", [[0, "なし"], [110, "110"], [150, "150"], [180, "180"], [300, "300"]], dhGet(), setDh));
     if (hasGhost()) s.appendChild(seg("撤去の印", [[1, "入"], [0, "切"]], mat("ghost").visible ? 1 : 0, function(v){ mat("ghost").visible = !!v; ask(); }));
     s.appendChild(el("div", "font-size:12px;line-height:1.5;color:var(--sub,#5B6673)", CTL === "stick" ? "左の丸で歩く、右の丸か画面をなぞって見回します。足あとと小さい図面も使えます。" : "床の足あとをタップすると、そこへ歩きます。画面をなぞると見回せます。"));
     var sp = speedText(); if (sp) s.appendChild(el("div", "font-size:11px;color:var(--sub,#5B6673);font-variant-numeric:tabular-nums", sp));
   }
+  function setDh(v){ if (!fin(v) || v < 0 || v > 600) return dhGet(); keep("dh", Math.round(v)); var r = sync(); if (r.ok && !r.empty) afterSync(); ask(); return dhGet(); }   /* 土間の下がり（mm）を替える */
   function sheetShow(on){ if (!V) return; if (on){ sheetDraw(); V.sheet.style.display = "flex"; } else V.sheet.style.display = "none"; }
   function setCtl(v){ CTL = v === "stick" ? "stick" : "foot"; keep("ctl", CTL); joyShow(); return CTL; }
   function chips(){
@@ -45990,7 +46151,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      LIT＝［空の明るさ, 影つきの日ざし, 影を作らない日ざし］。lt＝軽い（今までと同じ）／eye＝きれい・目線／top＝きれい・上から（天井が無いので日ざしを弱める） */
   var LIT = { lt: [2.5, 1.1, 0], eye: [2.1, 1.8, .9], top: [1.8, 1, .7] }, EXPO = 1.12, POOLO = .14;
   /* つやの映り込みの強さ（材料ごと）。床と壁は弱く、陶器・鏡・金物は強く */
-  var ENVI = { _: .22, _floor: .25, porc: .75, seat: .5, tub: .5, tubRim: .5, tubIn: .45, sink: 1, ktop: .55, hob: .35, kpanel: .55, mirror: 1.3, ubw: .25, ubc: .25, steel: .35, alu: .6, glass: .7, water: .4, cabF: .35, plate: .4, doorE: .4, ubd: .5 };
+  var ENVI = { _: .22, _floor: .25, kamachi: .34, porc: .75, seat: .5, tub: .5, tubRim: .5, tubIn: .45, sink: 1, ktop: .55, hob: .35, kpanel: .55, mirror: 1.3, ubw: .25, ubc: .25, steel: .35, alu: .6, glass: .7, water: .4, cabF: .35, plate: .4, doorE: .4, ubd: .5 };
   var ENVC = [[0, "#e4e2dd"], [.44, "#dedbd4"], [.5, "#d6d2ca"], [.58, "#b9b2a4"], [1, "#8f8573"]];   /* 映る絵：上＝天井、真ん中＝壁、下＝床（部屋の中らしい明るさ） */
   function lightSet(){
     if (!sun || !hemi) return;
@@ -46070,10 +46231,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function pose(){
     if (VIEW === "top" && TV){ var cp = Math.cos(TV.pitch); return { p: [TV.cx + TV.dist * cp * Math.sin(TV.yaw), TV.dist * Math.sin(TV.pitch) + 1, TV.cz + TV.dist * cp * Math.cos(TV.yaw)], q: [TV.cx, 1, TV.cz], fov: TV.fov }; }
-    var c = Math.cos(fp.p); return { p: [fp.x, fp.y, fp.z], q: [fp.x + Math.sin(fp.yaw) * c, fp.y + Math.sin(fp.p), fp.z - Math.cos(fp.yaw) * c], fov: fp.fov };
+    var c = Math.cos(fp.p), ey = fp.y + LVY * K; return { p: [fp.x, ey, fp.z], q: [fp.x + Math.sin(fp.yaw) * c, ey + Math.sin(fp.p), fp.z - Math.cos(fp.yaw) * c], fov: fp.fov };
   }
   function place(){
     if (!fp) return;
+    var lt = MODEL ? lvOf(MODEL, fp.x / K, fp.z / K) : 0, tn = performance.now(), ld = Math.min(.1, (tn - LVT) / 1000); LVT = tn;   /* 目の高さを、足もとの床の高さに合わせる（CAD-687）。歩いている間は、なめらかに */
+    if (!isMoving || Math.abs(lt - LVY) < 1.5) LVY = lt; else { LVY += (lt - LVY) * Math.min(1, ld * 9); ask(); }
     var ps = pose(), i;
     if (POSE){ var t = POSE.t < 0 ? 0 : POSE.t > 1 ? 1 : POSE.t, e = t * t * (3 - 2 * t), a = POSE.a, o = { p: [], q: [], fov: a.fov + (ps.fov - a.fov) * e }; for (i = 0; i < 3; i++){ o.p[i] = a.p[i] + (ps.p[i] - a.p[i]) * e; o.q[i] = a.q[i] + (ps.q[i] - a.q[i]) * e; } ps = o; }
     cam.position.set(ps.p[0], ps.p[1], ps.p[2]); cam.lookAt(ps.q[0], ps.q[1], ps.q[2]);
@@ -46154,10 +46317,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var ray = new T.Raycaster(); ray.setFromCamera(new T.Vector2(nx, ny), cam);
     var hits = ray.intersectObjects(root.children, true), hit = null, i, tg = null;
     for (i = 0; i < hits.length; i++){ tg = (hits[i].object.userData.tags || [])[hits[i].faceIndex] || null; if (!tg || tg.k === "ghost" || tg.k === "gone" || (VIEW === "top" && tg.k === "ceil")) continue; hit = hits[i]; break; }
-    var o = ray.ray.origin, d = ray.ray.direction, t = d.y < -1e-4 ? (.009 - o.y) / d.y : -1, x, y, best = -1, bd = 1e9;
-    if (SHOWF && t > 0 && t <= (hit ? hit.distance : Infinity) + .04){   /* 床が見えている点：近くの足あとへ（手前に壁や物がある時は拾わない） */
-      x = (o.x + d.x * t) / K; y = (o.z + d.z * t) / K;
-      NODES.forEach(function(nd, k){ var dd = Math.hypot(nd.x - x, nd.y - y); if (dd < bd){ bd = dd; best = k; } });
+    var o = ray.ray.origin, d = ray.ray.direction, t = -1, x, y, best = -1, bd = 1e9, tl = Object.create(null);
+    if (SHOWF && d.y < -1e-4){   /* 床が見えている点：近くの足あとへ（手前に壁や物がある時は拾わない）。足あとの床の高さごとに、指の先の床の点を出す（CAD-687） */
+      NODES.forEach(function(nd, k){
+        var L = nd.lv || 0, tq = tl[L]; if (tq === undefined) tq = tl[L] = (L * K + .009 - o.y) / d.y;
+        if (!(tq > 0) || tq > (hit ? hit.distance : Infinity) + .04) return;
+        var dd = Math.hypot(nd.x - (o.x + d.x * tq) / K, nd.y - (o.z + d.z * tq) / K); if (dd < bd){ bd = dd; best = k; t = tq; }
+      });
       if (best >= 0 && bd <= (VIEW === "top" ? 700 : clamp(t / K * .17, 340, 640))){ walkTo(best); return; }   /* 遠い足あとは、少し広めに拾う */
     }
     if (VIEW === "top" && hit){   /* 上から：触った部屋へ降りる */
@@ -46370,7 +46536,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     NODES.forEach(function(nd, i){
       if (VIEW === "eye" && Math.hypot(nd.x - hx, nd.y - hy) < 430) return;   /* いま立っている所の足あとは出さない */
       var yw = (nd.yaw !== null && nd.kind === "d") ? nd.yaw : Math.atan2(nd.x - hx, -(nd.y - hy)), fx = Math.sin(yw), fy = -Math.cos(yw), rx = -fy, ry = fx;
-      var P = function(a, b){ return [(nd.x + (rx * a + fx * b) * S) * K, .009, (nd.y + (ry * a + fy * b) * S) * K]; };
+      var P = function(a, b){ return [(nd.x + (rx * a + fx * b) * S) * K, (nd.lv || 0) * K + .009, (nd.y + (ry * a + fy * b) * S) * K]; };
       acc.quad("foot", [P(-1, -1), P(1, -1), P(1, 1), P(-1, 1)], [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], { k: "foot", i: i });
     });
     footObj = acc.mesh(); if (footObj){ footObj.children.forEach(function(m){ m.renderOrder = 3; }); scene.add(footObj); }
@@ -46378,7 +46544,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function ringAt(x, y){
     if (!scene || !T) return;
     if (!ringObj){ var g = new T.PlaneGeometry(1, 1); g.rotateX(-Math.PI / 2); ringObj = new T.Mesh(g, mat("ring")); ringObj.renderOrder = 4; ringObj.visible = false; scene.add(ringObj); }
-    ringObj.position.set(x * K, .012, y * K); ringObj.visible = true; RING = 0;
+    ringObj.position.set(x * K, (MODEL ? lvOf(MODEL, x, y) : 0) * K + .012, y * K); ringObj.visible = true; RING = 0;
   }
   function ringHide(){ if (ringObj) ringObj.visible = false; RING = -1; }
   function ringStep(dt){ if (!ringObj || !ringObj.visible || RING < 0) return false; RING += dt; var u = (RING % .9) / .9, s = .5 + u * .55; ringObj.scale.set(s, 1, s); ringObj.material.opacity = 1 - u * u; return true; }
@@ -46612,7 +46778,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   });
   window.addEventListener("resize", function(){ if (V && V.open && R){ resize(); ask(); } });
   setInterval(menu, 1500); menu();
-  function here(){ return fp ? { x: Math.round(fp.x / K), y: Math.round(fp.z / K), room: fpRoom, yaw: fp.yaw * 180 / Math.PI, node: hereNode, view: VIEW } : null; }
+  function here(){ return fp ? { x: Math.round(fp.x / K), y: Math.round(fp.z / K), room: fpRoom, yaw: fp.yaw * 180 / Math.PI, node: hereNode, view: VIEW, lv: MODEL ? lvOf(MODEL, fp.x / K, fp.z / K) : 0, eye: Math.round(fp.y / K + LVY) } : null; }
 
   window.RITTAI = {
     v: VER, stage: STAGE,
@@ -46628,7 +46794,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* 段階4（歩く）で足した入口 */
     here: here,
     box: boxOf,   /* 検査用（CAD-668）：部品の外形 */
-    nodes: function(){ return NODES.map(function(n, i){ return { i: i, x: n.x, y: n.y, room: n.room, kind: n.kind, pair: n.pair }; }); },
+    nodes: function(){ return NODES.map(function(n, i){ return { i: i, x: n.x, y: n.y, room: n.room, kind: n.kind, pair: n.pair, lv: n.lv || 0 }; }); },
     go: function(i){ return walkTo(i); },
     route: function(i){ return (fp && MODEL && NODES[i]) ? route(i) : null; },
     busy: function(){ return !!(TW || POSE || LOOP); },
@@ -46638,6 +46804,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     ctl: function(m){ if (m){ setCtl(m); labels(); } return CTL; },
     home: function(){ goHome(); renderNow(); return here(); },
     jump: function(id){ jumpRoom(id); renderNow(); return here(); },
+    /* 床の高さ（CAD-687） */
+    level: function(x, y){ return MODEL ? lvOf(MODEL, x, y) : null; },                        /* その点の床の高さ（FL＝0、mm） */
+    step: function(v){ if (v !== undefined){ setDh(v); renderNow(); } return dhGet(); },    /* 土間の下がり（mm）。数を渡すと替える */
     clear: function(x, y, r){ return MODEL ? okPt(MODEL, x, y, r || 0) : null; }
   };
 })();
