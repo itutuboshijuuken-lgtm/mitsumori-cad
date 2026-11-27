@@ -45414,7 +45414,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      RITTAI.rectState()＝今の様子（検査・つなぐ側用）。下の帯（#rittaiRect）は立体の絵の下に入る（絵に被らない）。帯の高さは途中で変えない。
    ・タップの見分け（Fable の作業番号 702）：押して離すまでの時間を「指が動いた時刻」（イベントの時刻）で測る。前は処理した時刻で測っていたので、絵を描くのが遅い時（きれいな絵・重い家・古い端末）に、
      描くのに掛かった時間までタップの時間に数えて、触っても何も起きない事があった。道具の「離す直前のずれ戻し」も同じ時刻で測る。道具の数字の札・「起点」の札は、印（十字）に重ねない。
-     RITTAI.v は 21。
+   ・戸の警告の知らせ（Fable の作業番号 703）：「この戸を開けた先は、階段の吹き抜けです…」は、その戸が見えている時だけ
+     （目の場所から、赤い印の下＝通る所か戸袋の面の手前まで、目の高さの壁に当たらずに見通せる時。腰壁の向こうは見える）。前は戸から 1.4m 以内なら壁の向こうでも出ていた。
+     1 回出したら 1.9m より離れるまで出さない。同じ戸は 20 秒あける。出ている間に見えない所へ移ったら、すぐ消す。指で引っ張る道具の最中は出さない。赤い印と RITTAI.doorWarn は今までどおり。
+     RITTAI.v は 22。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45431,7 +45434,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 21, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 22, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -46635,7 +46638,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       });
     }
     if (d.wv) put(G, function(acc){ var cs = [0]; if (d.pk && !d.ub) cs.push((d.pk > 0 ? -1 : 1) * w); cs.forEach(function(c0){ [1, -1].forEach(function(sd){ var t = sd * (d.th / 2 + 14), za = d.z1 <= 2060 ? d.z1 + 70 : d.z1 - 340, zb2 = za + 260; acc.quad("warn", [fpt(FRL, c0 - 130 * sd, t, za), fpt(FRL, c0 + 130 * sd, t, za), fpt(FRL, c0 + 130 * sd, t, zb2), fpt(FRL, c0 - 130 * sd, t, zb2)], [0, 0, sd], [[0, 0], [1, 0], [1, 1], [0, 1]], tag); }); }); });   /* 警告の印（Fable 700）：開けた先に床が無い戸。戸の上に、両面。片引き戸は、通る所の上と戸袋の上の2か所 */
-    var st = { id: d.id, ty: d.ty, a: 0, tgt: 0, auto: (!d.ext && parts.length) ? 1 : 0, x: d.a[0] + d.ux * org, y: d.a[1] + d.uy * org, wv: d.wv ? 1 : 0 };
+    var st = { id: d.id, ty: d.ty, a: 0, tgt: 0, auto: (!d.ext && parts.length) ? 1 : 0, x: d.a[0] + d.ux * org, y: d.a[1] + d.uy * org, wv: d.wv ? 1 : 0, ux: d.ux, uy: d.uy, th: d.th, pk: (d.pk && !d.ub) ? (d.pk > 0 ? -1 : 1) * w : 0 };
     st.apply = function(){ var a = st.a; parts.forEach(function(p){ if (p.k === "sw") p.o.rotation.y = p.sg * a * 1.45; else if (p.k === "sl") p.o.position.x = p.dx * a * K; else { p.o.rotation.y = p.sg * a * 1.3; p.q.rotation.y = -2 * p.sg * a * 1.3; } }); };
     G.userData.door = st; G.userData.tris = tris;
     return G;
@@ -47715,7 +47718,30 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (R) R.shadowMap.needsUpdate = true;
   }
   /* ----- 扉：近づくと開く ----- */
-  function doorsAim(){ if (!fp) return; var x = fp.x / K, y = fp.z / K, ch = false; DOORS.forEach(function(d){ if (!d.auto) return; var near = VIEW === "eye" && Math.hypot(d.x - x, d.y - y) < (d.tgt ? 1900 : 1400), t = HOLD !== null ? HOLD : near ? 1 : 0; if (t !== d.tgt){ d.tgt = t; ch = true; if (t && d.wv && HOLD === null) say("この戸を開けた先は、階段の吹き抜けです（床がありません）。戸の向きを直してください。", 5200); } }); if (ch) kick(); }
+  var DWS = Object.create(null), DWID = null, DWTXT = "この戸を開けた先は、階段の吹き抜けです（床がありません）。戸の向きを直してください。";   /* 戸の警告の知らせ：戸ごとの「もう出した」と出した時刻・今出している戸（Fable 703） */
+  function seeDoor(x, y, d, tx, ty){   /* 目の場所から、その戸（の赤い印の下。tx・ty＝壁の芯の上の点）の面の手前まで、目の高さの壁に当たらずに見通せるか（壁の向こうの戸には、警告の知らせを出さない。Fable 703） */
+    var G = MODEL && MODEL.segs, nx = -(d.uy || 0), ny = d.ux || 0, pv, k, ex, ey, n, i, j, t, px, py, s;
+    if (!G || (!nx && !ny)) return true;
+    pv = Math.abs((x - tx) * nx + (y - ty) * ny); k = (d.th || 120) / 2 + 40;
+    if (pv <= k + 20) return true;                                                  /* 戸口の中に立っている */
+    ex = tx + (x - tx) * k / pv; ey = ty + (y - ty) * k / pv;                       /* 戸の面の少し手前（目の側） */
+    n = Math.max(1, Math.ceil(Math.hypot(ex - x, ey - y) / 50));
+    for (i = 0; i <= n; i++){ t = i / n; px = x + (ex - x) * t; py = y + (ey - y) * t; for (j = 0; j < G.length; j++){ s = G[j]; if (segD(px, py, s[0], s[1], s[2], s[3]) < s[4]) return false; } }
+    return true;
+  }
+  function doorSay(d, x, y){   /* 警告のある戸：赤い印（通る所の上・片引き戸は戸袋の上も）の近く（1.4m 以内）にいて、見えている時に、理由を 1 回出す。見えなくなったら（となりの部屋へ移った等）すぐ消す。1.9m より離れたら、また出せるようにする。同じ戸は 20 秒あける（Fable 703） */
+    var w = DWS[d.id] || (DWS[d.id] = { on: 0, t: 0 }), P = [[d.x, d.y]], L = 1e9, far, now = performance.now();
+    function see(r){ var ok = false; P.forEach(function(p){ if (!ok && p[2] < r && seeDoor(x, y, d, p[0], p[1])) ok = true; }); return ok; }
+    if (d.pk) P.push([d.x + d.ux * d.pk, d.y + d.uy * d.pk]);
+    P.forEach(function(p){ p[2] = Math.hypot(p[0] - x, p[1] - y); if (p[2] < L) L = p[2]; });
+    if (HOLD !== null || SQ) return;
+    far = VIEW !== "eye" || L >= 1900; if (far) w.on = 0;
+    if (far || !see(1900)){ if (DWID === d.id){ if (V && V.msg.textContent === DWTXT) say(""); DWID = null; } return; }   /* 離れた・見えなくなった：出ている知らせを消す */
+    if (w.on || !see(1400)) return;
+    w.on = 1; if (w.t && now - w.t < 20000) return;
+    w.t = now; DWID = d.id; say(DWTXT, 5200);
+  }
+  function doorsAim(){ if (!fp) return; var x = fp.x / K, y = fp.z / K, ch = false; DOORS.forEach(function(d){ if (!d.auto) return; var near = VIEW === "eye" && Math.hypot(d.x - x, d.y - y) < (d.tgt ? 1900 : 1400), t = HOLD !== null ? HOLD : near ? 1 : 0; if (t !== d.tgt){ d.tgt = t; ch = true; } if (d.wv) doorSay(d, x, y); }); if (DWID && !DOORS.some(function(d){ return d.wv && d.id === DWID; })){ if (V && V.msg.textContent === DWTXT) say(""); DWID = null; } if (ch) kick(); }
   function doorsStep(dt){
     var act = false, endAny = false;
     DOORS.forEach(function(d){
