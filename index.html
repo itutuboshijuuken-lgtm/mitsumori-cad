@@ -5316,6 +5316,7 @@ function addStdOpening(ty, context){
   pushUndo();
   { const v = spot(nh); if (v != null) pos = v; }
   S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: (nh.h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0});
+  try { var s752 = S.sashes[S.sashes.length - 1]; s752._o752 = 1; s752._f752 = +s752.flip || 0; } catch(e){}   /* CAD-752：取り込み・手で置く時も、おすすめの向き（少し後で） */
   sel = {t: "o", i: S.sashes.length - 1};
   const placed = S.sashes[sel.i]; HB.__cands=[]; HB.__tap25=null; HB.__grab476="o"+sel.i;
   if (context || (HB.__putAt && HB.__put?.meetingQuick)) placed.meetingPending = true;
@@ -5866,6 +5867,7 @@ function placeOpening(ty, pt){
   pushUndo();
   const L = nh.L, pos = Math.max(0, Math.min(L - x.w, Math.round((nh.t * L - x.w / 2) / 5) * 5));
   S.sashes.push({cat: x.cat, name: x.name, w: x.w, h: x.h, wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos, flip: (nh.h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0});
+  try { var s752 = S.sashes[S.sashes.length - 1]; s752._o752 = 1; s752._f752 = +s752.flip || 0; } catch(e){}   /* CAD-752：取り込み・手で置く時も、おすすめの向き（少し後で） */
   save(); sel = {t: "o", i: S.sashes.length - 1}; flashAt = Date.now(); drawPlan();
 }
 function placePart(pt){
@@ -38038,7 +38040,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ skipped++; return; }
         var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L];
         var along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w;
-        S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"});
+        S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); try { var s752 = S.sashes[S.sashes.length - 1]; s752._o752 = 1; s752._f752 = +s752.flip || 0; } catch(e){}   /* CAD-752 */
       } catch(e){ skipped++; }
     });
     var addFC = function(L){ (L || []).forEach(function(fc){ try { var r = fc.rect; if (!Array.isArray(r) || r.length < 4) return; var fk = fc.type === "doma" ? "flDoma" : fc.type === "tatami" ? "tatami" : null; if (!fk) return; S.tatami = S.tatami || []; S.tatami.push({x0: tx(Math.min(r[0], r[2])), y0: ty(Math.min(r[1], r[3])), x1: tx(Math.max(r[0], r[2])), y1: ty(Math.max(r[1], r[3])), fk: fk, st: "fl:" + fk}); } catch(e){} }); };
@@ -38077,7 +38079,7 @@ HB.__noStable438 = false;   /* CAD-441：選んだ時は図面の大きさを変
         S.parts2D = (F2.walls || []).filter(function(w){ return Array.isArray(w) && w.length >= 4 && !(Math.abs(w[0] - w[2]) > 30 && Math.abs(w[1] - w[3]) > 30); }).map(function(w){ var h = Math.abs(w[1] - w[3]) <= 30; return h ? {x1: tx(Math.min(w[0], w[2])), y1: ty(w[1]), x2: tx(Math.max(w[0], w[2])), y2: ty(w[1]), isNew: S.mode === "zo"} : {x1: tx(w[0]), y1: ty(Math.min(w[1], w[3])), x2: tx(w[0]), y2: ty(Math.max(w[1], w[3])), isNew: S.mode === "zo"}; });
         S.roomNames = (F2.rooms || []).filter(function(r){ return r && r.name; }).map(function(r){ return {p: [tx(+r.x), ty(+r.y)], name: String(r.name).slice(0, 12)}; });
         S.sashes = []; S.tatami = [];
-        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); } catch(e){ sk2++; } });
+        (F2.openings || []).forEach(function(op){ try { var m = MAP[op.type] || MAP.window, base = pickS(m[0], m[1], +op.w || 780); if (!base){ sk2++; return; } var pt = [tx(+op.x), ty(+op.y)], nh = nearestHost(pt); if (!nh || nh.d > 300){ sk2++; return; } var seg = hostSeg(nh.h), L = Math.hypot(seg[1][0] - seg[0][0], seg[1][1] - seg[0][1]), u = [(seg[1][0] - seg[0][0]) / L, (seg[1][1] - seg[0][1]) / L], along = (pt[0] - seg[0][0]) * u[0] + (pt[1] - seg[0][1]) * u[1], w = +op.w || base.w; S.sashes.push({cat: base.cat, name: base.name, w: w, h: op.type === "opening" ? Math.max(+op.h || 0, 2030) : (+op.h || base.h), wall: nh.h.t === "e" ? nh.h.i : -1, n: 1, price: 0, drawn: true, host: nh.h, pos: Math.max(0, Math.round(along - w / 2)), flip: (nh.h.t === "e" && /玄関|勝手口/.test(base.cat) && !/引/.test(base.name || "")) ? 1 : 0, st: "new"}); try { var s752b = S.sashes[S.sashes.length - 1]; s752b._o752 = 1; s752b._f752 = +s752b.flip || 0; } catch(e){} } catch(e){ sk2++; } });
         addFC(F2.floor_changes);
         var snap2 = flSnap(); flLoad(keep1); S.fl.push({name: (S.fl.length + 1) + "階", snap: snap2}); if (S.mode === "zo") S.floors = 2; S.fi = 0; save(); try { flTitle(); } catch(e){} two = {sk: sk2};
       }
@@ -43398,6 +43400,7 @@ body:not(.nbtutRun):not(.fsDraw) #stM:has(#enclBar:not([hidden])) #slotM{positio
  function pushSash(x, host, pos){
    S.sashes = S.sashes || [];
    S.sashes.push({ cat: x.cat, name: x.name, w: x.w, h: x.h, wall: host.t === "e" ? host.i : -1, n: 1, price: 0, drawn: true, host: host, pos: Math.round(pos / 5) * 5, flip: 0, meetingPending: true });
+   try { var s752 = S.sashes[S.sashes.length - 1]; s752._o752 = 1; s752._f752 = +s752.flip || 0; } catch(e){}   /* CAD-752 */
    return true;
  }
  function roomOf(x, y){ try { return roomAt(x, y); } catch(e){ return null; } }
@@ -49220,7 +49223,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       pushUndo();
       rec = { cat: x.cat, name: x.name, w: x.w, h: x.h, wall: h.t === "e" ? h.i : -1, n: 1, price: 0, drawn: true, host: h, pos: pos, flip: (h.t === "e" && /玄関|勝手口/.test(x.cat) && !/引/.test(x.name || "")) ? 1 : 0 };
       if (x.frame && x.frame !== "fixed") rec.frame = x.frame;
-      S.sashes.push(rec); i = S.sashes.length - 1;
+      S.sashes.push(rec); i = S.sashes.length - 1; try { rec._o752 = 1; rec._f752 = +rec.flip || 0; } catch(e){}   /* CAD-752：ドアはおすすめの向きで置く（少し後で向きを決める） */
       try { sel = { t: "o", i: i }; flashAt = Date.now(); } catch(x2){}
       save(); if (typeof drawPlan === "function") drawPlan();
       touch(rec.nid);
@@ -50066,6 +50069,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (window.CAT705 && window.CAT705.groupOf(sa)) mk("カタログ", function(){ var j = idx(); if (j >= 0) window.CAT705.open(j); });   /* CAD-705 */
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     var fl723 = function(bit, msg){ return function(){ var so = sashObj; if (!so){ say("建具をもう一度タップしてください"); return; } quick737(function(){ so.flip = (so.flip || 0) ^ bit; }, msg); }; };
+    if (ty === "door" && window.doorRec752){ var r752 = doorRec752(sa); if (r752 != null && ((+sa.flip || 0) & 3) !== r752) mk("おすすめの向き", function(){ var so = sashObj; if (!so) return; quick737(function(){ so.flip = ((+so.flip || 0) & ~3) | r752; }, "おすすめの向き（部屋の中へ開く・吊元は壁の側）にしました"); }); var w752 = window.doorWarn752 ? doorWarn752(sa) : ""; if (w752) sashBar.insertAdjacentHTML("beforeend", "<div style='flex:1 1 100%;font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px'>⚠ " + w752 + "</div>"); }   /* CAD-752 */
     if (ty === "door" || ty === "closet"){ mk("吊元", fl723(2, "吊元を替えました")); mk("開き勝手", fl723(1, "開く向きを替えました")); }   /* CAD-723：立体と同じ呼び方 */
     else if (ty === "hiki") mk("戸袋の側", fl723(2, "戸袋の側を替えました"));
     if (window.KATA734 && KATA734.ok(sa)){ mk("扉の走る面", fl723(1, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）")); if (sa.frame !== "outset") mk("戸袋の形", function(){ var so = sashObj; if (!so) return; var m = ""; quick737(function(){ m = KATA734.toggle(so); }, function(){ return m; }); }); }   /* CAD-735 */
@@ -52369,5 +52373,60 @@ window.WHY724 = function(why){
   window.addEventListener("mado-change", function(){ clearTimeout(tmr); tmr = setTimeout(function(){ try { check(); } catch(e){} }, 700); });
   window.stairWarn748 = warn; window.stairWarnAll748 = all;
   window.stairWarnHtml748 = function(L){ return L && L.length ? "<div style='flex:1 1 100%;font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px'>⚠ " + L.join("<br>⚠ ") + "</div>" : ""; };
+})();
+</script>
+<script>
+/* ---------- CAD-752：ドアの向きを、置いた時から「おすすめ」に（2026-11-27 Opus）----------
+   翔伍の決まり：開く向きは部屋の中（廊下・ホール・階段の側に開くと危ない）。吊元は壁（角）のある方＝開けた扉が壁に沿う。
+   下が階段の吹き抜けの側には開かない。室内の開き戸だけ（玄関・勝手口・引き戸・折れ戸は今まで通り）。
+   向きの持ち方（平面図の opSym と同じ）：開く側＝nIn×(flip&1 ? −1 : 1)×(−uy, ux)、吊元＝flip&2 ? 終わりの端 : 始まりの端。 */
+(function(){
+  "use strict";
+  if (window.doorOrient752) return;
+  var PASS = /廊下|ホール|階段|玄関|ポーチ|吹抜|吹き抜け|ポーチ|通路/;
+  function inPoly(x, y, P){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ if ((P[i][1] > y) !== (P[j][1] > y) && x < (P[j][0] - P[i][0]) * (y - P[i][1]) / (P[j][1] - P[i][1]) + P[i][0]) c = !c; } return c; }
+  function isDoor(sa){ if (!sa || sa.cat !== "室内ドア") return false; var n = String(sa.name || ""); return !(/引|折れ|折戸|開口|ふすま|襖/.test(n)); }
+  function roomAt(md, p){ var best = null; (md.rooms || []).forEach(function(r){ if (r.poly && inPoly(p[0], p[1], r.poly) && (!best || r.area < best.area)) best = r; }); return best; }
+  function voidAt(md, p){ var L = md && md.below && md.below.stairs; if (!L || typeof tkExt !== "function") return false; return L.some(function(q){ var o = q.raw || q; if (typeof o.x !== "number") return false; var e = tkExt(o); return Math.abs(p[0] - o.x) <= e[0] && Math.abs(p[1] - o.y) <= e[1]; }); }
+  function segs(){ var out = []; try { var P = pts(); P.forEach(function(a, i){ var b = P[(i + 1) % P.length]; out.push([a, b]); }); } catch(e){} (S.parts2D || []).forEach(function(q){ if (q && q.st !== "remove" && q.state !== "remove") out.push([[q.x1, q.y1], [q.x2, q.y2]]); }); return out; }
+  /* おすすめの flip（決められない時は null） */
+  function rec(sa){
+    if (!isDoor(sa) || !sa.host || typeof hostSeg !== "function") return null;
+    var sg = hostSeg(sa.host); if (!sg) return null;
+    var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]); if (!(L > 0)) return null;
+    var ux = (sg[1][0] - sg[0][0]) / L, uy = (sg[1][1] - sg[0][1]) / L, nv = [-uy, ux], u0 = +sa.pos || 0, u1 = u0 + (+sa.w || 0), um = (u0 + u1) / 2;
+    var mid = [sg[0][0] + ux * um, sg[0][1] + uy * um], pA = [mid[0] + nv[0] * 300, mid[1] + nv[1] * 300], pB = [mid[0] - nv[0] * 300, mid[1] - nv[1] * 300];
+    var md = null; try { md = MADO.read(); } catch(e){} if (!md) return null;
+    var nIn = 1; if (sa.host.t === "e"){ try { var OUT = pts(); if (!inPoly(pA[0], pA[1], OUT)) nIn = -1; } catch(e){} }
+    var score = function(p){ if (voidAt(md, p)) return -9; var r = roomAt(md, p); if (!r) return -5; return PASS.test(String(r.disp || r.name || "")) ? 0 : 1; };
+    var sA = score(pA), sB = score(pB), side = sA > sB ? 1 : sB > sA ? -1 : 0;   /* +1＝(−uy,ux) の側へ開く */
+    /* 部屋と部屋の時は決めない（今のまま。どちらへ入るかは図面ごとに違うので、翔伍さんが［開き勝手］で決める） */
+    if (!side) return null;
+    var f1 = (nIn * side) < 0 ? 1 : 0;
+    /* 吊元：開く側の部屋で、扉の端からいちばん近い直交の壁（角）の方 */
+    var sn = [nv[0] * side, nv[1] * side], d0 = Infinity, d1 = Infinity;
+    segs().forEach(function(g){ var a = g[0], b = g[1], vx = b[0] - a[0], vy = b[1] - a[1], l = Math.hypot(vx, vy); if (!(l > 1)) return; vx /= l; vy /= l; if (Math.abs(vx * ux + vy * uy) > .05) return;
+      /* その壁が、扉の開く側へ伸びているか（扉の壁の線から開く側へ 100 以上） */
+      var da = (a[0] - sg[0][0]) * sn[0] + (a[1] - sg[0][1]) * sn[1], db = (b[0] - sg[0][0]) * sn[0] + (b[1] - sg[0][1]) * sn[1]; if (Math.max(da, db) < 100 || Math.min(da, db) > 150) return;
+      var uc = (a[0] - sg[0][0]) * ux + (a[1] - sg[0][1]) * uy; if (uc <= u0 + 1) d0 = Math.min(d0, u0 - uc); if (uc >= u1 - 1) d1 = Math.min(d1, uc - u1); });
+    if (d0 === Infinity && d1 === Infinity){ d0 = u0; d1 = L - u1; }
+    var f2 = d1 < d0 ? 2 : 0;
+    return (f1 | f2);
+  }
+  /* 今の向きで開いた先が、下の階の階段の吹き抜け（床が無い）か */
+  function warnDoor(sa){
+    if (!isDoor(sa) || !sa.host || typeof hostSeg !== "function") return "";
+    var sg = hostSeg(sa.host); if (!sg) return ""; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]); if (!(L > 0)) return "";
+    var ux = (sg[1][0] - sg[0][0]) / L, uy = (sg[1][1] - sg[0][1]) / L, um = (+sa.pos || 0) + (+sa.w || 0) / 2, mid = [sg[0][0] + ux * um, sg[0][1] + uy * um];
+    var nIn = 1; if (sa.host.t === "e"){ try { if (!inPoly(mid[0] - uy * 300, mid[1] + ux * 300, pts())) nIn = -1; } catch(e){} }
+    var sd = nIn * ((+sa.flip || 0) & 1 ? -1 : 1), p = [mid[0] - uy * 300 * sd, mid[1] + ux * 300 * sd], md = null; try { md = MADO.read(); } catch(e){}
+    return (md && voidAt(md, p)) ? "この戸を開けた先は、下の階の階段の吹き抜けです（床がありません）。［おすすめの向き］で直せます" : "";
+  }
+  function orient(sa){ var f = rec(sa); if (f == null) return false; sa.flip = ((+sa.flip || 0) & ~3) | f; return true; }
+  /* 置いた直後の印（_o752）が付いたドアだけ、少し後で向きを決める（取り込みの途中では読まない。翔伍さんが向きを変えたドアには触らない） */
+  var tm = null;
+  function sweep(){ if (typeof S === "undefined" || !S || !Array.isArray(S.sashes)) return; var ch = false; S.sashes.forEach(function(sa){ if (!sa || !sa._o752) return; if ((+sa.flip || 0) !== (+sa._f752 || 0) || !isDoor(sa)){ delete sa._o752; delete sa._f752; return; } var f = rec(sa); if (f == null) return; var f0 = +sa.flip || 0; sa.flip = (f0 & ~3) | f; delete sa._o752; delete sa._f752; if (sa.flip !== f0) ch = true; });   /* 部屋が決まるまで待つ。翔伍さんが向きを変えたら印を外す */ if (ch){ try { save(); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} } }
+  window.addEventListener("mado-change", function(){ clearTimeout(tm); tm = setTimeout(function(){ try { sweep(); } catch(e){ try { console.warn("CAD-752", e); } catch(x){} } }, 400); });
+  window.doorRec752 = rec; window.doorOrient752 = orient; window.doorSweep752 = sweep; window.doorWarn752 = warnDoor;
 })();
 </script>
