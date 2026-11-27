@@ -45233,7 +45233,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-717：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠（2026-11-27 Claude Fable）----------
+/* ---------- CAD-720：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45262,7 +45262,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・棒で歩く時（Fable の作業番号 692）：向きの丸が出ている間は、絵を1本指でなぞっても向きを変えない（向きは右の丸だけ。置きたい所を触る時に絵が動かないように）。
      その間のタップは、指が少し動いても・少し長く触ってもタップと見る。向きの丸をしまっている時・足あとで歩く時・「上から」は、今までどおりなぞって見回せる。
      触った場所（hit）の名前を分けた：lv＝床の高さ（mm。土間 −180 など）、fi＝今見ている階の番号（0＝1階）。floor は fi と同じ（階の番号）。前は floor が床の高さだった。
-     RITTAI.v は 11。
+   ・床板の向き（Fable の作業番号 693）：アプリ共通の物差し（CAD-583 床の張り方向の決まり＝window.__judge582。②間取り・⑤平面図と同じ）に合わせる。
+     床見切り「あり」＝各部屋の長手（収納は属する部屋の向き・階段の横の細い帯は本体の部屋の向き）／「なし」＝家全体を家の長手で統一。
+     物差しが使えない時は部屋の外形（奥行が幅の 1.05 倍より大きい時だけ南北）。RITTAI.rooms() の fr＝板の向き（1＝南北に流す）。
+     RITTAI.v は 12。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45279,7 +45282,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 11, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 12, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45362,6 +45365,32 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     M.lv = LV; M.rlv = RLV; M.dh = DH;
     var roomBy = Object.create(null), wallBy = Object.create(null), facesBy = Object.create(null), used = Object.create(null);
     var RFR = Object.create(null);
+    /* 板の向き（Fable 693）：アプリ共通の物差し（CAD-583 床の張り方向の決まり＝window.__judge582）に合わせる。
+       床見切り「あり」＝各部屋の長手（収納は属する部屋の向き・階段の横の細い帯は本体の部屋の向き）／「なし」＝家全体を家の長手で統一。
+       物差しが無い・その部屋が取れない時は、部屋の外形で決める（奥行が幅の 1.05 倍より大きい時だけ南北に流す。物差しと同じ決まり） */
+    var JDG = null; try { JDG = (typeof window.__judge582 === "function") ? window.__judge582() : null; } catch(e){ JDG = null; }
+    if (!JDG || typeof JDG.roomIdxAt !== "function" || !Array.isArray(JDG.infos)) JDG = null;
+    function innerPts(poly, holes, bb){   /* 部屋の中の点：升目（7×7）のうち、壁から離れた順 */
+      var C = [], i, j, k, x, y, dm, Q = [poly].concat(holes);
+      for (i = 0; i < 7; i++) for (j = 0; j < 7; j++){
+        x = bb[0] + (bb[2] - bb[0]) * (i + .5) / 7; y = bb[1] + (bb[3] - bb[1]) * (j + .5) / 7;
+        if (!inPoly(x, y, poly) || holes.some(function(h){ return inPoly(x, y, h); })) continue;
+        dm = 1e9; Q.forEach(function(P){ for (k = 0; k < P.length; k++){ var a = P[k], b = P[(k + 1) % P.length], dd = segD(x, y, a[0], a[1], b[0], b[1]); if (dd < dm) dm = dd; } });
+        C.push([x, y, dm, C.length]);
+      }
+      return C.sort(function(a, b){ return (b[2] - a[2]) || (a[3] - b[3]); });
+    }
+    function vertOf(poly, holes, bb){
+      var w = bb[2] - bb[0], dp = bb[3] - bb[1], own = w > 0 && dp > w * 1.05, C, i, ri;
+      if (!JDG) return own;
+      if (JDG.mode582 === "nashi") return !!JDG.houseVert582;   /* 床見切り「なし」：どの部屋も、家の長手の向き */
+      C = innerPts(poly, holes, bb);
+      for (i = 0; i < C.length && i < 12; i++){
+        ri = -1; try { ri = JDG.roomIdxAt(C[i][0], C[i][1]); } catch(e){ ri = -1; }
+        if (ri >= 0 && JDG.infos[ri]) return !!JDG.infos[ri].vert;
+      }
+      return own;
+    }
     /* 畳を敷く範囲の寄せ（Fable 690）：範囲の4辺 [左, 上, 右, 下] を、壁がある辺は壁の厚みの半分、段の框がある辺は框の見込み（105）だけ内へ寄せる */
     function sideIns(x0, y0, x1, y1, lvIn){
       function one(ax, ay, bx, by, ox, oy){
@@ -45392,12 +45421,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var d = { id: r.id, poly: r.poly, holes: holes, ch: r.ch || rd.ch, fk: fk, cf: isUb(r) ? "ubc" : (r.fin && r.fin.c === "none") ? "bare" : "ceil" };
       if (fk === "flDoma"){ M.doma = 1; if (DH > 0) RLV[r.id] = -DH; }
       var rxs = r.poly.map(function(p){ return p[0]; }), rys = r.poly.map(function(p){ return p[1]; }), rbb = [Math.min.apply(null, rxs), Math.min.apply(null, rys), Math.max.apply(null, rxs), Math.max.apply(null, rys)];
-      if (rbb[3] - rbb[1] > rbb[2] - rbb[0] + 1){ d.fr = 1; RFR[r.id] = 1; }   /* 板の向き：部屋の長い方へ流す（fr＝南北に流す） */
+      if (vertOf(r.poly, holes, rbb)){ d.fr = 1; RFR[r.id] = 1; }   /* 板の向き（fr＝南北に流す）：アプリ共通の物差しに合わせる（Fable 693） */
       var rq = ring(r.poly); if (fk === "tatami" && rq.length === 4 && !holes.length && axisPoly([rq])) d.ins = sideIns(rbb[0], rbb[1], rbb[2], rbb[3], RLV[r.id] || 0);   /* 四角い畳の部屋：畳を敷く */
       var rlv = LV.filter(function(q){ return q[0] < rbb[2] - 1 && q[2] > rbb[0] + 1 && q[1] < rbb[3] - 1 && q[3] > rbb[1] + 1; });
       if (rlv.length) d.lv = rlv;
       if (RLV[r.id]) d.dz = RLV[r.id];
-      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
+      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a, fr: d.fr ? 1 : 0 });
       unit("r:" + r.id, "room", d);
     });
 
@@ -45553,7 +45582,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var rw2 = (t.raw && typeof t.raw === "object") ? t.raw : {};
         d = { id: id, list: "tatami", k: t.kind === "flAge" ? (FLOORS[rw2.fin] ? rw2.fin : "tatami") : t.kind, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };   /* 小上がりは、上の仕上げ（畳・フローリングなど）で張る */
         var tz2 = lvOf(M, (t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2); if (tz2) d.z = tz2;
-        if (t.room ? RFR[t.room] : Math.abs(t.y1 - t.y0) > Math.abs(t.x1 - t.x0) + 1) d.fr = 1;
+        if (t.room ? RFR[t.room] : Math.abs(t.y1 - t.y0) > Math.abs(t.x1 - t.x0) * 1.05) d.fr = 1;   /* 部屋の中の物は部屋の向き。部屋の外の物は、その物の外形で（物差しと同じ 1.05 倍の決まり） */
         if (d.k === "tatami") d.ins = sideIns(Math.min(t.x0, t.x1), Math.min(t.y0, t.y1), Math.max(t.x0, t.x1), Math.max(t.y0, t.y1), tz2 || 0);
       } else if (t.list === "zones"){
         if (!ZK[t.kind] || ![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
@@ -47361,7 +47390,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     sync: function(){ var r = sync(); if (r.ok && V && V.open){ if (!r.empty) afterSync(); renderNow(); } return r; },
     plan: plan, check: check, stats: stats, pick: pick, bench: function(){ var b = bench(); if (b) renderNow(); return b; },
     quality: function(q){ return q ? setQual(q, true) : QUAL; },
-    rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk }; }) : []; },
+    rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk, fr: r.fr || 0 }; }) : []; },   /* fr＝板の向き（1＝南北に流す・0＝東西。Fable 693） */
     stand: function(id){ if (!MODEL) return null; jumpRoom(id); renderNow(); return fp ? { x: fp.x / K, y: fp.z / K, room: fpRoom } : null; },
     cam: function(o){ if (!fp) return null; o = o || {}; if (fin(o.x)) fp.x = o.x * K; if (fin(o.y)) fp.z = o.y * K; if (fin(o.h)) fp.y = o.h * K; if (fin(o.yaw)) fp.yaw = o.yaw * Math.PI / 180; if (fin(o.pitch)) fp.p = o.pitch * Math.PI / 180; if (fin(o.fov)){ fp.fov = o.fov; fovUser = true; FOVT = o.fov; } if (fin(o.x) || fin(o.y)){ onMove(); kick(); } renderNow(); return { x: fp.x / K, y: fp.z / K, h: fp.y / K, yaw: fp.yaw * 180 / Math.PI, pitch: fp.p * 180 / Math.PI, fov: fp.fov }; },
     ghost: function(on){ if (!T) return null; var g = mat("ghost"); if (typeof on === "boolean"){ g.visible = on; labels(); renderNow(); } return g.visible; },
