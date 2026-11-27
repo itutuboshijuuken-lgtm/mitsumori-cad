@@ -50722,12 +50722,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return f || L.filter(function(e){ return !/シャッター|雨戸|面格子/.test(nm(e)); })[0] || L[0];
   }
   /* 値段の表から：選んだ値で絞った行 */
-  function priced(d){ return (d.pick || []).filter(function(p){ return p.price !== false && (!(d.base || []).length || (d.base || []).some(function(r){ return r[p.id] != null; })); }); }   /* CAD-739：どの行にも無い項目（キーセット・開き方など）は値段の軸にしない */
+  function priced(d){ return (d.pick || []).filter(function(p){ return p.price !== false && (!(d.base || []).length || (d.base || []).some(function(r){ return r[p.id] != null; })) && !oneVal740(d, p); }); }
+  /* CAD-740：行には1つの値しか無いのに、項目には何通りもあり、足す部材（子扉など）がその項目で決まる時＝本体の値段は変わらない項目（ジエスタ2の開き方）→ 値段の軸にしない */
+  function oneVal740(d, p){ if ((p.values || []).length < 2) return false; var seen = {}, n = 0; (d.base || []).forEach(function(r){ if (r[p.id] != null && !seen[r[p.id]]){ seen[r[p.id]] = 1; n++; } }); return n === 1 && (d.adds || []).some(function(a){ return a.always && Array.isArray(a.match) && a.match.indexOf(p.id) >= 0; }); }   /* CAD-739：どの行にも無い項目（キーセット・開き方など）は値段の軸にしない */
   function rowsFor(d, sel, upto){ var P = priced(d); return (d.base || []).filter(function(r){ for (var i = 0; i < P.length && (upto == null || i < upto); i++){ var id = P[i].id; if (sel[id] != null && r[id] !== sel[id]) return false; } return true; }); }
   function fix(d, sel){   /* 選べない組み合わせになったら、選べる最初の値に寄せる */
     var P = priced(d);
     P.forEach(function(p, i){ var R = rowsFor(d, sel, i), ok = {}; R.forEach(function(r){ ok[r[p.id]] = 1; }); if (!ok[sel[p.id]]){ var f = (p.values || []).filter(function(v){ return ok[v.id]; })[0]; sel[p.id] = f ? f.id : null; } });
-    (d.pick || []).forEach(function(p){ if (p.price === false && sel[p.id] == null && p.values && p.values[0]) sel[p.id] = p.values[0].id; });
+    (d.pick || []).forEach(function(p){ if (P.indexOf(p) < 0 && sel[p.id] == null && p.values && p.values[0]) sel[p.id] = p.values[0].id; });   /* CAD-740：値段の軸でない項目（鍵など）も最初の値 */
     return sel;
   }
   function addDiff(a, vid){ var v = (a.values || []).filter(function(x){ return x.id === vid; })[0]; if (!v) return 0; if (a.included != null) return +v.teika || 0; if (a.id === "handle" && a.values[0]) return (+v.teika || 0) - (+a.values[0].teika || 0); return +v.teika || 0; }   /* ハンドルは差額（セットに標準が入っている）。included があればその値が差額 */
@@ -50737,7 +50739,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function matchId(a, sel){ return Array.isArray(a.match) ? a.match.map(function(k){ return sel[k] || ""; }).join("") : null; }   /* CAD-715：網戸など、呼称（幅＋高さ）ごとの値段 */
   function addDefault(a){ return a.included != null ? a.included : (a.id === "handle" && a.values[0] ? a.values[0].id : ""); }
   function total(d, sel, ad){ var R = rowsFor(d, sel); var r = R.length === 1 ? R[0] : null; if (!r) return null; var t = +r.teika || 0, miss = [];
-    (d.adds || []).forEach(function(a){ if (a.always && Array.isArray(a.match)){ var mv = alwaysV(a, sel); if (mv) t += +mv.teika || 0; else miss.push(a.name); return; } if (ad[a.id]) t += addDiff(a, ad[a.id]); });
+    (d.adds || []).forEach(function(a){ if (ad.keyset === "face" && (a.id === "handle" || a.id === "cylinder")) return;   /* CAD-740：顔認証はハンドル・シリンダー込み */
+      if (a.always && Array.isArray(a.match)){ var mv = alwaysV(a, sel); if (mv) t += +mv.teika || 0; else miss.push(a.name); return; } if (ad[a.id]) t += addDiff(a, ad[a.id]); });
     return { teika: t, row: r, miss: miss }; }
   /* CAD-728：部材を足して1つの品にする（玄関ドアの枠など）。always の adds は選んだ組に合う値を必ず足す */
   function alwaysV(a, sel){ var mid = matchId(a, sel); return (a.values || []).filter(function(x){ return x.id === mid; })[0] || null; }
@@ -50748,7 +50751,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     (d.pick || []).forEach(function(p){ if (sel[p.id] == null || (p.values || []).length < 2) return; var v = (p.values || []).filter(function(x){ return x.id === sel[p.id]; })[0];
       if (p.id === "sizeW" && v){ szW = v; return; } if (p.id === "sizeH" && v){ szH = v; if (szW) parts.push(szW.id + szH.id + "（" + (szW.outW || szW.w) + "×" + (szH.outH || szH.h) + "）"); return; }
       parts.push(vname(d, p.id, sel[p.id])); });
-    (d.adds || []).forEach(function(a){ if (ad[a.id] && ad[a.id] !== addDefault(a)) parts.push(Array.isArray(a.match) ? "＋" + a.name : vname({ pick: [a] }, a.id, ad[a.id])); });
+    (d.adds || []).forEach(function(a){ if (ad[a.id] && ad[a.id] !== "none" && ad[a.id] !== addDefault(a)) parts.push(Array.isArray(a.match) ? "＋" + a.name : vname({ pick: [a] }, a.id, ad[a.id])); });
     return parts.join(" ");
   }
   function seriesTitle(d){ var s = String(d.src || ""); var m = s.match(/（([^）]+)）/); return m ? m[1] : (d.series || ""); }
@@ -50779,7 +50782,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         (d.adds || []).forEach(function(a){ if (st.ad[a.id] == null) st.ad[a.id] = addDefault(a); });
         sizeFromDoor(d, st.sel, sa); fix(d, st.sel); draw();
       });
-    }).catch(function(e){ $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>カタログを読み込めませんでした（電波を確かめてください）。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; });
+    }).catch(function(e){ try { console.warn("[CAT705] 開く", e); } catch(x){} $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>カタログを読み込めませんでした（電波を確かめてください）。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; });
   }
   /* CAD-708：デザインの絵（アプリが描く共通の線の絵。どのメーカーも同じ。データは value.shape に12種の記号） */
   var SHAPE = { flush: "", panel: "<rect x='6' y='6' width='12' height='14' fill='none' stroke='#5B6673' stroke-width='1'/><rect x='6' y='24' width='12' height='14' fill='none' stroke='#5B6673' stroke-width='1'/>",
@@ -50798,6 +50801,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc(title) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + values.map(function(v){ var on = v.id === cur, ok = !okSet || okSet[v.id]; return "<button type='button' class='btn sub' data-c705='" + esc(pid) + "' data-v='" + esc(v.id) + "'" + (ok ? "" : " disabled") + " style='flex:0 1 auto;width:auto;max-width:100%;white-space:normal;text-align:left;min-height:40px;padding:4px 12px;font-size:14px;" + (on ? "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0);" : "") + (ok ? "" : "opacity:.35;") + (v.shape && SHAPE.hasOwnProperty(v.shape) ? "display:inline-flex;align-items:center;gap:6px;padding:4px 10px 4px 6px;" : "") + "'>" + shapeSvg(v.shape) + esc(v.name) + "</button>"; }).join("") + "</div>";
   }
   function draw(){
+    if (stepOn740()){ if (!st.sd740){ var e740 = start740(); if (e740){ goFile740(e740); return; } } drawStep740(); return; }
     var d = st.d, P = priced(d), h = "<h3>カタログから選ぶ</h3>";
     if (st.L.length > 1 && (st.ent.group === "サッシ" || st.ent.group === "勝手口ドア")){   /* CAD-715：窓は「シリーズ」と「形」に分けて小分けに */
       var lines = [], ln = lineOf(st.ent); st.L.forEach(function(e){ var l = lineOf(e); if (lines.indexOf(l) < 0) lines.push(l); });
@@ -50811,7 +50815,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     (d.adds || []).forEach(function(a){ if (a.always && Array.isArray(a.match)){ var av = alwaysV(a, st.sel); h += '<div style="margin:6px 2px;font-size:12.5px;font-weight:700;color:' + (av ? "var(--sub,#5B6673)" : "#B91C1C") + '">＋' + esc(a.name) + "：" + (av ? (+av.teika || 0).toLocaleString("ja-JP") + "円（自動で足す）" : "この組み合わせの値段がありません") + "</div>"; return; }
       if (Array.isArray(a.match)){ var mid = matchId(a, st.sel), mv = (a.values || []).filter(function(x){ return x.id === mid; })[0]; if (st.ad[a.id] && (!mv || st.ad[a.id] !== mv.id)) st.ad[a.id] = mv ? mv.id : ""; h += chips("__add:" + a.id, a.name, [{ id: "", name: "なし" }].concat(mv ? [{ id: mv.id, name: "あり（+" + (+mv.teika || 0).toLocaleString("ja-JP") + "）" }] : []), st.ad[a.id] || "", null); return; }
       h += chips("__add:" + a.id, a.name, (a.included != null || a.id === "handle" ? [] : [{ id: "", name: "なし" }]).concat((a.values || []).map(function(v){ var df = addDiff(a, v.id); return { id: v.id, name: v.name + (df ? "（" + (df > 0 ? "+" : "−") + Math.abs(df).toLocaleString("ja-JP") + "）" : "") }; })), st.ad[a.id] || "", null); });
-    (d.pick || []).forEach(function(p){ if (p.price === false && (p.values || []).length > 1) h += chips(p.id, p.name + "（値段は同じ）", p.values, st.sel[p.id], null); });
+    (d.pick || []).forEach(function(p){ if (P.indexOf(p) < 0 && (p.values || []).length > 1) h += chips(p.id, p.name + (p.price === false ? "（値段は同じ）" : ""), p.values, st.sel[p.id], null); });
     var T = total(d, st.sel, st.ad), mk = mkName(d.maker), rt = rate(mk);
     h += "<div style='margin-top:12px;padding:10px;border-radius:10px;background:#F3F7FC;font-size:14px;line-height:1.6'>" + (T ? "定価 <b>" + T.teika.toLocaleString("ja-JP") + "円</b> × 掛率 " + rt + "%（" + esc(mk) + "）＝ <b>" + Math.round(T.teika * rt / 100).toLocaleString("ja-JP") + "円</b>" : "この組み合わせはカタログにありません") + "<div style='font-size:11px;color:var(--sub,#5B6673)'>" + esc(d.src || "") + "（" + esc(d.year || "") + "・" + esc(d.tax || "") + "）　掛率は単価表の「掛率の設定」で変えられます</div></div>";
     h += "<div class='row' style='margin-top:10px;display:flex;gap:8px'><button type='button' class='btn' id='c705ok' style='flex:1;min-height:46px'" + (T ? "" : " disabled") + ">これにする</button>" + (st.sa.cat705 ? "<button type='button' class='btn sub' id='c705rm' style='min-height:46px'>カタログを外す</button>" : "") + "<button type='button' class='btn sub' id='c705x' style='min-height:46px'>閉じる</button></div>";
@@ -50823,9 +50827,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (pid.indexOf("__add:") === 0) st.ad[pid.slice(6)] = v; else st.sel[pid] = v;
       fix(st.d, st.sel); draw();
     }; });
-    $("c705x").onclick = function(){ $("modal").hidden = true; st = null; };
+    bindEnd705();
+  }
+  function bindEnd705(){
+    if ($("c705x")) $("c705x").onclick = function(){ $("modal").hidden = true; st = null; };
     if ($("c705rm")) $("c705rm").onclick = function(){ try { pushUndo(); delete st.sa.cat705; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} $("modal").hidden = true; st = null; };
-    $("c705ok").onclick = function(){
+    if ($("c705ok")) $("c705ok").onclick = function(){
       var T2 = total(st.d, st.sel, st.ad); if (!T2) return;
       try {
         pushUndo();
@@ -50841,6 +50848,203 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       $("modal").hidden = true; st = null;
       try { if (typeof toast === "function") toast("カタログの品にしました（見積は定価×掛率）"); } catch(e){}
     };
+  }
+  /* ---------- CAD-740：玄関ドア・勝手口ドアは「1つずつ決める」（2026-11-27 Claude/Opus）----------
+     翔伍の決まり：選ぶ時は一度にたくさん出さず、小分けにして1つずつ（玄関→種類→開き方→大きさ）。決まっていない人のためにスキップ（とりあえず置ける）。
+     ・上に「決めた事」を並べ、押すとそこへ戻る。下に［もどる］［スキップ（とりあえずこれで）］［やめる］。
+     ・組み合わせが無い物、足す部材の値段が無くなる物（＝あり得ない組）は出さない。
+     ・鍵が手動の時は FamiLock のキーセットを出さない。顔認証は AC100V式 の時だけ。顔認証の時は通常のハンドル・シリンダーを足さない（じゅうちゃんのメモ／カタログの決まり）。 */
+  var ORD740 = ["open", "design", "spec", "glass", "dan", "sizeH", "color", "entry", "kaihei"];
+  var HINT740 = {
+    open: "今の図面の扉の形から、近い物を先に選んであります",
+    dan: "k4仕様＝山口など温かい地域の標準の断熱／k2仕様＝さらに断熱が高い（寒い地域・こだわる人向け）",
+    sizeH: "扉の高さ（今の玄関の高さで決まります。測ってから選び直せます）",
+    entry: "手動＝ふつうの鍵／FamiLock＝カード・タグ・スマホで開く電気錠（電池式は配線いらず、AC100V式は電気工事が要る）",
+    kaihei: "自動開閉は AC100V式 の時だけ選べます",
+    glass: "Low-E＝断熱の高いガラス／安全合わせ＝割れても飛び散りにくい"
+  };
+  var LINEHINT740 = { "ジエスタ2": "新築・建て替え向けの玄関ドア", "リシェント": "リフォーム用。今の枠の上から付けるので、壁を壊さず1日で交換できる" };
+  function stepOn740(){ return !!(st && st.ent && (st.ent.group === "玄関ドア" || st.ent.group === "勝手口ドア") && !st.flat740); }
+  function kind740(e){ return /引戸/.test(nm(e)) ? "引戸" : "ドア"; }
+  function fileName740(e){ var n = nm(e).replace(/^\S+\s+/, "").replace(/^(玄関ドア\d*|玄関引戸\d*|勝手口ドア)\s*/, ""); return n || nm(e); }
+  function pickById740(d, id){ return (d.pick || []).filter(function(p){ return p.id === id; })[0]; }
+  function pickOrder740(d){
+    var ids = (d.pick || []).map(function(p){ return p.id; });
+    return ORD740.filter(function(k){ return ids.indexOf(k) >= 0; }).concat(ids.filter(function(k){ return ORD740.indexOf(k) < 0; }));
+  }
+  function isPricedId740(d, id){ return priced(d).some(function(p){ return p.id === id; }); }
+  /* その項目で選べる値（決めた事と合う行があり、足す部材の値段も無くならない物） */
+  function okVals740(pid){
+    var d = st.d, p = pickById740(d, pid); if (!p) return [];
+    var dn = st.dn740 || {}, R = d.base || [];
+    priced(d).forEach(function(q){ if (q.id !== pid && dn[q.id] && st.sel[q.id] != null) R = R.filter(function(r){ return r[q.id] === st.sel[q.id]; }); });
+    var pr = isPricedId740(d, pid), have = {};
+    if (pr) R.forEach(function(r){ have[r[pid]] = 1; });
+    return (p.values || []).filter(function(v){
+      if (pr && !have[v.id]) return false;
+      if (/AC100V式のみ/.test(v.name || "") && st.sel.entry && st.sel.entry !== "ac100v") return false;
+      var s2 = Object.assign({}, st.sel); s2[pid] = v.id;
+      return (d.adds || []).every(function(a){
+        if (!(a.always && Array.isArray(a.match)) || a.match.indexOf(pid) < 0) return true;
+        if (!a.match.every(function(k){ return k === pid || dn[k]; })) return true;
+        return !!alwaysV(a, s2);
+      });
+    });
+  }
+  /* 決めていない所を、決めた事に合う値へ寄せる（決めた所は動かさない） */
+  function fix740(){
+    var d = st.d, dn = st.dn740 || {}, order = pickOrder740(d);
+    order.filter(function(k){ return !dn[k]; }).forEach(function(k){
+      var ok = okVals740(k); if (!ok.length) return;
+      if (!ok.some(function(v){ return v.id === st.sel[k]; })) st.sel[k] = ok[0].id;
+    });
+    keyRule740(); reqFix740();
+  }
+  function manualKey740(){ return st.sel.entry === "shudo" || st.sel.entry === "manual"; }
+  function keyRule740(){
+    var ks = (st.d.adds || []).filter(function(a){ return a.id === "keyset"; })[0]; if (!ks) return;
+    if (manualKey740() && st.ad.keyset) st.ad.keyset = "";
+    if (st.ad.keyset === "face" && st.sel.entry !== "ac100v") st.ad.keyset = "";
+  }
+  function reqFix740(){
+    (st.d.adds || []).forEach(function(a){ if (a.always) return; var vs = addVals740(a);
+      if (!vs.some(function(v){ return v.id === st.ad[a.id]; })) st.ad[a.id] = reqAdd740(a) ? (vs[0] ? vs[0].id : "") : (vs.some(function(v){ return v.id === "none"; }) ? "none" : ""); });
+  }
+  /* 付ける物（なしでもよい物）。鍵の種類で出す物を絞る */
+  function optAdds740(){
+    return (st.d.adds || []).filter(function(a){
+      if (a.always) return false;
+      if ((a.id === "keyset" || a.id === "tenkey") && st.sel.entry && manualKey740()) return false;
+      return (a.values || []).some(function(v){ return v.id !== "none"; });
+    });
+  }
+  /* 「P11〜P29型用」のように型の範囲が名前にある物は、選んだデザインが範囲に入る物だけ */
+  function fitDesign740(v){
+    var m = String(v.name || "").match(/([A-Z]+)(\d+)〜([A-Z]+)?(\d+)型用/), dz = String(st.sel.design || "").match(/^([A-Z]+)(\d+)/);
+    if (!m || !dz) return true;
+    return dz[1] === m[1] && +dz[2] >= +m[2] && +dz[2] <= +m[4];
+  }
+  function reqAdd740(a){ return a.id === "handle" && !a.always; }   /* 引戸のハンドルは必ず要る（なしは出さない） */
+  function addVals740(a){
+    var vs = (a.values || []).filter(function(v){ return !(a.id === "keyset" && v.id === "face" && st.sel.entry !== "ac100v") && fitDesign740(v) && !(reqAdd740(a) && v.id === "none"); });
+    var hasNone = vs.some(function(v){ return v.id === "none"; });
+    return (a.included != null || a.id === "handle" || hasNone ? [] : [{ id: "", name: "なし" }]).concat(vs);
+  }
+  /* 段の一覧（毎回作り直す） */
+  function steps740(){
+    var S = [], sd = st.sd740 || {}, L = st.L;
+    var kinds = []; L.forEach(function(e){ var k = kind740(e); if (kinds.indexOf(k) < 0) kinds.push(k); });
+    var K = kind740(st.ent), LK = L.filter(function(e){ return kind740(e) === K; });
+    if (kinds.length > 1) S.push({ id: "__kind", name: "形", vals: kinds.map(function(k){ return { id: k, name: k === "引戸" ? "引戸（引き戸）" : "ドア（開き戸）" }; }), cur: K, done: sd.kind });
+    var lines = []; LK.forEach(function(e){ var l = lineOf(e); if (lines.indexOf(l) < 0) lines.push(l); });
+    var ln = lineOf(st.ent), LL = LK.filter(function(e){ return lineOf(e) === ln; });
+    if (lines.length > 1) S.push({ id: "__line", name: "商品", vals: lines.map(function(l){ return { id: l, name: l, sub: LINEHINT740[l] || "" }; }), cur: ln, done: sd.line });
+    if (LL.length > 1) S.push({ id: "__file", name: /^ジエスタ/.test(ln) ? "型の組" : "仕様", vals: LL.map(function(e){ return { id: e.file, name: fileName740(e) }; }), cur: st.ent.file, done: sd.file });
+    var dn = st.dn740 || {};
+    pickOrder740(st.d).forEach(function(pid){
+      var p = pickById740(st.d, pid); if (!p || (p.values || []).length < 2) return;
+      var ok = okVals740(pid); if (ok.length < 2) return;   /* 選べる物が1つなら聞かない */
+      if (pid === "open" && ok.some(function(v){ return RM740.test(v.name || ""); })){   /* 開き方とランマを分けて聞く（14個→7個＋あり／なし） */
+        var cv = ok.filter(function(v){ return v.id === st.sel.open; })[0], cb = cv ? baseOf740(ok, cv) : null, base = ok.filter(function(v){ return !RM740.test(v.name || ""); });
+        S.push({ id: "open", name: p.name || "開き方", vals: base, cur: cb && cb.id, done: dn.open, hint: HINT740.open });
+        if (cb && rmOf740(ok, cb)) S.push({ id: "__ranma", name: "ランマ（扉の上の明かり窓）", vals: [{ id: "0", name: "ランマなし" }, { id: "1", name: "ランマ付" }], cur: cv && RM740.test(cv.name || "") ? "1" : "0", done: sd.ranma });
+        return;
+      }
+      S.push({ id: pid, name: p.name || pid, vals: pid === "sizeW" || pid === "sizeH" ? ok.map(shortV) : ok.map(function(v){ return +v.outW > 0 && pid === "open" ? { id: v.id, name: v.name + "（幅" + (+v.outW).toLocaleString("ja-JP") + "）", shape: v.shape } : v; }), cur: st.sel[pid], done: dn[pid], hint: HINT740[pid] || (p.price === false ? "値段は同じです" : "") });
+    });
+    if (optAdds740().length) S.push({ id: "__adds", name: "付ける物", done: sd.adds });
+    S.push({ id: "__ok", name: "確認" });
+    return S;
+  }
+  var RM740 = /\s*ランマ付$/;
+  function baseOf740(ok, v){ if (!RM740.test(v.name || "")) return v; var n = v.name.replace(RM740, ""); return ok.filter(function(x){ return x.name === n; })[0] || v; }
+  function rmOf740(ok, b){ return ok.filter(function(x){ return RM740.test(x.name || "") && x.name.replace(RM740, "") === b.name; })[0] || null; }
+  function curStep740(S){ for (var i = 0; i < S.length; i++) if (!S[i].done && S[i].id !== "__ok") return i; return S.length - 1; }
+  var BTN740 = "min-height:44px;padding:6px 14px;font-size:15px;text-align:left;white-space:normal;width:auto;max-width:100%;flex:0 1 auto";
+  function vbtn740(sid, v, on){
+    return "<button type='button' class='btn sub' data-s740='" + esc(sid) + "' data-v='" + esc(v.id) + "' style='" + BTN740 + ";" + (on ? "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0);" : "") + (v.shape && SHAPE.hasOwnProperty(v.shape) ? "display:inline-flex;align-items:center;gap:8px;padding:4px 12px 4px 6px;" : "") + "'>" + shapeSvg(v.shape) + "<span>" + esc(v.name) + (v.sub ? "<br><span style='font-size:12px;font-weight:600;color:var(--sub,#5B6673)'>" + esc(v.sub) + "</span>" : "") + "</span></button>";
+  }
+  function drawStep740(){
+    var S = steps740(), k = st.at740 != null && st.at740 < S.length ? st.at740 : curStep740(S), s = S[k], h = "";
+    st.at740 = null;
+    var grpN = st.ent.group === "勝手口ドア" ? "勝手口ドア" : "玄関ドア";
+    h += "<h3 style='margin-bottom:4px'>" + grpN + "を選ぶ <span style='font-size:13px;font-weight:700;color:var(--sub,#5B6673)'>" + (k + 1) + "／" + S.length + "</span></h3>";
+    /* 決めた事（押すと戻る） */
+    var past = S.slice(0, k).map(function(x, i){ var v = x.vals && x.vals.filter(function(y){ return y.id === x.cur; })[0]; return "<button type='button' data-s740back='" + i + "' style='border:1px solid var(--line,#DCE3EB);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink,#18202A)'>" + esc(v ? v.name.replace(/<[^>]*>/g, "") : x.name) + "</button>"; });
+    if (past.length) h += "<div style='display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0 8px'><span style='font-size:12px;color:var(--sub,#5B6673)'>決めた事：</span>" + past.join("<span style='color:#9AA6B2'>›</span>") + "</div>";
+    if (s.id === "__adds"){
+      h += "<div style='font-size:16px;font-weight:800;margin:6px 0 2px'>付ける物（なしでもOK）</div>";
+      optAdds740().forEach(function(a){
+        var vs = addVals740(a), cur = st.ad[a.id] || (vs.some(function(v){ return v.id === "none"; }) ? "none" : "");
+        h += "<div style='margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)'>" + esc(a.name) + "</div><div style='display:flex;flex-wrap:wrap;gap:6px'>" + vs.map(function(v){ var df = v.id && v.id !== "none" ? addDiff(a, v.id) : 0; return vbtn740("__add:" + a.id, { id: v.id, name: v.name + (df ? "（＋" + df.toLocaleString("ja-JP") + "円）" : "") }, v.id === cur); }).join("") + "</div>";
+      });
+      if (st.ad.keyset === "face") h += "<div style='margin-top:8px;font-size:12.5px;color:var(--sub,#5B6673)'>顔認証の時は、ハンドル・シリンダーは顔認証のセットに入っているので、別には足しません。</div>";
+      h += "<div style='display:flex;gap:8px;margin-top:12px'><button type='button' class='btn' id='s740next' style='flex:1;min-height:46px'>次へ</button></div>";
+    }
+    else if (s.id === "__ok"){
+      var T = total(st.d, st.sel, st.ad), mk = mkName(st.d.maker), rt = rate(mk);
+      h += "<div style='font-size:15px;font-weight:800;margin:6px 0'>" + esc(label(st.d, st.ent, st.sel, st.ad)) + "</div>";
+      if (st.skip740) h += "<div style='font-size:12.5px;color:var(--sub,#5B6673);margin-bottom:6px'>決めていない所は、よく使う物で仮に選んでいます。上の「決めた事」から、いつでも選び直せます。</div>";
+      h += "<div style='margin-top:8px;padding:10px;border-radius:10px;background:#F3F7FC;font-size:14px;line-height:1.6'>" + (T ? "定価 <b>" + T.teika.toLocaleString("ja-JP") + "円</b> × 掛率 " + rt + "%（" + esc(mk) + "）＝ <b>" + Math.round(T.teika * rt / 100).toLocaleString("ja-JP") + "円</b>" + (T.miss.length ? "<br><span style='color:#B91C1C'>値段の無い部材：" + esc(T.miss.join("・")) + "</span>" : "") : "<span style='color:#B91C1C'>この組み合わせの値段がカタログにありません。上から選び直してください。</span>") + "</div>";
+      h += "<div style='display:flex;gap:8px;margin-top:10px'><button type='button' class='btn' id='c705ok' style='flex:1;min-height:46px'" + (T ? "" : " disabled") + ">これにする</button>" + (st.sa.cat705 ? "<button type='button' class='btn sub' id='c705rm' style='flex:0 0 auto;width:auto'>外す</button>" : "") + "</div>";
+    }
+    else {
+      h += "<div style='font-size:16px;font-weight:800;margin:6px 0 2px'>" + esc(s.name) + "</div>";
+      if (s.hint) h += "<div style='font-size:12.5px;color:var(--sub,#5B6673);margin-bottom:6px'>" + esc(s.hint) + "</div>";
+      h += "<div style='display:flex;flex-wrap:wrap;gap:6px'>" + s.vals.map(function(v){ return vbtn740(s.id, v, v.id === s.cur); }).join("") + "</div>";
+      var T0 = total(st.d, st.sel, st.ad); if (T0) h += "<div style='margin-top:10px;font-size:12.5px;color:var(--sub,#5B6673)'>今の選び方の定価：" + T0.teika.toLocaleString("ja-JP") + "円</div>";
+    }
+    h += "<div style='display:flex;gap:6px;margin-top:12px'>" + (k > 0 ? "<button type='button' class='btn sub' id='s740prev' style='flex:0 0 auto;width:auto;min-height:44px'>もどる</button>" : "") + (s.id !== "__ok" ? "<button type='button' class='btn sub' id='s740skip' style='flex:1;min-height:44px'>スキップ（とりあえずこれで）</button>" : "<span style='flex:1'></span>") + "<button type='button' class='btn sub' id='c705x' style='flex:0 0 auto;width:auto;min-height:44px'>やめる</button></div>";
+    $("mbox").innerHTML = h;
+    st.k740 = k;
+    function back(i){ var S2 = steps740(); for (var j = i; j < S2.length; j++) undone740(S2[j].id); st.skip740 = false; st.at740 = null; draw(); }
+    $("mbox").querySelectorAll("[data-s740back]").forEach(function(b){ b.onclick = function(){ back(+b.dataset.s740back); }; });
+    $("mbox").querySelectorAll("[data-s740]").forEach(function(b){ b.onclick = function(){ choose740(b.dataset.s740, b.dataset.v); }; });
+    if ($("s740prev")) $("s740prev").onclick = function(){ back(k - 1); };
+    if ($("s740skip")) $("s740skip").onclick = function(){ fix740(); steps740().forEach(function(x){ done740(x.id); }); st.skip740 = true; draw(); };
+    if ($("s740next")) $("s740next").onclick = function(){ done740("__adds"); draw(); };
+    bindEnd705();
+  }
+  function done740(id){ st.sd740 = st.sd740 || {}; st.dn740 = st.dn740 || {}; if (id === "__kind") st.sd740.kind = 1; else if (id === "__line") st.sd740.line = 1; else if (id === "__file") st.sd740.file = 1; else if (id === "__adds") st.sd740.adds = 1; else if (id === "__ranma") st.sd740.ranma = 1; else if (id !== "__ok") st.dn740[id] = 1; }
+  function undone740(id){ st.sd740 = st.sd740 || {}; st.dn740 = st.dn740 || {}; if (id === "__kind") delete st.sd740.kind; else if (id === "__line") delete st.sd740.line; else if (id === "__file") delete st.sd740.file; else if (id === "__adds") delete st.sd740.adds; else if (id === "__ranma") delete st.sd740.ranma; else delete st.dn740[id]; }
+  function goFile740(e){
+    return loadFile(e.file).then(function(dd){
+      st.ent = e; st.d = dd; st.sel = {}; st.ad = {}; st.dn740 = {};
+      (dd.adds || []).forEach(function(a){ st.ad[a.id] = addDefault(a); });
+      sizeFromDoor(dd, st.sel, st.sa); fix740(); draw();
+    });
+  }
+  function choose740(sid, v){
+    if (sid.indexOf("__add:") === 0){ st.ad[sid.slice(6)] = v === "none" ? "none" : v; keyRule740(); draw(); return; }
+    if (sid === "__kind" || sid === "__line" || sid === "__file"){
+      var K = sid === "__kind" ? v : kind740(st.ent), Lk = st.L.filter(function(e){ return kind740(e) === K; });
+      var ln = sid === "__line" ? v : lineOf(st.ent), Ll = Lk.filter(function(e){ return lineOf(e) === ln; });
+      if (!Ll.length) Ll = Lk;
+      var e = sid === "__file" ? st.L.filter(function(x){ return x.file === v; })[0] : (Ll.filter(function(x){ return x.file === st.ent.file; })[0] || Ll[0]);
+      done740(sid);
+      if (!e) return;
+      if (e.file === st.ent.file){ draw(); return; }
+      goFile740(e); return;
+    }
+    if (sid === "open" || sid === "__ranma"){
+      var okO = okVals740("open"), cur = okO.filter(function(x){ return x.id === st.sel.open; })[0], wantRm = sid === "__ranma" ? v === "1" : !!(cur && RM740.test(cur.name || ""));
+      var b = sid === "open" ? okO.filter(function(x){ return x.id === v; })[0] : (cur && baseOf740(okO, cur));
+      if (b){ var r = wantRm ? rmOf740(okO, b) : null; st.sel.open = r ? r.id : b.id; }
+      if (sid === "__ranma") done740("__ranma"); else done740("open");
+      fix740(); draw(); return;
+    }
+    st.sel[sid] = v; done740(sid); fix740(); draw();   /* fix740 の中で、デザインに合わない付ける物も寄せ直す */
+  }
+  /* 最初に開いた時：図面の扉（引き戸か）と、リフォームならリシェントを先に選んでおく */
+  function start740(){
+    st.sd740 = {}; st.dn740 = {}; st.skip740 = false;
+    if (st.sa.cat705 && st.sa.cat705.file === st.ent.file){ fix740(); steps740().forEach(function(x){ done740(x.id); }); return null; }
+    var wantK = /引/.test(String(st.sa.name || "")) ? "引戸" : "ドア", rf = false; try { rf = S.mode === "rf"; } catch(e){}
+    var C = st.L.filter(function(e){ return kind740(e) === wantK; }); if (!C.length) C = st.L;
+    if (st.sa.cat === "勝手口"){ var G = C.filter(function(e){ return e.group === "勝手口ドア"; }); if (G.length) C = G; }
+    var pref = (rf ? C.filter(function(e){ return lineOf(e) === "リシェント"; }) : C.filter(function(e){ return lineOf(e) !== "リシェント"; }))[0] || C[0];
+    if (pref && pref.file !== st.ent.file) return pref;
+    fix740(); return null;
   }
   window.CAT705 = { v: 1, base: function(){ return BASE; }, setBase: function(b){ BASE = b; idx = null; files = Object.create(null); }, groupOf: groupOf, open: open, loadIndex: loadIndex, loadFile: loadFile, makers: function(){ var m = seenMakers.slice(); (S && S.sashes || []).forEach(function(sa){ if (sa.cat705 && m.indexOf(sa.cat705.maker) < 0) m.push(sa.cat705.maker); }); return m; }, _total: total, _fix: fix };
   /* 単価表の掛率の一覧にカタログのメーカーを早めに出すため、静かに一覧だけ読む（失敗しても何もしない） */
