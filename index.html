@@ -45233,7 +45233,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-717：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠（2026-11-27 Claude Fable）----------
+/* ---------- CAD-726：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45262,7 +45262,15 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・棒で歩く時（Fable の作業番号 692）：向きの丸が出ている間は、絵を1本指でなぞっても向きを変えない（向きは右の丸だけ。置きたい所を触る時に絵が動かないように）。
      その間のタップは、指が少し動いても・少し長く触ってもタップと見る。向きの丸をしまっている時・足あとで歩く時・「上から」は、今までどおりなぞって見回せる。
      触った場所（hit）の名前を分けた：lv＝床の高さ（mm。土間 −180 など）、fi＝今見ている階の番号（0＝1階）。floor は fi と同じ（階の番号）。前は floor が床の高さだった。
-     RITTAI.v は 11。
+   ・床板の向き（Fable の作業番号 693）：アプリ共通の物差し（CAD-583 床の張り方向の決まり＝window.__judge582。②間取り・⑤平面図と同じ）に合わせる。
+     床見切り「あり」＝各部屋の長手（収納は属する部屋の向き・階段の横の細い帯は本体の部屋の向き）／「なし」＝家全体を家の長手で統一。
+     物差しが使えない時は部屋の外形（奥行が幅の 1.05 倍より大きい時だけ南北）。RITTAI.rooms() の fr＝板の向き（1＝南北に流す）。
+   ・壁に付く物の形（Fable の作業番号 694）：「触って候補」で置ける物が、立体で何か分かる形に出るようにした（形と大きさは目安。見積・保存は変えない）。
+     点で置く物＝コンセント・USB・スイッチ・調光・人感センサー・テレビ端子・LAN・テレビドアホン・分電盤・紙巻器・コート掛け・壁掛けテレビ・スポットライト・ペンダントライト。
+     線で置く物＝手すり（丸い木の棒と受け金物）・タオル掛け・ハンガーパイプ・可動棚・ピクチャーレール・ダクトレール・ロールスクリーン・ブラインド。面で置く物＝姿見（枠と鏡）。
+     アクセントクロス＝壁の面の仕上げとして出す（柄は記録の pat：ダーク・グレー・タイル調・柄物・木目調。部屋つきの記録はその部屋の面だけ）。前は立体に出ていなかった。
+     面で置く物（タイル・板張り・腰壁・漆喰・エコカラットなど）は、その壁の窓・ドアの所をよけて張る（前は窓の上にも張って、窓が隠れていた）。
+     RITTAI.v は 13。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45279,7 +45287,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 11, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 13, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45362,6 +45370,32 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     M.lv = LV; M.rlv = RLV; M.dh = DH;
     var roomBy = Object.create(null), wallBy = Object.create(null), facesBy = Object.create(null), used = Object.create(null);
     var RFR = Object.create(null);
+    /* 板の向き（Fable 693）：アプリ共通の物差し（CAD-583 床の張り方向の決まり＝window.__judge582）に合わせる。
+       床見切り「あり」＝各部屋の長手（収納は属する部屋の向き・階段の横の細い帯は本体の部屋の向き）／「なし」＝家全体を家の長手で統一。
+       物差しが無い・その部屋が取れない時は、部屋の外形で決める（奥行が幅の 1.05 倍より大きい時だけ南北に流す。物差しと同じ決まり） */
+    var JDG = null; try { JDG = (typeof window.__judge582 === "function") ? window.__judge582() : null; } catch(e){ JDG = null; }
+    if (!JDG || typeof JDG.roomIdxAt !== "function" || !Array.isArray(JDG.infos)) JDG = null;
+    function innerPts(poly, holes, bb){   /* 部屋の中の点：升目（7×7）のうち、壁から離れた順 */
+      var C = [], i, j, k, x, y, dm, Q = [poly].concat(holes);
+      for (i = 0; i < 7; i++) for (j = 0; j < 7; j++){
+        x = bb[0] + (bb[2] - bb[0]) * (i + .5) / 7; y = bb[1] + (bb[3] - bb[1]) * (j + .5) / 7;
+        if (!inPoly(x, y, poly) || holes.some(function(h){ return inPoly(x, y, h); })) continue;
+        dm = 1e9; Q.forEach(function(P){ for (k = 0; k < P.length; k++){ var a = P[k], b = P[(k + 1) % P.length], dd = segD(x, y, a[0], a[1], b[0], b[1]); if (dd < dm) dm = dd; } });
+        C.push([x, y, dm, C.length]);
+      }
+      return C.sort(function(a, b){ return (b[2] - a[2]) || (a[3] - b[3]); });
+    }
+    function vertOf(poly, holes, bb){
+      var w = bb[2] - bb[0], dp = bb[3] - bb[1], own = w > 0 && dp > w * 1.05, C, i, ri;
+      if (!JDG) return own;
+      if (JDG.mode582 === "nashi") return !!JDG.houseVert582;   /* 床見切り「なし」：どの部屋も、家の長手の向き */
+      C = innerPts(poly, holes, bb);
+      for (i = 0; i < C.length && i < 12; i++){
+        ri = -1; try { ri = JDG.roomIdxAt(C[i][0], C[i][1]); } catch(e){ ri = -1; }
+        if (ri >= 0 && JDG.infos[ri]) return !!JDG.infos[ri].vert;
+      }
+      return own;
+    }
     /* 畳を敷く範囲の寄せ（Fable 690）：範囲の4辺 [左, 上, 右, 下] を、壁がある辺は壁の厚みの半分、段の框がある辺は框の見込み（105）だけ内へ寄せる */
     function sideIns(x0, y0, x1, y1, lvIn){
       function one(ax, ay, bx, by, ox, oy){
@@ -45392,12 +45426,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var d = { id: r.id, poly: r.poly, holes: holes, ch: r.ch || rd.ch, fk: fk, cf: isUb(r) ? "ubc" : (r.fin && r.fin.c === "none") ? "bare" : "ceil" };
       if (fk === "flDoma"){ M.doma = 1; if (DH > 0) RLV[r.id] = -DH; }
       var rxs = r.poly.map(function(p){ return p[0]; }), rys = r.poly.map(function(p){ return p[1]; }), rbb = [Math.min.apply(null, rxs), Math.min.apply(null, rys), Math.max.apply(null, rxs), Math.max.apply(null, rys)];
-      if (rbb[3] - rbb[1] > rbb[2] - rbb[0] + 1){ d.fr = 1; RFR[r.id] = 1; }   /* 板の向き：部屋の長い方へ流す（fr＝南北に流す） */
+      if (vertOf(r.poly, holes, rbb)){ d.fr = 1; RFR[r.id] = 1; }   /* 板の向き（fr＝南北に流す）：アプリ共通の物差しに合わせる（Fable 693） */
       var rq = ring(r.poly); if (fk === "tatami" && rq.length === 4 && !holes.length && axisPoly([rq])) d.ins = sideIns(rbb[0], rbb[1], rbb[2], rbb[3], RLV[r.id] || 0);   /* 四角い畳の部屋：畳を敷く */
       var rlv = LV.filter(function(q){ return q[0] < rbb[2] - 1 && q[2] > rbb[0] + 1 && q[1] < rbb[3] - 1 && q[3] > rbb[1] + 1; });
       if (rlv.length) d.lv = rlv;
       if (RLV[r.id]) d.dz = RLV[r.id];
-      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
+      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a, fr: d.fr ? 1 : 0 });
       unit("r:" + r.id, "room", d);
     });
 
@@ -45452,6 +45486,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
           }
           if (lr.length) sgm.lv = lr;
         }
+        if (sgm.m === "cloth" && ACCW[w.id]) ACCW[w.id].forEach(function(q){ if ((!q.side || q.side === side) && (!q.rm || q.rm === f.room)) sgm.m = q.m; });   /* アクセントクロスの面（Fable 694） */
         return sgm;
       });
       if (!out.length) out.push({ s0: 0, s1: w.len, q0: 0, q1: w.len, room: null, m: "cloth", ch: 0, c0: 0, c1: 0, tr: 0 });
@@ -45460,6 +45495,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       out[0].s0 = -1e7; out[out.length - 1].s1 = 1e7;
       return out;
     }
+    var ACCW = Object.create(null), ACCM = { dark: "accD", gray: "accent", tile: "accT", pattern: "accP", wood: "accW" };   /* アクセントクロス（Fable 694）：壁の名札 → [{side, m, rm}] */
+    arr(rd.things).forEach(function(t){
+      if (t.list !== "fx" || t.kind !== "accent" || !t.wall || t.state === "remove") return;
+      var rw = (t.raw && typeof t.raw === "object") ? t.raw : {};
+      (ACCW[t.wall] = ACCW[t.wall] || []).push({ side: t.side || 0, m: ACCM[rw.pat] || "accent", rm: (rw.rm !== undefined && rw.rm !== null && roomBy["r" + rw.rm]) ? "r" + rw.rm : null });
+    });
     var sashBy = Object.create(null);
     arr(rd.things).forEach(function(t){ if (t.list === "sashes" && t.wall && t.drawn && fin(t.u) && t.w > 0 && t.h > 0) (sashBy[t.wall] = sashBy[t.wall] || []).push(t); });
     arr(rd.things).forEach(function(t){   /* ユニットバスの入口（ゾーンに付いたドア）：その辺の上にある壁へ、開口として足す */
@@ -45533,6 +45574,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         w = t.wall ? wallBy[t.wall] : null;
         if (!w || w.state === "remove" || !t.side || !fin(t.u)) return;
         d = { id: id, list: "fx", k: t.kind, shape: t.shape || "pt", state: t.state, a: w.a, ux: w.ux, uy: w.uy, th: w.th, wlen: w.len, side: t.side, u: t.u, z: t.z || 0, len: t.len, hgt: t.hgt, v: t.v, top: roomCh(t.room) };
+        if (d.shape === "area" || d.shape === "wall"){ var ct = arr(sashBy[w.id]).filter(function(q){ return q.state !== "remove" && fin(q.u) && q.w > 0 && q.h > 0; }).map(function(q){ return [q.u, q.u + q.w, q.sill || 0, (q.sill || 0) + q.h]; }); if (ct.length) d.cut = ct; }   /* その壁の窓・ドアの範囲（Fable 694） */
       } else if (t.list === "lights"){
         if (!fin(t.x) || !fin(t.y)) return;
         var lr = t.room ? roomBy[t.room] : null, rb = null;
@@ -45553,7 +45595,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var rw2 = (t.raw && typeof t.raw === "object") ? t.raw : {};
         d = { id: id, list: "tatami", k: t.kind === "flAge" ? (FLOORS[rw2.fin] ? rw2.fin : "tatami") : t.kind, x0: t.x0, y0: t.y0, x1: t.x1, y1: t.y1 };   /* 小上がりは、上の仕上げ（畳・フローリングなど）で張る */
         var tz2 = lvOf(M, (t.x0 + t.x1) / 2, (t.y0 + t.y1) / 2); if (tz2) d.z = tz2;
-        if (t.room ? RFR[t.room] : Math.abs(t.y1 - t.y0) > Math.abs(t.x1 - t.x0) + 1) d.fr = 1;
+        if (t.room ? RFR[t.room] : Math.abs(t.y1 - t.y0) > Math.abs(t.x1 - t.x0) * 1.05) d.fr = 1;   /* 部屋の中の物は部屋の向き。部屋の外の物は、その物の外形で（物差しと同じ 1.05 倍の決まり） */
         if (d.k === "tatami") d.ins = sideIns(Math.min(t.x0, t.x1), Math.min(t.y0, t.y1), Math.max(t.x0, t.x1), Math.max(t.y0, t.y1), tz2 || 0);
       } else if (t.list === "zones"){
         if (!ZK[t.kind] || ![t.x0, t.y0, t.x1, t.y1].every(fin)) return;
@@ -45794,7 +45836,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     grid: { g: [[.15, .075, .85, .925]], bu: [.5], bv: [.2875, .5, .7125] }, panel: { p: [[.2, .1, .8, .45], [.2, .55, .8, .9]] }, louver: { l: [.7, .775, .85] }, mirror: { m: [.2, .1, .8, .9] } };
   var SOLID = {   /* 名前：[色, ざらつき, 柄] */
     cloth: [0xffffff, .96, "cloth"], ceil: [0xffffff, 1, "cloth"], bare: [0xdedad1, .9], cap: [0xf0ece3, .9], ext: [0xffffff, .85, "siding"],
-    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5],
+    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5], chrome: [0xb2b8bd, .24, null, .8], railW: [0xcda571, .5], plateS: [0xc6c9ca, .9], screen: [0xe3ded2, .95],
+      accD: [0x4a4640, .95, "cloth"], accT: [0xeae5db, .55, "tileS"], accP: [0xeadfc8, .95, "cloth"], accW: [0xd7b88a, .8, "grainV"],
     porc: [0xfafafa, .25], cab: [0xece7dc, .6], wood: [0xffffff, .65, "ply"], tile: [0xffffff, .35, "tileS"], accent: [0x7d8a96, .95, "cloth"],
     shikkui: [0xf2eee4, 1], under: [0xd8c9a8, .9], mark: [0x8a9099, .7], base: [0xf2efe8, .55], crown: [0xf5f3ee, .8], cut: [0x3b4149, .95], ubd: [0xeef2f3, .3],
     seat: [0xece8de, .42], tub: [0xf4f6f7, .2], tubRim: [0xcfd9de, .3], tubIn: [0xe9f0f3, .15], sink: [0xaab0b5, .26, null, .85], ktop: [0xe2e4e6, .3], hob: [0x16181b, .1, null, .2], hobRing: [0x767c84, .4],
@@ -46325,7 +46368,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return true;
   }
 
-  var AREAM = { tile: "tile", board: "wood", waist: "wood", niche: "mark", shikkui: "shikkui", accent: "accent", under: "under", demo: "ghost" };
+  var AREAM = { tile: "tile", eco: "tile", board: "wood", waist: "wood", niche: "mark", shikkui: "shikkui", accent: "accent", under: "under", demo: "ghost" };
   var TKH = { kitchen: [0, 850], senmen: [0, 800], wc: [0, 420], bath: [0, 520], tearai: [650, 820], geta: [0, 900], senpan: [0, 60], makura: [1820, 1845], chudan: [850, 875], pillar: [0, -1], counter: [700, 735], stair: [0, 200], floor: [0, 6], yukaten: [0, 6], yukashu: [0, 6], dansa: [0, 6], ceil: [-1, -1], acout: [-1, -1] };
   var TKM = { kitchen: "cab", senmen: "cab", wc: "porc", bath: "porc", tearai: "porc", geta: "cab", senpan: "porc", makura: "wood", chudan: "wood", pillar: "wood", counter: "wood", stair: "wood" };
   function buildThing(d){
@@ -46333,21 +46376,114 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (d.list === "fx"){
       var fr = d, h = d.th / 2, sd = d.side, u = d.u, z = d.z || 0, L = d.wlen, top = d.top, k = d.k;
       var on = function(s0, s1, z0, z1, dep, mk){ fbox(acc, fr, s0, s1, sd > 0 ? h : -h - dep, sd > 0 ? h + dep : -h, Math.max(0, z0), Math.min(top, z1), (gh || mk === "ghost") ? "ghost" : mk, tag); };
+      /* 壁に付く物の形（Fable 694）。of＝壁の面から d0〜d1 離れた箱。barS＝壁に沿う丸棒、barT＝壁から出る丸棒、barZ＝立つ丸棒（dc＝壁の面から芯までの離れ） */
+      var MK = function(mk){ return (gh || mk === "ghost") ? "ghost" : mk; }, T0 = function(dd){ return sd > 0 ? h + dd : -h - dd; }, UV0 = [0, 0], UV4 = [UV0, UV0, UV0, UV0], NS = 10, sg = sd > 0 ? 1 : -1;
+      var of = function(s0, s1, z0, z1, d0, d1, mk){ fbox(acc, fr, s0, s1, Math.min(T0(d0), T0(d1)), Math.max(T0(d0), T0(d1)), Math.max(0, z0), Math.min(top, z1), MK(mk), tag); };
+      var barS = function(s0, s1, zc, dc, r, mk){
+        var tc = T0(dc), i, a, b, m, P = function(s, q){ return fpt(fr, s, tc + r * Math.cos(q), zc + r * Math.sin(q)); };
+        for (i = 0; i < NS; i++){
+          a = i / NS * 6.2832; b = (i + 1) / NS * 6.2832; m = (a + b) / 2;
+          acc.quad(MK(mk), [P(s0, a), P(s1, a), P(s1, b), P(s0, b)], [-fr.uy * Math.cos(m), Math.sin(m), fr.ux * Math.cos(m)], UV4, tag);
+          acc.tri(MK(mk), fpt(fr, s0, tc, zc), P(s0, a), P(s0, b), [-fr.ux, 0, -fr.uy], UV0, UV0, UV0, tag); acc.tri(MK(mk), fpt(fr, s1, tc, zc), P(s1, a), P(s1, b), [fr.ux, 0, fr.uy], UV0, UV0, UV0, tag);
+        }
+      };
+      var barT = function(sc, zc, d0, d1, r, mk){
+        var ta = T0(d0), tb = T0(d1), i, a, b, m, P = function(t, q){ return fpt(fr, sc + r * Math.cos(q), t, zc + r * Math.sin(q)); };
+        for (i = 0; i < NS; i++){
+          a = i / NS * 6.2832; b = (i + 1) / NS * 6.2832; m = (a + b) / 2;
+          acc.quad(MK(mk), [P(ta, a), P(tb, a), P(tb, b), P(ta, b)], [fr.ux * Math.cos(m), Math.sin(m), fr.uy * Math.cos(m)], UV4, tag);
+          acc.tri(MK(mk), fpt(fr, sc, tb, zc), P(tb, a), P(tb, b), [-fr.uy * sg, 0, fr.ux * sg], UV0, UV0, UV0, tag);
+        }
+      };
+      var barZ = function(sc, dc, z0, z1, r, mk){
+        var tc = T0(dc), i, a, b, m, P = function(zz, q){ return fpt(fr, sc + r * Math.cos(q), tc + r * Math.sin(q), zz); };
+        for (i = 0; i < NS; i++){
+          a = i / NS * 6.2832; b = (i + 1) / NS * 6.2832; m = (a + b) / 2;
+          acc.quad(MK(mk), [P(z0, a), P(z0, b), P(z1, b), P(z1, a)], [fr.ux * Math.cos(m) - fr.uy * Math.sin(m), 0, fr.uy * Math.cos(m) + fr.ux * Math.sin(m)], UV4, tag);
+          acc.tri(MK(mk), fpt(fr, sc, tc, z1), P(z1, a), P(z1, b), [0, 1, 0], UV0, UV0, UV0, tag); acc.tri(MK(mk), fpt(fr, sc, tc, z0), P(z0, a), P(z0, b), [0, -1, 0], UV0, UV0, UV0, tag);
+        }
+      };
+      var rim = function(w2, h2){ of(u - w2 - 1.6, u + w2 + 1.6, z - h2 - 1.6, z + h2 + 1.6, 0, 1.5, "plateS"); };   /* 白い壁の上でも輪郭が分かるように、うすい影の縁 */
+      var plate = function(){ rim(35, 60); on(u - 35, u + 35, z - 60, z + 60, 7, "plate"); };   /* スイッチ・コンセントの板（70×120） */
       if (d.shape === "pt"){
         if (k === "alarm") on(u - 50, u + 50, z - 50, z + 50, 25, "plate");
         else if (k === "sconce"){ on(u - 30, u + 30, z - 30, z + 30, 20, "plate"); on(u - 60, u + 60, z + 10, z + 110, 90, "lamp"); }
         else if (k === "hanger") on(u - 150, u + 150, z - 8, z + 8, 70, "steel");
-        else { on(u - 35, u + 35, z - 57, z + 58, 8, "plate"); on(u - 14, u + 14, z - 22, z + 22, 10, "mark"); }
+        else if (k === "outlet"){ plate(); of(u - 9, u + 9, z + 10, z + 34, 7, 8.2, "mark"); of(u - 9, u + 9, z - 34, z - 10, 7, 8.2, "mark"); }                                  /* コンセント：差し込み口2つ */
+        else if (k === "usb"){ plate(); of(u - 9, u + 9, z + 10, z + 34, 7, 8.2, "mark"); of(u - 8, u + 8, z - 30, z - 23, 7, 8.2, "kick"); of(u - 8, u + 8, z - 18, z - 11, 7, 8.2, "kick"); }   /* USB：差し込み口1つ＋USB2つ */
+        else if (k === "switch"){ plate(); of(u - 21, u + 21, z - 40, z + 40, 7, 10.5, "cap"); of(u - 3, u + 3, z + 24, z + 30, 10.5, 11.3, "mark"); }                          /* スイッチ：広い押し面と、ほたるの窓 */
+        else if (k === "dimmer"){ plate(); barT(u, z + 6, 7, 24, 17, "cap"); of(u - 1.5, u + 1.5, z + 12, z + 21, 24, 24.8, "mark"); of(u - 12, u + 12, z - 44, z - 36, 7, 9, "cap"); }   /* 調光：つまみ */
+        else if (k === "sensor"){ plate(); barT(u, z + 12, 7, 17, 15, "kick"); of(u - 12, u + 12, z - 40, z - 30, 7, 9, "cap"); }                                                /* 人感センサー：黒い目 */
+        else if (k === "tv"){ plate(); barT(u, z, 7, 15, 6.5, "chrome"); barT(u, z, 7, 9, 11, "cap"); }                                                                           /* テレビ端子：丸い端子 */
+        else if (k === "lan"){ plate(); of(u - 8, u + 8, z - 7, z + 7, 7, 8.2, "kick"); of(u - 13, u + 13, z - 12, z + 12, 7, 7.8, "cap"); }                                      /* LAN：四角い口 */
+        else if (k === "doorphone"){ rim(80, 95); on(u - 80, u + 80, z - 95, z + 95, 26, "plate"); of(u - 58, u + 58, z - 8, z + 70, 26, 27.4, "hob"); of(u - 42, u - 14, z - 70, z - 48, 26, 28.5, "mark"); of(u + 14, u + 42, z - 70, z - 48, 26, 28.5, "mark"); }   /* テレビドアホンの親機：画面とボタン */
+        else if (k === "panel"){ rim(210, 160); on(u - 210, u + 210, z - 160, z + 160, 100, "plate"); of(u - 196, u + 196, z - 146, z + 146, 100, 102, "base"); of(u + 70, u + 176, z + 62, z + 116, 102, 103, "mark"); }   /* 分電盤：箱とふた・のぞき窓 */
+        else if (k === "paper"){                                                                                                                                                /* 紙巻器：ふた・両側の腕・ペーパー */
+          on(u - 76, u + 76, z + 20, z + 64, 5, "chrome"); of(u - 76, u + 76, z + 50, z + 64, 0, 118, "chrome");
+          of(u - 76, u - 69, z - 22, z + 52, 0, 78, "chrome"); of(u + 69, u + 76, z - 22, z + 52, 0, 78, "chrome");
+          barS(u - 69, u + 69, z - 2, 64, 8, "chrome"); barS(u - 57, u + 57, z - 2, 64, 50, "porc");
+        }
+        else if (k === "coat"){ on(u - 225, u + 225, z - 42, z + 42, 18, "wood"); [-165, -55, 55, 165].forEach(function(o){ of(u + o - 6, u + o + 6, z - 26, z - 14, 18, 72, "chrome"); of(u + o - 6, u + o + 6, z - 26, z + 8, 60, 72, "chrome"); }); }   /* コート掛け：板とフック4つ */
+        else if (k === "tvwall"){ on(u - 150, u + 150, z - 100, z + 100, 24, "kick"); of(u - 562, u + 562, z - 322, z + 322, 24, 60, "kick"); of(u - 550, u + 550, z - 310, z + 310, 60, 61.5, "hob"); }                          /* 壁掛けテレビ：50型ほどの黒い画面 */
+        else if (k === "spot"){ on(u - 30, u + 30, z - 30, z + 30, 14, "kick"); of(u - 7, u + 7, z - 46, z, 14, 60, "kick"); barT(u, z - 62, 34, 128, 32, "kick"); of(u - 24, u + 24, z - 86, z - 38, 128, 129.5, "lamp"); }   /* スポットライト：筒と光る面 */
+        else if (k === "pendant"){ of(u - 2, u + 2, z + 60, top, 148, 152, "kick"); barZ(u, 150, z - 70, z + 60, 105, "plate"); barZ(u, 150, z - 73, z - 68, 60, "lamp"); barZ(u, 150, top - 22, top, 34, "plate"); }   /* ペンダントライト：天井の座・コード・笠 */
+        else { plate(); of(u - 14, u + 14, z - 22, z + 22, 7, 9, "mark"); }
       } else if (d.shape === "seg"){
-        var len = d.len || 900;
-        if (d.v) on(u - 17, u + 17, z, z + len, 55, k === "rod" ? "steel" : "wood");
-        else if (k === "indirect") on(Math.max(0, u), Math.min(L, u + len), z - 35, z + 35, 100, "cap");
-        else on(Math.max(0, u), Math.min(L, u + len), z - 17, z + 17, k === "rod" ? 90 : 55, k === "rod" ? "steel" : "wood");
+        var len = d.len || 900, sa = Math.max(0, u), sb = Math.min(L, u + len), bi, nb;
+        if (d.v){
+          if (k === "rail"){ barZ(u, 52, z, z + len, 17.5, "railW"); [z + 90, z + len - 90].forEach(function(q){ of(u - 9, u + 9, q - 9, q + 9, 0, 40, "chrome"); on(u - 22, u + 22, q - 22, q + 22, 4, "chrome"); }); }   /* たての手すり */
+          else on(u - 17, u + 17, z, z + len, 55, k === "rod" ? "steel" : "wood");
+        }
+        else if (k === "indirect") on(sa, sb, z - 35, z + 35, 100, "cap");
+        else if (sb - sa < 60) on(sa, sb, z - 17, z + 17, 55, k === "rod" ? "steel" : "wood");
+        else if (k === "rail"){                                                                                          /* 手すり：丸い木の棒（径35）と受け金物（両端から90、間は900以下） */
+          barS(sa, sb, z, 52, 17.5, "railW"); nb = Math.max(2, Math.ceil((sb - sa - 180) / 900) + 1);
+          for (bi = 0; bi < nb; bi++){ var bq = sa + 90 + (sb - sa - 180) * (nb > 1 ? bi / (nb - 1) : 0); of(bq - 9, bq + 9, z - 24, z - 12, 0, 60, "chrome"); of(bq - 9, bq + 9, z - 24, z - 6, 44, 60, "chrome"); on(bq - 22, bq + 22, z - 52, z - 6, 4, "chrome"); }
+        }
+        else if (k === "towel"){ barS(sa + 6, sb - 6, z, 62, 8, "chrome"); of(sa, sa + 14, z - 13, z + 13, 0, 74, "chrome"); of(sb - 14, sb, z - 13, z + 13, 0, 74, "chrome"); }   /* タオル掛け：メッキの棒と両端の座 */
+        else if (k === "pipe"){                                                                                          /* ハンガーパイプ：壁から300の所に径32のパイプ。両端（長い時は真ん中も）に腕 */
+          barS(sa, sb, z, 300, 16, "chrome"); nb = sb - sa > 1300 ? 3 : 2;
+          for (bi = 0; bi < nb; bi++){ var pq = sa + 20 + (sb - sa - 40) * bi / (nb - 1); of(pq - 4, pq + 4, z + 10, z + 46, 0, 318, "chrome"); of(pq - 4, pq + 4, z - 4, z + 46, 290, 318, "chrome"); on(pq - 20, pq + 20, z - 6, z + 60, 4, "chrome"); }
+        }
+        else if (k === "shelf"){                                                                                         /* 可動棚：奥行300の板と、棚柱・棚受け */
+          of(sa, sb, z, z + 20, 0, 300, "wood"); nb = sb - sa > 1300 ? 3 : 2;
+          for (bi = 0; bi < nb; bi++){ var sq = sa + 60 + (sb - sa - 120) * bi / (nb - 1); on(sq - 8, sq + 8, Math.max(100, z - 620), Math.min(top - 60, z + 620), 9, "chrome"); of(sq - 3, sq + 3, z - 16, z, 9, 262, "chrome"); of(sq - 3, sq + 3, z - 60, z - 16, 9, 30, "chrome"); }
+        }
+        else if (k === "picrail"){ on(sa, sb, z - 13, z + 13, 15, "aluI"); of(sa, sb, z - 13, z - 6, 15, 19, "aluI"); }                                                    /* ピクチャーレール：細いアルミのレール */
+        else if (k === "duct"){ on(sa, sb, z - 10, z + 10, 36, "kick"); of(sa, sb, z - 3, z + 3, 36, 37, "mark"); }                                                        /* ダクトレール：黒いレール */
+        else if (k === "roll"){                                                                                          /* ロールスクリーン：巻き取りの筒・途中まで下ろした布・下の棒 */
+          of(sa, sa + 10, z - 34, z + 34, 0, 76, "plate"); of(sb - 10, sb, z - 34, z + 34, 0, 76, "plate"); barS(sa + 10, sb - 10, z, 42, 24, "cap");
+          of(sa + 16, sb - 16, z - 440, z - 8, 64, 65.2, "screen"); of(sa + 16, sb - 16, z - 462, z - 440, 54, 72, "aluI");
+        }
+        else if (k === "blind"){                                                                                         /* ブラインド：上の箱・途中まで下ろした羽根・下の棒 */
+          of(sa, sb, z - 26, z + 14, 12, 62, "plate");
+          for (bi = 0; bi < 16; bi++) of(sa + 12, sb - 12, z - 44 - bi * 24, z - 42 - bi * 24, 24, 50, "cap");
+          of(sa + 12, sb - 12, z - 440, z - 426, 22, 52, "plate");
+        }
+        else on(sa, sb, z - 17, z + 17, k === "rod" ? 90 : 55, k === "rod" ? "steel" : "wood");
       } else {
         var a2 = Math.max(0, u), b2 = Math.min(L, u + (d.len || 600)), z1 = Math.min(top, z + (d.hgt || (d.shape === "wall" ? top : 600)));
         if (k === "counter" || k === "cshelf") on(a2, b2, z1 - 35, z1, k === "counter" ? 350 : 250, "wood");
+        else if (k === "mirror"){ on(a2, b2, z, z1, 14, "aluI"); if (b2 - a2 > 60 && z1 - z > 60) of(a2 + 14, b2 - 14, z + 14, z1 - 14, 14, 15.4, "mirror"); }   /* 姿見：細い枠と鏡（Fable 694） */
         else if (k === "curtbox") on(a2, b2, top - Math.min(d.hgt || 150, 400), top, 140, "cap");
-        else on(a2, b2, z, z1, k === "accent" ? 3 : 8, AREAM[k] || "under");
+        else {   /* 窓・ドアの所をよけて張る（Fable 694）：開口の端で升目に切り、開口に入る升は張らない */
+          var H = (d.cut || []).filter(function(c){ return c[0] < b2 - 1 && c[1] > a2 + 1 && c[2] < z1 - 1 && c[3] > z + 1; }), dp = k === "accent" ? 3 : 8, mk3 = AREAM[k] || "under";
+          if (!H.length) on(a2, b2, z, z1, dp, mk3);
+          else {
+            var xs = [a2, b2], zs = [z, z1], xi, zi;
+            H.forEach(function(c){ [c[0], c[1]].forEach(function(q){ if (q > a2 + 1 && q < b2 - 1) xs.push(q); }); [c[2], c[3]].forEach(function(q){ if (q > z + 1 && q < z1 - 1) zs.push(q); }); });
+            xs.sort(function(p1, p2){ return p1 - p2; }); zs.sort(function(p1, p2){ return p1 - p2; });
+            for (xi = 0; xi < xs.length - 1; xi++){
+              var run = null;
+              for (zi = 0; zi < zs.length - 1; zi++){
+                var cx = (xs[xi] + xs[xi + 1]) / 2, cz = (zs[zi] + zs[zi + 1]) / 2, hole = H.some(function(c){ return cx > c[0] && cx < c[1] && cz > c[2] && cz < c[3]; });
+                if (hole){ if (run){ on(xs[xi], xs[xi + 1], run[0], run[1], dp, mk3); run = null; } }
+                else if (run) run[1] = zs[zi + 1]; else run = [zs[zi], zs[zi + 1]];
+              }
+              if (run) on(xs[xi], xs[xi + 1], run[0], run[1], dp, mk3);
+            }
+          }
+        }
       }
     } else if (d.list === "lights"){
       if (!gh && d.k !== "rail" && d.rb){   /* 光の輪（部屋の中だけ） */
@@ -47361,7 +47497,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     sync: function(){ var r = sync(); if (r.ok && V && V.open){ if (!r.empty) afterSync(); renderNow(); } return r; },
     plan: plan, check: check, stats: stats, pick: pick, bench: function(){ var b = bench(); if (b) renderNow(); return b; },
     quality: function(q){ return q ? setQual(q, true) : QUAL; },
-    rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk }; }) : []; },
+    rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk, fr: r.fr || 0 }; }) : []; },   /* fr＝板の向き（1＝南北に流す・0＝東西。Fable 693） */
     stand: function(id){ if (!MODEL) return null; jumpRoom(id); renderNow(); return fp ? { x: fp.x / K, y: fp.z / K, room: fpRoom } : null; },
     cam: function(o){ if (!fp) return null; o = o || {}; if (fin(o.x)) fp.x = o.x * K; if (fin(o.y)) fp.z = o.y * K; if (fin(o.h)) fp.y = o.h * K; if (fin(o.yaw)) fp.yaw = o.yaw * Math.PI / 180; if (fin(o.pitch)) fp.p = o.pitch * Math.PI / 180; if (fin(o.fov)){ fp.fov = o.fov; fovUser = true; FOVT = o.fov; } if (fin(o.x) || fin(o.y)){ onMove(); kick(); } renderNow(); return { x: fp.x / K, y: fp.z / K, h: fp.y / K, yaw: fp.yaw * 180 / Math.PI, pitch: fp.p * 180 / Math.PI, fov: fp.fov }; },
     ghost: function(on){ if (!T) return null; var g = mat("ghost"); if (typeof on === "boolean"){ g.visible = on; labels(); renderNow(); } return g.visible; },
