@@ -48806,8 +48806,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* 置けない理由の文（CAD-734） */
   function clashMsg(cl){
     var w = cl && cl.why734;
-    if (w === "pocket") return "ここは引き戸の扉が壁の中に入る所（戸袋）なので、スイッチ・コンセントは付けられません。壁の中に扉があり、箱を入れる場所がないためです。戸袋の外の壁に付けてください";
-    if (w === "run") return "ここは引き戸の扉が走る面なので付けられません（開けると扉がぶつかります）。反対側の面なら付けられます";
+    if (w === "pocket") return "ここは引き戸の扉が壁の中に入る所（戸袋）なので、スイッチ・コンセントは付けられません。扉が入る分だけ下地が両面に分かれて薄くなり、箱が入らないためです。戸袋の外の壁に付けてください";
+    if (w === "run") return "ここは引き戸の扉が走る面なので付けられません（開けると扉がぶつかります）。反対側の薄い壁の面なら付けられます";
     return "ドア・窓（" + ((cl && cl.kind) || "") + "）がある所には付けられません。横の壁をタップしてください";
   }
   /* 壁のその点に、スイッチ・コンセントが付けられない理由（無ければ ""）。立体で壁を触った時に先に見せる */
@@ -49583,6 +49583,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var fl723 = function(bit, msg){ return function(){ var so = sashObj; if (!so) return; try { pushUndo(); so.flip = (so.flip || 0) ^ bit; save(); if (typeof drawPlan === "function") drawPlan(); say(msg); } catch(e){} }; };
     if (ty === "door" || ty === "closet"){ mk("吊元", fl723(2, "吊元を替えました")); mk("開き勝手", fl723(1, "開く向きを替えました")); }   /* CAD-723：立体と同じ呼び方 */
     else if (ty === "hiki") mk("戸袋の側", fl723(2, "戸袋の側を替えました"));
+    if (window.KATA734 && KATA734.ok(sa)){ mk("扉の走る面", fl723(1, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）")); if (sa.frame !== "outset") mk("戸袋の形", function(){ var so = sashObj; if (!so) return; try { pushUndo(); say(KATA734.toggle(so)); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} }); }   /* CAD-735 */
     try { if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(sa)) mk("状態", function(){ var j = idx(); if (j >= 0) sashAskState(j); }); } catch(e){}
     if (typeof winAccOK694 === "function" && winAccOK694(sa)) mk("付属", function(){ accSheet(); });   /* CAD-694 */
     var x = mk("×", closeSash); x.style.padding = "0"; x.style.width = "44px";
@@ -50820,6 +50821,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var B = [];
       if (ty === "door" || ty === "closet"){ B.push(["吊元", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "吊元を替えました"); }]); B.push(["開き勝手", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "開く向きを替えました"); }]); }
       if (ty === "hiki") B.push(["戸袋の側", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "戸袋の側を替えました"); }]);
+      if (window.KATA734 && KATA734.ok(o)){ B.push(["扉の走る面", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）"); }]); if (o.frame !== "outset") B.push(["戸袋の形", function(){ var m = ""; edit(function(){ m = KATA734.toggle(o); }); say(m); }]); }   /* CAD-735 */
       B.push(["大きさ", function(){ try { KAKU3.sashSize(idx("sashes", id)); } catch(e){} watchSync(); }]);
       B.push(["種類", function(){ var j = idx("sashes", id), so = S.sashes[j]; if (!so || !KAKU2.choose) return; KAKU2.choose({ where: so.host && so.host.t === "e" ? "ext" : "part", room: "", replace: j, done: function(){ after(); } }); }]);
       if (window.CAT705 && CAT705.groupOf(o)) B.push(["カタログ", function(){ try { CAT705.open(idx("sashes", id)); } catch(e){} watchSync(); }]);
@@ -51318,5 +51320,19 @@ window.WHY724 = function(why){
     return A;
   }
   window.UBD734 = { v: 1, zoneOf: zoneOf, zoneById: zoneById, label: label, acts: acts };
+})();
+</script>
+<script id="kata734js">
+/* ===== CAD-735（Opus）：片引き戸の戸袋の形を、新しい画面の帯から選ぶ。
+   記録：sa.tob581 なし＝片側だけ薄い壁（標準・扉はいつも見えて走る）／"both"＝両側薄壁（扉が壁の中に入る・引込み）。
+   flip の 2＝戸袋がどちらの端か／flip の 1＝扉が走る面。アウトセット（frame:"outset"）は戸袋なし ===== */
+(function(){
+  if (window.KATA734) return;
+  function ok(sa){ try { return !!(sa && typeof kata308 === "function" && kata308(sa)); } catch(e){ return false; } }
+  function toggle(sa){
+    if (sa.tob581 === "both"){ delete sa.tob581; delete sa.tobM581; delete sa.tobK581; return "片側だけ薄い壁にしました（扉はいつも見えて走ります。反対側の薄い壁の面にはスイッチ・コンセントを付けられます）"; }
+    sa.tob581 = "both"; return "両側薄壁（扉が壁の中に入る形）にしました。戸袋の壁は下地が薄くなるので、どちらの面にもスイッチ・コンセントは付けられません";
+  }
+  window.KATA734 = { v: 1, ok: ok, toggle: toggle };
 })();
 </script>
