@@ -1,0 +1,150 @@
+{
+ "v": 2,
+ "maker": "lixil",
+ "series": "rasissa-s-hikido-rendo",
+ "group": "室内ドア",
+ "year": "2025-07",
+ "src": "LIXIL 25ラシッサUD商品カタログ セット価格一覧（ラシッサS 室内引戸 機能付引戸 連動方式）p.242",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "type",
+   "name": "種類",
+   "values": [
+    {
+     "id": "katahiki-2",
+     "name": "片引戸 2枚建（連動方式・明り採り付）"
+    },
+    {
+     "id": "katahiki-3",
+     "name": "片引戸 3枚建（固定扉）（連動方式・明り採り付）"
+    }
+   ]
+  },
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "LAA",
+     "name": "LAA",
+     "shape": "flush"
+    },
+    {
+     "id": "LAB",
+     "name": "LAB",
+     "shape": "panel",
+     "shapeNote": "横の溝（板張り風）"
+    },
+    {
+     "id": "LAG",
+     "name": "LAG",
+     "shape": "panel"
+    }
+   ]
+  },
+  {
+   "id": "func",
+   "name": "機能",
+   "values": [
+    {
+     "id": "w-sm",
+     "name": "Wソフトモーション"
+    }
+   ]
+  },
+  {
+   "id": "frame",
+   "name": "枠",
+   "values": [
+    {
+     "id": "noncasing",
+     "name": "ノンケーシング枠（固定枠）"
+    }
+   ]
+  },
+  {
+   "id": "size",
+   "name": "サイズ",
+   "price": false,
+   "values": [
+    {
+     "id": "W16",
+     "name": "W16（1644×2023）",
+     "w": 1644,
+     "h": 2023
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "type": "katahiki-2",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 219000,
+   "page": 242
+  },
+  {
+   "type": "katahiki-2",
+   "design": "LAB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 219000,
+   "page": 242
+  },
+  {
+   "type": "katahiki-2",
+   "design": "LAG",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 243000,
+   "page": 242
+  },
+  {
+   "type": "katahiki-3",
+   "design": "LAA",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 275000,
+   "page": 242
+  },
+  {
+   "type": "katahiki-3",
+   "design": "LAB",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 275000,
+   "page": 242
+  },
+  {
+   "type": "katahiki-3",
+   "design": "LAG",
+   "func": "w-sm",
+   "frame": "noncasing",
+   "teika": 311000,
+   "page": 242
+  }
+ ],
+ "adds": [
+  {
+   "id": "casing",
+   "name": "ケーシング付枠",
+   "values": [
+    {
+     "id": "casing",
+     "name": "ケーシング付枠に変更",
+     "teika": 5000
+    }
+   ]
+  }
+ ],
+ "note": "ラシッサS 室内引戸 機能付引戸（連動方式・明り採り付）のセット価格。サイズはW16（1644mm）・H20（2023mm）のみ。デザインはパネルタイプのLAA・LAB・LAGのみ（LAAとLABは同価格）。ケーシング付枠は+5,000円（adds）。このセット価格一覧に品番の掲載はないため、baseの各行にhinbanは付けていない。",
+ "pages": [
+  {
+   "page": 242,
+   "rows": 6
+  }
+ ]
+}
