@@ -1,0 +1,967 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "samos-a-yokosuberidashi",
+ "seriesName": "サーモスA 横すべり出し窓（カムラッチ）（在来・204）",
+ "group": "サッシ",
+ "year": "2026-10",
+ "src": "LIXIL 業務用資料集 サーモスA・防火戸FG-A（IS9300）完成品価格表 2026年10月価格改定版",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "sizeW",
+   "name": "呼称幅",
+   "values": [
+    {
+     "id": "026",
+     "name": "026（内法基準寸法W 260mm）",
+     "w": 260,
+     "outW": 300
+    },
+    {
+     "id": "031",
+     "name": "031（内法基準寸法W 310mm）",
+     "w": 310,
+     "outW": 350
+    },
+    {
+     "id": "036",
+     "name": "036（内法基準寸法W 365mm）",
+     "w": 365,
+     "outW": 405
+    },
+    {
+     "id": "041",
+     "name": "041（内法基準寸法W 410mm）",
+     "w": 410,
+     "outW": 450
+    },
+    {
+     "id": "060",
+     "name": "060（内法基準寸法W 600mm）",
+     "w": 600,
+     "outW": 640
+    },
+    {
+     "id": "069",
+     "name": "069（内法基準寸法W 690mm）",
+     "w": 690,
+     "outW": 730
+    },
+    {
+     "id": "074",
+     "name": "074（内法基準寸法W 740mm）",
+     "w": 740,
+     "outW": 780
+    }
+   ]
+  },
+  {
+   "id": "sizeH",
+   "name": "呼称高",
+   "values": [
+    {
+     "id": "023",
+     "name": "023（内法基準寸法h 230mm）",
+     "h": 230,
+     "outH": 300
+    },
+    {
+     "id": "028",
+     "name": "028（内法基準寸法h 280mm）",
+     "h": 280,
+     "outH": 350
+    },
+    {
+     "id": "03",
+     "name": "03（内法基準寸法h 300mm）",
+     "h": 300,
+     "outH": 370
+    },
+    {
+     "id": "033",
+     "name": "033（内法基準寸法h 335mm）",
+     "h": 335,
+     "outH": 405
+    },
+    {
+     "id": "038",
+     "name": "038（内法基準寸法h 380mm）",
+     "h": 380,
+     "outH": 450
+    },
+    {
+     "id": "05",
+     "name": "05（内法基準寸法h 500mm）",
+     "h": 500,
+     "outH": 570
+    },
+    {
+     "id": "057",
+     "name": "057（内法基準寸法h 570mm）",
+     "h": 570,
+     "outH": 640
+    },
+    {
+     "id": "07",
+     "name": "07（内法基準寸法h 700mm）",
+     "h": 700,
+     "outH": 770
+    },
+    {
+     "id": "09",
+     "name": "09（内法基準寸法h 900mm）",
+     "h": 900,
+     "outH": 970
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "pg-clear",
+     "name": "一般複層ガラス 透明"
+    },
+    {
+     "id": "pg-kata",
+     "name": "一般複層ガラス 型"
+    },
+    {
+     "id": "lowe-clear",
+     "name": "Low-E複層ガラス 透明"
+    },
+    {
+     "id": "lowe-kata",
+     "name": "Low-E複層ガラス 型"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "sizeW": "026",
+   "sizeH": "023",
+   "glass": "pg-clear",
+   "teika": 47800,
+   "hinban": "@SAVS-026023",
+   "page": 60
+  },
+  {
+   "sizeW": "026",
+   "sizeH": "023",
+   "glass": "pg-kata",
+   "teika": 47800,
+   "hinban": "@SAVS-026023",
+   "page": 60
+  },
+  {
+   "sizeW": "026",
+   "sizeH": "023",
+   "glass": "lowe-clear",
+   "teika": 51700,
+   "hinban": "@SAVS-026023",
+   "page": 60
+  },
+  {
+   "sizeW": "026",
+   "sizeH": "023",
+   "glass": "lowe-kata",
+   "teika": 51700,
+   "hinban": "@SAVS-026023",
+   "page": 60
+  },
+  {
+   "sizeW": "031",
+   "sizeH": "028",
+   "glass": "pg-clear",
+   "teika": 49200,
+   "hinban": "@SAVS-031028",
+   "page": 60
+  },
+  {
+   "sizeW": "031",
+   "sizeH": "028",
+   "glass": "pg-kata",
+   "teika": 49200,
+   "hinban": "@SAVS-031028",
+   "page": 60
+  },
+  {
+   "sizeW": "031",
+   "sizeH": "028",
+   "glass": "lowe-clear",
+   "teika": 53100,
+   "hinban": "@SAVS-031028",
+   "page": 60
+  },
+  {
+   "sizeW": "031",
+   "sizeH": "028",
+   "glass": "lowe-kata",
+   "teika": 53100,
+   "hinban": "@SAVS-031028",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "03",
+   "glass": "pg-clear",
+   "teika": 50200,
+   "hinban": "@SAVS-03603",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "03",
+   "glass": "pg-kata",
+   "teika": 50200,
+   "hinban": "@SAVS-03603",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "03",
+   "glass": "lowe-clear",
+   "teika": 54100,
+   "hinban": "@SAVS-03603",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "03",
+   "glass": "lowe-kata",
+   "teika": 54100,
+   "hinban": "@SAVS-03603",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "033",
+   "glass": "pg-clear",
+   "teika": 50800,
+   "hinban": "@SAVS-036033",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "033",
+   "glass": "pg-kata",
+   "teika": 50800,
+   "hinban": "@SAVS-036033",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "033",
+   "glass": "lowe-clear",
+   "teika": 54700,
+   "hinban": "@SAVS-036033",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "033",
+   "glass": "lowe-kata",
+   "teika": 54700,
+   "hinban": "@SAVS-036033",
+   "page": 60
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "05",
+   "glass": "pg-clear",
+   "teika": 53900,
+   "hinban": "@SAVS-03605",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "05",
+   "glass": "pg-kata",
+   "teika": 53900,
+   "hinban": "@SAVS-03605",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "05",
+   "glass": "lowe-clear",
+   "teika": 57800,
+   "hinban": "@SAVS-03605",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "05",
+   "glass": "lowe-kata",
+   "teika": 57800,
+   "hinban": "@SAVS-03605",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "07",
+   "glass": "pg-clear",
+   "teika": 62300,
+   "hinban": "@SAVS-03607",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "07",
+   "glass": "pg-kata",
+   "teika": 62300,
+   "hinban": "@SAVS-03607",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "07",
+   "glass": "lowe-clear",
+   "teika": 66200,
+   "hinban": "@SAVS-03607",
+   "page": 61
+  },
+  {
+   "sizeW": "036",
+   "sizeH": "07",
+   "glass": "lowe-kata",
+   "teika": 66200,
+   "hinban": "@SAVS-03607",
+   "page": 61
+  },
+  {
+   "sizeW": "041",
+   "sizeH": "038",
+   "glass": "pg-clear",
+   "teika": 52100,
+   "hinban": "@SAVS-041038",
+   "page": 60
+  },
+  {
+   "sizeW": "041",
+   "sizeH": "038",
+   "glass": "pg-kata",
+   "teika": 52100,
+   "hinban": "@SAVS-041038",
+   "page": 60
+  },
+  {
+   "sizeW": "041",
+   "sizeH": "038",
+   "glass": "lowe-clear",
+   "teika": 56000,
+   "hinban": "@SAVS-041038",
+   "page": 60
+  },
+  {
+   "sizeW": "041",
+   "sizeH": "038",
+   "glass": "lowe-kata",
+   "teika": 56000,
+   "hinban": "@SAVS-041038",
+   "page": 60
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "03",
+   "glass": "pg-clear",
+   "teika": 52600,
+   "hinban": "@SAVS-06003",
+   "page": 60
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "03",
+   "glass": "pg-kata",
+   "teika": 52600,
+   "hinban": "@SAVS-06003",
+   "page": 60
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "03",
+   "glass": "lowe-clear",
+   "teika": 56500,
+   "hinban": "@SAVS-06003",
+   "page": 60
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "03",
+   "glass": "lowe-kata",
+   "teika": 56500,
+   "hinban": "@SAVS-06003",
+   "page": 60
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "05",
+   "glass": "pg-clear",
+   "teika": 56500,
+   "hinban": "@SAVS-06005",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "05",
+   "glass": "pg-kata",
+   "teika": 56500,
+   "hinban": "@SAVS-06005",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "05",
+   "glass": "lowe-clear",
+   "teika": 60400,
+   "hinban": "@SAVS-06005",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "05",
+   "glass": "lowe-kata",
+   "teika": 60400,
+   "hinban": "@SAVS-06005",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "057",
+   "glass": "pg-clear",
+   "teika": 62700,
+   "hinban": "@SAVS-060057",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "057",
+   "glass": "pg-kata",
+   "teika": 62700,
+   "hinban": "@SAVS-060057",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "057",
+   "glass": "lowe-clear",
+   "teika": 66800,
+   "hinban": "@SAVS-060057",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "057",
+   "glass": "lowe-kata",
+   "teika": 66800,
+   "hinban": "@SAVS-060057",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "07",
+   "glass": "pg-clear",
+   "teika": 67600,
+   "hinban": "@SAVS-06007",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "07",
+   "glass": "pg-kata",
+   "teika": 67600,
+   "hinban": "@SAVS-06007",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "07",
+   "glass": "lowe-clear",
+   "teika": 72700,
+   "hinban": "@SAVS-06007",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "07",
+   "glass": "lowe-kata",
+   "teika": 72700,
+   "hinban": "@SAVS-06007",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "teika": 75300,
+   "hinban": "@SAVS-06009",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "teika": 75300,
+   "hinban": "@SAVS-06009",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "teika": 81800,
+   "hinban": "@SAVS-06009",
+   "page": 61
+  },
+  {
+   "sizeW": "060",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "teika": 81800,
+   "hinban": "@SAVS-06009",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "03",
+   "glass": "pg-clear",
+   "teika": 58800,
+   "hinban": "@SAVS-06903",
+   "page": 60
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "03",
+   "glass": "pg-kata",
+   "teika": 58800,
+   "hinban": "@SAVS-06903",
+   "page": 60
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "03",
+   "glass": "lowe-clear",
+   "teika": 62700,
+   "hinban": "@SAVS-06903",
+   "page": 60
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "03",
+   "glass": "lowe-kata",
+   "teika": 62700,
+   "hinban": "@SAVS-06903",
+   "page": 60
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "05",
+   "glass": "pg-clear",
+   "teika": 64000,
+   "hinban": "@SAVS-06905",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "05",
+   "glass": "pg-kata",
+   "teika": 64000,
+   "hinban": "@SAVS-06905",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "05",
+   "glass": "lowe-clear",
+   "teika": 68100,
+   "hinban": "@SAVS-06905",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "05",
+   "glass": "lowe-kata",
+   "teika": 68100,
+   "hinban": "@SAVS-06905",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "07",
+   "glass": "pg-clear",
+   "teika": 72400,
+   "hinban": "@SAVS-06907",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "07",
+   "glass": "pg-kata",
+   "teika": 72400,
+   "hinban": "@SAVS-06907",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "07",
+   "glass": "lowe-clear",
+   "teika": 78300,
+   "hinban": "@SAVS-06907",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "07",
+   "glass": "lowe-kata",
+   "teika": 78300,
+   "hinban": "@SAVS-06907",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "teika": 80900,
+   "hinban": "@SAVS-06909",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "teika": 80900,
+   "hinban": "@SAVS-06909",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "teika": 88500,
+   "hinban": "@SAVS-06909",
+   "page": 61
+  },
+  {
+   "sizeW": "069",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "teika": 88500,
+   "hinban": "@SAVS-06909",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "03",
+   "glass": "pg-clear",
+   "teika": 58800,
+   "hinban": "@SAVS-07403",
+   "page": 60
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "03",
+   "glass": "pg-kata",
+   "teika": 58800,
+   "hinban": "@SAVS-07403",
+   "page": 60
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "03",
+   "glass": "lowe-clear",
+   "teika": 62700,
+   "hinban": "@SAVS-07403",
+   "page": 60
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "03",
+   "glass": "lowe-kata",
+   "teika": 62700,
+   "hinban": "@SAVS-07403",
+   "page": 60
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "05",
+   "glass": "pg-clear",
+   "teika": 64600,
+   "hinban": "@SAVS-07405",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "05",
+   "glass": "pg-kata",
+   "teika": 64600,
+   "hinban": "@SAVS-07405",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "05",
+   "glass": "lowe-clear",
+   "teika": 69000,
+   "hinban": "@SAVS-07405",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "05",
+   "glass": "lowe-kata",
+   "teika": 69000,
+   "hinban": "@SAVS-07405",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "07",
+   "glass": "pg-clear",
+   "teika": 73300,
+   "hinban": "@SAVS-07407",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "07",
+   "glass": "pg-kata",
+   "teika": 73300,
+   "hinban": "@SAVS-07407",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "07",
+   "glass": "lowe-clear",
+   "teika": 79600,
+   "hinban": "@SAVS-07407",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "07",
+   "glass": "lowe-kata",
+   "teika": 79600,
+   "hinban": "@SAVS-07407",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "glass": "pg-clear",
+   "teika": 82100,
+   "hinban": "@SAVS-07409",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "glass": "pg-kata",
+   "teika": 82100,
+   "hinban": "@SAVS-07409",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "glass": "lowe-clear",
+   "teika": 90200,
+   "hinban": "@SAVS-07409",
+   "page": 61
+  },
+  {
+   "sizeW": "074",
+   "sizeH": "09",
+   "glass": "lowe-kata",
+   "teika": 90200,
+   "hinban": "@SAVS-07409",
+   "page": 61
+  }
+ ],
+ "adds": [
+  {
+   "id": "roll-yoko",
+   "name": "横引きロール網戸",
+   "match": [
+    "sizeW",
+    "sizeH"
+   ],
+   "values": [
+    {
+     "id": "026023",
+     "name": "呼称026023",
+     "sizeW": "026",
+     "sizeH": "023",
+     "teika": 20000,
+     "hinban": ""
+    },
+    {
+     "id": "031028",
+     "name": "呼称031028",
+     "sizeW": "031",
+     "sizeH": "028",
+     "teika": 20800,
+     "hinban": ""
+    },
+    {
+     "id": "03603",
+     "name": "呼称03603",
+     "sizeW": "036",
+     "sizeH": "03",
+     "teika": 21500,
+     "hinban": ""
+    },
+    {
+     "id": "036033",
+     "name": "呼称036033",
+     "sizeW": "036",
+     "sizeH": "033",
+     "teika": 21500,
+     "hinban": ""
+    },
+    {
+     "id": "03605",
+     "name": "呼称03605",
+     "sizeW": "036",
+     "sizeH": "05",
+     "teika": 22200,
+     "hinban": ""
+    },
+    {
+     "id": "03607",
+     "name": "呼称03607",
+     "sizeW": "036",
+     "sizeH": "07",
+     "teika": 23300,
+     "hinban": ""
+    },
+    {
+     "id": "041038",
+     "name": "呼称041038",
+     "sizeW": "041",
+     "sizeH": "038",
+     "teika": 22200,
+     "hinban": ""
+    },
+    {
+     "id": "06003",
+     "name": "呼称06003",
+     "sizeW": "060",
+     "sizeH": "03",
+     "teika": 23900,
+     "hinban": ""
+    },
+    {
+     "id": "06005",
+     "name": "呼称06005",
+     "sizeW": "060",
+     "sizeH": "05",
+     "teika": 24900,
+     "hinban": ""
+    },
+    {
+     "id": "060057",
+     "name": "呼称060057",
+     "sizeW": "060",
+     "sizeH": "057",
+     "teika": 25100,
+     "hinban": ""
+    },
+    {
+     "id": "06007",
+     "name": "呼称06007",
+     "sizeW": "060",
+     "sizeH": "07",
+     "teika": 25400,
+     "hinban": ""
+    },
+    {
+     "id": "06009",
+     "name": "呼称06009",
+     "sizeW": "060",
+     "sizeH": "09",
+     "teika": 26700,
+     "hinban": ""
+    },
+    {
+     "id": "06903",
+     "name": "呼称06903",
+     "sizeW": "069",
+     "sizeH": "03",
+     "teika": 26400,
+     "hinban": ""
+    },
+    {
+     "id": "06905",
+     "name": "呼称06905",
+     "sizeW": "069",
+     "sizeH": "05",
+     "teika": 27500,
+     "hinban": ""
+    },
+    {
+     "id": "06907",
+     "name": "呼称06907",
+     "sizeW": "069",
+     "sizeH": "07",
+     "teika": 28400,
+     "hinban": ""
+    },
+    {
+     "id": "06909",
+     "name": "呼称06909",
+     "sizeW": "069",
+     "sizeH": "09",
+     "teika": 29500,
+     "hinban": ""
+    },
+    {
+     "id": "07403",
+     "name": "呼称07403",
+     "sizeW": "074",
+     "sizeH": "03",
+     "teika": 26400,
+     "hinban": ""
+    },
+    {
+     "id": "07405",
+     "name": "呼称07405",
+     "sizeW": "074",
+     "sizeH": "05",
+     "teika": 27500,
+     "hinban": ""
+    },
+    {
+     "id": "07407",
+     "name": "呼称07407",
+     "sizeW": "074",
+     "sizeH": "07",
+     "teika": 28400,
+     "hinban": ""
+    },
+    {
+     "id": "07409",
+     "name": "呼称07409",
+     "sizeW": "074",
+     "sizeH": "09",
+     "teika": 29500,
+     "hinban": ""
+    }
+   ]
+  }
+ ],
+ "note": "おすすめ品番は @SAVS-呼称-色記号。部材セット価格は入れていない。",
+ "pages": [
+  {
+   "page": 60,
+   "rows": 32
+  },
+  {
+   "page": 61,
+   "rows": 48
+  }
+ ]
+}
