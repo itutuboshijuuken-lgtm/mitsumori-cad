@@ -48073,7 +48073,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (x.cat === "室内ドア" && /上吊り/.test(x.name)) frame = "outset";
       spec = { cat: x.cat, name: x.name, w: w || x.w, h: h || x.h, frame: frame, kind: g ? g.k : "door", label: (x.name && x.name !== x.cat ? x.cat + " " + x.name : x.cat) + " " + (w || x.w) };
       tool = "put"; refresh();
-      if (ctx && ctx.p){ var r = null; try { r = window.KAKU2.placeAt(ctx.p[0], ctx.p[1]); } catch(e){} off(true); say(r && r.ok ? spec.label + "を付けました（戻すで戻せます・タップで向きが変わります）" : spec.label + "は、ここには付けられませんでした"); return; }
+      if (ctx && ctx.p){ var r = null; try { r = window.KAKU2.placeAt(ctx.p[0], ctx.p[1]); } catch(e){} say((r && r.ok ? spec.label + "を付けました。" : spec.label + "は、そこには付けられませんでした。") + "同じ物は、ほかの壁をタップすると続けて付きます（終わる時は［やめる］）"); return; }   /* CAD-712：持ったまま＝続けて置ける */
       pick2put();
     }
     function foot(skip, back){
@@ -48098,7 +48098,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         bindFoot(function(){ var r = wzRows(g, g.open[0][0])[0]; if (r) done(r[0]); }, function(){ st.g = null; step(); });
         return;
       }
-      /* ③ 大きさ */
+      /* CAD-712：大きさは聞かない（標準の大きさですぐ置く。大きさは置いたあと窓をタップ→［大きさ］。ルール7） */
+      if (!st.big){ var R0 = wzRows(g, st.o); if (R0[0]){ done(R0[0][0]); return; } }
       var R = wzRows(g, st.o), on = (g.open.filter(function(o){ return o[0] === st.o; })[0] || [st.o, st.o])[1];
       mb.innerHTML = "<h3>" + g.n + (g.open.length > 1 ? "（" + on + "）" : "") + "：大きさ</h3>"
         + '<p style="margin:2px 2px 0;font-size:12px;color:var(--sub,#5B6673)">幅×高さ（枠の外の寸法・mm）</p>'
@@ -48896,6 +48897,42 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return { ok: true, acc: sa.acc || null };
   }
   function sashLab(sa){ try { return (typeof sashLabel === "function" ? sashLabel(sa) : (sa.name || sa.cat)) + "　" + sa.w + "×" + sa.h; } catch(e){ return sa.cat + " " + sa.w; } }
+  /* CAD-712：窓・ドアの大きさを後から変える。同じ物（種類・形・大きさが同じ）が他にもあれば「全部まとめて」も選べる */
+  function sameAs(sa){ return (S.sashes || []).filter(function(o){ return o !== sa && o.cat === sa.cat && o.name === sa.name && o.w === sa.w && o.h === sa.h; }); }
+  function sizeRows(sa){
+    var W = ["掃き出し", "腰窓", "小窓", "FIX"];
+    return (typeof SASH !== "undefined" ? SASH : []).filter(function(x){ return W.indexOf(sa.cat) >= 0 ? W.indexOf(x.cat) >= 0 && x.cat === sa.cat : (x.cat === sa.cat && x.name === sa.name); });
+  }
+  var sizeAll = true;
+  function setSize(w, h, all){
+    var sa = sashObj; if (!sa || (S.sashes || []).indexOf(sa) < 0 || !(w > 0) || !(h > 0)) return { ok: false };
+    var L = [sa].concat(all ? sameAs(sa) : []);
+    try { pushUndo(); L.forEach(function(o){ o.w = Math.round(w); o.h = Math.round(h); if (o.cat705) delete o.cat705; }); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){ warn("大きさ", e); return { ok: false }; }
+    say((L.length > 1 ? L.length + "か所を" : "") + Math.round(w) + "×" + Math.round(h) + "にしました（戻すで戻せます）");
+    return { ok: true, n: L.length };
+  }
+  function sizeSheet(){
+    var sa = sashObj; if (!sa) return;
+    var R = sizeRows(sa), same = sameAs(sa).length;
+    var T = "display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:60px;padding:6px;border-radius:12px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:16px;font-weight:800;color:var(--ink,#18202A)";
+    var draw = function(){
+      $("mbox").innerHTML = "<h3>大きさ</h3><p class='hint' style='margin:2px 0 8px'>" + String(sashLab(sa)).replace(/[<&]/g, "") + "（幅×高さ・枠の外の寸法）</p>"
+        + (same ? '<button type="button" id="sz712All" aria-pressed="' + sizeAll + '" style="width:100%;min-height:44px;margin-bottom:8px;border-radius:10px;border:1px solid ' + (sizeAll ? "var(--ai,#2563B0);background:#E6EFFA;color:var(--ai,#2563B0)" : "var(--line,#DCE3EB);background:#fff;color:var(--ink,#18202A)") + ';font:inherit;font-size:14px;font-weight:800">' + (sizeAll ? "✓ " : "") + "同じ物 " + (same + 1) + "か所を全部まとめて変える</button>" : "")
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' + R.map(function(x, n){ var on = x.w === sa.w && x.h === sa.h; return '<button type="button" data-sz712="' + n + '" style="' + T + (on ? ";border-color:var(--ai,#2563B0);background:#E6EFFA;color:var(--ai,#2563B0)" : "") + '">' + x.w.toLocaleString("ja-JP") + " × " + x.h.toLocaleString("ja-JP") + (/\d{5}/.test(x.name) ? '<span style="font-size:11px;color:var(--sub,#5B6673)">' + x.name + "</span>" : "") + "</button>"; }).join("")
+        + '<button type="button" id="sz712Pad" style="' + T + '"><span style="font-size:14px">寸法を入れる</span><span style="font-size:11px;color:var(--sub,#5B6673)">幅と高さを数字で</span></button></div>'
+        + '<div class="row" style="margin-top:10px"><button type="button" class="btn" id="sz712Ok" style="width:100%;min-height:46px">閉じる</button></div>';
+      $("modal").hidden = false;
+      $("sz712Ok").onclick = function(){ $("modal").hidden = true; };
+      if ($("sz712All")) $("sz712All").onclick = function(){ sizeAll = !sizeAll; draw(); };
+      $("mbox").querySelectorAll("[data-sz712]").forEach(function(b){ b.onclick = function(){ var x = R[+b.dataset.sz712]; $("modal").hidden = true; setSize(x.w, x.h, same && sizeAll); }; });
+      $("sz712Pad").onclick = function(){
+        $("modal").hidden = true; var all = same && sizeAll;
+        if (typeof openPad !== "function") return;
+        openPad({ title: "幅（枠外・W）", unit: "mm", value: sa.w, done: function(w){ if (!w) return; openPad({ title: "高さ（枠外・H）", unit: "mm", value: sa.h, done: function(h){ if (!h) return; setSize(w, h, all); } }); } });
+      };
+    };
+    draw();
+  }
   function openSash(i){
     if (!A || busy() || editing) return { ok: false };
     var sa = (S.sashes || [])[i]; if (!sa) return { ok: false };
@@ -48908,6 +48945,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var mk = function(t, fn){ var b = document.createElement("button"); b.type = "button"; b.textContent = t; b.style.cssText = B; b.onclick = fn; sashBar.appendChild(b); return b; };
     var idx = function(){ return (S.sashes || []).indexOf(sashObj); };
     mk("変える", function(){ var j = idx(); if (j >= 0 && typeof changeSheet === "function") changeSheet(j); });
+    mk("大きさ", function(){ sizeSheet(); });   /* CAD-712 */
     if (window.CAT705 && window.CAT705.groupOf(sa)) mk("カタログ", function(){ var j = idx(); if (j >= 0) window.CAT705.open(j); });   /* CAD-705 */
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     if ((ty === "door" || ty === "hiki" || ty === "closet") && window.KAKU2 && window.KAKU2.flip) mk("向き", function(){ var j = idx(); if (j >= 0) window.KAKU2.flip(j); });
@@ -50001,7 +50039,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (why === "close"){ on = false; band = null; last = null; return; }
     if (!h || (h.kind !== "wall" && h.kind !== "floor" && h.kind !== "ceil")){ try { RITTAI.mark(null); } catch(e){} say("壁・床・天井をタップしてください"); return; }
     if (h.floor != null && typeof S !== "undefined" && Array.isArray(S.fl) && S.fl.length > 1 && h.floor !== (S.fi || 0) && S.fl[h.floor]){ try { flSwitch(h.floor); } catch(e){} }   /* CAD-709：触った階に切り替えてから置く */
-    try { var rr = (RITTAI.rooms() || []).find(function(q){ return q.id === h.room; }); if (rr && rr.name) h.name = rr.name; } catch(e){}   /* 部屋の名前は立体の部屋一覧から（hit.name は名前の無い部屋で「B」などの記号になるため） */
+    try { var rr = (RITTAI.rooms() || []).find(function(q){ return q.id === h.room; }); if (rr && rr.name) h.name = rr.name; } catch(e){}
+    /* CAD-712：ドア・窓を持っている間は、壁をタップするたびに同じ物が付く */
+    try { var K2 = window.KAKU2, sp = K2 && K2.state().tool === "put" ? K2.spec() : null;
+      if (sp && !sp.put && h.kind === "wall"){ var pt2 = ptOf(h), r2 = K2.placeAt(pt2[0], pt2[1]); if (r2 && r2.ok){ try { RITTAI.sync(); } catch(e){} say(sp.label + "を付けました（続けて付けられます）"); } else say(sp.label + "は、そこには付けられませんでした"); hold(sp); return; }
+      if (sp && !sp.put){ hold(sp); say("付けたい壁をタップしてください"); return; } } catch(e){}   /* 部屋の名前は立体の部屋一覧から（hit.name は名前の無い部屋で「B」などの記号になるため） */
     last = h;
     try { RITTAI.mark(h, h.kind === "wall" ? 300 : 450, h.kind === "wall" ? 300 : 450); } catch(e){}
     cands(h);
@@ -50014,7 +50056,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   setInterval(function(){ try { if (!RITTAI.isOpen()) return; var want = mode() ? "walk" : "only"; if (RITTAI.touching() !== want) start(); } catch(e){} }, 1000);   /* 歩き方の設定を変えた時も合わせる */
   RITTAI.watch(function(ev){ if (ev === "open") setTimeout(start, 0); else if (ev === "close"){ on = false; last = null; band = null; } });
   var want3d = false;
-  window.addEventListener("mado-change", function(){ if (!want3d) return; want3d = false; setTimeout(function(){ try { if (RITTAI.isOpen()) RITTAI.sync(); } catch(e){} }, 60); });
+  function hold(sp){
+    showBand(function(b){
+      var t = mk("div", "display:flex;gap:6px;align-items:center");
+      t.appendChild(mk("div", "flex:1 1 auto;min-width:0;font-size:13px;font-weight:800;color:var(--ink,#18202A);overflow:hidden;text-overflow:ellipsis;white-space:nowrap", sp.label + "：壁をタップで続けて付く"));
+      btn(t, "終わり", GRY, function(){ try { KAKU2.off(); } catch(e){} closeBand(); }); b.appendChild(t);
+    });
+  }
+  window.addEventListener("mado-change", function(){ if (!want3d) return; want3d = false; setTimeout(function(){ try { if (RITTAI.isOpen()){ RITTAI.sync(); var sp = KAKU2.state().tool === "put" ? KAKU2.spec() : null; if (sp && !sp.put) hold(sp); } } catch(e){} }, 60); });
   window.TOUCH707 = { v: 1, start: start, stop: stop, isOn: function(){ return on; }, last: function(){ return last; }, put: put, ptOf: ptOf };
 })();
 </script>
