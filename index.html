@@ -50086,7 +50086,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (window.CAT705 && window.CAT705.groupOf(sa)) mk("カタログ", function(){ var j = idx(); if (j >= 0) window.CAT705.open(j); });   /* CAD-705 */
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     var fl723 = function(bit, msg){ return function(){ var so = sashObj; if (!so){ say("建具をもう一度タップしてください"); return; } quick737(function(){ so.flip = (so.flip || 0) ^ bit; }, msg); }; };
-    if (ty === "door" && window.doorRec752){ var r752 = doorRec752(sa); if (r752 != null && ((+sa.flip || 0) & 3) !== r752) mk("おすすめの向き", function(){ var so = sashObj; if (!so) return; quick737(function(){ so.flip = ((+so.flip || 0) & ~3) | r752; }, "おすすめの向き（部屋の中へ開く・吊元は壁の側）にしました"); }); var w752 = window.doorWarn752 ? doorWarn752(sa) : ""; if (w752) sashBar.insertAdjacentHTML("beforeend", "<div style='flex:1 1 100%;font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px'>⚠ " + w752 + "</div>"); }   /* CAD-752 */
+    if ((ty === "door" || ty === "hiki") && window.doorRec752){ var wo752 = window.doorWarnObj752 ? doorWarnObj752(sa) : null, r752 = ty === "door" ? doorRec752(sa) : null, fx752 = wo752 && wo752.fix != null ? wo752.fix : (r752 != null && ((+sa.flip || 0) & 3) !== r752 ? (((+sa.flip || 0) & ~3) | r752) : null);
+      if (fx752 != null) mk("おすすめの向き", function(){ var so = sashObj; if (!so) return; quick737(function(){ so.flip = fx752; }, ty === "hiki" ? "戸袋の側を入れ替えました（通る所が吹き抜けに向かない向き）" : "おすすめの向き（部屋の中へ開く・吊元は壁の側）にしました"); });
+      if (wo752) sashBar.insertAdjacentHTML("beforeend", "<div style='flex:1 1 100%;font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px'>⚠ " + wo752.why + "</div>"); }   /* CAD-752/754：片引き戸も */
     if (ty === "door" || ty === "closet"){ mk("吊元", fl723(2, "吊元を替えました")); mk("開き勝手", fl723(1, "開く向きを替えました")); }   /* CAD-723：立体と同じ呼び方 */
     else if (ty === "hiki") mk("戸袋の側", fl723(2, "戸袋の側を替えました"));
     if (window.KATA734 && KATA734.ok(sa)){ mk("扉の走る面", fl723(1, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）")); if (sa.frame !== "outset") mk("戸袋の形", function(){ var so = sashObj; if (!so) return; var m = ""; quick737(function(){ m = KATA734.toggle(so); }, function(){ return m; }); }); }   /* CAD-735 */
@@ -51026,6 +51028,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var wrap = E("g", { transform: "scale(" + k + ")", "class": "zsymDown" }, g); wrap.innerHTML = s; stairMark(wrap, true); n++;
       } catch(e){ warn("下の階の階段", e); }
     });
+    /* CAD-754：吹き抜けへ通る・開く戸に赤い印（Fable 23:40・翔伍「警告にしよう」） */
+    try { if (window.doorWarnObj752) (S.sashes || []).forEach(function(sa){ var w = doorWarnObj752(sa); if (!w || !w.c) return; var gw = E("g", {}, g); E("circle", { cx: w.c[0], cy: w.c[1], r: 380, fill: "rgba(220,38,38,.08)", stroke: "#DC2626", "stroke-width": 1.5, "stroke-dasharray": "6 4", "vector-effect": "non-scaling-stroke" }, gw); text(gw, w.c[0], w.c[1] + 380 + 140 * f, "⚠ 吹き抜け", 130 * f, "#DC2626"); }); } catch(e){ warn("戸の警告", e); }
     return n;
   }
   /* 下の階の階段（この階に自分の階段がある時は空） */
@@ -51803,14 +51807,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (ty === "door" || ty === "closet"){ B.push(["吊元", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "吊元を替えました"); }]); B.push(["開き勝手", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "開く向きを替えました"); }]); }
       if (ty === "hiki") B.push(["戸袋の側", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "戸袋の側を替えました"); }]);
       if (window.KATA734 && KATA734.ok(o)){ B.push(["扉の走る面", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）"); }]); if (o.frame !== "outset") B.push(["戸袋の形", function(){ var m = ""; edit(function(){ m = KATA734.toggle(o); }); say(m); }]); }   /* CAD-735 */
-      if (ty === "door" && window.doorRec752){ var r752 = doorRec752(o); if (r752 != null && ((+o.flip || 0) & 3) !== r752) B.unshift(["おすすめの向き", function(){ edit(function(){ o.flip = ((+o.flip || 0) & ~3) | r752; }, "おすすめの向き（部屋の中へ開く・吊元は壁の側）にしました"); }]); }   /* CAD-752：立体でも */
+      if ((ty === "door" || ty === "hiki") && window.doorRec752){ var wo752 = window.doorWarnObj752 ? doorWarnObj752(o) : null, r752 = ty === "door" ? doorRec752(o) : null, fx752 = wo752 && wo752.fix != null ? wo752.fix : (r752 != null && ((+o.flip || 0) & 3) !== r752 ? (((+o.flip || 0) & ~3) | r752) : null); if (fx752 != null) B.unshift(["おすすめの向き", function(){ edit(function(){ o.flip = fx752; }, "おすすめの向きにしました"); }]); }   /* CAD-752/754：立体でも・片引き戸も */
       B.push(["大きさ", function(){ try { KAKU3.sashSize(idx("sashes", id)); } catch(e){} watchSync(); }]);
       B.push(["種類", function(){ var j = idx("sashes", id), so = S.sashes[j]; if (!so || !KAKU2.choose) return; KAKU2.choose({ where: so.host && so.host.t === "e" ? "ext" : "part", room: "", replace: j, done: function(){ after(); } }); }]);
       if (window.CAT705 && CAT705.groupOf(o)) B.push(["カタログ", function(){ try { CAT705.open(idx("sashes", id)); } catch(e){} watchSync(); }]);
       B.push(["消す", function(){ del("sashes", id); }, 1]);
       bandFor(nm(list, o), B);
       try { adjRow753(h, "sashes", o); } catch(e){ try { console.warn("CAD-753", e); } catch(x){} }
-      try { var w752 = (ty === "door" && window.doorWarn752) ? doorWarn752(o) : ""; if (w752 && band){ var wd = mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", "⚠ " + w752); band.insertBefore(wd, band.children[1] || null); } } catch(e){}
+      try { var w752 = ((ty === "door" || ty === "hiki") && window.doorWarn752) ? doorWarn752(o) : ""; if (w752 && band){ var wd = mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", "⚠ " + w752); band.insertBefore(wd, band.children[1] || null); } } catch(e){}
       return;
     }
     var B2 = [];
@@ -52496,20 +52500,34 @@ window.WHY724 = function(why){
     var f2 = d1 < d0 ? 2 : 0;
     return (f1 | f2);
   }
-  /* 今の向きで開いた先が、下の階の階段の吹き抜け（床が無い）か */
-  function warnDoor(sa){
-    if (!isDoor(sa) || !sa.host || typeof hostSeg !== "function") return "";
-    var sg = hostSeg(sa.host); if (!sg) return ""; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]); if (!(L > 0)) return "";
-    var ux = (sg[1][0] - sg[0][0]) / L, uy = (sg[1][1] - sg[0][1]) / L, um = (+sa.pos || 0) + (+sa.w || 0) / 2, mid = [sg[0][0] + ux * um, sg[0][1] + uy * um];
-    var nIn = 1; if (sa.host.t === "e"){ try { if (!inPoly(mid[0] - uy * 300, mid[1] + ux * 300, pts())) nIn = -1; } catch(e){} }
-    var sd = nIn * ((+sa.flip || 0) & 1 ? -1 : 1), p = [mid[0] - uy * 300 * sd, mid[1] + ux * 300 * sd], md = null; try { md = MADO.read(); } catch(e){}
-    return (md && voidAt(md, p)) ? "この戸を開けた先は、下の階の階段の吹き抜けです（床がありません）。［おすすめの向き］で直せます" : "";
+  /* 吹き抜けの確かめ（Fable 23:40 の決まり）：戸の「通る所」の真ん中から、壁の両側へ 300 出た点が、下の階の階段の箱の中にある。外壁の外は数えない
+     通る所＝開き戸は開口ぜんぶ、片引き戸は戸袋でない半分（flip&2 ? 終わりの半分 : 始まりの半分） */
+  function isHiki(sa){ return !!(sa && sa.cat === "室内ドア" && String(sa.name || "") === "片引き戸"); }
+  function geo(sa){ if (!sa || !sa.host || typeof hostSeg !== "function") return null; var sg = hostSeg(sa.host); if (!sg) return null; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]); if (!(L > 0)) return null; return { a: sg[0], ux: (sg[1][0] - sg[0][0]) / L, uy: (sg[1][1] - sg[0][1]) / L, L: L }; }
+  function passU(sa, flip){ var u0 = +sa.pos || 0, w = +sa.w || 0; if (isHiki(sa)) return (flip & 2) ? u0 + w * .75 : u0 + w * .25; return u0 + w / 2; }
+  function voidSides(sa, flip, md){ var g = geo(sa); if (!g || !md) return { a: false, b: false, c: null }; var um = passU(sa, flip), c = [g.a[0] + g.ux * um, g.a[1] + g.uy * um], nv = [-g.uy, g.ux];
+    var pa = [c[0] + nv[0] * 300, c[1] + nv[1] * 300], pb = [c[0] - nv[0] * 300, c[1] - nv[1] * 300], OUT = null; try { OUT = pts(); } catch(e){}
+    var ok = function(p){ return !(sa.host.t === "e" && OUT && !inPoly(p[0], p[1], OUT)); };
+    return { a: ok(pa) && voidAt(md, pa), b: ok(pb) && voidAt(md, pb), c: c, sideA: nv }; }
+  /* 今の向きの警告 {why, fix}（無ければ null） */
+  function warnObj(sa){
+    if (!sa || sa.cat !== "室内ドア" || (!isDoor(sa) && !isHiki(sa))) return null;
+    var md = null; try { md = MADO.read(); } catch(e){} if (!md || !md.below) return null;
+    var f = +sa.flip || 0, v = voidSides(sa, f, md); if (!v.a && !v.b) return null;
+    if (isHiki(sa)){ var f2 = f ^ 2, v2 = voidSides(sa, f2, md); return { why: "この引き戸の通る所の先は、下の階の階段の吹き抜けです（床がありません）。" + (!v2.a && !v2.b ? "［おすすめの向き］で戸袋の側を入れ替えると直ります" : "戸の位置を動かしてください"), fix: (!v2.a && !v2.b) ? f2 : null, c: v.c }; }
+    var g = geo(sa), nIn = 1; if (sa.host.t === "e"){ try { if (!inPoly(v.c[0] - g.uy * 300, v.c[1] + g.ux * 300, pts())) nIn = -1; } catch(e){} }
+    var swingA = nIn * ((f & 1) ? -1 : 1) > 0, swingVoid = swingA ? v.a : v.b, passVoid = swingA ? v.b : v.a;
+    if (passVoid || (v.a && v.b)) return { why: "この戸を通った先は、下の階の階段の吹き抜けです（床がありません）。戸の位置を動かしてください", fix: null, c: v.c };
+    if (swingVoid){ var r = rec(sa); return { why: "この戸を開けた先は、下の階の階段の吹き抜けです（床がありません）。" + (r != null ? "［おすすめの向き］で直ります" : ""), fix: r != null ? ((f & ~3) | r) : null, c: v.c }; }
+    return null;
   }
+  function warnDoor(sa){ var w = warnObj(sa); return w ? w.why : ""; }
   function orient(sa){ var f = rec(sa); if (f == null) return false; sa.flip = ((+sa.flip || 0) & ~3) | f; return true; }
   /* 置いた直後の印（_o752）が付いたドアだけ、少し後で向きを決める（取り込みの途中では読まない。翔伍さんが向きを変えたドアには触らない） */
   var tm = null;
-  function sweep(){ if (typeof S === "undefined" || !S || !Array.isArray(S.sashes)) return; var ch = false; S.sashes.forEach(function(sa){ if (!sa || !sa._o752) return; if ((+sa.flip || 0) !== (+sa._f752 || 0) || !isDoor(sa)){ delete sa._o752; delete sa._f752; return; } var f = rec(sa); if (f == null) return; var f0 = +sa.flip || 0; sa.flip = (f0 & ~3) | f; delete sa._o752; delete sa._f752; if (sa.flip !== f0) ch = true; });   /* 部屋が決まるまで待つ。翔伍さんが向きを変えたら印を外す */ if (ch){ try { save(); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} } }
+  function sweep(){ if (typeof S === "undefined" || !S || !Array.isArray(S.sashes)) return; var ch = false; S.sashes.forEach(function(sa){ if (!sa || !sa._o752) return; if ((+sa.flip || 0) !== (+sa._f752 || 0) || (!isDoor(sa) && !isHiki(sa))){ delete sa._o752; delete sa._f752; return; }
+      if (isHiki(sa)){ var wh = warnObj(sa); if (wh && wh.fix != null){ sa.flip = wh.fix; ch = true; } delete sa._o752; delete sa._f752; return; }   /* 片引き戸：通る所が吹き抜けに向かない戸袋の側 */ var f = rec(sa); if (f == null) return; var f0 = +sa.flip || 0; sa.flip = (f0 & ~3) | f; delete sa._o752; delete sa._f752; if (sa.flip !== f0) ch = true; });   /* 部屋が決まるまで待つ。翔伍さんが向きを変えたら印を外す */ if (ch){ try { save(); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} } }
   window.addEventListener("mado-change", function(){ clearTimeout(tm); tm = setTimeout(function(){ try { sweep(); } catch(e){ try { console.warn("CAD-752", e); } catch(x){} } }, 400); });
-  window.doorRec752 = rec; window.doorOrient752 = orient; window.doorSweep752 = sweep; window.doorWarn752 = warnDoor;
+  window.doorRec752 = rec; window.doorOrient752 = orient; window.doorSweep752 = sweep; window.doorWarn752 = warnDoor; window.doorWarnObj752 = warnObj;
 })();
 </script>
