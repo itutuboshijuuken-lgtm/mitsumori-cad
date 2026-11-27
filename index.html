@@ -23685,7 +23685,7 @@ setInterval(gkSync208, 600);
   /* ---------- 定義の追加 ---------- */
   var ADD220 = {
     paper: ["紙巻器", "pt"], towel: ["タオル掛け", "seg"], mirror: ["姿見", "area"],
-    tvwall: ["壁掛けテレビ", "pt"], picrail: ["ピクチャーレール", "seg"],
+    tvwall: ["壁掛けテレビ", "pt"], aircon: ["エアコン（室内機）", "pt"], picrail: ["ピクチャーレール", "seg"],   /* CAD-760：エアコン本体を置ける物に */
     roll: ["ロールスクリーン", "seg"], blind: ["ブラインド", "seg"],
     duct: ["ダクトレール", "seg"], spot: ["スポットライト", "pt"], pendant: ["ペンダントライト", "pt"],
     tv: ["テレビ端子", "pt"], lan: ["LAN端子", "pt"], usb: ["USBコンセント", "pt"],
@@ -23704,7 +23704,7 @@ setInterval(gkSync208, 600);
   FKPRE.mirror = {w: [300, 450, 600], h: [900, 1200, 1300, 1500]};
   FKPRE.eco = {w: [910, 1820, 2730], h: [900, 1200, 2100]};
   ["mirror", "eco"].forEach(function(k){ if (AREA.indexOf(k) < 0) AREA.push(k); });
-  var COL220 = {paper: "#4A6B8A", towel: "#3E6B7A", mirror: "#5B7A8C", tvwall: "#1F2833", picrail: "#8A6A12",
+  var COL220 = {aircon: "#3E5A73", paper: "#4A6B8A", towel: "#3E6B7A", mirror: "#5B7A8C", tvwall: "#1F2833", picrail: "#8A6A12",
     roll: "#6E5A8C", blind: "#5A6E8C", duct: "#B07A12", spot: "#C2571A", pendant: "#A85B12",
     tv: "#2A5A8C", lan: "#2A7A5B", usb: "#7A5B2A", sensor: "#8C2A5B", dimmer: "#5B2A8C",
     eco: "#4A7A6B", shelf: "#7A5226", pipe: "#3E4A57", coat: "#6B4A2A", doorphone: "#2A4A6B", panel: "#8C2A2A"};
@@ -23759,6 +23759,8 @@ setInterval(gkSync208, 600);
     if (cnt("towel")) work("fxTowel", "タオル掛け（下地込み）", cnt("towel"), "か所", F.filter(function(f){ return f.k === "towel"; }).map(function(f){ return "長さ" + fmt(f.len); }).join("、"));
     if (cnt("mirror")) work("fxMirror", "姿見（下地込み）", cnt("mirror"), "か所", F.filter(function(f){ return f.k === "mirror"; }).map(function(f){ return fmt(f.len) + "×" + fmt(f.hgt); }).join("、"));
     if (cnt("tvwall")) work("fxTvWall", "壁掛けテレビ（金具・下地込み）", cnt("tvwall"), "か所");
+    if (cnt("aircon")){ const exA = (S.extras || []).filter(function(e){ return e && e.k === "aircon"; }).reduce(function(a, e){ return a + Math.max(1, Math.round(+e.n || 1)); }, 0), nA = Math.max(0, cnt("aircon") - exA);   /* CAD-760：設備で数えた台数と二重にしない */
+      if (nA > 0) work("eAircon", "エアコン本体（標準取付込み）", nA, "台", "図面に置いた " + cnt("aircon") + " 台" + (exA ? "（設備で数えた " + exA + " 台を引いた分）" : "") + " × " + fmt(workP("eAircon").p) + "円"); }
     if (sumL("picrail")) work("fxPicRail", "ピクチャーレール", sumL("picrail"), "m");
     if (sumL("roll")) work("fxRoll", "ロールスクリーン", sumL("roll"), "m");
     if (sumL("blind")) work("fxBlind", "ブラインド", sumL("blind"), "m");
@@ -49701,7 +49703,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* ===== 5c0. 置く：何を置くか（大きいボタン。選んだら閉じる） ===== */
   var PUTS = [
     ["照明", [["lt", "down", "ダウンライト（DL）"], ["lt", "ceil", "シーリング（CL）"], ["lt", "rail", "ライティングレール"], ["fx", "pendant", "ペンダントライト"], ["fx", "spot", "スポットライト"], ["fx", "duct", "ダクトレール"], ["fx", "indirect", "間接照明"], ["fx", "sconce", "壁付け照明"]]],
-    ["電気", [["fx", "outlet", "コンセント"], ["fx", "usb", "USBコンセント"], ["fx", "switch", "スイッチ"], ["fx", "dimmer", "調光スイッチ"], ["fx", "sensor", "人感センサー"], ["fx", "tv", "テレビ端子"], ["fx", "lan", "LAN端子"], ["fx", "doorphone", "テレビドアホン"], ["fx", "panel", "分電盤"], ["fx", "alarm", "火災警報器"], ["tk", "acout", "エアコン用コンセント（天井）"]]],
+    ["電気", [["fx", "aircon", "エアコン（室内機）"], ["fx", "outlet", "コンセント"], ["fx", "usb", "USBコンセント"], ["fx", "switch", "スイッチ"], ["fx", "dimmer", "調光スイッチ"], ["fx", "sensor", "人感センサー"], ["fx", "tv", "テレビ端子"], ["fx", "lan", "LAN端子"], ["fx", "doorphone", "テレビドアホン"], ["fx", "panel", "分電盤"], ["fx", "alarm", "火災警報器"], ["tk", "acout", "エアコン用コンセント（天井）"]]],
     ["壁の仕上げ", [["fx", "accent", "アクセントクロス"], ["fx", "board", "板張り"], ["fx", "tile", "タイル仕上げ"], ["fx", "eco", "エコカラット"], ["fx", "shikkui", "漆喰"], ["fx", "waist", "腰壁"], ["fx", "under", "下地補強"], ["fx", "demo", "壁の一部を剥がす"]]],
     ["造作", [["fx", "niche", "ニッチ"], ["fx", "kuri", "くりぬき"], ["fx", "counter", "カウンター"], ["fx", "cshelf", "カウンター棚"], ["fx", "shelf", "可動棚"], ["fx", "pipe", "ハンガーパイプ"], ["fx", "mirror", "姿見"], ["tk", "makura", "枕棚"], ["tk", "chudan", "中段棚"]]],
     ["窓まわり", [["fx", "rod", "カーテンレール"], ["fx", "curtbox", "カーテンボックス"], ["fx", "roll", "ロールスクリーン"], ["fx", "blind", "ブラインド"]]],
@@ -50009,7 +50011,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return wr([{ op: "add", list: "lights", k: spec.k, x: p[0], y: p[1] }]);
   }
   /* 点の物の高さ（室内図で置いた時に近い高さ。火災警報器・室内物干しは窓口が天井から決める） */
-  var FXZ = { outlet: 300, usb: 300, tv: 300, lan: 300, switch: 1200, dimmer: 1200, sconce: 1800, spot: 2200, pendant: 2200, sensor: 2200, tvwall: 1000, coat: 1600, doorphone: 1400, panel: 1800, paper: 700 };
+  var FXZ = { aircon: 2100, outlet: 300, usb: 300, tv: 300, lan: 300, switch: 1200, dimmer: 1200, sconce: 1800, spot: 2200, pendant: 2200, sensor: 2200, tvwall: 1000, coat: 1600, doorphone: 1400, panel: 1800, paper: 700 };
   function fxType(k){ try { return (typeof FK !== "undefined" && FK[k]) ? FK[k][1] : ""; } catch(e){ return ""; } }
   function sideOf(w, p){ var d = (p[0] - w.a[0]) * (-w.uy) + (p[1] - w.a[1]) * w.ux; return d >= 0 ? 1 : -1; }
   function isRf(){ try { return S.mode === "rf"; } catch(e){ return false; } }
@@ -51694,6 +51696,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         E("path", { d: "M" + p1.join(" ") + "L" + p2.join(" ") + "L" + p3.join(" ") + "Z", fill: col }, g);   /* 分電盤：四角の半分を塗る */
       } else if (k === "tvwall"){
         band(g, F, t.u - 500, t.u + 500, 0, 70, { fill: "#fff", stroke: col }); fxLabel(g, F, t.u, 70, "壁掛TV", lab * .8, col);
+      } else if (k === "aircon"){   /* CAD-760：エアコン（室内機）＝幅800・奥行230の四角に「AC」 */
+        band(g, F, t.u - 400, t.u + 400, 0, 230, { fill: "#fff", stroke: col, "stroke-dasharray": "4 2" }); fxLabel(g, F, t.u, 115, "AC", lab * .8, col);
       } else {
         var sq = k === "lan" || k === "doorphone"; c = F.at(t.u, 95);
         if (sq) band(g, F, t.u - 75, t.u + 75, 20, 170, { fill: "#fff", stroke: col });
@@ -52524,7 +52528,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     else after("消しました（戻すで戻せます）");
     moving = null; closeBand(); }
   function nm(list, o){ var K = { bath: "ユニットバス（浴槽）", kitchen: "キッチン", wc: "トイレ", ub: "ユニットバス", senmen: "洗面化粧台", stair: "階段", down: "ダウンライト", ceil: "シーリング", outlet: "コンセント", switch: "スイッチ", tv: "テレビ端子" };
-    if (list === "sashes") return (o.cat || "") + " " + (o.name || "") + "　" + o.w + "×" + o.h; return K[o.k] || o.k || "置いた物"; }
+    if (list === "sashes") return (o.cat || "") + " " + (o.name || "") + "　" + o.w + "×" + o.h; var F0 = null; try { F0 = (typeof FK !== "undefined" && FK[o.k]) ? FK[o.k][0] : null; } catch(e){} return K[o.k] || F0 || o.k || "置いた物"; }   /* CAD-760：壁の物の名前は FK から（aircon などが英語で出ていた） */
   function bandFor(title, btns){
     showBand(function(b){
       var t = mk("div", "display:flex;gap:6px;align-items:center");
