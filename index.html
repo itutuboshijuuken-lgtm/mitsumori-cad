@@ -7120,6 +7120,7 @@ function drawExtras(){
       h += tg(i, "tear", "既存撤去", "撤去なし") + tg(i, "setsubi", "給排水・ガス接続", "なし") + tg(i, "duct", "レンジフード ダクト接続", "なし") + tg(i, "panel", "キッチンパネル（壁）", "パネルなし") + tg(i, "kbase", "壁下地補強", "補強なし") + tg(i, "ih", "IH用 200V回路", "ガスのまま") + tg(i, "floor", "キッチンの床張替え", "床そのまま") + tg(i, "dish", "食洗機（ビルトイン）", "食洗機なし");
     }
     if (e.k === "ub"){
+      h += `<div style="margin:6px 0"><button type="button" class="btn" data-cat741="${i}" style="min-height:44px;width:100%">${e.cat705 ? "カタログの品：" + e.cat705.label.replace(/&/g, "&amp;").replace(/</g, "&lt;") + "（選び直す）" : "カタログから選ぶ（LIXIL リデア）"}</button></div>`;   /* CAD-741 */
       const mkName201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード（メーカー未選択）";
       h += `<div class="sub2" style="margin-top:6px">メーカー</div><div class="seg">${[["", "未選択"], ["toto", "TOTO"], ["lixil", "LIXIL"], ["takara", "タカラ"]].map(([v, n]) => `<button data-ti="${i}" data-tk="maker" data-tv="${v}" aria-pressed="${(e.maker || "") === v}" type="button">${n}</button>`).join("")}</div>`;
       h += `<div class="sub2" style="margin-top:6px">基準：${mkName201}</div><div class="seg">${["1216", "1616", "1620"].map(v => `<button data-ti="${i}" data-tk="size" data-tv="${v}" aria-pressed="${e.size === v}" type="button">${v}</button>`).join("")}</div>`;
@@ -7174,6 +7175,7 @@ function drawExtras(){
   $("exList").querySelectorAll("[data-xn]").forEach(el => el.oninput = () => { S.extras[+el.dataset.xn].name = el.value; save(); });
   $("exList").querySelectorAll("[data-xi]").forEach(b => b.onclick = () => { const e = S.extras[+b.dataset.xi], f = EXT[e.k].f.find(x => x[0] === b.dataset.xf); openPad({title: `${EXT[e.k].n}：${f[1]}`, unit: f[2] || "", value: e[f[0]], done: v => { e[f[0]] = v || 0; save(); drawExtras(); }}); });
   $("exList").querySelectorAll("[data-ti]").forEach(b => b.onclick = () => { const e = S.extras[+b.dataset.ti], v = b.dataset.tv; e[b.dataset.tk] = v === "1" ? true : v === "0" ? false : v; save(); drawExtras(); });
+  $("exList").querySelectorAll("[data-cat741]").forEach(b => b.onclick = () => { try { window.CAT705 && CAT705.openExtra(+b.dataset.cat741); } catch(x){} });   /* CAD-741 */
   $("exList").querySelectorAll("[data-tk379]").forEach(el => el.onchange = () => { const e = S.extras[+el.dataset.tk379]; if (el.value) e.tk379 = el.value; else delete e.tk379; save(); drawExtras(); });   /* CAD-379 */
 }
 /* ---------- ⑤ 見積 ---------- */
@@ -8174,7 +8176,7 @@ function calc00(){
       else if (e.k === "ub"){
         const n2 = Math.max(1, Math.round(e.n)), pre = (e.auto || e.zid) ? "ユニットバス（図から） " : "ユニットバス ";
         const ubMk201 = e.maker === "toto" ? "TOTO サザナ" : e.maker === "lixil" ? "LIXIL リデア" : e.maker === "takara" ? "タカラ グランスパ" : "標準グレード";
-        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null; if (tk379) rows.push(tkRowObj379(pre + tk379.name, tk379, n2)); else work("uHon" + e.size, `${pre}${e.size}（${ubMk201}）`, n2, "台"); }   /* CAD-379 */
+        { const tk379 = e.tk379 ? tkEntry379(e.tk379) : null; if (e.cat705 && e.cat705.teika > 0 && typeof tkRowObj379 === "function") rows.push(tkRowObj379(pre + e.cat705.label, {price: e.cat705.teika, maker: e.cat705.maker, name: e.cat705.label}, n2)); else if (tk379) rows.push(tkRowObj379(pre + tk379.name, tk379, n2)); else work("uHon" + e.size, `${pre}${e.size}（${ubMk201}）`, n2, "台"); }   /* CAD-379 */
         if (e.from === "ub" && e.tear){ work("ubKaitai", pre + "既存解体", n2, "台"); addG("pla", 1.2 * n2, 200 * n2); }
         work("uKumi", pre + "組立", n2, "台");
         if (e.setsubi) work("uSetsubi", pre + "給排水・給湯接続", n2, "台");
@@ -50695,13 +50697,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   if (window.CAT705) return;
   var BASE = window.CAT705_BASE || "https://raw.githubusercontent.com/itutuboshijuuken-lgtm/mitsumori-cad/data/data/catalog/";
   var MK = { lixil: "LIXIL", daiken: "大建工業", panasonic: "Panasonic", noda: "ノダ", woodone: "ウッドワン", toto: "TOTO", ykk: "YKK AP", takara: "タカラスタンダード", sankyo: "三協アルミ", eidai: "永大産業", cleanup: "クリナップ" };
-  var GROUP = { "室内ドア": ["室内ドア"], "クローゼット": ["収納扉", "クローゼット"], "掃き出し": ["サッシ", "窓"], "腰窓": ["サッシ", "窓"], "小窓": ["サッシ", "窓"], "FIX": ["サッシ", "窓"], "玄関": ["玄関ドア"], "勝手口": ["勝手口ドア", "玄関ドア"] };
+  var GROUP = { "ユニットバス": ["ユニットバス"], "室内ドア": ["室内ドア"], "クローゼット": ["収納扉", "クローゼット"], "掃き出し": ["サッシ", "窓"], "腰窓": ["サッシ", "窓"], "小窓": ["サッシ", "窓"], "FIX": ["サッシ", "窓"], "玄関": ["玄関ドア"], "勝手口": ["勝手口ドア", "玄関ドア"] };
   var idx = null, files = Object.create(null), seenMakers = [];
   function mkName(id){ return MK[id] || String(id || "").toUpperCase(); }
   function get(url){ return fetch(url, { cache: "no-cache" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function loadIndex(){ if (idx) return Promise.resolve(idx); return get(BASE + "index.json").then(function(j){ idx = Array.isArray(j) ? j : []; idx.forEach(function(e){ var n = mkName(e.maker); if (seenMakers.indexOf(n) < 0) seenMakers.push(n); }); return idx; }); }
   function loadFile(f){ if (files[f]) return Promise.resolve(files[f]); return get(BASE + f).then(function(j){ files[f] = j; return j; }); }
-  function groupOf(sa){ if (!sa) return null; try { if (typeof sState === "function" && sState(sa) === "ip") return ["内窓"]; } catch(e){} var g = GROUP[sa.cat]; return g || null; }   /* CAD-716：リフォームで「インプラス」の窓は内窓のカタログ */
+  function groupOf(sa){ if (!sa) return null; if (sa.k === "ub") return ["ユニットバス"]; try { if (typeof sState === "function" && sState(sa) === "ip") return ["内窓"]; } catch(e){} var g = GROUP[sa.cat]; return g || null; }   /* CAD-716：リフォームで「インプラス」の窓は内窓のカタログ */
   function list(sa){ var g = groupOf(sa) || []; return (idx || []).filter(function(e){ return g.indexOf(e.group) >= 0 && winOk(sa, e); }); }
   /* CAD-715：窓は、図面の窓の種類で出すシリーズを絞る（ツーバイフォーの「204」は出さない＝在来の家）。掃き出し＝テラス／腰窓＝引違いのマド／小窓＝引違い・すべり出し・倒し／FIX＝FIXのマド */
   function nm(e){ return String(e.seriesName || e.series || ""); }
@@ -50750,7 +50752,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function label(d, ent, sel, ad){
     var parts = [mkName(d.maker), (ent && ent.seriesName) || d.seriesName || d.seriesLabel || seriesTitle(d)];
     var szW = null, szH = null;
-    (d.pick || []).forEach(function(p){ if (sel[p.id] == null || (p.values || []).length < 2) return; var v = (p.values || []).filter(function(x){ return x.id === sel[p.id]; })[0];
+    (d.pick || []).forEach(function(p){ if (sel[p.id] == null || (p.values || []).length < 2) return; if (d.series === "ridea" || /^ridea/.test(String(d.series || ""))){ if (p.id === "door") return; if (p.id === "size"){ parts.push(sel.size); return; } } var v = (p.values || []).filter(function(x){ return x.id === sel[p.id]; })[0];
       if (p.id === "sizeW" && v){ szW = v; return; } if (p.id === "sizeH" && v){ szH = v; if (szW) parts.push(szW.id + szH.id + "（" + (szW.outW || szW.w) + "×" + (szH.outH || szH.h) + "）"); return; }
       parts.push(vname(d, p.id, sel[p.id])); });
     (d.adds || []).forEach(function(a){ if (ad[a.id] && ad[a.id] !== "none" && ad[a.id] !== addDefault(a)) parts.push(Array.isArray(a.match) ? "＋" + a.name : vname({ pick: [a] }, a.id, ad[a.id])); });
@@ -50761,6 +50763,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function rate(maker){ try { return (typeof tkRatePct379 === "function") ? tkRatePct379(maker) : 65; } catch(e){ return 65; } }
   /* サイズ（値段が同じ項目）は、図面のドアの幅に近い物を最初に選んでおく（値に w があれば w、無ければ型番の数字＝幅のcm） */
   function sizeFromDoor(d, sel, sa){
+    if (sa && sa.k === "ub"){ if (sel.size == null && sa.size && (d.pick || []).some(function(p){ return p.id === "size" && (p.values || []).some(function(v){ return v.id === sa.size; }); })) sel.size = sa.size; return; }   /* CAD-741：浴室は見積の「基準サイズ」を先に選ぶ */
     /* CAD-715：窓は基本寸法（outW・outH）が図面の窓の幅・高さに一番近い物 */
     (d.pick || []).forEach(function(pp){ var key = pp.id === "sizeW" ? "outW" : pp.id === "sizeH" ? "outH" : null, tgt = pp.id === "sizeW" ? sa.w : sa.h; if (!key || sel[pp.id] != null || !(tgt > 0)) return;
       var b = null, bd = Infinity; (pp.values || []).forEach(function(v){ var x = +v[key] || +v[pp.id === "sizeW" ? "w" : "h"] || 0; if (x > 0 && Math.abs(x - tgt) < bd){ bd = Math.abs(x - tgt); b = v.id; } }); if (b) sel[pp.id] = b; });
@@ -50833,7 +50836,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function bindEnd705(){
     if ($("c705x")) $("c705x").onclick = function(){ $("modal").hidden = true; st = null; };
-    if ($("c705rm")) $("c705rm").onclick = function(){ try { pushUndo(); delete st.sa.cat705; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} $("modal").hidden = true; st = null; };
+    if ($("c705rm")) $("c705rm").onclick = function(){ try { pushUndo(); var exi = st.exi; delete st.sa.cat705; save(); if (typeof drawPlan === "function") drawPlan(); if (exi != null && typeof drawExtras === "function") drawExtras(); } catch(e){} $("modal").hidden = true; st = null; };
     if ($("c705ok")) $("c705ok").onclick = function(){
       var T2 = total(st.d, st.sel, st.ad); if (!T2) return;
       try {
@@ -50845,7 +50848,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var pv726 = function(id){ var p0 = (st.d.pick || []).filter(function(x){ return x.id === id; })[0]; return p0 && (p0.values || []).filter(function(v){ return v.id === st.sel[id]; })[0]; };   /* CAD-727：立体の扉にデザインと色を出すための控え（Fable の頼み） */
         var dz726 = pv726("design"), cl726 = pv726("color");
         st.sa.cat705 = { shape: (dz726 && dz726.shape) || "", colorName: (cl726 && cl726.name) || "", grp: st.ent.group || "", file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
-        save(); if (typeof drawPlan === "function") drawPlan();
+        if (st.exi != null && st.sel.size && ["1216", "1616", "1620"].indexOf(st.sel.size) >= 0) st.sa.size = st.sel.size;   /* CAD-741：浴室の基準サイズも合わせる */
+        save(); if (typeof drawPlan === "function") drawPlan(); try { if (st.exi != null && typeof drawExtras === "function") drawExtras(); } catch(x){}
       } catch(e){ try { console.warn("[CAT705] 選ぶ", e); } catch(x){} }
       $("modal").hidden = true; st = null;
       try { if (typeof toast === "function") toast("カタログの品にしました（見積は定価×掛率）"); } catch(e){}
@@ -50863,10 +50867,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     sizeH: "扉の高さ（今の玄関の高さで決まります。測ってから選び直せます）",
     entry: "手動＝ふつうの鍵／FamiLock＝カード・タグ・スマホで開く電気錠（電池式は配線いらず、AC100V式は電気工事が要る）",
     kaihei: "自動開閉は AC100V式 の時だけ選べます",
+    size: "今の浴室の大きさに近い物を選びます（1616＝1坪）。壁の中の寸法は、図面と必ず合わせてください",
+    door: "ドアの位置の記号です（値段は同じ）。分からなければスキップしてください",
     glass: "Low-E＝断熱の高いガラス／安全合わせ＝割れても飛び散りにくい"
   };
   var LINEHINT740 = { "ジエスタ2": "新築・建て替え向けの玄関ドア", "リシェント": "リフォーム用。今の枠の上から付けるので、壁を壊さず1日で交換できる" };
-  function stepOn740(){ return !!(st && st.ent && (st.ent.group === "玄関ドア" || st.ent.group === "勝手口ドア") && !st.flat740); }
+  function stepOn740(){ return !!(st && st.ent && (st.ent.group === "玄関ドア" || st.ent.group === "勝手口ドア" || st.ent.group === "ユニットバス") && !st.flat740); }
+  function isUb741(){ return !!(st && st.ent && st.ent.group === "ユニットバス"); }
   function kind740(e){ return /引戸/.test(nm(e)) ? "引戸" : "ドア"; }
   function fileName740(e){ var n = nm(e).replace(/^\S+\s+/, "").replace(/^(玄関ドア\d*|玄関引戸\d*|勝手口ドア)\s*/, ""); return n || nm(e); }
   function pickById740(d, id){ return (d.pick || []).filter(function(p){ return p.id === id; })[0]; }
@@ -50926,9 +50933,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!m || !dz) return true;
     return dz[1] === m[1] && +dz[2] >= +m[2] && +dz[2] <= +m[4];
   }
+  function fitSize741(v){
+    var m = String(v.name || "").match(/（([\dS・]+)サイズ）/); if (m && st.sel.size && m[1].split("・").indexOf(st.sel.size) < 0) return false;
+    if (/シャワーシステム選択時/.test(v.name || "")){ var su = (st.d.adds || []).filter(function(a){ return a.id === "suisen"; })[0], cv = su && (su.values || []).filter(function(x){ return x.id === st.ad.suisen; })[0]; if (!(cv && /シャワーシステム/.test(cv.name || ""))) return false; }
+    return true;
+  }
   function reqAdd740(a){ return a.id === "handle" && !a.always; }   /* 引戸のハンドルは必ず要る（なしは出さない） */
   function addVals740(a){
-    var vs = (a.values || []).filter(function(v){ return !(a.id === "keyset" && v.id === "face" && st.sel.entry !== "ac100v") && fitDesign740(v) && !(reqAdd740(a) && v.id === "none"); });
+    var vs = (a.values || []).filter(function(v){ return !(a.id === "keyset" && v.id === "face" && st.sel.entry !== "ac100v") && fitDesign740(v) && fitSize741(v) && !(reqAdd740(a) && v.id === "none"); });
     var hasNone = vs.some(function(v){ return v.id === "none"; });
     return (a.included != null || a.id === "handle" || hasNone ? [] : [{ id: "", name: "なし" }]).concat(vs);
   }
@@ -50941,7 +50953,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var lines = []; LK.forEach(function(e){ var l = lineOf(e); if (lines.indexOf(l) < 0) lines.push(l); });
     var ln = lineOf(st.ent), LL = LK.filter(function(e){ return lineOf(e) === ln; });
     if (lines.length > 1) S.push({ id: "__line", name: "商品", vals: lines.map(function(l){ return { id: l, name: l, sub: LINEHINT740[l] || "" }; }), cur: ln, done: sd.line });
-    if (LL.length > 1) S.push({ id: "__file", name: /^ジエスタ/.test(ln) ? "型の組" : "仕様", vals: LL.map(function(e){ return { id: e.file, name: fileName740(e) }; }), cur: st.ent.file, done: sd.file });
+    if (LL.length > 1) S.push({ id: "__file", name: isUb741() ? "タイプ" : /^ジエスタ/.test(ln) ? "型の組" : "仕様", vals: LL.map(function(e){ return { id: e.file, name: fileName740(e) }; }), cur: st.ent.file, done: sd.file });
     var dn = st.dn740 || {};
     pickOrder740(st.d).forEach(function(pid){
       var p = pickById740(st.d, pid); if (!p || (p.values || []).length < 2) return;
@@ -50969,12 +50981,25 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function drawStep740(){
     var S = steps740(), k = st.at740 != null && st.at740 < S.length ? st.at740 : curStep740(S), s = S[k], h = "";
     st.at740 = null;
-    var grpN = st.ent.group === "勝手口ドア" ? "勝手口ドア" : "玄関ドア";
+    var grpN = isUb741() ? "ユニットバス" : st.ent.group === "勝手口ドア" ? "勝手口ドア" : "玄関ドア";
     h += "<h3 style='margin-bottom:4px'>" + grpN + "を選ぶ <span style='font-size:13px;font-weight:700;color:var(--sub,#5B6673)'>" + (k + 1) + "／" + S.length + "</span></h3>";
     /* 決めた事（押すと戻る） */
     var past = S.slice(0, k).map(function(x, i){ var v = x.vals && x.vals.filter(function(y){ return y.id === x.cur; })[0]; return "<button type='button' data-s740back='" + i + "' style='border:1px solid var(--line,#DCE3EB);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink,#18202A)'>" + esc(v ? v.name.replace(/<[^>]*>/g, "") : x.name) + "</button>"; });
     if (past.length) h += "<div style='display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin:4px 0 8px'><span style='font-size:12px;color:var(--sub,#5B6673)'>決めた事：</span>" + past.join("<span style='color:#9AA6B2'>›</span>") + "</div>";
-    if (s.id === "__adds"){
+    if (s.id === "__adds" && isUb741() && !st.ubAdd741){
+      h += "<div style='font-size:16px;font-weight:800;margin:6px 0 2px'>変える所を選ぶ（変えなければ標準のまま）</div>";
+      optAdds740().forEach(function(a){
+        var vs = addVals740(a), cur = st.ad[a.id], cv = vs.filter(function(v){ return v.id === cur; })[0], df = cv && cur ? addDiff(a, cur) : 0, std = String(cur) === String(addDefault(a)) || cur == null || cur === "";
+        h += "<button type='button' data-ub741='" + esc(a.id) + "' style='display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;min-height:44px;margin:4px 0;padding:6px 12px;border-radius:10px;border:1px solid " + (std ? "var(--line,#DCE3EB)" : "var(--ai,#2563B0)") + ";background:" + (std ? "#fff" : "#E6EFFA") + ";font:inherit;font-size:14px;text-align:left'><span style='font-weight:800'>" + esc(a.name) + "</span><span style='font-size:12.5px;color:var(--sub,#5B6673)'>" + (std ? "標準" : esc(((cv && cv.name) || "").slice(0, 16)) + (df ? "（" + (df > 0 ? "＋" : "") + df.toLocaleString("ja-JP") + "）" : "")) + " ›</span></button>";
+      });
+      h += "<div style='display:flex;gap:8px;margin-top:12px'><button type='button' class='btn' id='s740next' style='flex:1;min-height:46px'>次へ</button></div>";
+    }
+    else if (s.id === "__adds" && isUb741()){
+      var ua = (st.d.adds || []).filter(function(a){ return a.id === st.ubAdd741; })[0];
+      h += "<div style='font-size:16px;font-weight:800;margin:6px 0 2px'>" + esc(ua.name) + "</div><div style='display:flex;flex-direction:column;gap:6px'>" + addVals740(ua).map(function(v){ var df = v.id ? addDiff(ua, v.id) : 0; return vbtn740("__add:" + ua.id, { id: v.id, name: v.name + (df ? "（" + (df > 0 ? "＋" : "") + df.toLocaleString("ja-JP") + "円）" : "") }, v.id === st.ad[ua.id]); }).join("") + "</div>";
+      h += "<div style='display:flex;gap:8px;margin-top:12px'><button type='button' class='btn sub' id='s740ubback' style='flex:1;min-height:44px'>一覧にもどる</button></div>";
+    }
+    else if (s.id === "__adds"){
       h += "<div style='font-size:16px;font-weight:800;margin:6px 0 2px'>付ける物（なしでもOK）</div>";
       optAdds740().forEach(function(a){
         var vs = addVals740(a), cur = st.ad[a.id] || (vs.some(function(v){ return v.id === "none"; }) ? "none" : "");
@@ -50999,12 +51024,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     h += "<div style='display:flex;gap:6px;margin-top:12px'>" + (k > 0 ? "<button type='button' class='btn sub' id='s740prev' style='flex:0 0 auto;width:auto;min-height:44px'>もどる</button>" : "") + (s.id !== "__ok" ? "<button type='button' class='btn sub' id='s740skip' style='flex:1;min-height:44px'>スキップ（とりあえずこれで）</button>" : "<span style='flex:1'></span>") + "<button type='button' class='btn sub' id='c705x' style='flex:0 0 auto;width:auto;min-height:44px'>やめる</button></div>";
     $("mbox").innerHTML = h;
     st.k740 = k;
-    function back(i){ var S2 = steps740(); for (var j = i; j < S2.length; j++) undone740(S2[j].id); st.skip740 = false; st.at740 = null; draw(); }
+    function back(i){ st.ubAdd741 = null; var S2 = steps740(); for (var j = i; j < S2.length; j++) undone740(S2[j].id); st.skip740 = false; st.at740 = null; draw(); }
     $("mbox").querySelectorAll("[data-s740back]").forEach(function(b){ b.onclick = function(){ back(+b.dataset.s740back); }; });
     $("mbox").querySelectorAll("[data-s740]").forEach(function(b){ b.onclick = function(){ choose740(b.dataset.s740, b.dataset.v); }; });
     if ($("s740prev")) $("s740prev").onclick = function(){ back(k - 1); };
     if ($("s740skip")) $("s740skip").onclick = function(){ fix740(); steps740().forEach(function(x){ done740(x.id); }); st.skip740 = true; draw(); };
     if ($("s740next")) $("s740next").onclick = function(){ done740("__adds"); draw(); };
+    $("mbox").querySelectorAll("[data-ub741]").forEach(function(b){ b.onclick = function(){ st.ubAdd741 = b.dataset.ub741; draw(); }; });
+    if ($("s740ubback")) $("s740ubback").onclick = function(){ st.ubAdd741 = null; draw(); };
     bindEnd705();
   }
   function done740(id){ st.sd740 = st.sd740 || {}; st.dn740 = st.dn740 || {}; if (id === "__kind") st.sd740.kind = 1; else if (id === "__line") st.sd740.line = 1; else if (id === "__file") st.sd740.file = 1; else if (id === "__adds") st.sd740.adds = 1; else if (id === "__ranma") st.sd740.ranma = 1; else if (id !== "__ok") st.dn740[id] = 1; }
@@ -51017,7 +51044,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     });
   }
   function choose740(sid, v){
-    if (sid.indexOf("__add:") === 0){ st.ad[sid.slice(6)] = v === "none" ? "none" : v; keyRule740(); draw(); return; }
+    if (sid.indexOf("__add:") === 0){ st.ad[sid.slice(6)] = v === "none" ? "none" : v; if (isUb741()) st.ubAdd741 = null; keyRule740(); reqFix740(); draw(); return; }
     if (sid === "__kind" || sid === "__line" || sid === "__file"){
       var K = sid === "__kind" ? v : kind740(st.ent), Lk = st.L.filter(function(e){ return kind740(e) === K; });
       var ln = sid === "__line" ? v : lineOf(st.ent), Ll = Lk.filter(function(e){ return lineOf(e) === ln; });
@@ -51048,7 +51075,22 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (pref && pref.file !== st.ent.file) return pref;
     fix740(); return null;
   }
-  window.CAT705 = { v: 1, base: function(){ return BASE; }, setBase: function(b){ BASE = b; idx = null; files = Object.create(null); }, groupOf: groupOf, open: open, loadIndex: loadIndex, loadFile: loadFile, makers: function(){ var m = seenMakers.slice(); (S && S.sashes || []).forEach(function(sa){ if (sa.cat705 && m.indexOf(sa.cat705.maker) < 0) m.push(sa.cat705.maker); }); return m; }, _total: total, _fix: fix };
+  /* CAD-741：ユニットバス（見積の「設備」の浴室＝S.extras の k:"ub"）をカタログから選ぶ。記録は e.cat705（建具と同じ形） */
+  function openExtra(i){
+    var e = (S.extras || [])[i]; if (!e || e.k !== "ub") return;
+    $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>読み込み中…</p>"; $("modal").hidden = false;
+    loadIndex().then(function(){
+      var L = list(e); if (!L.length){ $("mbox").innerHTML = "<h3>ユニットバス</h3><p class='hint'>カタログは、まだありません。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; return; }
+      var cur = e.cat705 || null, ent = (cur && L.filter(function(x){ return x.file === cur.file; })[0]) || L[0];
+      return loadFile(ent.file).then(function(d){
+        st = { si: -1, sa: e, L: L, ent: ent, d: d, sel: Object.assign({}, cur && cur.file === ent.file ? cur.sel : {}), ad: Object.assign({}, cur && cur.file === ent.file ? cur.adds : {}), exi: i };
+        (d.adds || []).forEach(function(a){ if (st.ad[a.id] == null) st.ad[a.id] = addDefault(a); });
+        if (st.sel.size == null && e.size && (d.pick || []).some(function(p){ return p.id === "size" && (p.values || []).some(function(v){ return v.id === e.size; }); })) st.sel.size = e.size;
+        fix(d, st.sel); draw();
+      });
+    }).catch(function(x){ try { console.warn("[CAT705] 浴室", x); } catch(y){} $("mbox").innerHTML = "<h3>カタログから選ぶ</h3><p class='hint'>カタログを読み込めませんでした（電波を確かめてください）。</p><div class='row'><button type='button' class='btn' id='c705x' style='width:100%;min-height:46px'>閉じる</button></div>"; $("c705x").onclick = function(){ $("modal").hidden = true; }; });
+  }
+  window.CAT705 = { v: 1, openExtra: openExtra, base: function(){ return BASE; }, setBase: function(b){ BASE = b; idx = null; files = Object.create(null); }, groupOf: groupOf, open: open, loadIndex: loadIndex, loadFile: loadFile, makers: function(){ var m = seenMakers.slice(); (S && S.sashes || []).forEach(function(sa){ if (sa.cat705 && m.indexOf(sa.cat705.maker) < 0) m.push(sa.cat705.maker); }); return m; }, _total: total, _fix: fix };
   /* 単価表の掛率の一覧にカタログのメーカーを早めに出すため、静かに一覧だけ読む（失敗しても何もしない） */
   setTimeout(function(){ try { loadIndex().catch(function(){}); } catch(e){} }, 4000);
 })();
