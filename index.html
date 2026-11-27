@@ -1688,10 +1688,15 @@ function sashRow(s, two){
   const where = `${s.w}×${s.h}・${two ? (s.fl || 1) + "階・" : ""}${wallLabel(s.wall).split(" ")[0]}`;
   const whereF = wakuLbl405(s.cat) + where;   /* CAD-405：見積の本体行だけ枠外を明示する */
   if (st === "fusuma" || st === "shoji"){ const w = workP("rpShoji"), k = sPanels(s) * s.n; return {name: `${st === "fusuma" ? "襖" : "障子"} 張替え`, spec: `${s.cat === "クローゼット" ? "押入" : /掃き出し|腰窓|小窓/.test(s.cat) ? s.cat + " " + s.name : s.name}・${where}・${fmt(w.p)}円/枚`, qty: `${k}枚`, cost: w.p * k, avg: w.avg, fix: {kind: "work", key: "rpShoji"}}; }
+  if (st === "ip" && s.cat705 && s.cat705.grp === "内窓" && s.cat705.teika > 0 && typeof tkRowObj379 === "function"){   /* CAD-716：インプラスをカタログから選んだ時は「定価×掛率」＋取付手間 */
+    const r716 = tkRowObj379("インプラス（内窓） " + s.cat705.label, {price: s.cat705.teika, maker: s.cat705.maker, name: s.cat705.label}, s.n), w716 = workP("umWork");
+    if (r716 && w716.p > 0){ r716.cost = (r716.cost || 0) + w716.p * s.n; r716.spec = (r716.spec || "") + `＋取付手間 ${fmt(w716.p)}円 × ${s.n}か所`; }
+    return r716;
+  }
   if (st === "ip"){ const pr = s.ipPrice || AVG_IP[s.cat] || 60000; return {name: `インプラス（内窓） ${s.cat} ${s.name}`, spec: `既存窓の内側・${where}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.ipPrice, fix: {kind: "sash"}}; }
   if (s.cat === "シャッター"){ const bp = shutterPrice(s), pr = s.price || bp.p; return {name: `シャッター ${s.name}`, spec: `${where}・${s.price ? "入れた単価" : bp.note}`, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && bp.avg, fix: {kind: "sash"}}; }
   const out = s.frame === "outset", oyako248 = s.cat === "玄関" && /親子/.test(s.name || "");   /* CAD-248：玄関の親子ドアは本体330,000＋取付50,000 */
-  if (s.cat705 && s.cat705.teika > 0 && typeof tkRowObj379 === "function") return tkRowObj379(s.cat705.label, {price: s.cat705.teika, maker: s.cat705.maker, name: s.cat705.label}, s.n);   /* CAD-705：カタログから選んだ物は「定価×掛率」の1行 */
+  if (s.cat705 && s.cat705.teika > 0 && s.cat705.grp !== "内窓" && typeof tkRowObj379 === "function") return tkRowObj379(s.cat705.label, {price: s.cat705.teika, maker: s.cat705.maker, name: s.cat705.label}, s.n);   /* CAD-705：カタログから選んだ物は「定価×掛率」の1行 */
   { const tk386 = s.tk386 ? tkEntry386(s.tk386) : null; if (tk386 && tkSashList386(s).includes(tk386)) return tkRowObj379(tk386.name, tk386, s.n); }   /* CAD-386：種類（定価）を選んだら本体行は定価×掛率の1行にする（今の種類に合う定価の時だけ） */
   const pr = s.price || (oyako248 && !out ? 380000 : (out ? AVG_OUTSET : MY_SASH[s.cat] || AVG_SASH[s.cat] || 50000));
   return {name: s.cat === "室内ドア" ? `室内 ${sashLabel(s)}` : `${s.cat} ${s.name}`, spec: oyako248 && !s.price && !out ? `${whereF}・本体330,000円＋取付50,000円` : whereF, qty: `${s.n}台`, cost: pr * s.n, avg: !s.price && (out || !MY_SASH[s.cat]), fix: {kind: "sash"}};
@@ -49889,7 +49894,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function get(url){ return fetch(url, { cache: "no-cache" }).then(function(r){ if (!r.ok) throw new Error(r.status); return r.json(); }); }
   function loadIndex(){ if (idx) return Promise.resolve(idx); return get(BASE + "index.json").then(function(j){ idx = Array.isArray(j) ? j : []; idx.forEach(function(e){ var n = mkName(e.maker); if (seenMakers.indexOf(n) < 0) seenMakers.push(n); }); return idx; }); }
   function loadFile(f){ if (files[f]) return Promise.resolve(files[f]); return get(BASE + f).then(function(j){ files[f] = j; return j; }); }
-  function groupOf(sa){ if (!sa) return null; var g = GROUP[sa.cat]; return g || null; }
+  function groupOf(sa){ if (!sa) return null; try { if (typeof sState === "function" && sState(sa) === "ip") return ["内窓"]; } catch(e){} var g = GROUP[sa.cat]; return g || null; }   /* CAD-716：リフォームで「インプラス」の窓は内窓のカタログ */
   function list(sa){ var g = groupOf(sa) || []; return (idx || []).filter(function(e){ return g.indexOf(e.group) >= 0 && winOk(sa, e); }); }
   /* CAD-715：窓は、図面の窓の種類で出すシリーズを絞る（ツーバイフォーの「204」は出さない＝在来の家）。掃き出し＝テラス／腰窓＝引違いのマド／小窓＝引違い・すべり出し・倒し／FIX＝FIXのマド */
   function nm(e){ return String(e.seriesName || e.series || ""); }
@@ -49922,7 +49927,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function addDiff(a, vid){ var v = (a.values || []).filter(function(x){ return x.id === vid; })[0]; if (!v) return 0; if (a.included != null) return +v.teika || 0; if (a.id === "handle" && a.values[0]) return (+v.teika || 0) - (+a.values[0].teika || 0); return +v.teika || 0; }   /* ハンドルは差額（セットに標準が入っている）。included があればその値が差額 */
   /* CAD-715：窓の大きさのボタンは「枠外の寸法（呼称）」だけ短く */
-  function shortP(p){ return p.id === "sizeW" ? "幅（枠外）" : p.id === "sizeH" ? "高さ（枠外）" : p.name; }
+  function shortP(p){ var o = (p.values || []).some(function(v){ return +v.outW > 0 || +v.outH > 0; }), k = o ? "（枠外）" : "（内法）"; return p.id === "sizeW" ? "幅" + k : p.id === "sizeH" ? "高さ" + k : p.name; }
   function shortV(v){ var o = +v.outW || +v.outH; return o > 0 ? { id: v.id, name: o.toLocaleString("ja-JP") + "（" + v.id + "）" } : v; }
   function matchId(a, sel){ return Array.isArray(a.match) ? a.match.map(function(k){ return sel[k] || ""; }).join("") : null; }   /* CAD-715：網戸など、呼称（幅＋高さ）ごとの値段 */
   function addDefault(a){ return a.included != null ? a.included : (a.id === "handle" && a.values[0] ? a.values[0].id : ""); }
@@ -49944,7 +49949,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function sizeFromDoor(d, sel, sa){
     /* CAD-715：窓は基本寸法（outW・outH）が図面の窓の幅・高さに一番近い物 */
     (d.pick || []).forEach(function(pp){ var key = pp.id === "sizeW" ? "outW" : pp.id === "sizeH" ? "outH" : null, tgt = pp.id === "sizeW" ? sa.w : sa.h; if (!key || sel[pp.id] != null || !(tgt > 0)) return;
-      var b = null, bd = Infinity; (pp.values || []).forEach(function(v){ var x = +v[key] || 0; if (x > 0 && Math.abs(x - tgt) < bd){ bd = Math.abs(x - tgt); b = v.id; } }); if (b) sel[pp.id] = b; });
+      var b = null, bd = Infinity; (pp.values || []).forEach(function(v){ var x = +v[key] || +v[pp.id === "sizeW" ? "w" : "h"] || 0; if (x > 0 && Math.abs(x - tgt) < bd){ bd = Math.abs(x - tgt); b = v.id; } }); if (b) sel[pp.id] = b; });
     var p = (d.pick || []).filter(function(x){ return x.id === "size"; })[0]; if (!p || sel.size != null || !(sa.w > 0)) return;
     var best = null, bd = Infinity;
     (p.values || []).forEach(function(v){ var w = v.w > 0 ? v.w : (function(){ var m = String(v.id).match(/(\d+)/); if (!m) return 0; var t = m[1]; return t.length >= 3 ? +t.slice(0, 3) * 10 : +t * 100; })(); if (w > 0 && Math.abs(w - sa.w) < bd){ bd = Math.abs(w - sa.w); best = v.id; } });
@@ -50014,8 +50019,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         pushUndo();
         (function(){ var pw = (st.d.pick || []).filter(function(x){ return x.id === "sizeW"; })[0], ph = (st.d.pick || []).filter(function(x){ return x.id === "sizeH"; })[0];
           var vw = pw && (pw.values || []).filter(function(x){ return x.id === st.sel.sizeW; })[0], vh = ph && (ph.values || []).filter(function(x){ return x.id === st.sel.sizeH; })[0];
+          if (st.ent.group === "内窓") return;   /* 内窓は今ある窓の内側に付けるので、図面の窓の大きさは変えない */
           if (vw && +vw.outW > 0) st.sa.w = +vw.outW; if (vh && +vh.outH > 0) st.sa.h = +vh.outH; })();   /* CAD-715：図面の窓をカタログの基本寸法（枠外）に合わせる */
-        st.sa.cat705 = { file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
+        st.sa.cat705 = { grp: st.ent.group || "", file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
         save(); if (typeof drawPlan === "function") drawPlan();
       } catch(e){ try { console.warn("[CAT705] 選ぶ", e); } catch(x){} }
       $("modal").hidden = true; st = null;
