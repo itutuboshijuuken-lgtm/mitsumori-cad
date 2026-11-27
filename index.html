@@ -49083,3 +49083,31 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.ZPRINT = { v: VER, build: build, print: print, plan: plan };
 })();
 </script>
+<script>
+/* ---------- CAD-697：①描くに「📐 新しい図面で描く（試験中）」のボタン（2026-11-27 Claude/Opus）----------
+   翔伍の頼み「⋯の切り替えはよく分からん。いつもの画面から使えるように」。
+   押すと「新しい歩く画面（試験中）」を入にして、そのまま新しい図面を開く。切に戻すのは今までどおり⋯から。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  function go(){
+    try {
+      if (window.WALK2 && !window.WALK2.isOn()) window.WALK2.setOn(true);
+      var n = 0, t = setInterval(function(){
+        n++;
+        try { if (window.ZUMEN && typeof window.ZUMEN.open === "function"){ window.ZUMEN.open(); if (window.ZUMEN.isOpen()){ clearInterval(t); return; } } } catch(e){}
+        if (n > 20){ clearInterval(t); try { if (typeof toast === "function") toast("新しい図面を開けませんでした。⋯の「新しい図面を見る」から開いてください"); } catch(e){} }
+      }, 150);
+    } catch(e){}
+  }
+  setInterval(function(){
+    try {
+      var st1 = document.getElementById("st1"); if (!st1 || st1.hidden || document.getElementById("zum697btn")) return;
+      var after = document.getElementById("imp439btn"); if (!after) return;
+      var b = document.createElement("button"); b.id = "zum697btn"; b.type = "button"; b.textContent = "📐 新しい図面で描く（試験中）";
+      try { var cs = getComputedStyle(after); ["background", "border", "borderRadius", "color", "fontFamily", "fontSize", "fontWeight", "padding", "width", "minHeight", "boxShadow", "boxSizing"].forEach(function(k){ b.style[k] = cs[k]; }); } catch(e){}   /* となりの「図面の写真から作る」と同じ見た目（黒金の画面にそろえる） */
+      b.style.display = "block"; b.style.marginTop = "8px"; b.onclick = go;
+      after.after(b);
+    } catch(e){}
+  }, 600);
+})();
+</script>
