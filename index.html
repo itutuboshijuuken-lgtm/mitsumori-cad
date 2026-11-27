@@ -39422,6 +39422,7 @@ function kozo478(C){
       if (hz && q[0] > Math.min(g[0], g[2]) && q[0] < Math.max(g[0], g[2])){ if (g[1] > q[1]) r.y1 = Math.min(r.y1, g[1]); else if (g[1] < q[1]) r.y0 = Math.max(r.y0, g[1]); } });
     if (!isFinite(r.x0 + r.x1 + r.y0 + r.y1)) return null; return r;
   }
+  var MW748 = 910;
   function applyFloor(t, first){
     var lb = stairLabel(); if (!lb) return "この階に「階段」の部屋がありません";
     var R = rectAround(lb.p); if (!R) return "階段の部屋の壁が見つかりません";
@@ -39450,6 +39451,32 @@ function kozo478(C){
       var kh = (S.fuko > 0) ? Math.round((S.ch || 2400) + (+S.dosa || 240) + S.fuko + 40) : 0, Hk = kh || ((S.ch || 2400) + (+S.dosa || 240)), need = Math.max(1, Math.ceil(Hk / 190)) * 227.5, bx = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 };
       if (sd > need + 1){ if (dir === "e") bx.x1 = bx.x0 + need; else if (dir === "w") bx.x0 = bx.x1 - need; else if (dir === "s") bx.y1 = bx.y0 + need; else bx.y0 = bx.y1 - need; sd = need; }
       var so = {k: "stair", x: (bx.x0 + bx.x1) / 2, y: (bx.y0 + bx.y1) / 2, w: Math.round(sw), d: Math.round(sd), dir: dir, st: "s", isNew: true, state: "new"}; if (kh) so.kh = kh;
+      /* CAD-748：あり得ない収まりを避ける（翔伍の指摘：外壁に向かってまっすぐ上がると、上がり切った所が壁で2階へ出られない）
+         ・上り口が階段の長い辺の横（上り始めの端の近く）にある → 上り始めに廻り段（横から入って向きを変える）
+         ・上がり切る先が外壁 → 上がり切る所に廻り段（向きを変えて2階へ出る）
+         ・廻り段（3段・910角）の分だけ直の段を減らして、部屋の長さに収める。蹴上げが230を超える時は知らせる */
+      try {
+        var rv = {e: [1, 0], w: [-1, 0], s: [0, 1], n: [0, -1]}[dir], runH = dir === "e" || dir === "w", full = runH ? R.x1 - R.x0 : R.y1 - R.y0;
+        var st0 = dir === "e" ? R.x0 : dir === "w" ? R.x1 : dir === "s" ? R.y0 : R.y1, far = dir === "e" ? R.x1 : dir === "w" ? R.x0 : dir === "s" ? R.y1 : R.y0;
+        var OP = pts(), oMin = Math.min.apply(null, OP.map(function(q){ return runH ? q[0] : q[1]; })), oMax = Math.max.apply(null, OP.map(function(q){ return runH ? q[0] : q[1]; }));
+        var pMin = Math.min.apply(null, OP.map(function(q){ return runH ? q[1] : q[0]; })), pMax = Math.max.apply(null, OP.map(function(q){ return runH ? q[1] : q[0]; }));
+        var tAlong = runH ? t[0] : t[1], sideOn = runH ? (side === "U" || side === "D") : (side === "L" || side === "R");
+        var bot = sideOn && Math.abs(tAlong - st0) <= 1200, top = Math.abs(far - oMin) < 5 || Math.abs(far - oMax) < 5;
+        if (bot || top){
+          var nTurn = (bot ? 1 : 0) + (top ? 1 : 0), nS = Math.floor((full - nTurn * MW748) / 227.5 + 1e-6);
+          if (nS >= 1){
+            var ev = side === "U" ? [0, 1] : side === "D" ? [0, -1] : side === "L" ? [1, 0] : [-1, 0];
+            var turn = function(a, b2){ return (a[0] * b2[1] - a[1] * b2[0]) < 0 ? "L" : "R"; };
+            var xv; if (runH){ var lo = R.y0, hi = R.y1; xv = Math.abs(lo - pMin) < 5 ? [0, 1] : Math.abs(hi - pMax) < 5 ? [0, -1] : (bot ? [-ev[0], -ev[1]] : [0, 1]); } else { var lo2 = R.x0, hi2 = R.x1; xv = Math.abs(lo2 - pMin) < 5 ? [1, 0] : Math.abs(hi2 - pMax) < 5 ? [-1, 0] : (bot ? [-ev[0], -ev[1]] : [1, 0]); }
+            var parts = []; if (bot) parts.push({t: "m", kind: 3, dir: turn(ev, rv)}); parts.push({t: "s", n: nS}); if (top) parts.push({t: "m", kind: 3, dir: turn(rv, xv)});
+            var len = nTurn * MW748 + nS * 227.5, b2 = { x0: R.x0, y0: R.y0, x1: R.x1, y1: R.y1 };
+            if (len < full - 1){ if (top){ if (dir === "e") b2.x0 = b2.x1 - len; else if (dir === "w") b2.x1 = b2.x0 + len; else if (dir === "s") b2.y0 = b2.y1 - len; else b2.y1 = b2.y0 + len; } else { if (dir === "e") b2.x1 = b2.x0 + len; else if (dir === "w") b2.x0 = b2.x1 - len; else if (dir === "s") b2.y1 = b2.y0 + len; else b2.y0 = b2.y1 - len; } }
+            so.parts = parts; so.x = (b2.x0 + b2.x1) / 2; so.y = (b2.y0 + b2.y1) / 2; so.d = Math.round(len); so.w = Math.round(Math.min(sw, Math.max(MW748, sw)));
+            var tot = nS + 3 * nTurn, rise = Hk / tot;
+            setTimeout(function(){ try { toast("階段を" + (bot && top ? "上下回り" : bot ? "下回り" : "上回り") + "（" + tot + "段・蹴上げ約" + Math.round(rise) + "mm）で置きました。" + (top ? "上がり切る先が外壁なので、上で向きを変える形にしています。" : "") + (rise > 230 ? "蹴上げが230を超えるので、段数か形を見直してください" : "") + "（階段をさわると変えられます）"); } catch(e){} }, 900);
+          }
+        }
+      } catch(e){ try { console.warn("CAD-748 階段の形", e); } catch(x){} }
       S.tenken.push(so);
     }
     save(); try { solve(); } catch(e){} try { drawPlan(); } catch(e){}
@@ -48061,10 +48088,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var hw = 1e9, k2; for (k2 = 0; k2 < P2.length; k2++){ var pa = P2[k2], pb = P2[(k2 + 1) % P2.length]; if (Math.abs(pa[0] - pb[0]) < 1 && ((pa[1] > y) !== (pb[1] > y))) hw = Math.min(hw, Math.abs(pa[0] - x)); }
         if (hw > 1e8) hw = dmin;
         var sc = dmin + Math.min(hw, 2500) * .35, nw = Math.min(nameW, Math.max(2 * Math.min(hw, 4000) - 240, 260)) / 2, bxc = [x - nw, y - nh, x + nw, y + nh];   /* 横に広い所を少し優先 */
-        if (avoid.some(function(q){ return hit(q, bxc, 1); })) sc *= .3;
-        if (!best || sc > best.sc) best = { x: x, y: y, sc: sc, d: dmin, hw: hw };
+        var hitAv = avoid.some(function(q){ return hit(q, bxc, 1); }); if (hitAv) sc *= .3;
+        if (!best || sc > best.sc) best = { x: x, y: y, sc: sc, d: dmin, hw: hw, hit: hitAv };
       }
       if (!best) return;
+      if (best.hit && /階段|吹抜|吹き抜け/.test(name)) return;   /* CAD-748：階段の絵で埋まった階段の部屋は、部屋名を出さない（絵の「上り／下り」で分かる。重ねると字が読めない） */
       var avail = Math.max(2 * Math.min(best.hw, 4000) - 240, 260);
       var s1 = name ? ts.room * clamp(avail / tw(name, ts.room, true), .5, 1) : 0, t2 = /帖|畳/.test(name) ? at : at + jo;
       if (tw(t2, ts.area) > avail) t2 = at;
