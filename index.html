@@ -49346,8 +49346,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function segD(x, y, a, b){ var ex = b[0] - a[0], ey = b[1] - a[1], L2 = ex * ex + ey * ey, t = L2 > 0 ? Math.max(0, Math.min(1, ((x - a[0]) * ex + (y - a[1]) * ey) / L2)) : 0; return Math.hypot(x - a[0] - ex * t, y - a[1] - ey * t); }
   function edgeAt(p){ var P = pts(), n = P.length, best = -1, bd = 16 * pxmm(), i, d; for (i = 0; i < n; i++){ d = segD(p[0], p[1], P[i], P[(i + 1) % n]); if (d < bd){ bd = d; best = i; } } return best; }
   function selNow(){ try { var z = zumen(); return z ? z.selected() : null; } catch(e){ return null; } }
+  /* CAD-737：帯のボタンなど（図面の外）を押した指は、図面のタップとして扱わない。
+     前は、ボタンを押した指を図面のタップと読んで帯を閉じてしまい、ボタンが効かなかった（スマホの指の時だけ） */
+  function onUi(t){ try { if (!t || !A) return false; var sv = plan(); if (sv && sv.contains(t)) return false; if (A.ov && (t === A.ov || A.ov.contains(t))) return false; return !!(t.closest && t.closest("button,input,select,textarea,label,#k3SashBar,#k3ThingBar,[id^='k3'],[id^='kaku']")); } catch(e){ return false; } }
   function onDown(e){
     nDown++;
+    if (onUi(e.target)){ down = null; return; }
     if (partObj && busy()) closePart();
     if (roomCid != null && busy()) closeRoom();
     if (sashObj && busy()) closeSash();
@@ -49727,15 +49731,26 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     mk("大きさ", function(){ sizeSheet(); });   /* CAD-712 */
     if (window.CAT705 && window.CAT705.groupOf(sa)) mk("カタログ", function(){ var j = idx(); if (j >= 0) window.CAT705.open(j); });   /* CAD-705 */
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
-    var fl723 = function(bit, msg){ return function(){ var so = sashObj; if (!so) return; try { pushUndo(); so.flip = (so.flip || 0) ^ bit; save(); if (typeof drawPlan === "function") drawPlan(); say(msg); } catch(e){} }; };
+    var fl723 = function(bit, msg){ return function(){ var so = sashObj; if (!so){ say("建具をもう一度タップしてください"); return; } quick737(function(){ so.flip = (so.flip || 0) ^ bit; }, msg); }; };
     if (ty === "door" || ty === "closet"){ mk("吊元", fl723(2, "吊元を替えました")); mk("開き勝手", fl723(1, "開く向きを替えました")); }   /* CAD-723：立体と同じ呼び方 */
     else if (ty === "hiki") mk("戸袋の側", fl723(2, "戸袋の側を替えました"));
-    if (window.KATA734 && KATA734.ok(sa)){ mk("扉の走る面", fl723(1, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）")); if (sa.frame !== "outset") mk("戸袋の形", function(){ var so = sashObj; if (!so) return; try { pushUndo(); say(KATA734.toggle(so)); save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} }); }   /* CAD-735 */
+    if (window.KATA734 && KATA734.ok(sa)){ mk("扉の走る面", fl723(1, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）")); if (sa.frame !== "outset") mk("戸袋の形", function(){ var so = sashObj; if (!so) return; var m = ""; quick737(function(){ m = KATA734.toggle(so); }, function(){ return m; }); }); }   /* CAD-735 */
     try { if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(sa)) mk("状態", function(){ var j = idx(); if (j >= 0) sashAskState(j); }); } catch(e){}
     if (typeof winAccOK694 === "function" && winAccOK694(sa)) mk("付属", function(){ accSheet(); });   /* CAD-694 */
     var x = mk("×", closeSash); x.style.padding = "0"; x.style.width = "44px";
     markSash();
     return { ok: true, i: i, label: lab };
+  }
+  /* CAD-737：帯のボタンで記録を直す時の決まった流れ。戻すの記録・保存が失敗しても、直した事は図面に必ず出し、失敗した時は理由を出す（黙って何も起きないのをやめる） */
+  function quick737(fn, msg){
+    var err = "";
+    try { pushUndo(); } catch(e){ err = "戻すの記録ができませんでした"; }
+    try { fn(); } catch(e){ say("直せませんでした：" + String((e && e.message) || e).slice(0, 60)); return; }
+    try { save(); } catch(e){ err = "保存できませんでした（端末の保存の空きが足りない時に起きます）：" + String((e && e.message) || e).slice(0, 40); }
+    try { if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    try { window.dispatchEvent(new CustomEvent("mado-change", { detail: { src: "app", ops: null } })); } catch(e){}
+    try { if (window.RITTAI && RITTAI.isOpen && RITTAI.isOpen()) RITTAI.sync(); } catch(e){}
+    say(err || (typeof msg === "function" ? msg() : msg));
   }
   function markSash(){
     if (!A) return; while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild);
