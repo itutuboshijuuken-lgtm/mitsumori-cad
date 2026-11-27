@@ -1416,6 +1416,9 @@ const WORK = [
   ["fxRod", "カーテンレール（材工）", "円/m", 0, 3500],
   ["fxBoard", "板張り（材工）", "円/㎡", 0, 6000],
   ["fxHisashi", "庇（アルミ・材工）", "円/か所", 0, 30000],
+  ["amadoM694", "雨戸（アルミ・手動・窓1か所・材工）（仮）", "円/か所", 0, 45000],
+  ["amadoE694", "窓シャッター（電動・窓1か所・材工・配線込み）（仮）", "円/か所", 0, 120000],
+  ["menKoushi694", "面格子（アルミ・窓1か所・材工）（仮）", "円/か所", 0, 20000],
   ["fxDemoBd", "壁ボード張替え（剥がした面・材工）", "円/㎡", 0, 4500],
   ["hgShita", "下地・間柱・柱の交換（剥がした面・仮）", "円/㎡", 0, 3500],
   ["hgAri", "白蟻 防蟻処理・被害部の補修（剥がした面・予備・仮）", "円/㎡", 0, 3000],
@@ -1662,6 +1665,15 @@ function shutterPrice(s){
    として扱い、表示に「枠外」を明示する。開口（建具なし）とシャッターは対象外。
    数値そのものは変えない（見積金額は台単位で w/h に依存しないため不変）。 */
 function wakuLbl405(cat){ return /開口|シャッター/.test(cat || "") ? "" : "枠外 "; }
+/* CAD-694：窓の付属（雨戸・窓シャッター・面格子・霧除け）。記録は窓の sa.acc = {amado:"m"|"e", koshi:1, kiri:1}。窓1か所ごとの目安単価（仮）。霧除けは今の「庇（アルミ・材工）」の単価 */
+const WACC694 = [["amado", "m", "amadoM694", "雨戸（手動）"], ["amado", "e", "amadoE694", "窓シャッター（電動）"], ["koshi", 1, "menKoushi694", "面格子"], ["kiri", 1, "fxHisashi", "霧除け（窓上の庇）"]];
+function winAccOK694(sa){ return !!sa && typeOf(sa) === "win" && !/開口|シャッター|浴室/.test(sa.cat || ""); }
+function winAcc694(work){
+  WACC694.forEach(([k, v, key, nm]) => {
+    const n = (S.sashes || []).filter(sa => winAccOK694(sa) && sa.acc && sa.acc[k] === v).reduce((a, sa) => a + (sa.n || 1), 0);
+    if (n > 0) work(key, nm, n, "か所");
+  });
+}
 function sashRow(s, two){
   const st = sState(s); if (st === "keep" || st === "waku") return null;
   if (s.cat === "開口") return null;
@@ -7815,6 +7827,7 @@ function calc00(){
   }
   function sash(){
     S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ tobRows581(s).forEach(x => rows.push(x));   /* CAD-581：両側薄壁の戸袋の行（選んだ時だけ） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+    winAcc694(work);   /* CAD-694 */
   }
   const FTN = {flComp: "フローリング", flSheet: "フローリング", floorFin: "フロアタイル", flMuku: "無垢板15mm", flMuku30: "無垢板30mm", flCF: "CF", flDoma: "土間", flOki: "置き床", flAge: "小上がり"};
   function floorFin(a, pre, ft, tkid388){
@@ -8851,6 +8864,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   try { if (window.ASH230) window.ASH230(rows, work, ashibaA, wallLen, topGL, two, ashPro); } catch(e){}
   if (two && !(S.tenken || []).some(o => o.k === "stair")){ if (typeof stairAuto389 === "function" && workP("kaidan").avg) rows.push(...stairAuto389((S.ch || 2400) + (S.dosa || 240))); else work("kaidan", "階段", 1, "か所"); }   /* CAD-389：自動の階段も直階段として積み上げ＋手間（単価を自分で入れている時は従来の1行） */
   S.sashes.forEach(s => { const r = sashRow(s, two); if (r) rows.push(r); const el248 = s.cat === "玄関" && s.elock ? ELOCK248.find(x => x[0] === s.elock) : null; if (el248 && sState(s) === "new"){ const w = workP(el248[2]); rows.push({name: `電子錠 ${el248[1]}`, spec: `玄関 ${s.name} に取付`, qty: `${s.n}台`, cost: w.p * s.n, avg: w.avg, fix: {kind: "work", key: el248[2]}}); } if (s.cat === "室内ドア" && s.glass && sState(s) === "new"){ const wg = workP("doorGlass"); rows.push({name: "ドア ガラス入り差額", spec: `室内 ${s.name} ${s.w}×${s.h}`, qty: `${s.n}枚`, cost: wg.p * s.n, avg: wg.avg, fix: {kind: "work", key: "doorGlass"}}); }   /* CAD-283：ガラス入り差額（1枚ごと） */ tobRows581(s).forEach(x => rows.push(x));   /* CAD-581：両側薄壁の戸袋の行（選んだ時だけ） */ wakuRows(s, two).forEach(x => rows.push(x)); });   /* CAD-248：電子錠を選んだ時だけ行を出す */ const wm206 = wakuMatRow206(); if (wm206) rows.push(wm206); tfrRows().forEach(x => rows.push(x)); tareRows().forEach(x => rows.push(x)); pillarRows().forEach(x => rows.push(x));
+  winAcc694(work);   /* CAD-694 */
   /* CAD-391：従来の大工手間（人工の積み上げ）の計算は廃止。下の行で「大工手間（基本）」に置き換えた */   /* CAD-248：刻み・間仕切りの扱いを明示 */
   rows.push(...daikuBaseRows391(nobeT));   /* CAD-391：大工手間（基本）＝基本坪単価×延床（ハウスメーカー方式・翔伍の決定 2026-11-19） */
   if (S.mode === "zo" && S.tr === "menzai") work("mensaiTe", "面材の手間", nobeT, "坪");   /* CAD-427：耐力面材を使う家だけ（翔伍の決定 2026-11-20：延床×3,500円/坪。面材＋筋交いの家も S.tr === "menzai" なので出す） */
@@ -47999,7 +48013,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      囲みで置いた床だけで部屋が埋まっていて今の仕組みが守って置かない時は、この部屋の中だけにある床に部屋タップの印を付けて置き換える（小上がりは除く）。
    CAD-691（2026-11-27 Claude/Opus）：ドア・窓の当たりを最大250mmに（引いて見ている時、ドアのとなりの部屋のタップまでドアに取られていた）。
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
-     記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。 */
+     記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
+   CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
@@ -48205,6 +48220,23 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     });
     return best;
   }
+  /* CAD-694：窓の付属のシート（雨戸・窓シャッター・面格子・霧除け）。押すたびに付ける／外す。戻す1回で戻る */
+  function accSheet(){
+    var sa = sashObj; if (!sa) return;
+    var a = sa.acc || {}, on = function(k, v){ return a[k] === v; };
+    var it = [["amado", "m", "雨戸（手動）"], ["amado", "e", "窓シャッター（電動）"], ["koshi", 1, "面格子"], ["kiri", 1, "霧除け（窓上の庇）"]];
+    $("mbox").innerHTML = "<h3>窓の付属</h3><p class='hint' style='margin:2px 0 8px'>" + String(sashLab(sa)).replace(/[<&]/g, "") + "。押すと付く／もう一度で外れます。見積に窓1か所ずつ入ります</p>"
+      + '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">' + it.map(function(q, n){ return '<button type="button" class="btn sub" data-acc694="' + n + '" aria-pressed="' + on(q[0], q[1]) + '" style="min-height:48px' + (on(q[0], q[1]) ? ";background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)" : "") + '">' + (on(q[0], q[1]) ? "✓ " : "") + q[2] + "</button>"; }).join("") + "</div>"
+      + '<div class="row" style="margin-top:10px"><button type="button" class="btn" id="acc694Ok" style="width:100%;min-height:46px">閉じる</button></div>';
+    $("modal").hidden = false;
+    $("acc694Ok").onclick = function(){ $("modal").hidden = true; };
+    $("mbox").querySelectorAll("[data-acc694]").forEach(function(b){ b.onclick = function(){ var q = it[+b.dataset.acc694]; setAcc(q[0], q[1]); accSheet(); }; });
+  }
+  function setAcc(k, v){
+    var sa = sashObj; if (!sa || (S.sashes || []).indexOf(sa) < 0) return { ok: false };
+    try { pushUndo(); var a = Object.assign({}, sa.acc || {}); if (a[k] === v) delete a[k]; else a[k] = v; if (Object.keys(a).length) sa.acc = a; else delete sa.acc; save(); } catch(e){ warn("窓の付属", e); return { ok: false }; }
+    return { ok: true, acc: sa.acc || null };
+  }
   function sashLab(sa){ try { return (typeof sashLabel === "function" ? sashLabel(sa) : (sa.name || sa.cat)) + "　" + sa.w + "×" + sa.h; } catch(e){ return sa.cat + " " + sa.w; } }
   function openSash(i){
     if (!A || busy() || editing) return { ok: false };
@@ -48221,6 +48253,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var ty = (typeof typeOf === "function") ? typeOf(sa) : "";
     if ((ty === "door" || ty === "hiki" || ty === "closet") && window.KAKU2 && window.KAKU2.flip) mk("向き", function(){ var j = idx(); if (j >= 0) window.KAKU2.flip(j); });
     try { if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(sa)) mk("状態", function(){ var j = idx(); if (j >= 0) sashAskState(j); }); } catch(e){}
+    if (typeof winAccOK694 === "function" && winAccOK694(sa)) mk("付属", function(){ accSheet(); });   /* CAD-694 */
     var x = mk("×", closeSash); x.style.padding = "0"; x.style.width = "44px";
     markSash();
     return { ok: true, i: i, label: lab };
@@ -48521,7 +48554,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
     room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, thing: function(kind, i){ return openThing(kind, i); }, thingClose: closeThing, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; },
-    floor: function(fk){ return setFloor(fk); }, domaDz: function(v){ return setDz(v); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
+    floor: function(fk){ return setFloor(fk); }, domaDz: function(v){ return setDz(v); }, acc: function(k, v){ return setAcc(k, v); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
   };
 })();
 </script>
