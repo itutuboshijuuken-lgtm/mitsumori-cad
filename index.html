@@ -49951,7 +49951,24 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } });
     return { ok: true };
   }
-  function reopenThing(){ var o = thObj, kd = thKind; setTimeout(function(){ if (thObj !== o) return; var j = thIdx(); if (j >= 0) openThing(kd, j); else closeThing(); }, 60); }
+  var adjQuiet = false;   /* CAD-753：立体から同じ微調整を使う時は、平面図の帯を開き直さない */
+  function withThing753(kind, obj, fn){ var k0 = thKind, o0 = thObj, n0 = thNid; thKind = kind; thObj = obj; thNid = obj && obj.nid; adjQuiet = true; try { return fn(); } finally { adjQuiet = false; thKind = k0; thObj = o0; thNid = n0; } }
+  /* 動かした後、置けない所（ドアの開く所・戸袋など）になったら元に戻して理由を返す */
+  function guard753(obj, kind, before){
+    if (kind !== "fx" || !window.KAKU2 || !KAKU2.clashOf || !obj || !obj.nid) return { ok: true };
+    var cl = null; try { cl = KAKU2.clashOf(obj.nid); } catch(e){}
+    if (!cl) return { ok: true };
+    try { var m = window.MADO; if (m) m.write([Object.assign({ op: "set", id: obj.nid }, before)]); } catch(e){}
+    return { ok: false, why: KAKU2.clashMsg ? KAKU2.clashMsg(cl) : "ここには置けません" };
+  }
+  var ADJ753 = {
+    info: function(kind, obj){ return withThing753(kind, obj, adjInfo); },
+    moveU: function(kind, obj, du){ return withThing753(kind, obj, function(){ var A2 = adjInfo(); if (!A2 || !A2.fx) return { ok: false }; var nu = Math.max(0, Math.min(A2.w.len - A2.len, A2.u + du)); if (Math.abs(nu - A2.u) < .5) return { ok: false, why: "壁の端です" }; var bf = { u: Math.round(A2.u) }; wrSet({ u: Math.round(nu) }); return guard753(obj, kind, bf); }); },
+    moveZ: function(kind, obj, dz){ return withThing753(kind, obj, function(){ var A2 = adjInfo(); if (!A2 || !A2.fx || A2.z == null) return { ok: false }; var nz = Math.max(0, A2.z + dz); var bf = { z: Math.round(A2.z) }; wrSet({ z: Math.round(nz) }); return guard753(obj, kind, bf); }); },
+    nudge: function(kind, obj, dx, dy){ return withThing753(kind, obj, function(){ return nudge(dx, dy); }); },
+    set: function(kind, obj, which, v){ return withThing753(kind, obj, function(){ var A2 = adjInfo(); var bf = A2 && A2.fx ? { u: Math.round(A2.u), z: A2.z != null ? Math.round(A2.z) : undefined } : null; var r = setPos(which, v); if (bf && r && r.ok){ if (bf.z === undefined) delete bf.z; return guard753(obj, kind, bf); } return r || { ok: false }; }); }
+  };
+  function reopenThing(){ if (adjQuiet) return; var o = thObj, kd = thKind; setTimeout(function(){ if (thObj !== o) return; var j = thIdx(); if (j >= 0) openThing(kd, j); else closeThing(); }, 60); }
   function closeThing(){ thObj = null; thKind = ""; thNid = null; if (thBar && thBar.parentNode) thBar.parentNode.removeChild(thBar); }
 
   /* ===== 3d. ドア・窓の帯（変える・向き・状態） ===== */
@@ -50719,6 +50736,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     ], { t: "ここに置く", fn: function(){ $("modal").hidden = true; var R = function(v){ return Math.round(v / 10) * 10; }; var rc = { x0: R(pt[0] - cur.w / 2), y0: R(pt[1] - cur.d / 2), x1: R(pt[0] + cur.w / 2), y1: R(pt[1] + cur.d / 2) }, ib = inner744(rc); if (ib){ var w0 = rc.x1 - rc.x0, d0 = rc.y1 - rc.y0; if (rc.x0 < ib.x0){ rc.x0 = ib.x0; rc.x1 = rc.x0 + w0; } if (rc.x1 > ib.x1){ rc.x1 = ib.x1; rc.x0 = Math.max(ib.x0, rc.x1 - w0); } if (rc.y0 < ib.y0){ rc.y0 = ib.y0; rc.y1 = rc.y0 + d0; } if (rc.y1 > ib.y1){ rc.y1 = ib.y1; rc.y0 = Math.max(ib.y0, rc.y1 - d0); } snap744(rc, ib); } putRect744(rc, fk, nm); } });   /* 部屋からはみ出さない・壁ぎわへ寄せる */
   }
   window.KAKU3 = {
+    adj: ADJ753,   /* CAD-753 */
     fin: { wall: function(p){ return finWall(p); }, floor3d: function(p, nm){ return finFloor3d(p, nm); }, stopRect: function(){ stopRect744(); } },   /* CAD-744 */
     v: VER, stage: "描く3",
     state: function(){ return { attached: !!A, usable: usable(), editing: editing, pad: padOpen(), edge: (typeof HB !== "undefined" && HB) ? HB.__edgeSel : null, unknown: unk() }; },
@@ -51785,11 +51803,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (ty === "door" || ty === "closet"){ B.push(["吊元", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "吊元を替えました"); }]); B.push(["開き勝手", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "開く向きを替えました"); }]); }
       if (ty === "hiki") B.push(["戸袋の側", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 2; }, "戸袋の側を替えました"); }]);
       if (window.KATA734 && KATA734.ok(o)){ B.push(["扉の走る面", function(){ edit(function(){ o.flip = (o.flip || 0) ^ 1; }, "扉の走る面を替えました（反対側の面にはスイッチ・コンセントを付けられます）"); }]); if (o.frame !== "outset") B.push(["戸袋の形", function(){ var m = ""; edit(function(){ m = KATA734.toggle(o); }); say(m); }]); }   /* CAD-735 */
+      if (ty === "door" && window.doorRec752){ var r752 = doorRec752(o); if (r752 != null && ((+o.flip || 0) & 3) !== r752) B.unshift(["おすすめの向き", function(){ edit(function(){ o.flip = ((+o.flip || 0) & ~3) | r752; }, "おすすめの向き（部屋の中へ開く・吊元は壁の側）にしました"); }]); }   /* CAD-752：立体でも */
       B.push(["大きさ", function(){ try { KAKU3.sashSize(idx("sashes", id)); } catch(e){} watchSync(); }]);
       B.push(["種類", function(){ var j = idx("sashes", id), so = S.sashes[j]; if (!so || !KAKU2.choose) return; KAKU2.choose({ where: so.host && so.host.t === "e" ? "ext" : "part", room: "", replace: j, done: function(){ after(); } }); }]);
       if (window.CAT705 && CAT705.groupOf(o)) B.push(["カタログ", function(){ try { CAT705.open(idx("sashes", id)); } catch(e){} watchSync(); }]);
       B.push(["消す", function(){ del("sashes", id); }, 1]);
       bandFor(nm(list, o), B);
+      try { adjRow753(h, "sashes", o); } catch(e){ try { console.warn("CAD-753", e); } catch(x){} }
+      try { var w752 = (ty === "door" && window.doorWarn752) ? doorWarn752(o) : ""; if (w752 && band){ var wd = mk("div", "font-size:12.5px;line-height:1.45;color:#B91C1C;font-weight:700;background:#FDECEC;border-radius:8px;padding:6px 8px", "⚠ " + w752); band.insertBefore(wd, band.children[1] || null); } } catch(e){}
       return;
     }
     var B2 = [];
@@ -51801,7 +51822,69 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (o.k === "bath" && window.UBD734){ var uz2 = UBD734.zoneOf(o); if (uz2) B2.push(["入口（ドア）", function(){ ubBand(uz2); }]); }   /* CAD-734 */
     B2.push(["消す", function(){ del(list, id); }, 1]);
     bandFor(nm(list, o), B2);
+    try { if (o.k !== "stair") adjRow753(h, list, o); } catch(e){ try { console.warn("CAD-753", e); } catch(x){} }
     if (o.k === "stair" && window.stairWarn748 && band){ var W749 = stairWarn748(o); if (W749.length){ var wd = document.createElement("div"); wd.innerHTML = stairWarnHtml748(W749); band.insertBefore(wd.firstChild, band.children[1] || null); } }   /* CAD-749 */
+  }
+  /* ---------- CAD-753：立体で物を選んだ時の矢印と寸法（翔伍の頼み 23:28：ドアを選んだら矢印も出して位置をずらせる、置く物すべて、寸法でも）----------
+     矢印は「画面で見た向き」に動く（RITTAI.viewAxes があれば使う。無ければ RITTAI.screen で向きを出す）。1回 10mm（平面図の微調整と同じ）。
+     寸法は「画面の左の端から」「床から」（壁の物・ドア・窓）、「図面の左の壁から」「図面の上の壁から」（床・天井の物）。置けない所は理由を出して止める。ずらしても帯は閉じない */
+  var STEP753 = 10;
+  function scr753(x, y, hh){ try { return RITTAI.screen(x, y, hh || 0); } catch(e){ return null; } }
+  function wallRight753(h, a, ux, uy, u0, hh){
+    try { if (RITTAI.viewAxes){ var va = RITTAI.viewAxes(h); if (va && (va.right === 1 || va.right === -1)) return va.right; } } catch(e){}
+    var p0 = scr753(a[0] + ux * u0, a[1] + uy * u0, hh), p1 = scr753(a[0] + ux * (u0 + 300), a[1] + uy * (u0 + 300), hh);
+    return (p0 && p1 && p1.x < p0.x) ? -1 : 1;
+  }
+  function floorAxes753(h, x, y, hh){
+    try { if (RITTAI.viewAxes){ var va = RITTAI.viewAxes(h); if (va && va.right && va.away) return { r: va.right, a: va.away }; } } catch(e){}
+    var c = scr753(x, y, hh), ex = scr753(x + 300, y, hh), ey = scr753(x, y + 300, hh); if (!c || !ex || !ey) return { r: [1, 0], a: [0, -1] };
+    var dxE = ex.x - c.x, dxS = ey.x - c.x, r = Math.abs(dxE) >= Math.abs(dxS) ? [dxE >= 0 ? 1 : -1, 0] : [0, dxS >= 0 ? 1 : -1];
+    var aw = r[0] ? [0, (ey.y - c.y) < 0 ? 1 : -1] : [(ex.y - c.y) < 0 ? 1 : -1, 0];
+    return { r: r, a: aw };
+  }
+  function moveSash753(o, du){
+    if (!o.host || typeof hostSeg !== "function") return { ok: false };
+    var sg = hostSeg(o.host); if (!sg) return { ok: false }; var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]);
+    var np = Math.max(0, Math.min(L - o.w, Math.round((+o.pos || 0) + du)));
+    if (np === Math.round(+o.pos || 0)) return { ok: false, why: "壁の端です" };
+    var same = function(a, b){ return a && b && a.t === b.t && a.i === b.i; };
+    var hit = (S.sashes || []).some(function(q){ return q !== o && q.drawn && same(q.host, o.host) && np < q.pos + q.w && np + o.w > q.pos; });
+    if (hit) return { ok: false, why: "隣のドア・窓に重なります" };
+    var p0 = o.pos; try { pushUndo(); o.pos = np; save(); } catch(e){ return { ok: false }; }
+    try { if (window.KAKU2 && KAKU2.clashOf && o.nid){ var cl = KAKU2.clashOf(o.nid); if (cl){ o.pos = p0; save(); return { ok: false, why: KAKU2.clashMsg ? KAKU2.clashMsg(cl) : "ここには動かせません" }; } } } catch(e){}
+    return { ok: true };
+  }
+  function adjRow753(h, list, o){
+    if (!band || !o) return;
+    var K3 = window.KAKU3 && KAKU3.adj, kind = list === "fx" ? "fx" : list === "tenken" ? "k" : list === "lights" ? "lt" : list === "sashes" ? "sa" : null; if (!kind) return;
+    var row = mk("div", "display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%");
+    var SB = "flex:0 0 44px;min-height:44px;padding:0;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink,#18202A)";
+    var WB = "flex:1 1 0;min-width:0;min-height:44px;padding:0 4px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:12.5px;font-weight:800;color:var(--ink,#18202A);line-height:1.15";
+    var res = function(r, msg){ if (r && r.ok === false && r.why) say("動かせません：" + r.why); else if (r && r.ok !== false && msg) {} after(); setTimeout(function(){ try { pick(h); } catch(e){} }, 30); };
+    var pad = function(title, sub, v, done){ if (typeof openPad !== "function") return; openPad({ title: title, sub: sub, unit: "mm", value: Math.round(v), done: function(x){ if (x != null && x >= 0) done(Math.round(x)); } }); watchSync(); };
+    var vbtn = function(lab, val, fn){ var b = mk("button", WB); b.type = "button"; b.innerHTML = "<span style='display:block;font-size:10.5px;font-weight:700;color:var(--sub,#5B6673)'>" + lab + "</span>" + Math.round(val).toLocaleString("ja-JP"); b.onclick = fn; row.appendChild(b); };
+    var arr = function(t, fn){ var b = mk("button", SB, t); b.type = "button"; b.onclick = fn; row.appendChild(b); };
+    if (kind === "sa"){
+      var sg = (typeof hostSeg === "function" && o.host) ? hostSeg(o.host) : null; if (!sg) return;
+      var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]), ux = (sg[1][0] - sg[0][0]) / L, uy = (sg[1][1] - sg[0][1]) / L, rt = wallRight753(h, sg[0], ux, uy, (+o.pos || 0) + o.w / 2, 1000);
+      var left = rt > 0 ? +o.pos : L - o.pos - o.w;
+      vbtn("画面の左の端から", left, function(){ pad("画面の左の端から（mm）", "壁の端からドア・窓の端まで", left, function(v){ var np = rt > 0 ? v : L - v - o.w; res(moveSash753(o, np - (+o.pos || 0))); }); });
+      arr("◀", function(){ res(moveSash753(o, -STEP753 * rt)); }); arr("▶", function(){ res(moveSash753(o, STEP753 * rt)); });
+    } else if (kind === "fx"){
+      var A2 = K3 && K3.info("fx", o); if (!A2) return;
+      var w = A2.w, rt2 = wallRight753(h, w.a, w.ux, w.uy, A2.u + A2.len / 2, A2.z != null ? A2.z : 1000), lf = rt2 > 0 ? A2.u : w.len - A2.u - A2.len;
+      vbtn("画面の左の端から", lf, function(){ pad("画面の左の端から（mm）", "壁の端から物まで（仕上がった壁の内側の目安）", lf, function(v){ var nu = rt2 > 0 ? v : w.len - v - A2.len; res(K3.moveU("fx", o, nu - A2.u)); }); });
+      if (A2.z != null) vbtn("床から", A2.z, function(){ pad("床から（mm）", "床から物の真ん中まで", A2.z, function(v){ res(K3.set("fx", o, "z", v)); }); });
+      arr("◀", function(){ res(K3.moveU("fx", o, -STEP753 * rt2)); }); arr("▶", function(){ res(K3.moveU("fx", o, STEP753 * rt2)); });
+      if (A2.z != null){ arr("▲", function(){ res(K3.moveZ("fx", o, STEP753)); }); arr("▼", function(){ res(K3.moveZ("fx", o, -STEP753)); }); }
+    } else {
+      var A3 = K3 && K3.info(kind, o), ax = floorAxes753(h, o.x, o.y, kind === "lt" ? 2300 : 0);
+      if (A3 && A3.left != null) vbtn("図面の左の壁から", A3.left, function(){ pad("図面の左の壁から（mm）", "", A3.left, function(v){ res(K3.set(kind, o, "left", v)); }); });
+      if (A3 && A3.top != null) vbtn("図面の上の壁から", A3.top, function(){ pad("図面の上の壁から（mm）", "", A3.top, function(v){ res(K3.set(kind, o, "top", v)); }); });
+      var mv = function(v){ return function(){ res(K3 ? K3.nudge(kind, o, v[0] * STEP753, v[1] * STEP753) : null); }; };
+      arr("◀", mv([-ax.r[0], -ax.r[1]])); arr("▲", mv([ax.a[0], ax.a[1]])); arr("▼", mv([-ax.a[0], -ax.a[1]])); arr("▶", mv(ax.r));
+    }
+    band.appendChild(row);
   }
   /* CAD-736：階段で上の階・下の階へ（Fable の RITTAI.stairs の立つ場所へ）。dir 1＝上へ／-1＝下へ */
   function stairGo(h, dir){
