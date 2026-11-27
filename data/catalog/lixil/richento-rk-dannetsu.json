@@ -1,0 +1,399 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rk",
+ "seriesName": "リシェント 勝手口ドア 断熱仕様",
+ "group": "勝手口ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "タイプ",
+   "values": [
+    {
+     "id": "saifu",
+     "name": "採風タイプ",
+     "wmin": 461,
+     "wmax": 861,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "10",
+     "name": "片開き",
+     "wmin": 516,
+     "wmax": 916,
+     "hmin": 1426,
+     "hmax": 2256
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "dannetsu",
+     "name": "断熱仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "kataban",
+     "name": "型板複層ガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせ型板複層ガラス"
+    },
+    {
+     "id": "frost",
+     "name": "フロスト複層ガラス"
+    }
+   ]
+  },
+  {
+   "id": "gtype",
+   "name": "ガラス種",
+   "values": [
+    {
+     "id": "lowe",
+     "name": "Low-E複層ガラス（アルゴンガス入り）"
+    },
+    {
+     "id": "ippan",
+     "name": "一般複層ガラス"
+    }
+   ]
+  },
+  {
+   "id": "cyl",
+   "name": "シリンダー",
+   "values": [
+    {
+     "id": "less",
+     "name": "シリンダーレス"
+    },
+    {
+     "id": "ari",
+     "name": "シリンダー付"
+    }
+   ]
+  },
+  {
+   "id": "thumb",
+   "name": "サムターン",
+   "values": [
+    {
+     "id": "std",
+     "name": "標準サムターン"
+    },
+    {
+     "id": "sec",
+     "name": "セキュリティサムターン"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "kataban",
+   "gtype": "lowe",
+   "cyl": "less",
+   "teika": 156000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "kataban",
+   "gtype": "lowe",
+   "cyl": "ari",
+   "teika": 168000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "kataban",
+   "gtype": "ippan",
+   "cyl": "less",
+   "teika": 142000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "kataban",
+   "gtype": "ippan",
+   "cyl": "ari",
+   "teika": 156000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "anzen",
+   "gtype": "lowe",
+   "cyl": "less",
+   "teika": 183000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "anzen",
+   "gtype": "lowe",
+   "cyl": "ari",
+   "teika": 197000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "anzen",
+   "gtype": "ippan",
+   "cyl": "less",
+   "teika": 168000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "anzen",
+   "gtype": "ippan",
+   "cyl": "ari",
+   "teika": 183000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "frost",
+   "gtype": "lowe",
+   "cyl": "less",
+   "teika": 183000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "frost",
+   "gtype": "lowe",
+   "cyl": "ari",
+   "teika": 197000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "frost",
+   "gtype": "ippan",
+   "cyl": "less",
+   "teika": 168000,
+   "page": 10
+  },
+  {
+   "design": "saifu",
+   "spec": "dannetsu",
+   "glass": "frost",
+   "gtype": "ippan",
+   "cyl": "ari",
+   "teika": 183000,
+   "page": 10
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "design",
+    "spec"
+   ],
+   "values": [
+    {
+     "id": "saifudannetsu",
+     "teika": 95000,
+     "page": 10
+    }
+   ]
+  },
+  {
+   "id": "buhinbako",
+   "name": "部品箱（必須）",
+   "always": true,
+   "match": [
+    "cyl",
+    "thumb"
+   ],
+   "values": [
+    {
+     "id": "lessstd",
+     "teika": 1500,
+     "hinban": "□-01-BXFS",
+     "page": 11
+    },
+    {
+     "id": "lesssec",
+     "teika": 4200,
+     "hinban": "□-01-BXFT",
+     "page": 11
+    },
+    {
+     "id": "aristd",
+     "teika": 11600,
+     "hinban": "□-01-BXFV",
+     "page": 11
+    },
+    {
+     "id": "arisec",
+     "teika": 14400,
+     "hinban": "□-01-BXFW",
+     "page": 11
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドルセット（レバーハンドル）",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "saifu",
+     "teika": 6400,
+     "hinban": "□□-01-BXYH",
+     "page": 11
+    }
+   ]
+  },
+  {
+   "id": "closer",
+   "name": "ドアクローザ（内付）",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "saifu",
+     "teika": 13500,
+     "hinban": "□-01-BXGE",
+     "page": 10
+    }
+   ]
+  },
+  {
+   "id": "koshi",
+   "name": "網付格子",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "Gstd",
+     "name": "G型 井桁格子 標準メッシュ",
+     "teika": 23100,
+     "page": 10
+    },
+    {
+     "id": "Ghi",
+     "name": "G型 井桁格子 ハイメッシュ",
+     "teika": 25400,
+     "page": 10
+    },
+    {
+     "id": "Hstd",
+     "name": "H型 横格子 標準メッシュ",
+     "teika": 23100,
+     "page": 10
+    },
+    {
+     "id": "Hhi",
+     "name": "H型 横格子 ハイメッシュ",
+     "teika": 25400,
+     "page": 10
+    },
+    {
+     "id": "Jstd",
+     "name": "J型 デザイン横格子 標準メッシュ",
+     "teika": 23100,
+     "page": 10
+    },
+    {
+     "id": "Jhi",
+     "name": "J型 デザイン横格子 ハイメッシュ",
+     "teika": 25400,
+     "page": 10
+    },
+    {
+     "id": "Kstd",
+     "name": "K型 ヒシクロス格子 標準メッシュ",
+     "teika": 23100,
+     "page": 10
+    },
+    {
+     "id": "Khi",
+     "name": "K型 ヒシクロス格子 ハイメッシュ",
+     "teika": 25400,
+     "page": 10
+    },
+    {
+     "id": "Lstd",
+     "name": "L型 縦格子 標準メッシュ",
+     "teika": 23100,
+     "page": 10
+    },
+    {
+     "id": "Lhi",
+     "name": "L型 縦格子 ハイメッシュ",
+     "teika": 25400,
+     "page": 10
+    },
+    {
+     "id": "Nstd",
+     "name": "N型 格子なし 標準メッシュ",
+     "teika": 19700,
+     "page": 10
+    },
+    {
+     "id": "Nhi",
+     "name": "N型 格子なし ハイメッシュ",
+     "teika": 22000,
+     "page": 10
+    }
+   ]
+  }
+ ],
+ "note": "勝手口ドア断熱仕様は製作範囲内のどの寸法でも一律価格で、色では価格が変わらない。枠はランマなしのみ。本体はガラス入り完成品（採風タイプ）。部品箱はロック仕様とサムターン仕様で決まる必須部材。網付格子は別途の選択部材。外額縁・内額縁は別途有償品で未収録。",
+ "pages": [
+  {
+   "page": 10,
+   "rows": 12
+  },
+  {
+   "page": 11,
+   "rows": 0
+  }
+ ]
+}

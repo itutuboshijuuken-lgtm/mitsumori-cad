@@ -1,0 +1,646 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rk",
+ "seriesName": "リシェント 勝手口ドア 高断熱仕様",
+ "group": "勝手口ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "タイプ",
+   "values": [
+    {
+     "id": "saifu",
+     "name": "採風タイプ",
+     "wmin": 461,
+     "wmax": 853,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "terrace",
+     "name": "テラスタイプ",
+     "wmin": 461,
+     "wmax": 853,
+     "shape": "full",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "10",
+     "name": "片開き",
+     "wmin": 524,
+     "wmax": 916,
+     "hmin": 1426,
+     "hmax": 2256
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "kodannetsu",
+     "name": "高断熱仕様"
+    }
+   ]
+  },
+  {
+   "id": "glass",
+   "name": "ガラス",
+   "values": [
+    {
+     "id": "kataban",
+     "name": "型板トリプルガラス"
+    },
+    {
+     "id": "tomei",
+     "name": "透明トリプルガラス",
+     "note": "テラスタイプのみ"
+    },
+    {
+     "id": "frost",
+     "name": "フロストトリプルガラス"
+    },
+    {
+     "id": "anzen",
+     "name": "安全合わせ型板トリプルガラス"
+    }
+   ]
+  },
+  {
+   "id": "cyl",
+   "name": "シリンダー",
+   "values": [
+    {
+     "id": "less",
+     "name": "シリンダーレス"
+    },
+    {
+     "id": "ari",
+     "name": "シリンダー付"
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "dusk",
+     "name": "ダスクグレー"
+    },
+    {
+     "id": "other",
+     "name": "その他色",
+     "note": "ブラック・オータムブラウン・シャイングレー・ホワイト・ナチュラルシルバー"
+    }
+   ]
+  },
+  {
+   "id": "thumb",
+   "name": "サムターン",
+   "values": [
+    {
+     "id": "std",
+     "name": "標準サムターン"
+    },
+    {
+     "id": "sec",
+     "name": "セキュリティサムターン"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 308000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "less",
+   "color": "other",
+   "teika": 279000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 320000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 292000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 366000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "less",
+   "color": "other",
+   "teika": 338000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 378000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 350000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 366000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "less",
+   "color": "other",
+   "teika": 338000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 378000,
+   "page": 6
+  },
+  {
+   "design": "saifu",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 350000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 252000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "less",
+   "color": "other",
+   "teika": 228000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 263000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "kataban",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 239000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "tomei",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 252000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "tomei",
+   "cyl": "less",
+   "color": "other",
+   "teika": 228000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "tomei",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 263000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "tomei",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 239000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 321000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "less",
+   "color": "other",
+   "teika": 297000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 333000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "frost",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 309000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "less",
+   "color": "dusk",
+   "teika": 321000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "less",
+   "color": "other",
+   "teika": 297000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "ari",
+   "color": "dusk",
+   "teika": 333000,
+   "page": 6
+  },
+  {
+   "design": "terrace",
+   "spec": "kodannetsu",
+   "glass": "anzen",
+   "cyl": "ari",
+   "color": "other",
+   "teika": 309000,
+   "page": 6
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "color",
+    "spec"
+   ],
+   "values": [
+    {
+     "id": "duskkodannetsu",
+     "teika": 114000,
+     "page": 6
+    },
+    {
+     "id": "otherkodannetsu",
+     "teika": 105000,
+     "page": 6
+    }
+   ]
+  },
+  {
+   "id": "buhinbako",
+   "name": "部品箱（必須）",
+   "always": true,
+   "match": [
+    "cyl",
+    "thumb"
+   ],
+   "values": [
+    {
+     "id": "lessstd",
+     "teika": 3000,
+     "hinban": "□-01-BXTA",
+     "page": 7
+    },
+    {
+     "id": "lesssec",
+     "teika": 8400,
+     "hinban": "□-01-BXTB",
+     "page": 7
+    },
+    {
+     "id": "aristd",
+     "teika": 13900,
+     "hinban": "□-01-BXTC",
+     "page": 7
+    },
+    {
+     "id": "arisec",
+     "teika": 17200,
+     "hinban": "□-01-BXTD",
+     "page": 7
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドルセット",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "saifu",
+     "teika": 7500,
+     "hinban": "□□-02-BXTK",
+     "page": 7
+    },
+    {
+     "id": "terrace",
+     "teika": 7500,
+     "hinban": "□□-01-BXTK",
+     "page": 7
+    }
+   ]
+  },
+  {
+   "id": "closer",
+   "name": "ドアクローザ（内付）",
+   "always": true,
+   "match": [
+    "design"
+   ],
+   "values": [
+    {
+     "id": "saifu",
+     "teika": 13500,
+     "hinban": "□-02-BXGE",
+     "page": 6
+    },
+    {
+     "id": "terrace",
+     "teika": 13500,
+     "hinban": "□-02-BXGE",
+     "page": 6
+    }
+   ]
+  },
+  {
+   "id": "koshi",
+   "name": "網付格子",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "GAstddusk",
+     "name": "GA型 井桁格子 標準メッシュ（ダスクグレー）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "GAstdother",
+     "name": "GA型 井桁格子 標準メッシュ（その他色）",
+     "teika": 30000,
+     "page": 6
+    },
+    {
+     "id": "GAhidusk",
+     "name": "GA型 井桁格子 ハイメッシュ（ダスクグレー）",
+     "teika": 34700,
+     "page": 6
+    },
+    {
+     "id": "GAhiother",
+     "name": "GA型 井桁格子 ハイメッシュ（その他色）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "HAstddusk",
+     "name": "HA型 横格子 標準メッシュ（ダスクグレー）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "HAstdother",
+     "name": "HA型 横格子 標準メッシュ（その他色）",
+     "teika": 30000,
+     "page": 6
+    },
+    {
+     "id": "HAhidusk",
+     "name": "HA型 横格子 ハイメッシュ（ダスクグレー）",
+     "teika": 34700,
+     "page": 6
+    },
+    {
+     "id": "HAhiother",
+     "name": "HA型 横格子 ハイメッシュ（その他色）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "JAstddusk",
+     "name": "JA型 デザイン横格子 標準メッシュ（ダスクグレー）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "JAstdother",
+     "name": "JA型 デザイン横格子 標準メッシュ（その他色）",
+     "teika": 30000,
+     "page": 6
+    },
+    {
+     "id": "JAhidusk",
+     "name": "JA型 デザイン横格子 ハイメッシュ（ダスクグレー）",
+     "teika": 34700,
+     "page": 6
+    },
+    {
+     "id": "JAhiother",
+     "name": "JA型 デザイン横格子 ハイメッシュ（その他色）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "KAstddusk",
+     "name": "KA型 ヒシクロス格子 標準メッシュ（ダスクグレー）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "KAstdother",
+     "name": "KA型 ヒシクロス格子 標準メッシュ（その他色）",
+     "teika": 30000,
+     "page": 6
+    },
+    {
+     "id": "KAhidusk",
+     "name": "KA型 ヒシクロス格子 ハイメッシュ（ダスクグレー）",
+     "teika": 34700,
+     "page": 6
+    },
+    {
+     "id": "KAhiother",
+     "name": "KA型 ヒシクロス格子 ハイメッシュ（その他色）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "LAstddusk",
+     "name": "LA型 縦格子 標準メッシュ（ダスクグレー）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "LAstdother",
+     "name": "LA型 縦格子 標準メッシュ（その他色）",
+     "teika": 30000,
+     "page": 6
+    },
+    {
+     "id": "LAhidusk",
+     "name": "LA型 縦格子 ハイメッシュ（ダスクグレー）",
+     "teika": 34700,
+     "page": 6
+    },
+    {
+     "id": "LAhiother",
+     "name": "LA型 縦格子 ハイメッシュ（その他色）",
+     "teika": 32300,
+     "page": 6
+    },
+    {
+     "id": "NAstddusk",
+     "name": "NA型 格子なし 標準メッシュ（ダスクグレー）",
+     "teika": 28900,
+     "page": 6
+    },
+    {
+     "id": "NAstdother",
+     "name": "NA型 格子なし 標準メッシュ（その他色）",
+     "teika": 26600,
+     "page": 6
+    },
+    {
+     "id": "NAhidusk",
+     "name": "NA型 格子なし ハイメッシュ（ダスクグレー）",
+     "teika": 31200,
+     "page": 6
+    },
+    {
+     "id": "NAhiother",
+     "name": "NA型 格子なし ハイメッシュ（その他色）",
+     "teika": 28900,
+     "page": 6
+    }
+   ]
+  }
+ ],
+ "note": "勝手口ドア高断熱仕様は製作範囲内のどの寸法でも一律価格。枠はランマなしのみ。本体はガラス入り完成品で、採風タイプに透明ガラスの設定はない。部品箱はロック仕様（シリンダーレス／シリンダー付）とサムターン仕様で決まる必須部材。網付格子は別途の選択部材（色はダスクグレー／その他色で価格が変わる）。外額縁・内額縁は別途有償品で未収録。",
+ "pages": [
+  {
+   "page": 6,
+   "rows": 28
+  },
+  {
+   "page": 7,
+   "rows": 0
+  }
+ ]
+}
