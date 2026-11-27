@@ -47602,7 +47602,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     [b.undo, b.redo, b.clear, b.fix, el("span", "flex:1"), b.redraw, b.cancel].forEach(function(x){ row.appendChild(x); });
     mid.appendChild(layer); mid.appendChild(msg); root.insertBefore(row, bot);
     A = { root: root, mid: mid, row: row, layer: layer, ink: ink, hint: hint, msg: msg, b: b, top: top, top0: top ? top.textContent : "" };
-    if (top) top.textContent = "試験中　新しい図面（1階）";   /* CAD-676：描く・置く・印刷まで入ったので、見出しは短く */
+    if (top) top.textContent = "試験中　新しい図面（" + ((typeof S !== "undefined" && S && Array.isArray(S.fl) && S.fl[S.fi || 0]) ? S.fl[S.fi || 0].name : "1階") + "）";   /* CAD-709：今の階 */   /* CAD-676：描く・置く・印刷まで入ったので、見出しは短く */
     bind(layer);
     if (obsRoot) obsRoot.disconnect();
     obsRoot = new MutationObserver(function(){ onState(); }); obsRoot.observe(root, { attributes: true, attributeFilter: ["style"] });
@@ -47621,7 +47621,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function able(e, on){ e.disabled = !on; e.style.opacity = on ? "" : ".4"; }
   function refresh(){
     if (!A) return;
-    var r = rd(), good = !!(r && r.ok), empty = good && !!r.empty, f1 = !good || empty || !(r.fi > 0), ok = appOk(), st = stacks();
+    var r = rd(), good = !!(r && r.ok), empty = good && !!r.empty, f1 = true, ok = appOk(), st = stacks();
     if (empty && ok && !tracing && zopen()){ tracing = true; mine = []; ink(); }   /* 外形が無い時は、開いたらすぐなぞる状態 */
     if (tracing && (!ok || !f1)) leave();
     show(A.b.undo, !tracing); show(A.b.redo, !tracing); show(A.b.redraw, !tracing && ok && f1);
@@ -47681,7 +47681,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     refresh();
     return { ok: true, byButton: !!byButton };
   }
-  function start(){ if (!A || !appOk()) return false; var r = rd(); if (r && r.ok && !r.empty && r.fi > 0) return false; tracing = true; mine = []; ink(); refresh(); return true; }
+  function start(){ if (!A || !appOk()) return false; var r = rd(); tracing = true; mine = []; ink(); refresh(); return true; }
   function leave(){ clearTimeout(tmFix); tracing = false; mine = []; cur = null; curEl = null; pid = null; if (A){ ink(); A.layer.style.display = "none"; } }
   function cancel(){ leave(); refresh(); return true; }
   function clear(){ clearTimeout(tmFix); mine = []; cur = null; curEl = null; pid = null; ink(); refresh(); return true; }
@@ -47792,7 +47792,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { if (typeof HB !== "undefined" && HB && HB.__nbtut) return false; } catch(e){}
     try { return typeof S !== "undefined" && S && Array.isArray(S.edges) && S.edges.length >= 4 && typeof pushUndo === "function" && typeof eraseRect === "function" && typeof eraFromStroke === "function" && typeof pts === "function" && !!kt(); } catch(e){ return false; }
   }
-  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty && !(r.fi > 0)); }
+  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty); }   /* CAD-709：2階でも使える（名前は昔のまま） */
   function usable(){ return sw() && zopen() && appOk() && f1() && !tracingK(); }
   function plan(){ return A ? A.root.querySelector('svg[aria-label="平面図"]') : null; }
   function el(tag, css, text){ var e = document.createElement(tag); if (css) e.style.cssText = css; if (text != null) e.textContent = text; return e; }
@@ -48494,7 +48494,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { if (typeof HB !== "undefined" && HB && HB.__nbtut) return false; } catch(e){}
     try { return typeof S !== "undefined" && S && Array.isArray(S.edges) && S.edges.length >= 3 && typeof editEdge === "function" && typeof pts === "function"; } catch(e){ return false; }
   }
-  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty && !(r.fi > 0)); }
+  function f1(){ var r = rd(); return !!(r && r.ok && !r.empty); }   /* CAD-709：2階でも使える（名前は昔のまま） */
   function usable(){ return sw() && zopen() && appOk() && f1(); }
   function plan(){ return A ? A.root.querySelector('svg[aria-label="平面図"]') : null; }
   function pad(){ return document.getElementById("pad"); }
@@ -49876,7 +49876,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function put(it, h){
     var K = window.KAKU2, r = null;
-    if (!K || !K.state().usable){ say("置くのは、平面図から立体を開いた時の1階だけです"); return { ok: false }; }
+    if (!K || !K.state().usable){ say("置くのは、平面図から立体を開いた時だけです"); return { ok: false }; }
     var p = ptOf(h);
     try { K.off(); K.specPut(it[0], it[1], it[2]); r = K.placeAt(p[0], p[1]); } catch(e){ try { console.warn("CAD-707 置く", e); } catch(x){} }
     try { K.off(); } catch(e){}
@@ -49919,7 +49919,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function onHit(h, why){
     if (why === "close"){ on = false; band = null; last = null; return; }
     if (!h || (h.kind !== "wall" && h.kind !== "floor" && h.kind !== "ceil")){ try { RITTAI.mark(null); } catch(e){} say("壁・床・天井をタップしてください"); return; }
-    if (h.floor && h.floor > 0){ say("置くのは今は1階だけです"); return; }
+    if (h.floor != null && typeof S !== "undefined" && Array.isArray(S.fl) && S.fl.length > 1 && h.floor !== (S.fi || 0) && S.fl[h.floor]){ try { flSwitch(h.floor); } catch(e){} }   /* CAD-709：触った階に切り替えてから置く */
     try { var rr = (RITTAI.rooms() || []).find(function(q){ return q.id === h.room; }); if (rr && rr.name) h.name = rr.name; } catch(e){}   /* 部屋の名前は立体の部屋一覧から（hit.name は名前の無い部屋で「B」などの記号になるため） */
     last = h;
     try { RITTAI.mark(h, h.kind === "wall" ? 300 : 450, h.kind === "wall" ? 300 : 450); } catch(e){}
@@ -49930,5 +49930,44 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function addBtn(){ RITTAI.button("k707", "置く", function(){ on ? stop() : start(); }); }
   RITTAI.watch(function(ev){ if (ev === "open") addBtn(); else if (ev === "close"){ on = false; last = null; band = null; } });
   window.TOUCH707 = { v: 1, start: start, stop: stop, isOn: function(){ return on; }, last: function(){ return last; }, put: put, ptOf: ptOf };
+})();
+</script>
+<script>
+/* ---------- CAD-709：新しい図面で2階（2026-11-27 Claude/Opus）----------
+   ・図面の上の帯の右に［1F］［2F］。2階がまだ無い時は［＋2階］（今のアプリの flAdd：1階と同じ外形で始まる＝総2階。形はあとで［描き直す］）。
+   ・切り替えは今のアプリの flSwitch をそのまま呼ぶ（階ごとの記録・戻すの決まりは今と同じ）。見出しも今の階に。
+   ・描く・置く・寸法・候補・微調整は2階でも同じ操作（1階だけの制限を外した）。立体で触った階が違う時は、その階に切り替えてから置く。
+   ・保存キーは増やさない。2階の壁は MADO.read()（fi＝1 の時）でそのまま読める（耐力壁の計算は Fable）。 */
+(function(){
+  "use strict";
+  if (window.FLOOR709) return;
+  function ok(){ return typeof S !== "undefined" && S && typeof flSwitch === "function" && typeof flAdd === "function"; }
+  function nm(){ try { flEnsure(); return S.fl[S.fi].name; } catch(e){ return "1階"; } }
+  var BTN = "flex:0 0 auto;min-width:44px;min-height:34px;padding:0 10px;border-radius:9px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:13px;font-weight:800;color:var(--ink,#18202A)";
+  var ON = "background:#E6EFFA;border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)";
+  function go(i){
+    if (!ok()) return;
+    try { if (window.KAKU2) KAKU2.off(); } catch(e){}
+    if (i === "add"){ if (S.fl.length >= 2) return; flAdd(); try { flSwitch(0); flSwitch(1); } catch(e){}   /* 1階も描き直して揃える（揃う前は見積が総2階として数えられないため。今のアプリで行き来した後と同じ状態） */
+      try { toast("2階を足しました（1階と同じ形。形は［描き直す］で変えられます）"); } catch(e){} }
+    else if (i !== S.fi) flSwitch(i);
+    setTimeout(function(){ try { if (window.ZUMEN && ZUMEN.isOpen()) ZUMEN.home(); } catch(e){} ensure(); }, 120);
+  }
+  function ensure(){
+    var r = document.getElementById("zumenRoot"); if (!r || r.style.display === "none" || !ok()) return;
+    var t = r.firstElementChild; if (!t) return;
+    var want = "試験中　新しい図面（" + nm() + "）", tn = t.firstChild;
+    if (tn && tn.nodeType === 3 && tn.nodeValue !== want) tn.nodeValue = want;
+    if (t.style.display !== "flex"){ t.style.display = "flex"; t.style.alignItems = "center"; t.style.gap = "6px"; t.style.paddingTop = "calc(env(safe-area-inset-top,0px) + 4px)"; t.style.paddingBottom = "4px"; }
+    var g = document.getElementById("fl709"), key = S.fl.length + "|" + S.fi;
+    if (!g || g.parentNode !== t){ g = document.createElement("div"); g.id = "fl709"; g.style.cssText = "margin-left:auto;display:flex;gap:4px;flex:0 0 auto"; t.appendChild(g); g.dataset.k = ""; }
+    if (g.dataset.k === key) return;
+    g.dataset.k = key; g.innerHTML = "";
+    S.fl.forEach(function(f, i){ var b = document.createElement("button"); b.type = "button"; b.textContent = String(f.name).replace(/^(\d+)階$/, "$1F"); b.style.cssText = BTN + (i === S.fi ? ";" + ON : ""); b.onclick = function(){ go(i); }; g.appendChild(b); });
+    if (S.fl.length < 2){ var a = document.createElement("button"); a.type = "button"; a.textContent = "＋2階"; a.style.cssText = BTN; a.onclick = function(){ go("add"); }; g.appendChild(a); }
+  }
+  window.addEventListener("mado-change", function(){ setTimeout(ensure, 0); });
+  setInterval(ensure, 600);
+  window.FLOOR709 = { v: 1, go: go, ensure: ensure };
 })();
 </script>
