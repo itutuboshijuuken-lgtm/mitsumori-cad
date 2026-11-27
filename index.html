@@ -48307,7 +48307,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      開き方の並びも部屋で替える（リビングの窓は掃き出し、トイレ・洗面・浴室は小窓、寝室・洋室は腰窓）。外の帯から開いた時は全部出す */
   function wzList(ctx){
     var by = function(n){ return WZ.filter(function(g){ return g.n === n; })[0]; }, cl = function(g, o){ var c = {}; for (var k in g) c[k] = g[k]; if (o) c.open = o; return c; };
-    if (!ctx || !ctx.where) return WZ;
+    if (!ctx || !ctx.where) return ["室内ドア", "引き戸", "窓", "玄関", "勝手口", "クローゼット", "シャッター", "開口（建具なし）"].map(by);   /* 場所が決まっていない時：よく使う順（スキップ＝室内ドア） */
     var rm = String(ctx.room || ""), L;
     if (ctx.where === "part"){
       L = /洋室|寝室|子供|和室|納戸/.test(rm) ? ["室内ドア", "クローゼット", "引き戸", "開口（建具なし）"] : /トイレ|洗面|脱衣|浴/.test(rm) ? ["室内ドア", "引き戸", "開口（建具なし）"] : /玄関|廊下|ホール/.test(rm) ? ["室内ドア", "引き戸", "開口（建具なし）", "クローゼット"] : ["室内ドア", "引き戸", "クローゼット", "開口（建具なし）"];
