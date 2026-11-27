@@ -50701,7 +50701,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     back.style.display = v ? "" : "none";
   }
   function openPlan(){ showBack(false); try { ZUMEN.open(); } catch(e){} }
-  function toOld(n){ if (n === 5 && window.EST721 && !toOld.raw){ try { document.getElementById("modal").hidden = true; } catch(e){} EST721.open(); return; } toOld.raw = false; try { if (window.KAKU2) KAKU2.off(); } catch(e){} try { document.getElementById("modal").hidden = true; } catch(e){} try { ZUMEN.close(); } catch(e){} try { go(n); } catch(e){} try { window.scrollTo(0, 0); } catch(e){} showBack(true); }
+  function toOld(n){ if (n === 4 && window.SPEC730 && !toOld.raw){ try { document.getElementById("modal").hidden = true; } catch(e){} SPEC730.open(); return; }
+    if (n === 5 && window.EST721 && !toOld.raw){ try { document.getElementById("modal").hidden = true; } catch(e){} EST721.open(); return; } toOld.raw = false; try { if (window.KAKU2) KAKU2.off(); } catch(e){} try { document.getElementById("modal").hidden = true; } catch(e){} try { ZUMEN.close(); } catch(e){} try { go(n); } catch(e){} try { window.scrollTo(0, 0); } catch(e){} showBack(true); }
   function setMode(m){ try { if (typeof S === "undefined" || S.mode === m) return; S.mode = m; save(); go(typeof step !== "undefined" ? step : 1); document.querySelectorAll("[data-mode]").forEach(function(b){ b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)); }); } catch(e){} try { toast(m === "rf" ? "内装リフォームにしました" : "新築・増築にしました"); } catch(e){} }
   function menu(){
     var md = document.getElementById("modal"), mb = document.getElementById("mbox"); if (!md || !mb) return;
@@ -50999,4 +51000,50 @@ window.WHY724 = function(why){
     outside: "家の外には置けません", dup: "同じ所に同じ物があります", small: "小さすぎます", shape: "形を読み取れませんでした（もう一度なぞってください）",
     win: "窓の向きは変わりません", error: "うまくいきませんでした（戻すで元に戻せます）", "wall-open": "壁の無い所には付けられません", "wall-remove": "撤去する壁には付けられません" })[why] || "その場所には置けません（壁・床・部屋の中をタップしてください）";
 };
+</script>
+<script>
+/* ---------- CAD-730：新しい画面の仕様（2026-11-27 Claude/Opus）----------
+   ・［メニュー］→［仕様］で、新しい画面の1枚に仕様を出す（下に［◀ 図面］［見積を見る］）。
+   ・中身は今の仕様の画面そのもの（CAD-254 のタブ：床／壁／天井／部屋別／構造・外装／その他、CAD-259 のシンプル／本職こだわり）。ボタン・計算・保存は今までと同じ。
+   ・前の画面の仕様をこの画面の中に移して見せ、閉じると元に戻す。工事の種類の切り替え・題・下の「見積を見る」は、新しい画面の物があるので隠す。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.SPEC730) return;
+  var V = null, home = null;
+  function frame(){
+    if (V) return V;
+    var st = document.createElement("style");
+    st.textContent = "#spec730 #st4{display:block!important;padding:0 2px 10px}#spec730 #st4 .modeSeg,#spec730 #st4 .note639,#spec730 #st4 .screenTitle557,#spec730 #st4 > .row:last-of-type{display:none!important}";
+    document.head.appendChild(st);
+    var box = document.createElement("div"); box.id = "spec730";
+    box.style.cssText = "position:fixed;inset:0;z-index:2147483050;display:none;flex-direction:column;background:var(--bg,#F7F9FC);color:var(--ink,#18202A)";
+    var top = document.createElement("div"); top.style.cssText = "padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;background:#fff;border-bottom:1px solid var(--line,#DCE3EB);font-size:12px;color:var(--sub,#5B6673);font-weight:700";
+    top.textContent = "見積即答CAD　仕様";
+    var mid = document.createElement("div"); mid.id = "spec730mid"; mid.style.cssText = "flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:4px 12px 20px";
+    var bot = document.createElement("div"); bot.style.cssText = "display:flex;gap:8px;align-items:center;padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px);background:#fff;border-top:1px solid var(--line,#DCE3EB)";
+    var B = "flex:0 0 auto;min-height:44px;padding:0 14px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:14px;font-weight:800;color:var(--ink,#18202A)";
+    var b1 = document.createElement("button"); b1.type = "button"; b1.textContent = "◀ 図面"; b1.style.cssText = B; b1.onclick = close;
+    var sp = document.createElement("span"); sp.style.flex = "1";
+    var b2 = document.createElement("button"); b2.type = "button"; b2.textContent = "見積を見る"; b2.style.cssText = B + ";border-color:var(--ai,#2563B0);color:var(--ai,#2563B0)"; b2.onclick = function(){ close(); try { EST721.open(); } catch(e){} };
+    bot.appendChild(b1); bot.appendChild(sp); bot.appendChild(b2);
+    box.appendChild(top); box.appendChild(mid); box.appendChild(bot); document.body.appendChild(box);
+    V = { box: box, mid: mid }; return V;
+  }
+  function open(){
+    var st4 = document.getElementById("st4"); if (!st4) return;
+    try { if (window.KAKU2) KAKU2.off(); } catch(e){}
+    try { if (typeof go === "function") go(4); } catch(e){}
+    var v = frame();
+    if (st4.parentNode !== v.mid){ home = { p: st4.parentNode, n: st4.nextSibling }; v.mid.appendChild(st4); }
+    st4.hidden = false; v.box.style.display = "flex"; v.open = true; v.mid.scrollTop = 0;
+  }
+  function close(){
+    if (!V) return;
+    var st4 = document.getElementById("st4");
+    if (st4 && home && home.p){ try { home.p.insertBefore(st4, home.n); } catch(e){ home.p.appendChild(st4); } }
+    V.box.style.display = "none"; V.open = false;
+    try { if (window.ZUMEN && !ZUMEN.isOpen()) ZUMEN.open(); } catch(e){}
+  }
+  window.SPEC730 = { v: 2, open: open, close: close, isOpen: function(){ return !!(V && V.open); } };
+})();
 </script>
