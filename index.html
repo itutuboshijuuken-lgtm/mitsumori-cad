@@ -44911,7 +44911,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var s = st();
     if (!s) return bad("no-data");
     if (!nf()) return bad("no-nafuda");
-    try { return readNow(s); } catch(e){ warn("読む窓口", e); return bad("error", { msg: String((e && e.message) || e) }); }
+    var rd;
+    try { rd = readNow(s); } catch(e){ warn("読む窓口", e); return bad("error", { msg: String((e && e.message) || e) }); }
+    try { belowOf(s, rd); } catch(e){ warn("下の階の階段", e); }
+    return rd;
+  }
+  /* CAD-736：2階より上を見ている時だけ、下の階の階段を渡す（立体の床の穴・下りていく段・落下防止の手すり用。Fable の CAD-734 の形） */
+  function belowOf(s, rd){
+    var fi = s.fi || 0; if (!rd || !rd.ok || !(fi > 0)) return;
+    var sn = arr(s.fl)[fi - 1] && arr(s.fl)[fi - 1].snap, tk = isObj(sn) ? arr(sn.tenken) : [];
+    rd.below = { fi: fi - 1, stairs: tk.filter(function(o){ return isObj(o) && o.k === "stair" && typeof o.x === "number" && typeof o.y === "number"; }).map(function(o, i){
+      return { id: o.nid || ("s" + i), x: o.x, y: o.y, dir: o.dir || "n", raw: clone(o), kh: o.kh || ((sn.ch || s.ch || 2400) + (s.dosa || 240)) };
+    }) };
   }
 
   /* 名札 → 今どこにあるか（一覧の名前と番号。別の階にしまってある時は here:false） */
@@ -50949,6 +50960,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function pick(h){
     moving = null;
     var list = h.kind === "sash" ? "sashes" : (h.list || ""), id = h.id, i = idx(list, id), o = i >= 0 ? S[list][i] : null;
+    if (list === "below"){ stairGo(h, -1); return; }   /* CAD-736：2階で下りていく段（記録は下の階の物なので直さない） */
     if (!o && window.UBD734 && /:in$/.test(String(id || ""))){ var uz = UBD734.zoneById(String(id).replace(/:in$/, "")); if (uz){ try { RITTAI.mark(h, 300, 300); } catch(e){} ubBand(uz); return; } }   /* CAD-734：浴室の入口（ユニットバスのドア）を触った時 */
     if (!o){ say("この物は、ここでは直せません"); return; }
     try { RITTAI.mark(h, 300, 300); } catch(e){}
@@ -50969,9 +50981,25 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (list === "tenken" && o.dir != null || list === "tenken") B2.push(["回す", function(){ edit(function(){ o.dir = ({ n: "e", e: "s", s: "w", w: "n" })[o.dir] || "e"; try { moveTenken(o, 0, 0); } catch(e){} }, "向きを替えました（押すたびに90°）"); }]);
     B2.push(["動かす", function(){ moving = { list: list, id: id }; bandFor(nm(list, o) + "：動かす先をタップ", [["やめる", function(){ moving = null; closeBand(); }, 1]]); }]);
     if (list === "tenken" && o.w > 0) B2.push(["大きさ", function(){ if (typeof openPad !== "function") return; openPad({ title: "幅（mm）", unit: "mm", value: o.w, done: function(w){ if (!w) return; var d0 = o.d || o.w; openPad({ title: "奥行（mm）", unit: "mm", value: d0, done: function(d){ edit(function(){ o.w = Math.round(w); if (d) o.d = Math.round(d); try { moveTenken(o, 0, 0); } catch(e){} }, "大きさを変えました"); } }); } }); }]);
+    if (o.k === "stair" && typeof S !== "undefined" && Array.isArray(S.fl) && S.fl.length > (S.fi || 0) + 1) B2.unshift([(S.fi || 0) + 2 + "階へ", function(){ stairGo(h, 1); }]);   /* CAD-736 */
     if (o.k === "bath" && window.UBD734){ var uz2 = UBD734.zoneOf(o); if (uz2) B2.push(["入口（ドア）", function(){ ubBand(uz2); }]); }   /* CAD-734 */
     B2.push(["消す", function(){ del(list, id); }, 1]);
     bandFor(nm(list, o), B2);
+  }
+  /* CAD-736：階段で上の階・下の階へ（Fable の RITTAI.stairs の立つ場所へ）。dir 1＝上へ／-1＝下へ */
+  function stairGo(h, dir){
+    var fi = (typeof S !== "undefined" && S.fi) || 0, to = fi + dir;
+    if (dir < 0 && !(to >= 0)){ say("下の階がありません"); return; }
+    var go = function(){
+      var key = dir > 0 ? null : "t:" + h.id, sid = dir > 0 ? h.id : null, s0 = null;
+      try { (RITTAI.stairs() || []).forEach(function(q){ if ((key && q.key === key) || (sid && q.id === sid && !q.below)) s0 = q; }); } catch(e){}
+      closeBand();
+      try { flSwitch(to); } catch(e){ say("階を替えられませんでした"); return; }
+      try { RITTAI.sync(); } catch(e){}
+      setTimeout(function(){ try { s0 = s0 || null; var st2 = null; (RITTAI.stairs() || []).forEach(function(q){ if (s0 && q.id === s0.id) st2 = q; }); var c = st2 ? (dir > 0 ? st2.top : st2.foot) : (s0 ? (dir > 0 ? s0.top : s0.foot) : null); if (c) RITTAI.cam(c); } catch(e){} say((to + 1) + "階へ移りました"); }, 120);
+    };
+    if (dir < 0){ bandFor("階段（下り）", [[(to + 1) + "階へ", go]]); return; }
+    go();
   }
   /* CAD-734：浴室の入口の帯（形・ずらす・辺・幅・消す）。押すたびに帯を書き直す */
   function ubBand(z){ var again = function(){ after(); ubBand(z); }; bandFor(UBD734.label(z), UBD734.acts(z, again)); }
