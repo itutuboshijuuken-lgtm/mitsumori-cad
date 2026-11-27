@@ -45338,7 +45338,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-757：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり） ＋ 片引き戸の形 ＋ 歩いて階段を上る ＋ 段数の決まり・戸の警告 ＋ 指で引っ張って決める道具（2026-11-27 Claude Fable）----------
+/* ---------- CAD-759：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり） ＋ 片引き戸の形 ＋ 歩いて階段を上る ＋ 段数の決まり・戸の警告 ＋ 指で引っ張って決める道具（タップの見分けの直し）（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45412,7 +45412,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      見切り：床の一部分の記録に mk（CAD-755）がある時、その範囲のふちのうち「仕切りの無い所」（壁の面にも同じ材の範囲にも接していない辺＝道具の open と同じ決まり）に、細い見切り（幅 28・アルミ色）を描く。
      RITTAI.adjustDims({ list, id })＝道具を開かずに、その物の寸法の札だけ（道具を開いた時と同じ label・v。帯に同じ数字を出す時用）。
      RITTAI.rectState()＝今の様子（検査・つなぐ側用）。下の帯（#rittaiRect）は立体の絵の下に入る（絵に被らない）。帯の高さは途中で変えない。
-     RITTAI.v は 20。
+   ・タップの見分け（Fable の作業番号 702）：押して離すまでの時間を「指が動いた時刻」（イベントの時刻）で測る。前は処理した時刻で測っていたので、絵を描くのが遅い時（きれいな絵・重い家・古い端末）に、
+     描くのに掛かった時間までタップの時間に数えて、触っても何も起きない事があった。道具の「離す直前のずれ戻し」も同じ時刻で測る。道具の数字の札・「起点」の札は、印（十字）に重ねない。
+     RITTAI.v は 21。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45429,7 +45431,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 20, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 21, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -47260,7 +47262,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     function up(e){
       if (!ps[e.pointerId]) return;
       delete ps[e.pointerId]; NPTR = ks().length; pinch = 0; cen = null;
-      var lax = noDrag(), isTap = down && down.id === e.pointerId && e.type === "pointerup" && !down.multi && down.far < (lax ? 18 : 9) && performance.now() - down.t < (lax ? 700 : 450);
+      var lax = noDrag(), isTap = down && down.id === e.pointerId && e.type === "pointerup" && !down.multi && down.far < (lax ? 18 : 9) && ((down.te > 0 && e.timeStamp > 0) ? e.timeStamp - down.te : performance.now() - down.t) < (lax ? 700 : 450);   /* 指が動いた時刻で測る（Fable 702） */
       if (!NPTR || isTap) down = null;
       if (isTap) tap(e.clientX, e.clientY);
       if (!NPTR){ mv(); posSave(); }
@@ -47268,7 +47270,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     cvs.addEventListener("pointerdown", function(e){
       if (SQ){ sqDown(e); e.preventDefault(); return; }   /* 指で引っ張って決める道具（Fable 701）の間 */
       ps[e.pointerId] = [e.clientX, e.clientY]; NPTR = ks().length; try { cvs.setPointerCapture(e.pointerId); } catch(x){}
-      if (NPTR === 1) down = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), far: 0, multi: false }; else if (down) down.multi = true;
+      if (NPTR === 1) down = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), te: e.timeStamp > 0 ? e.timeStamp : 0, far: 0, multi: false }; else if (down) down.multi = true;
       pinch = NPTR === 2 ? dist() : 0; cen = NPTR === 2 ? mid() : null; mv(); e.preventDefault();
     });
     cvs.addEventListener("pointermove", function(e){
@@ -48043,6 +48045,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      平面の座標 (p, q)：床・天井＝家の (x, y)／壁＝(壁に沿う u, 床からの高さ) */
   var SQ = null, SQSEQ = 0, SQC = "#2563B0", SQH = null;   /* SQH＝最後に知らせた「触った所」（壁の範囲を始める時、触った高さ・面をそのまま使う） */
   function sqF(v){ return Math.round(v).toLocaleString("ja-JP"); }
+  function sqT(e){ return (e && e.timeStamp > 0) ? e.timeStamp : performance.now(); }   /* 指が動いた時刻（処理した時刻ではない。絵を描くのが遅い端末でも、タップ・離す直前の判定がずれない） */
   function sqGeo(room, ceil){   /* 部屋の壁の面（F）と、部屋のふちの芯の線（E＝壁の無い境の時に使う）。線分＝[ax, ay, bx, by, 部屋の側の向き nx, ny] */
     var F = [], E = [], bp = [], bq = [];
     MODEL.units.forEach(function(u){
@@ -48347,11 +48350,13 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var X = ps0[0].toFixed(1), Y = ps0[1].toFixed(1), x0 = ps0[0], y0 = ps0[1], cr = "M" + (x0 - 20).toFixed(1) + " " + Y + "H" + (x0 + 20).toFixed(1) + "M" + X + " " + (y0 - 20).toFixed(1) + "V" + (y0 + 20).toFixed(1);
       h += '<circle cx="' + X + '" cy="' + Y + '" r="13" fill="none" stroke="#fff" stroke-width="6" opacity=".9"/><circle cx="' + X + '" cy="' + Y + '" r="13" fill="' + SQC + '" fill-opacity=".18" stroke="' + SQC + '" stroke-width="3"/>';
       h += '<path d="' + cr + '" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".9"/><path d="' + cr + '" stroke="' + SQC + '" stroke-width="2.2" stroke-linecap="round"/>';
-      if (SQ.mode === "rect") labs.push({ x: x0, y: y0 - 30, t: "起点", k: "s", sm: 1 });
+      if (SQ.mode === "rect" && SQ.ph === "pt") labs.unshift({ x: x0, y: y0 - 30, t: "起点", k: "s", sm: 1 });
+      labs.unshift({ x: x0, y: y0, t: "", k: "m", gh: 1 });   /* 印の場所（見えない札）：数字の札は、ここを避けて置く */
     }
     /* 数字の札：画面の中に収め、重なる時はずらす（文字が重ならない・切れない） */
-    labs.forEach(function(a){ a.w = a.sm ? 40 : Math.max(34, a.t.length * 9.6 + 14); a.h = a.sm ? 18 : 22; a.x = clamp(a.x, a.w / 2 + 3, W - a.w / 2 - 3); a.y = clamp(a.y, a.h / 2 + 3, H - a.h / 2 - 3); });
+    labs.forEach(function(a){ if (a.gh){ a.w = 30; a.h = 30; return; } a.w = a.sm ? 40 : Math.max(34, a.t.length * 9.6 + 14); a.h = a.sm ? 18 : 22; a.x = clamp(a.x, a.w / 2 + 3, W - a.w / 2 - 3); a.y = clamp(a.y, a.h / 2 + 3, H - a.h / 2 - 3); });
     for (i = 1; i < labs.length; i++){ for (var j = 0, guard = 0; j < i && guard < 12; j++){ var A = labs[j], Bq = labs[i]; if (Math.abs(A.x - Bq.x) < (A.w + Bq.w) / 2 + 2 && Math.abs(A.y - Bq.y) < (A.h + Bq.h) / 2 + 2){ Bq.y = A.y + (A.h + Bq.h) / 2 + 3; if (Bq.y > H - Bq.h / 2 - 3) Bq.y = A.y - (A.h + Bq.h) / 2 - 3; j = -1; guard++; } } }
+    labs = labs.filter(function(a){ return !a.gh; });
     labs.forEach(function(a){
       h += '<g data-k="' + a.k + '"><rect x="' + (a.x - a.w / 2).toFixed(1) + '" y="' + (a.y - a.h / 2).toFixed(1) + '" width="' + a.w.toFixed(1) + '" height="' + a.h + '" rx="6" fill="#fff" fill-opacity=".96" stroke="' + SQC + '" stroke-width="' + (a.sm ? 1 : 1.6) + '"/><text x="' + a.x.toFixed(1) + '" y="' + (a.y + (a.sm ? 4 : 5)).toFixed(1) + '" text-anchor="middle" font-size="' + (a.sm ? 11 : 14) + '" font-weight="800" fill="#18202A" font-family="inherit">' + a.t + "</text></g>";
     });
@@ -48363,7 +48368,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (SQ.ptr !== null || POSE) return;
     SQ.ptr = e.pointerId; try { V.cvs.setPointerCapture(e.pointerId); } catch(x){}
     if (SQ.mode === "rect" && SQ.ph === "sz") sqGrab(e.clientX, e.clientY);
-    SQ.dn = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), far: 0, g: sqPick(e.clientX, e.clientY), base: SQ.ph === "pt" ? [SQ.s[0], SQ.s[1]] : [SQ.c[0], SQ.c[1]], hist: [] };
+    SQ.dn = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: sqT(e), far: 0, g: sqPick(e.clientX, e.clientY), base: SQ.ph === "pt" ? [SQ.s[0], SQ.s[1]] : [SQ.c[0], SQ.c[1]], hist: [] };
   }
   function sqGrab(cx, cy){   /* 四角の4つの角のうち、指に近い角（画面で 44px 以内）を「動かす角」に、その対角を「動かない角」にする（どの角からでも直せる） */
     var s = SQ.s, c = SQ.c, F = SQ.fr, rc = V.cvs.getBoundingClientRect(), best = null;
@@ -48383,7 +48388,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (d.far < 9) return;   /* タップかもしれない間は、動かさない */
     g = sqPick(e.clientX, e.clientY); if (!g) return;
     if (!d.g || d.g.far || g.far) sqMoveTo(g.p, g.q); else sqMoveTo(d.base[0] + g.p - d.g.p, d.base[1] + g.q - d.g.q);
-    cur = SQ.ph === "pt" ? SQ.s : SQ.c; d.hist.push([performance.now(), cur[0], cur[1], e.clientX, e.clientY, SQ.ph]); if (d.hist.length > 60) d.hist.shift();
+    cur = SQ.ph === "pt" ? SQ.s : SQ.c; d.hist.push([sqT(e), cur[0], cur[1], e.clientX, e.clientY, SQ.ph]); if (d.hist.length > 60) d.hist.shift();
     ask();
   }
   function sqTap(cx, cy, g){   /* タップ（印を動かす時だけ）：同じ面ならそこへ。別の壁・別の部屋なら、その面（見えている側）へ移る */
@@ -48402,7 +48407,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function sqUp(e){
     if (!SQ || SQ.ptr !== e.pointerId) return;
-    var d = SQ.dn, tu = performance.now(), i, h0 = null, last; SQ.ptr = null; SQ.dn = null; if (!d) return;
+    var d = SQ.dn, tu = sqT(e), i, h0 = null, last; SQ.ptr = null; SQ.dn = null; if (!d) return;
     if (e.type === "pointerup" && d.far < 9 && tu - d.t < 600){ if (SQ.ph === "pt") sqTap(e.clientX, e.clientY, d.g); }   /* 引っ張る時のタップでは、四角を動かさない */
     else if (d.hist.length){   /* 指を離す時のずれ：離す直前に指がほぼ止まっていたなら、少し前の位置に戻す */
       last = d.hist[d.hist.length - 1];
