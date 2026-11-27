@@ -50434,7 +50434,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
           var vw = pw && (pw.values || []).filter(function(x){ return x.id === st.sel.sizeW; })[0], vh = ph && (ph.values || []).filter(function(x){ return x.id === st.sel.sizeH; })[0];
           if (st.ent.group === "内窓") return;   /* 内窓は今ある窓の内側に付けるので、図面の窓の大きさは変えない */
           if (vw && +vw.outW > 0) st.sa.w = +vw.outW; if (vh && +vh.outH > 0) st.sa.h = +vh.outH; })();   /* CAD-715：図面の窓をカタログの基本寸法（枠外）に合わせる */
-        st.sa.cat705 = { grp: st.ent.group || "", file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
+        var pv726 = function(id){ var p0 = (st.d.pick || []).filter(function(x){ return x.id === id; })[0]; return p0 && (p0.values || []).filter(function(v){ return v.id === st.sel[id]; })[0]; };   /* CAD-727：立体の扉にデザインと色を出すための控え（Fable の頼み） */
+        var dz726 = pv726("design"), cl726 = pv726("color");
+        st.sa.cat705 = { shape: (dz726 && dz726.shape) || "", colorName: (cl726 && cl726.name) || "", grp: st.ent.group || "", file: st.ent.file, maker: mkName(st.d.maker), label: label(st.d, st.ent, st.sel, st.ad), teika: T2.teika, sel: Object.assign({}, st.sel), adds: Object.assign({}, st.ad), year: st.d.year || "", src: st.d.src || "", hinban: T2.row.hinban || "" };
         save(); if (typeof drawPlan === "function") drawPlan();
       } catch(e){ try { console.warn("[CAT705] 選ぶ", e); } catch(x){} }
       $("modal").hidden = true; st = null;
@@ -50506,6 +50508,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       btn(t, "閉じる", GRY, closeBand); b.appendChild(t);
       var r = mk("div", "display:flex;gap:6px;align-items:center;width:100%");
       var top = window.KOHO ? KOHO.cands({ where: where, room: h.name || "", mode: isRf() ? "rf" : "zo" }) : [];
+      try { var vw = RITTAI.view(); if (where === "floor" && h.room && vw && vw !== "eye"){ var r0 = mk("div", "display:flex;gap:6px"); btn(r0, "ここへ降りる（部屋の中を見る）", BTN.replace("flex:1 1 0", "flex:1 1 auto") + ";background:#2563B0;color:#fff", function(){ closeBand(); try { RITTAI.view("eye"); setTimeout(function(){ try { RITTAI.jump(h.room); } catch(e){} }, 850); } catch(e){} }); b.appendChild(r0); } } catch(e){}   /* CAD-727：上から見ている時は、触った部屋に降りられる */
       top.forEach(function(it){ btn(r, it[2].replace(/（.*?）/g, ""), BTN, function(){ put(it, h); }); });
       if (where === "wall" && window.KAKU2 && KAKU2.choose){   /* CAD-711：触った壁に付けられる建具だけ（外壁／間仕切りで分ける） */
         var wt = "part"; try { var w0 = (MADO.read().walls || []).find(function(q){ return q.id === h.wall; }); if (w0 && w0.t === "e") wt = "ext"; } catch(e){}
