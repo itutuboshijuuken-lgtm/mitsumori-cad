@@ -47170,7 +47170,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     arr(L.legend).forEach(function(q){ pen(S("rect", { x: q.x, y: q.y - 90 * L.f, width: 420 * L.f, height: 180 * L.f, fill: q.k === "new" ? NEWF : q.k === "rm" ? "none" : "#fff", stroke: q.k === "rm" ? RED : INK }, g), q.k === "rm" ? 1 : 1.1, q.k === "rm" ? [6, 4] : null); });
     L.labels.forEach(function(q){
       var at = { x: q.cx, y: q.cy + q.size * .36, "font-size": q.size, "text-anchor": "middle", fill: q.k === "area" ? SUB : INK, "font-weight": q.k === "room" || q.k === "title" ? 600 : 400 }, halo = q.k === "dim" || q.k === "room" || q.k === "area";
-      if (halo){ at.stroke = "#fff"; at["stroke-width"] = (q.size * .18).toFixed(1); at["stroke-linejoin"] = "round"; at["paint-order"] = "stroke"; }   /* 文字のまわりを白く抜く（下の線が字にかからない） */
+      if (halo){ at.stroke = "#fff"; at["stroke-width"] = (q.size * (q.k === "dim" ? .18 : .42)).toFixed(1);   /* CAD-698：部屋名・広さは白抜きを太く（通り芯の一点鎖線が字の間に見えないように） */ at["stroke-linejoin"] = "round"; at["paint-order"] = "stroke"; }   /* 文字のまわりを白く抜く（下の線が字にかからない） */
       var t = S("text", at, g);
       if (halo) t.style.paintOrder = "stroke";
       if (q.rot) t.setAttribute("transform", "rotate(-90 " + q.cx + " " + q.cy + ")");
@@ -48199,6 +48199,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
    CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-698（2026-11-27 Claude/Opus）：部屋の帯に［横幅］［奥行］。数字を入れると間仕切りが動く（今の CAD-139 の applyRoomDim。T字の壁も一緒・戻す1回）。
+     入れた数字はぴったり（5mm単位。227.5mmの目には吸い付けない）。四角くない部屋・動かせる間仕切りが無い向きは出さない。部屋名・広さの白抜きを太く。
    CAD-695（2026-11-27 Claude/Opus）：「工事を追加」にバルコニー（FRP防水・手すり）・ロフト（床・はしご）・スロープ（手すり）・家庭用蓄電池（全国平均の仮単価）。 */
 (function(){
   "use strict";
@@ -48488,6 +48490,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     mk("名前", function(){ var rr = roomObj(roomCid); if (rr && typeof roomNameSheet === "function") roomNameSheet(rr); });
     if (isRf() && typeof roomFinSheet === "function") mk("仕上げ", function(){ var rr = roomObj(roomCid); if (rr) roomFinSheet(rr); });
     if (!isRf() && HB && typeof HB.__ltSeg50 === "function") mk("床", function(){ floorSheet(); });   /* CAD-688：新築・増築の部屋の床 */
+    /* CAD-698：部屋の横幅・奥行を数字で（今の CAD-139 の仕組み）。動かせる間仕切りがある向きだけ出す */
+    var dz = roomDims(r), seen = {};
+    dz.forEach(function(en){ if (seen[en.dim]) return; seen[en.dim] = 1; var b = mk("", function(){ dimPad(en); }); b.innerHTML = '<span style="display:block;font-size:11px;font-weight:700;line-height:1.1">' + (en.dim === "w" ? "横幅" : "奥行") + '</span><span style="display:block;font-size:13px;line-height:1.2">' + Math.round(en.cur).toLocaleString("ja-JP") + "</span>"; b.style.padding = "0 8px"; });
     var x = mk("×", function(){ closeRoom(); try { var z = zumen(); if (z) z.select(null); } catch(e){} }); x.style.padding = "0"; x.style.width = "44px";
     return { ok: true, cid: cid, name: nm };
   }
@@ -48546,6 +48551,57 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     finally { HB.__floorArm = arm0 || null; if (!ok) sel = sel0; }
     setTimeout(function(){ if (roomCid != null){ var r2 = roomObj(roomCid); if (r2) openRoom(roomCid); } }, 60);
     return { ok: ok, now: floorNow(roomObj(roomCid)) };
+  }
+  /* ===== CAD-698：部屋の横幅・奥行（今の②間取りの CAD-139／CAD-176 と同じ選び方）。
+     部屋の辺に乗っている間仕切りの中で一番長く重なる1本から、今の roomDimsFor でこの部屋の分を出す。四角くない部屋は出さない。
+     入れた数字はぴったり（5mm単位）。今の applyRoomDim は 227.5mm の目に吸い付けるので、その時だけ吸い付きを外して呼ぶ（戻す1回で戻る・T字の壁も一緒に伸び縮み） ===== */
+  function roomDims(r){
+    try {
+      if (!r || !r.p || !HB || !HB.__roomDimsFor139 || !HB.__applyRoomDim139 || typeof roomRectAt !== "function") return [];
+      var rr = roomRectAt(r.p[0], r.p[1]); if (!rr || rr.bad) return [];
+      var best = null, bestOv = 100;
+      (S.parts2D || []).forEach(function(q){
+        if (pState(q) === "remove") return;
+        var vt = Math.abs(q.x1 - q.x2) < 1, hz = Math.abs(q.y1 - q.y2) < 1, ov = 0;
+        if (vt && (Math.abs(q.x1 - rr.x0) < 2 || Math.abs(q.x1 - rr.x1) < 2)) ov = Math.min(Math.max(q.y1, q.y2), rr.y1) - Math.max(Math.min(q.y1, q.y2), rr.y0);
+        if (hz && (Math.abs(q.y1 - rr.y0) < 2 || Math.abs(q.y1 - rr.y1) < 2)) ov = Math.min(Math.max(q.x1, q.x2), rr.x1) - Math.max(Math.min(q.x1, q.x2), rr.x0);
+        if (ov > bestOv){ bestOv = ov; best = q; }
+      });
+      if (!best) return [];
+      var L = HB.__roomDimsFor139(best).filter(function(en){ return en.cid === rr.cid; }), w = null, d = null;
+      /* 横幅・奥行が両方とれるよう、もう一方の向きの間仕切りも見る */
+      var other = null, oOv = 100, bv = Math.abs(best.x1 - best.x2) < 1;
+      (S.parts2D || []).forEach(function(q){
+        if (q === best || pState(q) === "remove") return;
+        var vt = Math.abs(q.x1 - q.x2) < 1, hz = Math.abs(q.y1 - q.y2) < 1, ov = 0; if (vt === bv) return;
+        if (vt && (Math.abs(q.x1 - rr.x0) < 2 || Math.abs(q.x1 - rr.x1) < 2)) ov = Math.min(Math.max(q.y1, q.y2), rr.y1) - Math.max(Math.min(q.y1, q.y2), rr.y0);
+        if (hz && (Math.abs(q.y1 - rr.y0) < 2 || Math.abs(q.y1 - rr.y1) < 2)) ov = Math.min(Math.max(q.x1, q.x2), rr.x1) - Math.max(Math.min(q.x1, q.x2), rr.x0);
+        if (ov > oOv){ oOv = ov; other = q; }
+      });
+      if (other) L = L.concat(HB.__roomDimsFor139(other).filter(function(en){ return en.cid === rr.cid; }));
+      L.forEach(function(en){ if (en.dim === "w" && !w) w = en; if (en.dim !== "w" && !d) d = en; });
+      return [w, d].filter(Boolean);
+    } catch(e){ warn("部屋の寸法", e); return []; }
+  }
+  function applyDim(en, v){
+    var g0 = gSnap, fin = null;
+    try { gSnap = function(x){ return Math.round(x / 5) * 5; }; fin = HB.__applyRoomDim139(en, Math.round(v)); }
+    catch(e){ warn("部屋の寸法を変える", e); }
+    finally { gSnap = g0; }
+    try { save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){}
+    if (fin == null) return null;
+    var rr = en.rect; return Math.round(en.side === "x0" ? rr.x1 - fin : en.side === "x1" ? fin - rr.x0 : en.side === "y0" ? rr.y1 - fin : fin - rr.y0);
+  }
+  function dimPad(en){
+    var r = roomObj(roomCid), nm = r ? roomNm(r) : "部屋", lab = en.dim === "w" ? "横幅" : "奥行";
+    if (typeof openPad !== "function") return;
+    openPad({ title: nm + "の" + lab, sub: "壁の芯から芯まで。間仕切りが動きます", unit: "mm", std: false, value: Math.round(en.cur), done: function(v){
+      if (!(v > 0)) return;
+      var nd = applyDim(en, v);
+      if (nd == null || Math.abs(nd - Math.round(en.cur)) < 1) say(lab + "は変えられませんでした（となりの部屋が狭くなりすぎる・外壁を越える時は止まります）");
+      else say(nm + "の" + lab + "を " + nd.toLocaleString("ja-JP") + "mm にしました（戻すで戻せます）");
+      setTimeout(function(){ if (roomCid != null && roomObj(roomCid)) openRoom(roomCid); }, 80);
+    } });
   }
   function closeRoom(){ roomCid = null; if (roomBar && roomBar.parentNode) roomBar.parentNode.removeChild(roomBar); }
 
@@ -48739,7 +48795,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     open: open, edgeAt: function(x, y){ return A ? edgeAt([x, y]) : -1; }, dimEdgeAt: function(x, y){ return A ? dimEdgeAt([x, y]) : -1; },
     room: function(cid){ return openRoom(cid); }, roomClose: closeRoom, thing: function(kind, i){ return openThing(kind, i); }, thingClose: closeThing, sash: function(i){ return openSash(i); }, sashClose: closeSash, sashAt: function(x, y){ return A ? sashAt([x, y]) : -1; },
     part: function(i){ return openPart(i); }, partState: function(st){ return setSt(st); }, partClose: closePart, partSel: function(){ return partSel; },
-    floor: function(fk){ return setFloor(fk); }, domaDz: function(v){ return setDz(v); }, acc: function(k, v){ return setAcc(k, v); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
+    floor: function(fk){ return setFloor(fk); }, domaDz: function(v){ return setDz(v); }, roomDims: function(){ return roomDims(roomObj(roomCid)).map(function(en){ return { dim: en.dim, cur: en.cur, side: en.side }; }); }, roomDim: function(dim, v){ var en = roomDims(roomObj(roomCid)).filter(function(x){ return x.dim === dim; })[0]; return en ? applyDim(en, v) : null; }, acc: function(k, v){ return setAcc(k, v); }, tare: function(i){ return openTare(i); }   /* CAD-687・688 */
   };
 })();
 </script>
