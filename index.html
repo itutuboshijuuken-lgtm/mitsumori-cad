@@ -45248,7 +45248,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-734：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり）（2026-11-27 Claude Fable）----------
+/* ---------- CAD-746：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり） ＋ 片引き戸の形 ＋ 歩いて階段を上る（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45294,7 +45294,16 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      触ると {kind:"thing", list:"below", id:"below:階段のid", k:"stair"}。below が無い時は、今までと同じ（何も作らない）。かかる部屋が四角くない時も、今までと同じ。
      1階の階段の手すり：まっすぐの所の壁側（両側に壁がある時は廻りの外側）に、径35の丸い木の棒。段の鼻の線から 800。受け金物つき。
      RITTAI.stairs()＝階段ごとの立つ場所 [{id, key, below, kh, foot:{x,y,yaw}, top:{x,y,yaw}}]（foot＝下の階で上り口の手前、top＝上の階で下り口の先。そのまま RITTAI.cam() に渡せる。「階段を触ると2階へ」用）。
-     RITTAI.v は 16。
+   ・片引き戸の形（Fable の作業番号 698。翔伍さんの決まり。記録は CAD-734・735）：標準（tob581 なし）＝戸袋の区間は、戸が走る面（n の側）の反対側に半分の厚みの壁だけ。戸は走る面に見えたまま。
+     引込み（tob581 "both"）＝戸は壁の中（今までの絵）。アウトセット（frame "outset"）＝壁の面の外（今までの絵）。触った時：薄い壁の外の面＝壁（物を置ける）、戸が走る面＝建具。
+   ・歩いて階段を上る・下りる（Fable の作業番号 699。翔伍さんの指示）：スティックは、階段の門（上る階段＝1段目の入口の辺／下りていく段＝最上段の出口の辺）から入ると段の上を歩ける。
+     目の高さは段の高さ。横へは出られない。足あとは、階段の手前（上の階では下り口の先）の床に「階段の印（○階へ）」が出て、タップすると道すじ＋段の真ん中を通って上り（下り）切る。
+     階の切り替え：上り＝目が上の階の床より 250 上に出る段で上の階へ、下り＝その2段下で下の階へ。アプリの「階を替える」（window.flSwitch）を呼ぶ（RITTAI.floorFn(fn) で差し替えられる）。
+     替えた時、window に "rittai-floor"（detail＝{fi, why:"stairs"}）を出す。上の階に同じ階段（below）が無い時は、段の形を持ち越して上り切る。上の階が無い時は、最上段で止まる。
+     足あと・足あとの道すじ・当たりの決まりは今までどおり（階段は通らない）。見積・保存の中身は変えない（階を替えるのは、アプリの階のボタンと同じ動き）。
+     足した命令：RITTAI.climb(id)＝印をタップしたのと同じ／RITTAI.move(dx, dy)＝検査用（スティックで動かしたのと同じ）／RITTAI.here() に fi・stair／RITTAI.stairs() に mark。
+     RITTAI.stairs() の top は、上の階（下りていく段）では、壁から 300 離れた所・前が壁の時は広い方を向く。画面の上の「試験中」の字は消した。
+     RITTAI.v は 18。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45311,7 +45320,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 16, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 18, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45324,7 +45333,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var VIEW = "eye", TV = null, POSE = null, FOVT = 0;                           /* 見方：eye＝目線／top＝上から。TV＝上からのカメラ。POSE＝切り替えの途中 */
   var NODES = [], DOORS = [], footObj = null, ringObj = null, RING = -1, hereNode = -1;   /* 足あと・開く扉 */
   var TW = null, LOOP = 0, LT = 0, LOOPACT = false, NPTR = 0, JL = null, JR = null, LVY = 0, LVT = 0;                    /* 歩いている最中の動き・スティック */
-  var CTL = "foot", SHOWR = true, SHOWF = true, tmPos = 0, hinted = false, topHint = false, missed = 0, HOLD = null;    /* 操作の選び（端末に覚える）。HOLD＝検査用（扉を開けたまま・閉めたまま） */
+  var CTL = "foot", SHOWR = true, SHOWF = true, tmPos = 0, hinted = false, topHint = false, missed = 0, HOLD = null, ONST = null, FLFN = null, STSAY = 0;    /* 操作の選び（端末に覚える）。HOLD＝検査用（扉を開けたまま・閉めたまま） */
 
   function mado(){ var m = window.MADO; return (m && typeof m.read === "function") ? m : null; }
   function sw(){ try { return !!(window.WALK2 && window.WALK2.isOn()); } catch(e){ return false; } }
@@ -45696,11 +45705,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         if (ext && !gone) M.outOps.push([w.a[0] + w.ux * mid, w.a[1] + w.uy * mid, w.ux, w.uy, s1 - s0, v0, v1]);
         if (gone || ty === "win") return;
         var kata = cat === "室内ドア" && ty === "hiki";
-        if (kata){ o.pk = (fl & 2) ? 1 : -1; if (o.pk > 0) o.c0 = mid; else o.c1 = mid; o.w0 = o.c0; o.w1 = o.c1; }   /* 片引き戸：開口の半分だけ壁を抜く。残りの半分は戸袋 */
+        if (kata){ o.pk = (fl & 2) ? 1 : -1; if (o.pk > 0) o.c0 = mid; else o.c1 = mid; o.w0 = o.c0; o.w1 = o.c1;   /* 片引き戸：開口の半分だけ壁を抜く。残りの半分は戸袋 */
+          if (raw.tob581 !== "both" && raw.frame !== "outset"){ o.pb = 1; o.p0 = o.pk > 0 ? s0 : mid; o.p1 = o.pk > 0 ? mid : s1; } }   /* 標準の形（Fable 698）：戸袋の区間は、戸が走る面の反対側に半分の厚みの壁だけ */
         else if (t.ub && ty === "hiki") o.pk = 1;                                                                   /* 浴室の引き戸：開口は全幅。扉は浴室の側の壁の面を走る */
         else if (ty === "chigai" || ty === "hiki") o.w1 = mid;                                                      /* 引違い：開くのは片側 */
         o.walk = (!ext && z0 <= 250 && v1 - v0 >= 1700 - Math.max(0, v0) && o.w1 - o.w0 >= 500) ? 1 : 0;                                /* 歩いて通れる開口（外へは出ない） */
-        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: v0, z1: v1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0, col: cc || undefined, shape: shp || undefined }); }
+        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: v0, z1: v1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, pb: o.pb || undefined, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0, col: cc || undefined, shape: shp || undefined }); }
         M.doors.push({ id: id, ty: ty, x: w.a[0] + w.ux * (o.w0 + o.w1) / 2, y: w.a[1] + w.uy * (o.w0 + o.w1) / 2, ux: w.ux, uy: w.uy, half: w.th / 2, w: o.w1 - o.w0, nIn: nIn, walk: o.walk, ext: ext, entry: (ext && /玄関/.test(cat)) ? 1 : 0, zb: v0 });
       });
       M.n.walls++;
@@ -45737,7 +45747,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var rw = (t.raw && typeof t.raw === "object") ? t.raw : {}, dr2 = String(t.dir || "n"), ro = { n: 0, e: 1, s: 2, w: 3 }[dr2] || 0, fux = [1, 0, -1, 0][ro], fuy = [0, 1, 0, -1][ro], fw = (fin(t.w) && t.w > 0) ? t.w : hx * 2, fd = (fin(t.d) && t.d > 0) ? t.d : hy * 2, bwn = 0;
         if (t.kind === "kitchen") [-fw / 3, 0, fw / 3].forEach(function(s){ var tt = (rw.fb ? 1 : -1) * (fd / 2 + 70); if (colD(M, t.x + fux * s - fuy * tt, t.y + fuy * s + fux * tt) < 40) bwn++; });   /* 奥のすぐ後ろが壁か（壁付けのキッチン） */
         d = { id: id, list: "tenken", k: t.kind, state: t.state, x: t.x, y: t.y, hx: hx, hy: hy, ch: roomCh(t.room), dir: dr2, w: fw, dd: fd, fb: rw.fb ? 1 : 0, lr: rw.lr ? 1 : 0, gs: String(rw.gs || ""), bw: bwn >= 2 ? 1 : 0 };
-        if (t.kind === "stair" && STG[id]){ d.st = STG[id]; M.blocks.push([d.st.bb[0] - 120, d.st.bb[1] - 120, d.st.bb[2] + 120, d.st.bb[3] + 120]); }   /* 段の形（Fable 695）。階段は通り抜けない */
+        if (t.kind === "stair" && STG[id]){ d.st = STG[id]; M.blocks.push([d.st.bb[0] - 120, d.st.bb[1] - 120, d.st.bb[2] + 120, d.st.bb[3] + 120, "t:" + id]); }   /* 段の形（Fable 695）。階段は通り抜けない */
         if (d.st && d.st.hole){ var hr0 = []; try { hr0 = handRuns(M, d.st); } catch(e){ hr0 = []; } if (hr0.length) d.hr = hr0; }   /* 手すり（Fable 697） */
         var tdz = lvOf(M, t.x, t.y); if (tdz) d.dz = tdz;   /* 土間や小上がりの上の器具は、その床の高さに置く */
         var tz = TKH[t.kind] || [0, 500]; if (t.state !== "remove" && tz[0] >= 0 && tz[0] < EYE && (tz[1] < 0 || tz[1] > 300)) M.blocks.push([t.x - hx - 120, t.y - hy - 120, t.x + hx + 120, t.y + hy + 120]);
@@ -45762,8 +45772,23 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     BST.forEach(function(q){   /* 下の階の階段：この階では「下りていく段」（Fable 697） */
       var g = q.g, bb = g.bb, gr = []; try { gr = guardRuns(M, g); } catch(e){ gr = []; }
       (M.ti || (M.ti = Object.create(null)))[q.id] = { list: "below", i: null, k: "stair" };
-      M.blocks.push([bb[0] - 120, bb[1] - 120, bb[2] + 120, bb[3] + 120]);
+      M.blocks.push([bb[0] - 120, bb[1] - 120, bb[2] + 120, bb[3] + 120, "t:" + q.id]);
       M.n.things++; unit("t:" + q.id, "thing", { id: q.id, sid: q.sid, list: "below", k: "stair", state: "new", x: (bb[0] + bb[2]) / 2, y: (bb[1] + bb[3]) / 2, hx: (bb[2] - bb[0]) / 2, hy: (bb[3] - bb[1]) / 2, ch: rd.ch, st: g, dn: 1, gr: gr });
+    });
+    /* 歩いて階段を上る・下りる（Fable 699）：階段ごとの「歩く記録」（stw）と、タップする印（smark。行き先の階がある時だけ） */
+    M.fls = arr(rd.floors).map(function(f){ return { i: (f && f.i) | 0, name: String((f && f.name) || "") }; });
+    M.stw = []; M.smark = [];
+    M.units.forEach(function(u){
+      if (u.kind !== "thing" || !u.d || !u.d.st || u.d.k !== "stair") return;
+      var w = null; try { w = stairRec(u); } catch(e){ w = null; }
+      if (!w) return;
+      M.stw.push(w);
+      var to = (M.fi || 0) + (w.dn ? -1 : 1), fl = M.fls.filter(function(f){ return f.i === to; })[0]; if (!fl) return;
+      var g = w.dn ? w.gout : w.gin, D = [600, 450, 780, 330], k, x, y, r;   /* 印を置く所：門の先 600。置けない時は、近く・遠く・すぐ先 */
+      for (k = 0; k < D.length; k++){
+        x = Math.round(g.x + g.nx * D[k]); y = Math.round(g.y + g.ny * D[k]); r = roomAt(M, x, y);
+        if (r && okPt(M, x, y, 170)){ M.smark.push({ key: w.key, id: w.id, up: w.dn ? 0 : 1, x: x, y: y, room: r.id, lv: lvOf(M, x, y), yaw: Math.atan2(-g.nx, g.ny), label: (fl.name || ((to + 1) + "階")) + "へ" }); break; }
+      }
     });
     if (LV.length || M.doma) M.units.forEach(function(u){
       if (u.kind !== "room") return;
@@ -45793,6 +45818,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (u.d.ob || u.d.wl) u.sig = u.kind + JSON.stringify(u.d);
     });
     M.nodes = mkNodes(M);
+    M.smark.forEach(function(mk){ M.nodes.forEach(function(nd){ if (Math.hypot(nd.x - mk.x, nd.y - mk.y) < 400) nd.sm = 1; }); });   /* 階段の印と重なる足あとは、出さない（Fable 699） */
     return M;
   }
   /* 建具の種類。新しい図面（CAD-662）・今のアプリと同じ見分け方 */
@@ -46029,6 +46055,20 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.ClampToEdgeWrapping; t.anisotropy = 4; if ("colorSpace" in t) t.colorSpace = T.SRGBColorSpace;
     return t;
   }
+  function stairTex(up, label){   /* 階段の印（Fable 699）：白い丸に、階段の絵・矢印・「○階へ」。上が階段の方 */
+    var c = document.createElement("canvas"); c.width = c.height = 256; var g = c.getContext("2d"), rg, i;
+    rg = g.createRadialGradient(128, 128, 30, 128, 128, 126); rg.addColorStop(0, "rgba(255,255,255,.98)"); rg.addColorStop(.7, "rgba(255,255,255,.95)"); rg.addColorStop(.84, "rgba(255,255,255,.4)"); rg.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = rg; g.beginPath(); g.arc(128, 128, 126, 0, 6.2832); g.fill();
+    g.strokeStyle = "rgba(37,99,176,.95)"; g.lineWidth = 8; g.beginPath(); g.arc(128, 128, 98, 0, 6.2832); g.stroke();
+    g.strokeStyle = "#2563B0"; g.fillStyle = "#2563B0"; g.lineWidth = 9; g.lineJoin = "miter"; g.lineCap = "butt";
+    g.beginPath(); g.moveTo(70, 132); for (i = 0; i < 3; i++){ g.lineTo(70 + 26 * (i + 1), 132 - 22 * i); g.lineTo(70 + 26 * (i + 1), 132 - 22 * (i + 1)); } g.lineTo(172, 66); g.stroke();   /* 横から見た段 */
+    var ax = up ? 176 : 108, ay = up ? 104 : 62, bx = up ? 196 : 88, by = up ? 84 : 82, hx = up ? 1 : -1;   /* 矢印：上り＝右上へ、下り＝左下へ */
+    g.lineWidth = 8; g.beginPath(); g.moveTo(up ? 150 : 134, up ? 130 : 36); g.lineTo(bx, by); g.stroke();
+    g.beginPath(); g.moveTo(bx + hx * 8, by - hx * 8); g.lineTo(bx - hx * 20, by - hx * 6); g.lineTo(bx + hx * 6, by + hx * 20); g.closePath(); g.fill();
+    g.font = "bold 44px sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(String(label || "").slice(0, 5), 128, 176);
+    var t = new T.CanvasTexture(c); t.wrapS = t.wrapT = T.ClampToEdgeWrapping; t.anisotropy = 4; if ("colorSpace" in t) t.colorSpace = T.SRGBColorSpace;
+    return t;
+  }
   function mat(mk){
     if (MATS[mk]) return MATS[mk];
     var m, k;
@@ -46048,6 +46088,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       m = new T.MeshBasicMaterial({ color: 0xffe0ae, map: t2, transparent: true, opacity: POOLO, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     }
     else if (mk === "foot" || mk === "ring"){ m = new T.MeshBasicMaterial({ map: markTex(mk), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); m.toneMapped = false; }
+    else if (mk.indexOf("stm:") === 0){ m = new T.MeshBasicMaterial({ map: stairTex(mk.charAt(4) === "u", mk.slice(6)), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); m.toneMapped = false; }   /* 階段の印（Fable 699） */
     else if (mk === "mark3"){ m = new T.MeshBasicMaterial({ color: 0x2563b0, transparent: true, opacity: .42, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }); m.toneMapped = false; }   /* 触った所の印 */
     else if (mk === "dglass") m = new T.MeshStandardMaterial({ color: 0xf1f5f5, transparent: true, opacity: .6, roughness: .3, metalness: 0 });   /* 扉のガラス（型ガラス：向こうがぼんやり明るい） */
     else if (mk === "dgroove"){ m = new T.MeshBasicMaterial({ color: 0x1c1410, transparent: true, opacity: .3, depthWrite: false }); m.toneMapped = false; }   /* 扉の溝・ガラリの筋 */
@@ -46223,7 +46264,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } else if (o.ty !== "win"){
       f = 30; var exP2 = d.sp.some(function(g){ return g.m === "ext"; }), exM2 = d.sm.some(function(g){ return g.m === "ext"; });
       var fm = o.cat === "浴室ドア" ? "plate" : (o.ext && o.ty === "door") ? [exP2 ? "aluO" : "aluI", exM2 ? "aluO" : "aluI", "aluI", "aluI", "aluI", "aluI"] : o.col ? "wframe:" + o.col : "wframe";   /* 玄関の枠：外を向く面だけ濃い色、室内から見える面はシルバー（窓と同じ決まり） */
-      fbox(acc, fr, s0, s0 + f, -h - 8, h + 8, z0, z1, fm, tag); fbox(acc, fr, s1 - f, s1, -h - 8, h + 8, z0, z1, fm, tag); fbox(acc, fr, s0 + f, s1 - f, -h - 8, h + 8, z1 - f, z1, fm, tag);
+      var pj = (o.pb && (o.n === 1 || o.n === -1)) ? (o.pk > 0 ? 0 : 1) : -1;   /* 標準の片引き戸（Fable 698）：戸袋の側の縦枠（0＝s0 の側、1＝s1 の側）は、薄い壁の側の半分だけ */
+      fbox(acc, fr, s0, s0 + f, pj === 0 && o.n < 0 ? 0 : -h - 8, pj === 0 && o.n > 0 ? 0 : h + 8, z0, z1, fm, tag); fbox(acc, fr, s1 - f, s1, pj === 1 && o.n < 0 ? 0 : -h - 8, pj === 1 && o.n > 0 ? 0 : h + 8, z0, z1, fm, tag); fbox(acc, fr, s0 + f, s1 - f, -h - 8, h + 8, z1 - f, z1, fm, tag);
+      if (pj >= 0 && fin(o.p0) && fin(o.p1)){ var tA = o.n > 0 ? 0 : -h - 8, tB = o.n > 0 ? h + 8 : 0;   /* 戸が走る側の半分 */
+        fbox(acc, fr, pj === 0 ? o.p0 : o.p0 - f, pj === 0 ? o.p1 + f : o.p1, tA, tB, z1 - f, z1, fm, tag);                 /* 鴨居：戸袋の上まで通す */
+        fbox(acc, fr, pj === 0 ? o.p0 : o.p1 - f, pj === 0 ? o.p0 + f : o.p1, tA, tB, z0, z1 - f, fm, tag); }               /* 戸尻（戸袋の奥）の縦枠 */
       if (o.ty === "door" && o.cat !== "浴室ドア" && fin(o.n) && o.n){   /* 戸当り（Fable 691）：開き戸が閉まった時に当たる桟。開く向きの反対側に、枠から 12 出る */
         var ta = o.n > 0 ? -44 : 20, tb = o.n > 0 ? -20 : 44, fs = (typeof fm === "string") ? fm : "aluI";   /* 玄関の戸当りは室内側にあるので、シルバー */
         fbox(acc, fr, s0 + f, s0 + f + 12, ta, tb, z0, z1 - f, fs, tag); fbox(acc, fr, s1 - f - 12, s1 - f, ta, tb, z0, z1 - f, fs, tag); fbox(acc, fr, s0 + f + 12, s1 - f - 12, ta, tb, z1 - f - 12, z1 - f, fs, tag);
@@ -46268,16 +46313,27 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       fbox(acc, fr, s0, s1, -h, h, z0, z1, [null, null, endL ? "cloth" : null, endR ? "cloth" : null, top || null, bot ? "cap" : null], { k: "edge", wall: d.id });
     }
     /* 開口の左右の端で壁を縦に区切り、区切りごとに「開口でない高さ」だけ壁を立てる（上下に並ぶ窓もそのまま抜ける） */
-    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: fin(o.v0) ? o.v0 : o.z0, z1: fin(o.v1) ? o.v1 : o.z1, rp: o.rp, rm: o.rm, n: o.n, col: o.col, ext: o.ext }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
-    carve.forEach(function(o){ xs.push(o.s0, o.s1); });
+    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: fin(o.v0) ? o.v0 : o.z0, z1: fin(o.v1) ? o.v1 : o.z1, rp: o.rp, rm: o.rm, n: o.n, col: o.col, ext: o.ext, pk: o.pk, pb: o.pb, p0: o.p0, p1: o.p1 }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
+    var hv = carve.filter(function(o){ return o.pb && o.p1 - o.p0 > 1 && (o.n === 1 || o.n === -1); }).map(function(o){ return { id: o.id, half: 1, s0: o.p0, s1: o.p1, z0: o.z0, z1: o.z1, n: o.n }; }), all = carve.concat(hv);   /* hv＝標準の片引き戸の戸袋（Fable 698） */
+    function halfW(s0, s1, z0, z1, o){   /* 戸袋の薄い壁：走る面（n）の反対側の半分。外の面＝今までどおりの壁の面。奥の面（戸が走る側から見える面）＝走る側の部屋の仕上げで、触ると「走る面の壁」 */
+      if (!(s1 - s0 > .5) || !(z1 - z0 > .5)) return;
+      var nP = [-fr.uy, 0, fr.ux], nM = [fr.uy, 0, -fr.ux];
+      if (o.n > 0) side(d.sm, -h, nM, s0, s1, z0, z1, -1); else side(d.sp, h, nP, s0, s1, z0, z1, 1);
+      var sg = o.n > 0 ? d.sp : d.sm, tI = o.n * 3, at = s0;   /* 芯から 3mm だけ走る側：触った点がどちらの面かを、はっきりさせる */
+      function back(a, b, m, room){ if (b - a > .5) acc.quad(m, [fpt(fr, a, tI, z0), fpt(fr, b, tI, z0), fpt(fr, b, tI, z1), fpt(fr, a, tI, z1)], o.n > 0 ? nP : nM, [[a * K, z0 * K], [b * K, z0 * K], [b * K, z1 * K], [a * K, z1 * K]], { k: "face", wall: d.id, side: o.n > 0 ? 1 : -1, room: room, run: o.id }); }
+      for (var i = 0; i < sg.length; i++){ var g = sg[i], a = Math.max(at, g.s0), b = Math.min(s1, g.s1); if (!(b - a > .5)) continue; back(at, a, "cloth", null); back(a, b, g.m, g.room); at = b; }
+      back(at, s1, "cloth", null);
+    }
+    all.forEach(function(o){ xs.push(o.s0, o.s1); });
     xs = xs.filter(function(x){ return x >= sA - .01 && x <= sB + .01; }).sort(function(a, b){ return a - b; });
-    function open2(x, za, zb, right){ return carve.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
+    function open2(x, za, zb, right){ return all.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
     for (var i = 0; i < xs.length - 1; i++){
       var xa = xs[i], xb = xs[i + 1]; if (xb - xa < .5) continue;
-      var cov = carve.filter(function(o){ return o.s0 <= xa + .5 && o.s1 >= xb - .5; }).sort(function(p, q){ return p.z0 - q.z0; }), z = d.z0;
+      var cov = all.filter(function(o){ return o.s0 <= xa + .5 && o.s1 >= xb - .5; }).sort(function(p, q){ return p.z0 - q.z0; }), z = d.z0;
       for (var j = 0; j <= cov.length; j++){
         var o = cov[j] || null, zb = o ? o.z0 : d.top;
         if (zb - z > .5) piece(xa, xb, z, zb, xa <= sA + .5 || open2(xa, z, zb, false), xb >= sB - .5 || open2(xb, z, zb, true), (o || capT) ? "cap" : "cut", z > d.z0 + .5 ? true : capB);
+        if (o && o.half) halfW(xa, xb, Math.max(z, o.z0), o.z1, o);
         if (o) z = Math.max(z, o.z1);
       }
     }
@@ -46396,7 +46452,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var wp = Math.round(w * .7 / 5) * 5, dr = d.hs ? -1 : 1, hp = -dr * (w / 2 - F), mm = hp + dr * (wp - F), hc = dr * (w / 2 - F);
       put(G, function(acc){ leaf(acc, hp, mm - dr * 2, -20, 20, zb, zt); bx(acc, mm + dr * 2, hc, -20, 20, zb, zt, mk); bar(acc, mm - dr * 80); hinges(acc, hp); hinges(acc, hc); });
     } else if (d.pk){                          /* 片引き戸：戸袋（壁の中）へ引く。アウトセットは壁の面の外を走る */
-      var sl = d.pk > 0 ? -1 : 1, tcn = d.out ? n * (d.th / 2 + 26) : 0, Lf = sub(0), a0 = -sl * (w / 2 - F), a1 = sl * (w / 2 + 34);
+      var sl = d.pk > 0 ? -1 : 1, tcn = d.out ? n * (d.th / 2 + 26) : d.pb ? n * Math.max(d.th / 4, 18) : 0, Lf = sub(0), a0 = -sl * (w / 2 - F), a1 = sl * (w / 2 + 34);
       put(Lf, function(acc){ leaf(acc, a1, a0, tcn - 16, tcn + 16, zb, d.out ? d.z1 + 14 : zt); hikite(acc, a0 + sl * 62, tcn - 16, tcn + 16); });
       if (d.out) put(G, function(acc){ bx(acc, -sl * (w / 2), sl * (w * 1.5 + 30), tcn - 22, tcn + 22, d.z1 + 14, d.z1 + 60, "alu"); });
       parts.push({ k: "sl", o: Lf, dx: sl * (w - F - 96) });
@@ -46897,7 +46953,6 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var rooms = MODEL ? MODEL.rooms : [], sig = rooms.map(function(r){ return r.id + ":" + r.name; }).join("|");
     if (V.chipSig !== sig){
       V.chipSig = sig; V.chipCur = null; V.top.textContent = ""; V.chip = Object.create(null);
-      V.top.appendChild(el("span", "font-size:12px;color:var(--sub,#5B6673);flex:0 0 auto;white-space:nowrap;padding:0 4px", "試験中"));
       rooms.forEach(function(r, i){ var b = el("button", BTN, r.name || ("部屋" + (i + 1))); b.type = "button"; b.onclick = function(){ sheetShow(false); jumpRoom(r.id); }; V.top.appendChild(b); V.chip[r.id] = b; });
     }
     Object.keys(V.chip).forEach(function(id){ var on = id === fpRoom, b = V.chip[id]; b.style.borderColor = on ? "var(--ai,#2563B0)" : "var(--line,#DCE3EB)"; b.style.color = on ? "var(--ai,#2563B0)" : "var(--ink,#18202A)"; });
@@ -47009,7 +47064,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function place(){
     if (!fp) return;
-    var lt = MODEL ? lvOf(MODEL, fp.x / K, fp.z / K) : 0, tn = performance.now(), ld = Math.min(.1, (tn - LVT) / 1000); LVT = tn;   /* 目の高さを、足もとの床の高さに合わせる（CAD-687）。歩いている間は、なめらかに */
+    var lt = MODEL ? eyeLv(fp.x / K, fp.z / K) : 0, tn = performance.now(), ld = Math.min(.1, (tn - LVT) / 1000); LVT = tn;   /* 目の高さを、足もとの床の高さに合わせる（CAD-687）。歩いている間は、なめらかに */
     if (!isMoving || Math.abs(lt - LVY) < 1.5) LVY = lt; else { LVY += (lt - LVY) * Math.min(1, ld * 9); ask(); }
     var ps = pose(), i;
     if (POSE){ var t = POSE.t < 0 ? 0 : POSE.t > 1 ? 1 : POSE.t, e = t * t * (3 - 2 * t), a = POSE.a, o = { p: [], q: [], fov: a.fov + (ps.fov - a.fov) * e }; for (i = 0; i < 3; i++){ o.p[i] = a.p[i] + (ps.p[i] - a.p[i]) * e; o.q[i] = a.q[i] + (ps.q[i] - a.q[i]) * e; } ps = o; }
@@ -47097,10 +47152,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var o = ray.ray.origin, d = ray.ray.direction, t = -1, x, y, best = -1, bd = 1e9, tl = Object.create(null);
     if (SHOWF && d.y < -1e-4){   /* 床が見えている点：近くの足あとへ（手前に壁や物がある時は拾わない）。足あとの床の高さごとに、指の先の床の点を出す（CAD-687） */
       NODES.forEach(function(nd, k){
+        if (nd.sm && VIEW === "eye") return;   /* 階段の印と重なる足あとは、印の方を拾う（Fable 699） */
         var L = nd.lv || 0, tq = tl[L]; if (tq === undefined) tq = tl[L] = (L * K + .009 - o.y) / d.y;
         if (!(tq > 0) || tq > (hit ? hit.distance : Infinity) + .04) return;
         var dd = Math.hypot(nd.x - (o.x + d.x * tq) / K, nd.y - (o.z + d.z * tq) / K); if (dd < bd){ bd = dd; best = k; t = tq; }
       });
+      var bs = -1;
+      if (VIEW === "eye") (MODEL.smark || []).forEach(function(mk, k){   /* 階段の印（Fable 699） */
+        var L = mk.lv || 0, tq = tl[L]; if (tq === undefined) tq = tl[L] = (L * K + .009 - o.y) / d.y;
+        if (!(tq > 0) || tq > (hit ? hit.distance : Infinity) + .04) return;
+        var dd = Math.hypot(mk.x - (o.x + d.x * tq) / K, mk.y - (o.z + d.z * tq) / K); if (dd < bd){ bd = dd; bs = k; best = -1; t = tq; }
+      });
+      if (bs >= 0 && bd <= clamp(t / K * .17, 340, 640)){ if (stairWalk(MODEL.smark[bs])) return; }
       if (best >= 0 && bd <= (VIEW === "top" ? 700 : clamp(t / K * .17, 340, 640))){ walkTo(best); return; }   /* 遠い足あとは、少し広めに拾う */
     }
     if (TOUCH){ touchTap(cx, cy); return; }   /* 足あとの外をタップ（RITTAI.touch の walk つき）：触った場所を知らせる */
@@ -47196,16 +47259,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function stepWalk(dt){
     var w = TW; w.t = Math.min(1, w.t + dt / w.dur);
-    var e = w.t < .5 ? 2 * w.t * w.t : 1 - 2 * (1 - w.t) * (1 - w.t), s = e * w.L, p = along(w, s);   /* ゆっくり出て、ゆっくり止まる */
+    var e = w.st ? (w.t < .12 ? w.t * w.t / .2112 : w.t > .88 ? 1 - (1 - w.t) * (1 - w.t) / .2112 : (w.t - .06) / .88) : (w.t < .5 ? 2 * w.t * w.t : 1 - 2 * (1 - w.t) * (1 - w.t)), s = e * w.L, p = along(w, s);   /* ゆっくり出て、ゆっくり止まる（階段は、途中を同じ速さで） */
     fp.x = p[0] * K; fp.z = p[1] * K;
+    if (w.st){ w.sNow = s; stairTrack(w, p[0], p[1]); if (TW !== w) return; s = w.sNow; }
     if (!w.free){   /* 向き：道すじの80cm先を見る（細かい折れ曲がりで首を振らない）。着く手前では、向きを保つか、ドアを向く */
       var ty = fp.yaw, rest = w.L - s, q;
       if (w.yaw1 !== null && rest < 900) ty = w.yaw1;
       else if (rest > 260){ q = along(w, Math.min(w.L, s + 800)); if (Math.hypot(q[0] - p[0], q[1] - p[1]) > 40) ty = Math.atan2(q[0] - p[0], -(q[1] - p[1])); }
       var dy = ((ty - fp.yaw) % 6.283185 + 9.424778) % 6.283185 - 3.141593;
-      fp.yaw += dy * (1 - Math.pow(.0008, dt)); fp.p += (-.1 - fp.p) * (1 - Math.pow(.03, dt));
+      fp.yaw += dy * (1 - Math.pow(.0008, dt)); fp.p += ((w.st && ONST ? (w.st.up ? -.26 : -.42) : -.1) - fp.p) * (1 - Math.pow(.03, dt));   /* 階段の上では、足もとの段を見る */
     }
-    if (w.t >= 1){ TW = null; ringHide(); arrive(w.node); }
+    if (w.t >= 1 || (w.end && s >= w.end)){ TW = null; ringHide(); arrive(w.node); }
   }
   /* 壁と設備から離す（すべって進む）。壁の端＝ドアの枠の所は少し甘くして、通りやすくする */
   function push(x, y){
@@ -47218,16 +47282,174 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       }
       for (i = 0; i < M.blocks.length; i++){
         var b = M.blocks[i], pad = RW - 120; if (!(x > b[0] - pad && x < b[2] + pad && y > b[1] - pad && y < b[3] + pad)) continue;
+        if (b[4] && gateOpen(M, b[4], x, y)) continue;   /* 階段の門の前（Fable 699） */
         var dl = x - (b[0] - pad), dr = (b[2] + pad) - x, du = y - (b[1] - pad), dd = (b[3] + pad) - y, m = Math.min(dl, dr, du, dd);
         if (m === dl) x = b[0] - pad; else if (m === dr) x = b[2] + pad; else if (m === du) y = b[1] - pad; else y = b[3] + pad;
       }
     }
     return [x, y];
   }
+  /* ===== 歩いて階段を上る・下りる（Fable 699）=====
+     歩く記録（M.stw）：tr＝段の形（下から順）、R＝蹴上げ、kh＝階の高さ、off＝段の高さの土台（下りていく段は −kh）、seg＝横の辺（当たりの線）と廻りの角、
+     gin＝1段目の入口の辺、gout＝最上段の出口の辺（どちらも nx・ny は段の外向き）、iU＝上りで階を替える段、iD＝下りで階を替える段。
+     ONST＝階段の上にいる印 { s: 歩く記録, i: 段（0＝一番下）, M: その時の家 }。目の高さは、その段の高さ。
+     スティック：門（上る階段＝1段目の入口、下りる階段＝最上段の出口）から入る。横へは出られない。足あと・道すじ・当たりの決まりは今までどおり（階段は通らない）。
+     階の切り替え：上り＝目が上の階の床より 250 上に出る段で上の階へ。下り＝その2段下で下の階へ。アプリの「階を替える」（window.flSwitch）を呼ぶ。場所と向きはそのまま */
+  function stairRec(u){
+    var st = u.d.st, n = st.tr.length, dn = u.d.dn ? 1 : 0, seg = [], cen = [], pv = Object.create(null), P, ex, m, i, k;
+    if (!(n > 0) || !(st.kh > 0)) return null;
+    for (i = 0; i < n; i++){
+      ex = st.tr[i][0]; P = st.tr[i].slice(1); m = P.length; var gx = 0, gy = 0;
+      for (k = 0; k < m; k++){ gx += P[k][0] / m; gy += P[k][1] / m; }
+      cen.push([gx, gy]);
+      for (k = 1; k < m; k++){ if (k === ex) continue; var a = P[k], b = P[(k + 1) % m]; seg.push([a[0], a[1], b[0], b[1], 60]); }   /* 入口の辺（0）と出口の辺（ex）のほかは、横の辺 */
+      if (ex === m - 1 && m >= 3){ var pk = P[0][0] + "," + P[0][1]; if (!pv[pk]){ pv[pk] = 1; seg.push([P[0][0], P[0][1], P[0][0], P[0][1], 0]); } }   /* 廻りの角（段の幅が 0 になる所）には寄らない */
+    }
+    var gate = function(a, b, c){ var L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, tx = (b[0] - a[0]) / L, ty = (b[1] - a[1]) / L, nx = ty, ny = -tx, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2; if ((mx - c[0]) * nx + (my - c[1]) * ny < 0){ nx = -nx; ny = -ny; } return { x: mx, y: my, tx: tx, ty: ty, nx: nx, ny: ny, half: L / 2 }; };
+    var f = st.tr[0].slice(1), l = st.tr[n - 1].slice(1), ex2 = st.tr[n - 1][0], R = st.kh / (n + 1), iU = n - 1;
+    for (i = 0; i < n; i++) if ((i + 1) * R + EYE >= st.kh + 250){ iU = i; break; }
+    iU = Math.max(Math.min(1, n - 1), Math.min(n - 1, iU));
+    return { id: u.d.sid || u.d.id, key: u.key, dn: dn, tr: st.tr.map(function(q){ return q.slice(1); }), n: n, R: R, kh: st.kh, off: dn ? -st.kh : 0, seg: seg, cen: cen, gin: gate(f[0], f[1], cen[0]), gout: gate(l[ex2], l[(ex2 + 1) % l.length], cen[n - 1]), iU: iU, iD: Math.max(0, iU - 2), bb: st.bb };
+  }
+  function recOf(M, key){ var a = (M && M.stw) || [], i; for (i = 0; i < a.length; i++) if (a[i].key === key) return a[i]; return null; }
+  function gateAt(g, x, y){ return [(x - g.x) * g.nx + (y - g.y) * g.ny, (x - g.x) * g.tx + (y - g.y) * g.ty]; }   /* [門の外へ出た長さ, 門の真ん中からの横ずれ] */
+  function gateOpen(M, key, x, y){ var s = recOf(M, key); if (!s) return false; var g = s.dn ? s.gout : s.gin, q = gateAt(g, x, y); return q[0] > -90 && q[0] < 470 && Math.abs(q[1]) <= Math.max(70, g.half - 250); }
+  function treadAt(s, x, y, i0){   /* その点がどの段の上か（近い段から探す）。無ければ −1 */
+    var n = s.n, k, i;
+    if (x < s.bb[0] - 1 || x > s.bb[2] + 1 || y < s.bb[1] - 1 || y > s.bb[3] + 1) return -1;
+    i0 = fin(i0) ? clamp(Math.round(i0), 0, n - 1) : 0;
+    for (k = 0; k < n; k++){ i = i0 + k; if (i < n && inPoly(x, y, s.tr[i])) return i; if (k){ i = i0 - k; if (i >= 0 && inPoly(x, y, s.tr[i])) return i; } }
+    return -1;
+  }
+  function segPush(x, y, sg){   /* 段の横の辺から離す（壁と同じ決まり：面から 250。辺の端の先は 120） */
+    var RW = 250, it, i;
+    for (it = 0; it < 3; it++) for (i = 0; i < sg.length; i++){
+      var s = sg[i], ex = s[2] - s[0], ey = s[3] - s[1], L2 = ex * ex + ey * ey, tt = L2 > 0 ? ((x - s[0]) * ex + (y - s[1]) * ey) / L2 : 0, tc = clamp(tt, 0, 1), px = s[0] + ex * tc, py = s[1] + ey * tc, d = Math.hypot(x - px, y - py), nd = s[4] + ((L2 > 0 && (tt < 0 || tt > 1)) ? 120 : RW);
+      if (d >= nd) continue;
+      if (d < .01){ if (L2 > 0){ var Ln = Math.sqrt(L2); x += -ey / Ln * nd; y += ex / Ln * nd; } else x += nd; } else { x = px + (x - px) / d * nd; y = py + (y - py) / d * nd; }
+    }
+    return [x, y];
+  }
+  function stairEnter(x, y){   /* 門から入ったか：上る階段＝1段目、下りる階段＝最上段 */
+    var a = (MODEL && MODEL.stw) || [], i, s, j;
+    for (i = 0; i < a.length; i++){ s = a[i]; j = s.dn ? s.n - 1 : 0; if (x > s.bb[0] && x < s.bb[2] && y > s.bb[1] && y < s.bb[3] && inPoly(x, y, s.tr[j])) return { s: s, i: j, M: MODEL }; }
+    return null;
+  }
+  function stairKeep(x, y){   /* 階段の上にいる印を、今の家・今の場所に合わせ直す（家が読み直された時・別の所へ移った時は外す） */
+    if (!ONST) return;
+    var s = ONST.s, j, k, Q = [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]];
+    if (ONST.M !== MODEL){ var r = s.carried ? s : recOf(MODEL, s.key); if (!r){ ONST = null; return; } s = r; ONST = { s: r, i: Math.min(ONST.i, r.n - 1), M: MODEL, sw: ONST.sw }; }
+    for (k = 0, j = -1; k < Q.length && j < 0; k++) j = treadAt(s, x + Q[k][0], y + Q[k][1], ONST.i);
+    if (j < 0){ ONST = null; return; }
+    ONST.i = j;
+  }
+  function eyeLv(x, y){   /* 足もとの高さ（目の高さの土台）。階段の上にいる間は、その段の高さ */
+    if (ONST && ONST.M === MODEL && VIEW === "eye"){ var s = ONST.s; if (x > s.bb[0] - 40 && x < s.bb[2] + 40 && y > s.bb[1] - 40 && y < s.bb[3] + 40) return (ONST.i + 1) * s.R + s.off; }
+    return lvOf(MODEL, x, y);
+  }
+  function floorGo(to){   /* 階を替えて、その階の家を読み直す。できたら true */
+    var ok = false, r = null, from = MODEL ? MODEL.fi || 0 : 0;
+    var sw = function(i){ try { if (typeof FLFN === "function") return FLFN(i) !== false; if (typeof window.flSwitch === "function"){ window.flSwitch(i); return true; } } catch(e){ warn("階を替えられませんでした", e); } return false; };
+    if (!sw(to)) return false;
+    clearTimeout(tmSync);
+    try { r = sync(); } catch(e){ warn("階を替えた後の読み直しで、うまくいきませんでした", e); r = null; }
+    if (!r || !r.ok || r.empty || !MODEL || (MODEL.fi || 0) !== to){   /* 行った先の階が読めない・空：元の階へ戻す */
+      try { if (sw(from)){ clearTimeout(tmSync); r = sync(); if (r && r.ok && !r.empty && MODEL && fp) afterSync(); } } catch(e){ warn("元の階へ戻せませんでした", e); }
+      return false;
+    }
+    fpPid = MODEL.pid; var rm = roomOfFp(); if (rm) fpRoom = rm;
+    try { labels(); chips(); footBuild(); doorsAim(); mapDraw(); } catch(e){ warn("階を替えた後の画面の直し", e); }
+    try { window.dispatchEvent(new CustomEvent("rittai-floor", { detail: { fi: to, why: "stairs" } })); } catch(e){}
+    return true;
+  }
+  function stairFloor(){   /* 決めた段まで来たら、階を替える。替えたら true */
+    if (!ONST || !MODEL) return false;
+    var s = ONST.s, fi = MODEL.fi || 0, up = !s.dn, to = (up && ONST.i >= s.iU) ? fi + 1 : (!up && ONST.i <= s.iD) ? fi - 1 : -1, k;
+    if (to < 0 || s.stay) return false;
+    var fl = (MODEL.fls || []).filter(function(f){ return f.i === to; })[0];
+    if (!fl){ s.stay = 1; return false; }
+    var i0 = ONST.i, lv0 = LVY;
+    if (!floorGo(to)){ s.stay = 1; if (ONST && ONST.M !== MODEL) stairKeep(fp.x / K, fp.z / K); return false; }
+    var a = MODEL.stw || [], r2 = null;
+    for (k = 0; k < a.length && !r2; k++) if (!!a[k].dn === up && a[k].id === s.id) r2 = a[k];
+    for (k = 0; k < a.length && !r2; k++) if (!!a[k].dn === up && a[k].n === s.n && Math.abs(a[k].bb[0] - s.bb[0]) < 2 && Math.abs(a[k].bb[1] - s.bb[1]) < 2 && Math.abs(a[k].bb[2] - s.bb[2]) < 2 && Math.abs(a[k].bb[3] - s.bb[3]) < 2) r2 = a[k];
+    if (!r2){ r2 = {}; Object.keys(s).forEach(function(q){ r2[q] = s[q]; }); r2.dn = up ? 1 : 0; r2.off = up ? -s.kh : 0; r2.key = null; r2.carried = 1; r2.stay = 0; }   /* 新しい階に同じ階段の記録が無い時：段の形を持ち越して、そのまま歩き切る */
+    ONST = { s: r2, i: Math.min(i0, r2.n - 1), M: MODEL, sw: 1 };
+    LVY = lv0 + (up ? -s.kh : s.kh);   /* 目の高さを、新しい階の床からの高さに読み替える（見た目の高さは変わらない） */
+    say((fl.name || ((to + 1) + "階")) + (up ? "へ上がります" : "へ下ります"), 1800);
+    return true;
+  }
+  function stairStep(x0, y0, cx, cy){   /* 階段の上での一歩：横の辺から離し、段の上にいる間は進める。出口は門だけ。進めない時は null */
+    var s = ONST.s, p = segPush(cx, cy, s.seg), j = treadAt(s, p[0], p[1], ONST.i), mx = cx - x0, my = cy - y0, ml = Math.hypot(mx, my) || 1, q, g;
+    if (j < 0){ q = [p[0] + mx / ml * 2, p[1] + my / ml * 2]; j = treadAt(s, q[0], q[1], ONST.i); if (j >= 0) p = q; }
+    if (j < 0){ q = [p[0] - mx / ml * 2, p[1] - my / ml * 2]; j = treadAt(s, q[0], q[1], ONST.i); if (j >= 0) p = q; }
+    if (j >= 0){ if (j !== ONST.i){ ONST.i = j; stairFloor(); } return p; }
+    g = gateAt(s.gout, p[0], p[1]);
+    if (ONST.i >= s.n - 1 && g[0] > -3 && g[0] < 260 && Math.abs(g[1]) <= s.gout.half){   /* 最上段の出口の辺を越えた */
+      if (s.dn){ ONST = null; posSave(); return p; }   /* 上の階の床へ出る */
+      var t = performance.now(); if (t - STSAY > 4000){ STSAY = t; say("ここから上へは行けません（上の階がまだありません）。", 2800); }
+      return null;
+    }
+    g = gateAt(s.gin, p[0], p[1]);
+    if (ONST.i <= 0 && g[0] > -3 && g[0] < 260 && Math.abs(g[1]) <= s.gin.half){   /* 1段目の入口の辺を越えた */
+      if (!s.dn){ ONST = null; posSave(); return p; }   /* 下の階の床へ下りる */
+      return null;
+    }
+    return null;
+  }
+  function stairTrack(w, x, y){   /* 印をタップして階段を歩いている間：今いる段を追い、決めた段で階を替える */
+    var s = w.st.s, on = !!(ONST && ONST.s === s && ONST.M === MODEL), j = treadAt(s, x, y, on ? ONST.i : (w.st.up ? 0 : s.n - 1));
+    if (j < 0){ if (on) ONST = null; return; }
+    if (on && ONST.i === j) return;
+    ONST = { s: s, i: j, M: MODEL, sw: on ? ONST.sw : 0 };
+    if (stairFloor()){ w.st.s = ONST.s; stairTail(w); }
+  }
+  function stairStand(M, gx, gy, nx, ny){   /* 門の先で立つ所（壁から 300 離れた所。無ければ 200）と向き（前が 1.3m 空いていれば null＝進む向きのまま、詰まっていれば広い方） */
+    var D = [600, 500, 400, 300, 220], k, x = 0, y = 0, r = null;
+    for (k = 0; k < D.length && !r; k++){ x = gx + nx * D[k]; y = gy + ny * D[k]; r = roomAt(M, x, y); if (!(r && okPt(M, x, y, k < 3 ? 300 : 200))) r = null; }
+    if (!r) return null;
+    return { x: x, y: y, yaw: okSeg(M, x, y, x + nx * 1300, y + ny * 1300, 150) ? null : wideYaw(x, y, r) };
+  }
+  function stairTail(w){   /* 階を替えた後：終点を、新しい階で立てる所に直す。前が壁で詰まる時は、着く手前から広い方を向く（速さはそのまま） */
+    var s = w.st.s, g = w.st.up ? s.gout : s.gin, n = w.pts.length, k, L0 = w.L, L = 0, cum = [0], q = stairStand(MODEL, g.x, g.y, g.nx, g.ny);
+    if (n < 3) return;
+    if (q) w.pts[n - 1] = [q.x, q.y]; else { w.pts.pop(); n--; }
+    for (k = 1; k < n; k++){ L += Math.hypot(w.pts[k][0] - w.pts[k - 1][0], w.pts[k][1] - w.pts[k - 1][1]); cum.push(L); }
+    if (!(L > 30) || !(L0 > 30)) return;
+    var u = clamp((w.sNow || 0) / L, 0, 1);
+    w.cum = cum; w.L = L; w.dur = w.dur * L / L0; w.t = u < .06818 ? Math.sqrt(.2112 * u) : u > .93182 ? 1 - Math.sqrt(.2112 * (1 - u)) : .06 + .88 * u;   /* 今いる所は変えずに、道の長さだけ替える */
+    if (q && q.yaw !== null) w.yaw1 = q.yaw;
+  }
+  function stairWalk(mk){   /* 階段の印をタップ：印まで道すじで歩き、段の真ん中を通って上り（下り）切る */
+    if (!fp || !MODEL || POSE || !mk || VIEW !== "eye") return false;
+    var s = recOf(MODEL, mk.key); if (!s) return false;
+    sheetShow(false);
+    var up = !s.dn, g0 = up ? s.gin : s.gout, g1 = up ? s.gout : s.gin, x0 = fp.x / K, y0 = fp.z / K, pts = null, i, cum = [0], L = 0, k;
+    stairKeep(x0, y0);
+    if (ONST && ONST.s === s){ pts = [[x0, y0]]; for (i = ONST.i + (up ? 1 : -1); i >= 0 && i < s.n; i += up ? 1 : -1) pts.push(s.cen[i]); }   /* もう階段の上にいる時：今の段から続ける */
+    else {
+      ONST = null; pts = routeXY(x0, y0, mk.x, mk.y);
+      if (!pts || !pts.length){ fp.x = mk.x * K; fp.z = mk.y * K; pts = [[mk.x, mk.y]]; } else pts = pts.slice();   /* 道すじが無い時は、印の所から */
+      pts.push([g0.x + g0.nx * 30, g0.y + g0.ny * 30]);
+      for (i = up ? 0 : s.n - 1; i >= 0 && i < s.n; i += up ? 1 : -1) pts.push(s.cen[i]);
+    }
+    pts.push([g1.x + g1.nx * 160, g1.y + g1.ny * 160]); pts.push([g1.x + g1.nx * 600, g1.y + g1.ny * 600]);
+    for (k = 1; k < pts.length; k++){ L += Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]); cum.push(L); }
+    if (L < 30) return false;
+    TW = { pts: pts, cum: cum, L: L, t: 0, dur: clamp(L / 1250 + .5, 1.2, 16), yaw1: null, free: false, node: -1, st: { s: s, up: up ? 1 : 0 }, end: 0 };
+    ringHide(); kick();
+    return true;
+  }
   function tryMove(dx, dy){
     if (!fp || !MODEL) return;
-    var x = fp.x / K, y = fp.z / K, n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 60)), i, p;
-    for (i = 0; i < n; i++){ p = push(x + dx / n, y + dy / n); x = p[0]; y = p[1]; }
+    var x = fp.x / K, y = fp.z / K, n, i, p, e;
+    stairKeep(x, y);
+    if (ONST){ dx *= .62; dy *= .62; }   /* 階段の上は、ゆっくり（Fable 699） */
+    n = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 60));
+    for (i = 0; i < n; i++){
+      if (ONST){ p = stairStep(x, y, x + dx / n, y + dy / n); if (!p) break; x = p[0]; y = p[1]; }
+      else { p = push(x + dx / n, y + dy / n); x = p[0]; y = p[1]; e = stairEnter(x, y); if (e){ ONST = e; stairFloor(); } }
+    }
     fp.x = x * K; fp.z = y * K;
   }
   /* 動いている間だけ回す（止まっている間は描かない） */
@@ -47309,13 +47531,18 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function footBuild(){
     if (!scene) return;
     if (footObj){ scene.remove(footObj); footObj.traverse(function(o){ if (o.geometry) try { o.geometry.dispose(); } catch(e){} }); footObj = null; }
-    if (!SHOWF || (TOUCH && !TWALK) || !MODEL || !NODES.length || !fp) return;   /* 置く物を持っている間は、足あとを出さない（タップ＝置く、と分かるように） */
+    if (!SHOWF || (TOUCH && !TWALK) || !MODEL || (!NODES.length && !(MODEL.smark && MODEL.smark.length)) || !fp) return;   /* 置く物を持っている間は、足あとを出さない（タップ＝置く、と分かるように） */
     var acc = new Acc(), S = 245, hx = fp.x / K, hy = fp.z / K;
     NODES.forEach(function(nd, i){
-      if (VIEW === "eye" && Math.hypot(nd.x - hx, nd.y - hy) < 430) return;   /* いま立っている所の足あとは出さない */
+      if (VIEW === "eye" && (nd.sm || Math.hypot(nd.x - hx, nd.y - hy) < 430)) return;   /* いま立っている所の足あとは出さない（階段の印と重なる足あとも） */
       var yw = (nd.yaw !== null && nd.kind === "d") ? nd.yaw : Math.atan2(nd.x - hx, -(nd.y - hy)), fx = Math.sin(yw), fy = -Math.cos(yw), rx = -fy, ry = fx;
       var P = function(a, b){ return [(nd.x + (rx * a + fx * b) * S) * K, (nd.lv || 0) * K + .009, (nd.y + (ry * a + fy * b) * S) * K]; };
       acc.quad("foot", [P(-1, -1), P(1, -1), P(1, 1), P(-1, 1)], [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], { k: "foot", i: i });
+    });
+    if (VIEW === "eye") (MODEL.smark || []).forEach(function(mk, i){   /* 階段の印（Fable 699）：上が階段の方 */
+      var fx = Math.sin(mk.yaw), fy = -Math.cos(mk.yaw), rx = -fy, ry = fx, S2 = 300;
+      var P = function(a, b){ return [(mk.x + (rx * a + fx * b) * S2) * K, (mk.lv || 0) * K + .0095, (mk.y + (ry * a + fy * b) * S2) * K]; };
+      acc.quad("stm:" + (mk.up ? "u" : "d") + ":" + mk.label, [P(-1, -1), P(1, -1), P(1, 1), P(-1, 1)], [0, 1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], { k: "foot", s: i });
     });
     footObj = acc.mesh(); if (footObj){ footObj.children.forEach(function(m){ m.renderOrder = 3; }); scene.add(footObj); }
   }
@@ -47635,7 +47862,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (VIEW === "top"){ if (MODEL) topFit(); ceilShow(false); }
     if (!MODEL){ footBuild(); mapDraw(); joyShow(); }
   }
-  function afterSync(){ var here = (fp && MODEL && fpPid === MODEL.pid) ? roomOfFp() : null; if (here) fpRoom = here; else stand(fpRoom); labels(); arrive(-1); }
+  function afterSync(){ if (fp && MODEL) stairKeep(fp.x / K, fp.z / K); var here = (fp && MODEL && fpPid === MODEL.pid) ? roomOfFp() : null; if (here) fpRoom = here; else if (!ONST) stand(fpRoom); labels(); arrive(-1); }
   var WHY = { "no-mado": "準備ができていません（窓口がありません）。", "no-nafuda": "準備ができていません（名札がありません）。", "no-data": "家のデータがまだありません。" };
   function open(opt){
     opt = opt || {};
@@ -47672,7 +47899,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     posSave(true); V.open = false; V.box.style.display = "none"; V.sheet.style.display = "none";
     touchEnd("close"); watchSay("close");
     if (raf){ cancelAnimationFrame(raf); raf = 0; } if (LOOP){ cancelAnimationFrame(LOOP); LOOP = 0; }
-    need = false; isMoving = false; LOOPACT = false; NPTR = 0; TW = null; ringHide();
+    need = false; isMoving = false; LOOPACT = false; NPTR = 0; TW = null; ONST = null; ringHide();
     if (POSE){ var dn = POSE.done; POSE = null; if (dn) try { dn(); } catch(e){} }
     if (VIEW !== "eye"){ VIEW = "eye"; ceilShow(true); }
     [JL, JR].forEach(function(j){ if (j){ j.id = null; j.x = j.y = 0; } });
@@ -47740,7 +47967,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (!mm) return;
       if (nt && nt.textContent !== NOTE_ON){ if (noteOrg === null) noteOrg = nt.textContent; nt.textContent = NOTE_ON; }
       if (b) return;
-      b = document.createElement("button"); b.type = "button"; b.id = "rittaiMenu"; b.textContent = "新しい立体を見る（歩ける・試験中）";
+      b = document.createElement("button"); b.type = "button"; b.id = "rittaiMenu"; b.textContent = "新しい立体を見る（歩ける）";
       b.onclick = function(){ open(); };
       if (nt && nt.parentNode === mm) mm.insertBefore(b, nt.nextSibling); else mm.appendChild(b);
     } catch(e){}
@@ -47753,7 +47980,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   });
   window.addEventListener("resize", function(){ if (V && V.open && R){ resize(); ask(); } });
   setInterval(menu, 1500); menu();
-  function here(){ return fp ? { x: Math.round(fp.x / K), y: Math.round(fp.z / K), room: fpRoom, yaw: fp.yaw * 180 / Math.PI, node: hereNode, view: VIEW, lv: MODEL ? lvOf(MODEL, fp.x / K, fp.z / K) : 0, eye: Math.round(fp.y / K + LVY) } : null; }
+  function here(){ return fp ? { x: Math.round(fp.x / K), y: Math.round(fp.z / K), room: fpRoom, yaw: fp.yaw * 180 / Math.PI, node: hereNode, view: VIEW, lv: MODEL ? lvOf(MODEL, fp.x / K, fp.z / K) : 0, eye: Math.round(fp.y / K + LVY), fi: MODEL ? MODEL.fi || 0 : 0, stair: (ONST && MODEL && ONST.M === MODEL) ? { id: ONST.s.id, i: ONST.i, n: ONST.s.n, dn: ONST.s.dn ? 1 : 0 } : null } : null; }   /* fi＝見ている階、stair＝階段の上にいる時の段（Fable 699） */
 
   window.RITTAI = {
     v: VER, stage: STAGE,
@@ -47764,7 +47991,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     quality: function(q){ return q ? setQual(q, true) : QUAL; },
     rooms: function(){ return MODEL ? MODEL.rooms.map(function(r){ return { id: r.id, name: r.name, fk: r.fk, fr: r.fr || 0 }; }) : []; },   /* fr＝板の向き（1＝南北に流す・0＝東西。Fable 693） */
     stand: function(id){ if (!MODEL) return null; jumpRoom(id); renderNow(); return fp ? { x: fp.x / K, y: fp.z / K, room: fpRoom } : null; },
-    cam: function(o){ if (!fp) return null; o = o || {}; if (fin(o.x)) fp.x = o.x * K; if (fin(o.y)) fp.z = o.y * K; if (fin(o.h)) fp.y = o.h * K; if (fin(o.yaw)) fp.yaw = o.yaw * Math.PI / 180; if (fin(o.pitch)) fp.p = o.pitch * Math.PI / 180; if (fin(o.fov)){ fp.fov = o.fov; fovUser = true; FOVT = o.fov; } if (fin(o.x) || fin(o.y)){ onMove(); kick(); } renderNow(); return { x: fp.x / K, y: fp.z / K, h: fp.y / K, yaw: fp.yaw * 180 / Math.PI, pitch: fp.p * 180 / Math.PI, fov: fp.fov }; },
+    cam: function(o){ if (!fp) return null; o = o || {}; if (fin(o.x)) fp.x = o.x * K; if (fin(o.y)) fp.z = o.y * K; if (fin(o.h)) fp.y = o.h * K; if (fin(o.yaw)) fp.yaw = o.yaw * Math.PI / 180; if (fin(o.pitch)) fp.p = o.pitch * Math.PI / 180; if (fin(o.fov)){ fp.fov = o.fov; fovUser = true; FOVT = o.fov; } if (fin(o.x) || fin(o.y)){ ONST = null; if (TW && TW.st){ TW = null; ringHide(); } onMove(); kick(); } renderNow(); return { x: fp.x / K, y: fp.z / K, h: fp.y / K, yaw: fp.yaw * 180 / Math.PI, pitch: fp.p * 180 / Math.PI, fov: fp.fov }; },
     ghost: function(on){ if (!T) return null; var g = mat("ghost"); if (typeof on === "boolean"){ g.visible = on; labels(); renderNow(); } return g.visible; },
     /* 段階4（歩く）で足した入口 */
     here: here,
@@ -47778,12 +48005,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         var nrm = function(a, b, P){ var gx = 0, gy = 0, L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = (b[1] - a[1]) / L, ny = -(b[0] - a[0]) / L; P.forEach(function(p){ gx += p[0] / P.length; gy += p[1] / P.length; }); if (((a[0] + b[0]) / 2 - gx) * nx + ((a[1] + b[1]) / 2 - gy) * ny < 0){ nx = -nx; ny = -ny; } return [nx, ny]; };   /* その辺の、段の外への向き */
         var n0 = nrm(f[0], f[1], f), e0 = lp[ex], e1 = lp[(ex + 1) % lp.length], n1 = nrm(e0, e1, lp);
         return { id: u.d.sid || u.d.id, key: u.key, below: u.d.dn ? 1 : 0, kh: st.kh, hand: (u.d.hr || []).map(function(h){ return h.slice(0, 4); }), guard: (u.d.gr || []).map(function(g){ return g.slice(); }),   /* hand＝階段の手すりの線、guard＝落下防止の手すりの線（検査用） */
+          mark: (function(){ var m = (MODEL.smark || []).filter(function(q){ return q.key === u.key; })[0]; return m ? { x: m.x, y: m.y, up: m.up, label: m.label } : null; })(),   /* mark＝タップする印（Fable 699。行き先の階が無い時は null） */
           foot: { x: Math.round((f[0][0] + f[1][0]) / 2 + n0[0] * 600), y: Math.round((f[0][1] + f[1][1]) / 2 + n0[1] * 600), yaw: yawOf(-n0[0], -n0[1]) },
-          top: { x: Math.round((e0[0] + e1[0]) / 2 + n1[0] * 600), y: Math.round((e0[1] + e1[1]) / 2 + n1[1] * 600), yaw: yawOf(n1[0], n1[1]) } };
+          top: (function(){ var t0 = { x: Math.round((e0[0] + e1[0]) / 2 + n1[0] * 600), y: Math.round((e0[1] + e1[1]) / 2 + n1[1] * 600), yaw: yawOf(n1[0], n1[1]) }, q = u.d.dn ? stairStand(MODEL, (e0[0] + e1[0]) / 2, (e0[1] + e1[1]) / 2, n1[0], n1[1]) : null; if (q){ t0.x = Math.round(q.x); t0.y = Math.round(q.y); if (q.yaw !== null) t0.yaw = Math.round((((q.yaw + 3.141593) % 6.283185 + 6.283185) % 6.283185 - 3.141593) * 1800 / Math.PI) / 10; } return t0; })() };   /* 上の階（下りていく段）では、壁から離れた所に立ち、前が詰まる時は広い方を向く（Fable 699） */
       });
     },
     nodes: function(){ return NODES.map(function(n, i){ return { i: i, x: n.x, y: n.y, room: n.room, kind: n.kind, pair: n.pair, lv: n.lv || 0 }; }); },
     go: function(i){ return walkTo(i); },
+    /* 歩いて階段を上る・下りる（Fable 699） */
+    climb: function(id){ if (!MODEL) return false; var m = (MODEL.smark || []).filter(function(q){ return id == null || q.id === id || q.key === id || q.key === "t:" + id; })[0]; return m ? stairWalk(m) : false; },   /* 階段の印をタップしたのと同じ（id＝階段の名札か部品の名前。省くと最初の階段）。行き先の階が無い時は false */
+    move: function(dx, dy){ if (!fp || !MODEL || VIEW !== "eye" || POSE) return null; if (TW){ TW = null; ringHide(); } tryMove(+dx || 0, +dy || 0); onMove(); renderNow(); return here(); },   /* 検査用：スティックで (dx, dy) mm 動かしたのと同じ */
+    floorFn: function(fn){ FLFN = typeof fn === "function" ? fn : null; return true; },   /* 階を替える時に呼ぶ関数を差し替える（渡さなければ window.flSwitch）。fn(階の番号) が false を返したら、替えない */
     route: function(i){ return (fp && MODEL && NODES[i]) ? route(i) : null; },
     busy: function(){ return !!(TW || POSE || LOOP); },
     view: function(v){ if (v) setView(v, -1); return VIEW; },
