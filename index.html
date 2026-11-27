@@ -48341,7 +48341,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       spec = { cat: x.cat, name: x.name, w: w || x.w, h: h || x.h, frame: frame, kind: g ? g.k : "door", label: (x.name && x.name !== x.cat ? x.cat + " " + x.name : x.cat) + " " + (w || x.w) };
       if (ctx && ctx.replace != null){ var so = S.sashes[ctx.replace]; spec = null; if (!so) return; try { pushUndo(); so.cat = x.cat; so.name = x.name; so.w = w || x.w; so.h = h || x.h; so.frame = frame; delete so.cat705; save(); if (typeof drawPlan === "function") drawPlan(); } catch(e){} say("種類を変えました（戻すで戻せます）"); try { if (ctx.done) ctx.done(); } catch(e){} return; }   /* CAD-723：今ある建具の種類を替える */
       tool = "put"; refresh();
-      if (ctx && ctx.p){ var r = null; try { r = window.KAKU2.placeAt(ctx.p[0], ctx.p[1]); } catch(e){} say((r && r.ok ? spec.label + "を付けました。" : spec.label + "は、そこには付けられませんでした。") + "同じ物は、ほかの壁をタップすると続けて付きます（終わる時は［やめる］）"); return; }   /* CAD-712：持ったまま＝続けて置ける */
+      if (ctx && ctx.p){ var r = null; try { r = window.KAKU2.placeAt(ctx.p[0], ctx.p[1]); } catch(e){} say((r && r.ok ? spec.label + "を付けました。" : spec.label + "は付けられません：" + (window.WHY724 ? WHY724(r && r.why) : "") + "。") + "同じ物は、ほかの壁をタップすると続けて付きます（終わる時は［やめる］）"); return; }   /* CAD-712：持ったまま＝続けて置ける */
       pick2put();
     }
     function foot(skip, back){
@@ -48461,6 +48461,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (e.type !== "pointerup" || Date.now() - t.t > 500) return;
       var p = toPlan(e); if (!p) return;
       var r = !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p);
+      if (!r.ok && r.why !== "clash" && r.why !== "msg" && window.WHY724) say((spec.label || "") + "は置けません：" + WHY724(r.why));   /* CAD-725：置けない時は必ず理由 */
       if (r.ok || r.why !== "far") setTimeout(function(){ try { var z = zumen(); if (z) z.select(t.sel); } catch(x){} }, 0);
     }
   }
@@ -49453,7 +49454,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var r = null;
     try { K.off(); K.specPut(it[0], it[1], it[2]); r = K.placeAt(p[0], p[1]); } catch(e){ warn("候補を置く", e); }
     try { K.off(); } catch(e){}
-    say(r && r.ok ? it[2] + "を置きました（戻すで戻せます）" : it[2] + "は、ここには置けませんでした");
+    if (r && r.ok) say(it[2] + "を置きました（戻すで戻せます）"); else if (!(r && (r.why === "clash" || r.why === "msg"))) say(it[2] + "は置けません：" + (window.WHY724 ? WHY724(r && r.why) : "その場所には置けません"));   /* CAD-725 */
     return r || { ok: false };
   }
   /* その他：その場所に置ける物を全部（分け方は今の［置く］と同じ） */
@@ -50356,7 +50357,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { K.off(); K.specPut(it[0], it[1], it[2]); r = K.placeAt(p[0], p[1]); } catch(e){ try { console.warn("CAD-707 置く", e); } catch(x){} }
     try { K.off(); } catch(e){}
     if (r && r.ok){ try { RITTAI.sync(); } catch(e){} say(it[2] + "を置きました（戻すで戻せます）"); }
-    else say(it[2] + "は、ここには置けませんでした");
+    else if (!(r && (r.why === "clash" || r.why === "msg"))) say(it[2] + "は置けません：" + (window.WHY724 ? WHY724(r && r.why) : "その場所には置けません"));   /* CAD-725 */
     try { RITTAI.mark(null); } catch(e){}
     last = null; closeBand();
     return r || { ok: false };
@@ -50407,7 +50408,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     try { var rr = (RITTAI.rooms() || []).find(function(q){ return q.id === h.room; }); if (rr && rr.name) h.name = rr.name; } catch(e){}
     /* CAD-712：ドア・窓を持っている間は、壁をタップするたびに同じ物が付く */
     try { var K2 = window.KAKU2, sp = K2 && K2.state().tool === "put" ? K2.spec() : null;
-      if (sp && !sp.put && h.kind === "wall"){ var pt2 = ptOf(h), r2 = K2.placeAt(pt2[0], pt2[1]); if (r2 && r2.ok){ try { RITTAI.sync(); } catch(e){} say(sp.label + "を付けました（続けて付けられます）"); } else say(sp.label + "は、そこには付けられませんでした"); hold(sp); return; }
+      if (sp && !sp.put && h.kind === "wall"){ var pt2 = ptOf(h), r2 = K2.placeAt(pt2[0], pt2[1]); if (r2 && r2.ok){ try { RITTAI.sync(); } catch(e){} say(sp.label + "を付けました（続けて付けられます）"); } else if (!(r2 && r2.why === "clash")) say(sp.label + "は付けられません：" + (window.WHY724 ? WHY724(r2 && r2.why) : "")); hold(sp); return; }
       if (sp && !sp.put){ hold(sp); say("付けたい壁をタップしてください"); return; } } catch(e){}   /* 部屋の名前は立体の部屋一覧から（hit.name は名前の無い部屋で「B」などの記号になるため） */
     last = h;
     try { RITTAI.mark(h, h.kind === "wall" ? 300 : 450, h.kind === "wall" ? 300 : 450); } catch(e){}
@@ -50841,4 +50842,15 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   if (document.readyState === "complete") setTimeout(fromHash, 1500);
   window.SHARE722 = { v: 1, role: role, send: send, importPayload: importPayload, pack: pack, unpack: unpack, linkFor: linkFor, baseOf: baseOf, diff: diff, list: listSheet, ok: ok, items: rvItems };
 })();
+</script>
+<script>
+/* ---------- CAD-725：置けない時の理由（どの置き方でも同じ言葉）（2026-11-27 Claude/Opus）---------- */
+window.WHY724 = function(why){
+  return ({ far: "壁から離れています。付けたい壁のすぐ近くをタップしてください", none: "部屋の中をタップしてください（家の外や壁の上には置けません）",
+    open: "壁の無い所（開いている辺）には付けられません", remove: "撤去する壁には付けられません", short: "壁が短くて、この大きさは入りません",
+    full: "この壁には、もう空きがありません（ほかのドア・窓とぶつかります）", clash: "ドア・窓とコンセントなどがぶつかります",
+    "rf-only": "リフォームの時だけ使えます", "no-app": "図面を開いている時だけ置けます", "no-mado": "図面を開いている時だけ置けます",
+    outside: "家の外には置けません", dup: "同じ所に同じ物があります", small: "小さすぎます", shape: "形を読み取れませんでした（もう一度なぞってください）",
+    win: "窓の向きは変わりません", error: "うまくいきませんでした（戻すで元に戻せます）", "wall-open": "壁の無い所には付けられません", "wall-remove": "撤去する壁には付けられません" })[why] || "その場所には置けません（壁・床・部屋の中をタップしてください）";
+};
 </script>
