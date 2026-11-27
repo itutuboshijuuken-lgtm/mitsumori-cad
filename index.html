@@ -45244,7 +45244,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-734：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり）（2026-11-27 Claude Fable）----------
+/* ---------- CAD-737：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2階から・手すり） ＋ 片引き戸の形（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45290,7 +45290,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      触ると {kind:"thing", list:"below", id:"below:階段のid", k:"stair"}。below が無い時は、今までと同じ（何も作らない）。かかる部屋が四角くない時も、今までと同じ。
      1階の階段の手すり：まっすぐの所の壁側（両側に壁がある時は廻りの外側）に、径35の丸い木の棒。段の鼻の線から 800。受け金物つき。
      RITTAI.stairs()＝階段ごとの立つ場所 [{id, key, below, kh, foot:{x,y,yaw}, top:{x,y,yaw}}]（foot＝下の階で上り口の手前、top＝上の階で下り口の先。そのまま RITTAI.cam() に渡せる。「階段を触ると2階へ」用）。
-     RITTAI.v は 16。
+   ・片引き戸の形（Fable の作業番号 698。翔伍さんの決まり。記録は CAD-734・735）：標準（tob581 なし）＝戸袋の区間は、戸が走る面（n の側）の反対側に半分の厚みの壁だけ。戸は走る面に見えたまま。
+     引込み（tob581 "both"）＝戸は壁の中（今までの絵）。アウトセット（frame "outset"）＝壁の面の外（今までの絵）。触った時：薄い壁の外の面＝壁（物を置ける）、戸が走る面＝建具。
+     RITTAI.v は 17。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45307,7 +45309,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 16, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 17, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45692,11 +45694,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         if (ext && !gone) M.outOps.push([w.a[0] + w.ux * mid, w.a[1] + w.uy * mid, w.ux, w.uy, s1 - s0, v0, v1]);
         if (gone || ty === "win") return;
         var kata = cat === "室内ドア" && ty === "hiki";
-        if (kata){ o.pk = (fl & 2) ? 1 : -1; if (o.pk > 0) o.c0 = mid; else o.c1 = mid; o.w0 = o.c0; o.w1 = o.c1; }   /* 片引き戸：開口の半分だけ壁を抜く。残りの半分は戸袋 */
+        if (kata){ o.pk = (fl & 2) ? 1 : -1; if (o.pk > 0) o.c0 = mid; else o.c1 = mid; o.w0 = o.c0; o.w1 = o.c1;   /* 片引き戸：開口の半分だけ壁を抜く。残りの半分は戸袋 */
+          if (raw.tob581 !== "both" && raw.frame !== "outset"){ o.pb = 1; o.p0 = o.pk > 0 ? s0 : mid; o.p1 = o.pk > 0 ? mid : s1; } }   /* 標準の形（Fable 698）：戸袋の区間は、戸が走る面の反対側に半分の厚みの壁だけ */
         else if (t.ub && ty === "hiki") o.pk = 1;                                                                   /* 浴室の引き戸：開口は全幅。扉は浴室の側の壁の面を走る */
         else if (ty === "chigai" || ty === "hiki") o.w1 = mid;                                                      /* 引違い：開くのは片側 */
         o.walk = (!ext && z0 <= 250 && v1 - v0 >= 1700 - Math.max(0, v0) && o.w1 - o.w0 >= 500) ? 1 : 0;                                /* 歩いて通れる開口（外へは出ない） */
-        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: v0, z1: v1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0, col: cc || undefined, shape: shp || undefined }); }
+        if (ty !== "gap"){ M.n.doors++; unit("d:" + id, "door", { id: id, ty: ty, oya: /親子/.test(name) ? 1 : 0, a: w.a, ux: w.ux, uy: w.uy, th: w.th, s0: o.c0, s1: o.c1, z0: v0, z1: v1, n: o.n, hs: (fl & 2) ? 1 : 0, pk: o.pk, pb: o.pb || undefined, out: ((kata && raw.frame === "outset") || (t.ub && ty === "hiki")) ? 1 : 0, ext: ext, ub: t.ub ? 1 : 0, col: cc || undefined, shape: shp || undefined }); }
         M.doors.push({ id: id, ty: ty, x: w.a[0] + w.ux * (o.w0 + o.w1) / 2, y: w.a[1] + w.uy * (o.w0 + o.w1) / 2, ux: w.ux, uy: w.uy, half: w.th / 2, w: o.w1 - o.w0, nIn: nIn, walk: o.walk, ext: ext, entry: (ext && /玄関/.test(cat)) ? 1 : 0, zb: v0 });
       });
       M.n.walls++;
@@ -46219,7 +46222,11 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     } else if (o.ty !== "win"){
       f = 30; var exP2 = d.sp.some(function(g){ return g.m === "ext"; }), exM2 = d.sm.some(function(g){ return g.m === "ext"; });
       var fm = o.cat === "浴室ドア" ? "plate" : (o.ext && o.ty === "door") ? [exP2 ? "aluO" : "aluI", exM2 ? "aluO" : "aluI", "aluI", "aluI", "aluI", "aluI"] : o.col ? "wframe:" + o.col : "wframe";   /* 玄関の枠：外を向く面だけ濃い色、室内から見える面はシルバー（窓と同じ決まり） */
-      fbox(acc, fr, s0, s0 + f, -h - 8, h + 8, z0, z1, fm, tag); fbox(acc, fr, s1 - f, s1, -h - 8, h + 8, z0, z1, fm, tag); fbox(acc, fr, s0 + f, s1 - f, -h - 8, h + 8, z1 - f, z1, fm, tag);
+      var pj = (o.pb && (o.n === 1 || o.n === -1)) ? (o.pk > 0 ? 0 : 1) : -1;   /* 標準の片引き戸（Fable 698）：戸袋の側の縦枠（0＝s0 の側、1＝s1 の側）は、薄い壁の側の半分だけ */
+      fbox(acc, fr, s0, s0 + f, pj === 0 && o.n < 0 ? 0 : -h - 8, pj === 0 && o.n > 0 ? 0 : h + 8, z0, z1, fm, tag); fbox(acc, fr, s1 - f, s1, pj === 1 && o.n < 0 ? 0 : -h - 8, pj === 1 && o.n > 0 ? 0 : h + 8, z0, z1, fm, tag); fbox(acc, fr, s0 + f, s1 - f, -h - 8, h + 8, z1 - f, z1, fm, tag);
+      if (pj >= 0 && fin(o.p0) && fin(o.p1)){ var tA = o.n > 0 ? 0 : -h - 8, tB = o.n > 0 ? h + 8 : 0;   /* 戸が走る側の半分 */
+        fbox(acc, fr, pj === 0 ? o.p0 : o.p0 - f, pj === 0 ? o.p1 + f : o.p1, tA, tB, z1 - f, z1, fm, tag);                 /* 鴨居：戸袋の上まで通す */
+        fbox(acc, fr, pj === 0 ? o.p0 : o.p1 - f, pj === 0 ? o.p0 + f : o.p1, tA, tB, z0, z1 - f, fm, tag); }               /* 戸尻（戸袋の奥）の縦枠 */
       if (o.ty === "door" && o.cat !== "浴室ドア" && fin(o.n) && o.n){   /* 戸当り（Fable 691）：開き戸が閉まった時に当たる桟。開く向きの反対側に、枠から 12 出る */
         var ta = o.n > 0 ? -44 : 20, tb = o.n > 0 ? -20 : 44, fs = (typeof fm === "string") ? fm : "aluI";   /* 玄関の戸当りは室内側にあるので、シルバー */
         fbox(acc, fr, s0 + f, s0 + f + 12, ta, tb, z0, z1 - f, fs, tag); fbox(acc, fr, s1 - f - 12, s1 - f, ta, tb, z0, z1 - f, fs, tag); fbox(acc, fr, s0 + f + 12, s1 - f - 12, ta, tb, z1 - f - 12, z1 - f, fs, tag);
@@ -46264,16 +46271,27 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       fbox(acc, fr, s0, s1, -h, h, z0, z1, [null, null, endL ? "cloth" : null, endR ? "cloth" : null, top || null, bot ? "cap" : null], { k: "edge", wall: d.id });
     }
     /* 開口の左右の端で壁を縦に区切り、区切りごとに「開口でない高さ」だけ壁を立てる（上下に並ぶ窓もそのまま抜ける） */
-    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: fin(o.v0) ? o.v0 : o.z0, z1: fin(o.v1) ? o.v1 : o.z1, rp: o.rp, rm: o.rm, n: o.n, col: o.col, ext: o.ext }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
-    carve.forEach(function(o){ xs.push(o.s0, o.s1); });
+    var carve = d.ops.concat(d.xop || []).filter(function(o){ return !o.gone; }).map(function(o){ return { id: o.id, cat: o.cat, ty: o.ty, s0: o.c0, s1: o.c1, z0: fin(o.v0) ? o.v0 : o.z0, z1: fin(o.v1) ? o.v1 : o.z1, rp: o.rp, rm: o.rm, n: o.n, col: o.col, ext: o.ext, pk: o.pk, pb: o.pb, p0: o.p0, p1: o.p1 }; }), sA = -d.e0, sB = d.len + d.e1, xs = [sA, sB], capT = d.form === "koshi", capB = d.z0 > 1;
+    var hv = carve.filter(function(o){ return o.pb && o.p1 - o.p0 > 1 && (o.n === 1 || o.n === -1); }).map(function(o){ return { id: o.id, half: 1, s0: o.p0, s1: o.p1, z0: o.z0, z1: o.z1, n: o.n }; }), all = carve.concat(hv);   /* hv＝標準の片引き戸の戸袋（Fable 698） */
+    function halfW(s0, s1, z0, z1, o){   /* 戸袋の薄い壁：走る面（n）の反対側の半分。外の面＝今までどおりの壁の面。奥の面（戸が走る側から見える面）＝走る側の部屋の仕上げで、触ると「走る面の壁」 */
+      if (!(s1 - s0 > .5) || !(z1 - z0 > .5)) return;
+      var nP = [-fr.uy, 0, fr.ux], nM = [fr.uy, 0, -fr.ux];
+      if (o.n > 0) side(d.sm, -h, nM, s0, s1, z0, z1, -1); else side(d.sp, h, nP, s0, s1, z0, z1, 1);
+      var sg = o.n > 0 ? d.sp : d.sm, tI = o.n * 3, at = s0;   /* 芯から 3mm だけ走る側：触った点がどちらの面かを、はっきりさせる */
+      function back(a, b, m, room){ if (b - a > .5) acc.quad(m, [fpt(fr, a, tI, z0), fpt(fr, b, tI, z0), fpt(fr, b, tI, z1), fpt(fr, a, tI, z1)], o.n > 0 ? nP : nM, [[a * K, z0 * K], [b * K, z0 * K], [b * K, z1 * K], [a * K, z1 * K]], { k: "face", wall: d.id, side: o.n > 0 ? 1 : -1, room: room, run: o.id }); }
+      for (var i = 0; i < sg.length; i++){ var g = sg[i], a = Math.max(at, g.s0), b = Math.min(s1, g.s1); if (!(b - a > .5)) continue; back(at, a, "cloth", null); back(a, b, g.m, g.room); at = b; }
+      back(at, s1, "cloth", null);
+    }
+    all.forEach(function(o){ xs.push(o.s0, o.s1); });
     xs = xs.filter(function(x){ return x >= sA - .01 && x <= sB + .01; }).sort(function(a, b){ return a - b; });
-    function open2(x, za, zb, right){ return carve.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
+    function open2(x, za, zb, right){ return all.some(function(o){ return Math.abs((right ? o.s0 : o.s1) - x) < .5 && o.z0 < zb - .5 && o.z1 > za + .5; }); }
     for (var i = 0; i < xs.length - 1; i++){
       var xa = xs[i], xb = xs[i + 1]; if (xb - xa < .5) continue;
-      var cov = carve.filter(function(o){ return o.s0 <= xa + .5 && o.s1 >= xb - .5; }).sort(function(p, q){ return p.z0 - q.z0; }), z = d.z0;
+      var cov = all.filter(function(o){ return o.s0 <= xa + .5 && o.s1 >= xb - .5; }).sort(function(p, q){ return p.z0 - q.z0; }), z = d.z0;
       for (var j = 0; j <= cov.length; j++){
         var o = cov[j] || null, zb = o ? o.z0 : d.top;
         if (zb - z > .5) piece(xa, xb, z, zb, xa <= sA + .5 || open2(xa, z, zb, false), xb >= sB - .5 || open2(xb, z, zb, true), (o || capT) ? "cap" : "cut", z > d.z0 + .5 ? true : capB);
+        if (o && o.half) halfW(xa, xb, Math.max(z, o.z0), o.z1, o);
         if (o) z = Math.max(z, o.z1);
       }
     }
@@ -46392,7 +46410,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var wp = Math.round(w * .7 / 5) * 5, dr = d.hs ? -1 : 1, hp = -dr * (w / 2 - F), mm = hp + dr * (wp - F), hc = dr * (w / 2 - F);
       put(G, function(acc){ leaf(acc, hp, mm - dr * 2, -20, 20, zb, zt); bx(acc, mm + dr * 2, hc, -20, 20, zb, zt, mk); bar(acc, mm - dr * 80); hinges(acc, hp); hinges(acc, hc); });
     } else if (d.pk){                          /* 片引き戸：戸袋（壁の中）へ引く。アウトセットは壁の面の外を走る */
-      var sl = d.pk > 0 ? -1 : 1, tcn = d.out ? n * (d.th / 2 + 26) : 0, Lf = sub(0), a0 = -sl * (w / 2 - F), a1 = sl * (w / 2 + 34);
+      var sl = d.pk > 0 ? -1 : 1, tcn = d.out ? n * (d.th / 2 + 26) : d.pb ? n * Math.max(d.th / 4, 18) : 0, Lf = sub(0), a0 = -sl * (w / 2 - F), a1 = sl * (w / 2 + 34);
       put(Lf, function(acc){ leaf(acc, a1, a0, tcn - 16, tcn + 16, zb, d.out ? d.z1 + 14 : zt); hikite(acc, a0 + sl * 62, tcn - 16, tcn + 16); });
       if (d.out) put(G, function(acc){ bx(acc, -sl * (w / 2), sl * (w * 1.5 + 30), tcn - 22, tcn + 22, d.z1 + 14, d.z1 + 60, "alu"); });
       parts.push({ k: "sl", o: Lf, dx: sl * (w - F - 96) });
