@@ -48491,6 +48491,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       try { sel = { t: "o", i: i }; flashAt = Date.now(); } catch(x2){}
       save(); if (typeof drawPlan === "function") drawPlan();
       touch(rec.nid);
+      var cl724 = rec.nid ? clashOf(rec.nid) : null;
+      if (cl724){ S.sashes.splice(i, 1); try { undoStack.pop(); } catch(x3){} save(); if (typeof drawPlan === "function") drawPlan(); say("そこには " + (cl724.kind === "switch" ? "スイッチ" : cl724.kind === "outlet" ? "コンセント" : "壁の物") + " があるので建具を付けられません（先に動かすか消してください）"); return { ok: false, why: "clash" }; }   /* CAD-724 */
       if (typeof ipOK === "function" && typeof sashAskState === "function" && ipOK(rec)) sashAskState(i);
     } catch(e){ warn("置く", e); say("置けませんでした。戻すで元に戻せます"); return { ok: false, why: "error" }; }
     return { ok: true, i: i, pos: pos, host: h };
@@ -48504,6 +48506,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return { ok: true };
   }
   /* 照明・電気・設備を置く／動かす */
+  /* CAD-724：あり得ない置き方を止める（ドア・窓の開口の中にコンセント・スイッチ・紙巻器・手すりなど／その逆） */
+  function fxBox(t){ var L = +t.len || 0, H = +t.hgt || 0, u = +t.u || 0, z = +t.z || 0;
+    if (L > 0) return [u - L / 2, u + L, z - 20, z + (H || 60)]; return [u - 45, u + 45, z - 45, z + 45 + H]; }
+  function saBox(t){ return [+t.u || 0, (+t.u || 0) + (+t.w || 0), +t.sill || 0, (+t.sill || 0) + (+t.h || 0)]; }
+  function hits(a, b){ return a[0] < b[1] - 10 && b[0] < a[1] - 10 && a[2] < b[3] - 10 && b[2] < a[3] - 10; }
+  function clashOf(id){
+    var m = mado(), r = m ? m.read() : null; if (!r || !r.things) return null;
+    var me = r.things.filter(function(t){ return t.id === id; })[0]; if (!me || !me.wall) return null;
+    var mine = me.list === "sashes" ? saBox(me) : me.list === "fx" ? fxBox(me) : null; if (!mine) return null;
+    return r.things.filter(function(t){ return t !== me && t.wall === me.wall && ((me.list === "fx" && t.list === "sashes") || (me.list === "sashes" && t.list === "fx")) && hits(mine, t.list === "sashes" ? saBox(t) : fxBox(t)); })[0] || null;
+  }
   function wr(cmds, okMsg){
     var m = mado(); if (!m) return { ok: false, why: "no-mado" };
     var r = m.write(cmds);
@@ -48531,7 +48544,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (typ === "pt"){ c.u = Math.round(nw.t * nw.L); if (FXZ[spec.k] != null) c.z = FXZ[spec.k]; }
     else if (typ !== "wall") c.at = { u: Math.round(nw.t * nw.L) };   /* 線・面の物：今の決まりの長さで、タップした所が真ん中 */
     if (spec.k === "demo" && !isRf()){ say("壁の一部を剥がすのは、リフォームの時だけです"); return { ok: false, why: "rf-only" }; }
-    return wr([c]);
+    var r724 = wr([c]);
+    if (r724.ok && spec.k !== "demo"){ var nid724 = (r724.r && r724.r.ids || [])[0], cl = nid724 ? clashOf(nid724) : null;   /* CAD-724：ドア・窓の開口の中には付けない */
+      if (cl){ try { mado().write([{ op: "remove", id: nid724 }]); } catch(e){} try { if (typeof drawPlan === "function") drawPlan(); } catch(e){} say("ドア・窓（" + (cl.kind || "") + "）がある所には付けられません。横の壁をタップしてください"); return { ok: false, why: "clash" }; } }
+    return r724;
   }
   function placeTk(p){
     if (!appOk() || typeof addTenken !== "function") return { ok: false };
@@ -48762,6 +48778,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     puts: function(){ return PUTS; }, movePartBy: function(q, d){ if (!q || !(Math.abs(d) >= 1)) return { ok: false }; pdrag = { q: q, horiz: Math.abs(q.y1 - q.y2) < 1, d: d }; return endPdrag(true); },   /* CAD-703：内側の寸法の数字から（吸い付けない・T字も一緒） */ fxAt: function(x, y){ if (!A) return -1; var pk = thingAt([x, y], "fx"); return pk ? pk.i : -1; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
     choose: chooseSpec, put: choosePut, specPut: function(put, k, label){ spec = { put: put, k: k, label: label || k }; tool = "put"; refresh(); pick2put(); return spec; },
     spec: function(o){ if (o && typeof o === "object"){ spec = o; tool = "put"; refresh(); pick2put(); } return spec; },
+    clashOf: function(id){ return clashOf(id); },
     placeAt: function(x, y){ if (!A || tool !== "put" || !spec) return { ok: false }; var p = [x, y]; return !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p); },
     moveSash: function(i, wallId, pos, host){ return moveTo(i, { wall: wallId, pos: pos, host: host }); }, flip: function(i){ return flipAt(i); },
     tapAt: function(x, y){ if (!A || tool !== "del") return { ok: false }; var pk = thingAt([x, y]); return pk ? delThing(pk) : { ok: false, why: "nothing" }; }
@@ -50455,7 +50472,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       if (h.kind !== "wall"){ say("壁をタップしてください"); moving = mv; return; }
       var w0 = null; try { w0 = (MADO.read().walls || []).filter(function(q){ return q.id === h.wall; })[0]; } catch(e){}
       if (!w0){ say("その壁には動かせません"); return; }
+      var bk = { w: o.w, u: o.u, sd: o.sd };
       edit(function(){ o.w = w0.t === "e" ? w0.i : w0.key; o.u = Math.round(h.u); if (w0.t === "p") o.sd = h.side ? 1 : -1; else delete o.sd; }, "動かしました（戻すで戻せます）");
+      try { if (KAKU2.clashOf && KAKU2.clashOf(o.nid)){ o.w = bk.w; o.u = bk.u; if (bk.sd == null) delete o.sd; else o.sd = bk.sd; try { undoStack.pop(); } catch(x){} save(); after("ドア・窓がある所には動かせません"); } } catch(e){}   /* CAD-724 */
     } else {
       if (h.kind === "wall"){ say("床か天井をタップしてください"); moving = mv; return; }
       edit(function(){ if (mv.list === "tenken"){ try { moveTenken(o, Math.round(h.x - o.x), Math.round(h.y - o.y)); } catch(e){ o.x = Math.round(h.x); o.y = Math.round(h.y); } } else { o.x = Math.round(h.x); o.y = Math.round(h.y); } }, "動かしました（戻すで戻せます）");
