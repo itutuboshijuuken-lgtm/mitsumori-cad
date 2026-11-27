@@ -45159,7 +45159,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-702（Fable の CAD-699 版）：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり（2026-11-27 Claude Fable）----------
+/* ---------- CAD-706（Fable の CAD-705 版）：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45171,7 +45171,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      表示だけ（見積は変えない）。図面（CAD-662）が読む開口の z0・z1 は今までどおりで、立体での下端・上端は v0・v1 に持つ。
    ・窓と外まわり（CAD-699。Fable の作業番号 688）：窓は、外の枠・障子の框・ガラス・室内側の額縁（腰窓は膳板）。幅 1200 から上は2枚の引違い、FIX は1枚。アルミは室内側がシルバー、外壁の外側が濃い色。額縁は白。
      外まわり＝空（遠くの家と木の絵）・地面（FL−550）・犬走り・基礎・水切り・玄関ポーチ・塀と生垣。見た目だけで、家のデータ・見積とは無関係。タップや歩く計算には入れない。土間の下がりは、図面の［床］で決めた数（土間の床の記録の dz）を先に読み、無い土間だけ立体の設定に従う。
-     外まわりを描くのは、「上から」の時と、外への開口（窓・玄関など）が視界に入っている時だけ（壁しか見えていない時は、描く手間をかけない）。RITTAI.v は 7。
+     外まわりを描くのは、「上から」の時と、外への開口（窓・玄関など）が視界に入っている時だけ（壁しか見えていない時は、描く手間をかけない）。
+   ・触った場所を知らせる口（Fable の作業番号 689。Opus の「触って候補」＝候補の表 KOHO・帯・置いた記録・見積へのつなぎ が使う）：
+     RITTAI.touch(fn) で、タップが「歩く」から「触った場所を知らせる」に替わる（fn(hit, わけ)。足あとは消える）。RITTAI.touch(fn, {walk:true})＝足あとのタップだけは今までどおり歩く。
+     RITTAI.touch(null) で元に戻す。とじた時も元に戻して fn(null, "close")。RITTAI.touching()＝false／"only"／"walk"。
+     hit＝壁 {kind:"wall", wall, side, room, name, u, z, x, y, floor, ch}／床 {kind:"floor", room, name, x, y, floor}／天井 {kind:"ceil", room, name, x, y, ch}／
+     物 {kind:"thing", list, id, i, k, …}／建具 {kind:"sash", id, …}／何も無い所 null。u＝壁の a からの距離、z＝FL からの高さ（MADO.write の fx の wall・side・u・z にそのまま使える）。name＝部屋の名前。
+     RITTAI.hit(画面の点)＝その点の hit。RITTAI.mark(hit, 幅, 高さ)＝青い印（null で消す）。RITTAI.bar(要素)＝下のボタンの列のすぐ上に帯を差し込む（絵は縮む＝被らない。null で外す）。
+     RITTAI.button(鍵, 字, fn)＝下のボタンの列にボタンを足す。RITTAI.watch(fn)＝開いた時 fn("open")・とじた時 fn("close")。置いた後は RITTAI.sync()。RITTAI.v は 8。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45188,10 +45195,10 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 7, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 8, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
-  var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
+  var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
   var UNITS = Object.create(null);       /* 今ある立体の部品：名前 → { sig, obj } */
   var MATS = Object.create(null), TEXS = Object.create(null);
   var MODEL = null, fp = null, fpPid = null, fpRoom = null, fovUser = false;
@@ -45288,7 +45295,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       var rlv = LV.filter(function(q){ return q[0] < rbb[2] - 1 && q[2] > rbb[0] + 1 && q[1] < rbb[3] - 1 && q[3] > rbb[1] + 1; });
       if (rlv.length) d.lv = rlv;
       if (RLV[r.id]) d.dz = RLV[r.id];
-      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
+      M.rooms.push({ id: r.id, name: r.disp || r.name || r.label || "", nm: r.name || r.label || r.disp || "", poly: r.poly, holes: holes, ch: d.ch, fk: fk, area: a });
       unit("r:" + r.id, "room", d);
     });
 
@@ -45416,6 +45423,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* 物：壁の物・照明・設備・床の範囲 */
     arr(rd.things).forEach(function(t){
       var id = t.id || (t.list + "#" + t.i), w, d = null;
+      (M.ti || (M.ti = Object.create(null)))[id] = { list: t.list, i: fin(t.i) ? t.i : null, k: t.kind || null };
       if (t.list === "fx"){
         w = t.wall ? wallBy[t.wall] : null;
         if (!w || w.state === "remove" || !t.side || !fin(t.u)) return;
@@ -45641,6 +45649,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       m = new T.MeshBasicMaterial({ color: 0xffe0ae, map: t2, transparent: true, opacity: POOLO, blending: T.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
     }
     else if (mk === "foot" || mk === "ring"){ m = new T.MeshBasicMaterial({ map: markTex(mk), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }); m.toneMapped = false; }
+    else if (mk === "mark3"){ m = new T.MeshBasicMaterial({ color: 0x2563b0, transparent: true, opacity: .42, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -6, polygonOffsetUnits: -6 }); m.toneMapped = false; }   /* 触った所の印 */
     else if (mk === "water") m = new T.MeshStandardMaterial({ color: 0x8fc6de, transparent: true, opacity: .55, roughness: .04, metalness: 0, depthWrite: false });
     else { k = SOLID[mk] || [0xcccccc, .8]; m = new T.MeshStandardMaterial({ color: k[0], roughness: k[1], metalness: 0, map: k[2] ? tex(k[2]) : null }); if (k[3]){ m.userData.metal = k[3]; m.metalness = QUAL === "hq" ? k[3] : 0; } }
     m.name = mk; if (HQM[mk]) m.visible = QUAL === "hq";
@@ -46178,8 +46187,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     bSet.onclick = function(){ sheetShow(sheet.style.display === "none"); };
     mid.appendChild(cvs); mid.appendChild(msg); mid.appendChild(map); mid.appendChild(joyL); mid.appendChild(joyR); mid.appendChild(sheet); bot.appendChild(row);
     box.appendChild(top); box.appendChild(mid); box.appendChild(bot); document.body.appendChild(box);
-    V = { box: box, top: top, mid: mid, cvs: cvs, msg: msg, map: map, joyL: joyL, joyR: joyR, sheet: sheet, bPlan: bPlan, bView: bView, bHome: bHome, open: false, chip: Object.create(null), chipSig: null, chipCur: null, mapK: null };
+    V = { box: box, top: top, mid: mid, bot: bot, row: row, bSet: bSet, cvs: cvs, msg: msg, map: map, joyL: joyL, joyR: joyR, sheet: sheet, bPlan: bPlan, bView: bView, bHome: bHome, open: false, chip: Object.create(null), chipSig: null, chipCur: null, mapK: null };
     bind(cvs); bindMap(map); JL = bindJoy(joyL); JR = bindJoy(joyR);
+    try { if (window.ResizeObserver) new window.ResizeObserver(function(){ if (V && V.open && R && (V.mid.clientWidth !== RSW || V.mid.clientHeight !== RSH)){ resize(); renderNow(); } }).observe(mid); } catch(e){}   /* 下に帯が入って絵の場所が縮んだ時など */
     cvs.addEventListener("webglcontextrestored", function(){ try { if (R){ R.shadowMap.needsUpdate = true; ask(); } } catch(e){} });   /* 描く仕組みが戻った時は、描き直す */
     return V;
   }
@@ -46317,6 +46327,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function resize(){
     if (!R || !V) return;
     var w = Math.max(1, V.mid.clientWidth), h = Math.max(1, V.mid.clientHeight);
+    rowFit(); w = Math.max(1, V.mid.clientWidth); h = Math.max(1, V.mid.clientHeight); RSW = V.mid.clientWidth; RSH = V.mid.clientHeight;
     R.setPixelRatio(prNow()); R.setSize(w, h, false);
     cam.aspect = w / h; cam.updateProjectionMatrix();
     if (fp && !fovUser){ FOVT = fovFor(roomById(fpRoom)); fp.fov = FOVT; }
@@ -46413,6 +46424,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function tap(cx, cy){
     if (!R || !MODEL || !fp || POSE) return;
     if (V.sheet.style.display !== "none"){ sheetShow(false); return; }
+    if (TOUCH && !TWALK){ touchTap(cx, cy); return; }   /* 置く物を持っている間（RITTAI.touch）：歩かない */
     var rc = V.cvs.getBoundingClientRect(), nx = (cx - rc.left) / rc.width * 2 - 1, ny = -((cy - rc.top) / rc.height * 2 - 1);
     place(); cam.updateMatrixWorld(true);
     var ray = new T.Raycaster(); ray.setFromCamera(new T.Vector2(nx, ny), cam);
@@ -46427,6 +46439,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       });
       if (best >= 0 && bd <= (VIEW === "top" ? 700 : clamp(t / K * .17, 340, 640))){ walkTo(best); return; }   /* 遠い足あとは、少し広めに拾う */
     }
+    if (TOUCH){ touchTap(cx, cy); return; }   /* 足あとの外をタップ（RITTAI.touch の walk つき）：触った場所を知らせる */
     if (VIEW === "top" && hit){   /* 上から：触った部屋へ降りる */
       x = hit.point.x / K; y = hit.point.z / K;
       var rm = (tg.room && roomById(tg.room)) || roomAt(MODEL, x, y);
@@ -46632,7 +46645,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function footBuild(){
     if (!scene) return;
     if (footObj){ scene.remove(footObj); footObj.traverse(function(o){ if (o.geometry) try { o.geometry.dispose(); } catch(e){} }); footObj = null; }
-    if (!SHOWF || !MODEL || !NODES.length || !fp) return;
+    if (!SHOWF || (TOUCH && !TWALK) || !MODEL || !NODES.length || !fp) return;   /* 置く物を持っている間は、足あとを出さない（タップ＝置く、と分かるように） */
     var acc = new Acc(), S = 245, hx = fp.x / K, hy = fp.z / K;
     NODES.forEach(function(nd, i){
       if (VIEW === "eye" && Math.hypot(nd.x - hx, nd.y - hy) < 430) return;   /* いま立っている所の足あとは出さない */
@@ -46846,6 +46859,95 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     }
     if (OUTG.visible !== on) OUTG.visible = on;
   }
+  /* 触った場所を知らせる口（Fable の作業番号 689）。Opus の「触って候補」（候補の表 KOHO・候補の帯・置いた記録・見積へのつなぎ）が使う。
+     hitOf＝画面の点 → 触った場所。どれにも sx・sy（画面の点）と view（eye／top）。
+     壁：{kind:"wall", wall, side, room, name, u, z, x, y, floor, ch}（wall＝壁の id、side＝面（＋1／−1）、u＝壁の a からの距離、z＝FL からの高さ。MADO.write の fx の wall・side・u・z にそのまま使える）
+     床：{kind:"floor", room, name, x, y, floor}／天井：{kind:"ceil", room, name, x, y, ch}／置いてある物：{kind:"thing", list, id, i, k, room, name, x, y, z}／建具：{kind:"sash", id, room, name, x, y, z}／何も無い所：null */
+  function wallD(id){ var w = null; if (MODEL) MODEL.units.forEach(function(u){ if (u.key === "w:" + id) w = u.d; }); return w; }
+  function hitOf(cx, cy){
+    if (!R || !MODEL || !fp || !V || !V.open) return null;
+    var rc = V.cvs.getBoundingClientRect(), nx = (cx - rc.left) / rc.width * 2 - 1, ny = -((cy - rc.top) / rc.height * 2 - 1);
+    if (!(rc.width > 0) || !(rc.height > 0) || !(nx >= -1 && nx <= 1 && ny >= -1 && ny <= 1)) return null;
+    place(); cam.updateMatrixWorld(true);
+    var ray = new T.Raycaster(); ray.setFromCamera(new T.Vector2(nx, ny), cam);
+    var hits = ray.intersectObjects(root.children, true), i, h, tg, x, y, z, o = null, wu, rm, off, ti;
+    for (i = 0; i < hits.length; i++){
+      h = hits[i]; tg = (h.object.userData.tags || [])[h.faceIndex] || null;
+      if (!tg || tg.k === "ghost" || tg.k === "gone" || (VIEW === "top" && tg.k === "ceil")) continue;   /* 札の無い面（巾木・陰の帯など）は飛ばして、その奥を見る */
+      x = Math.round(h.point.x / K); y = Math.round(h.point.z / K); z = Math.round(h.point.y / K); rm = null;
+      if (tg.k === "face"){
+        wu = wallD(tg.wall); if (!wu) break;
+        rm = tg.room ? roomById(tg.room) : null; off = (tg.side < 0 ? -1 : 1) * (wu.th / 2 + 60);
+        o = { kind: "wall", wall: tg.wall, side: tg.side < 0 ? -1 : 1, room: tg.room || null, u: Math.round((x - wu.a[0]) * wu.ux + (y - wu.a[1]) * wu.uy), z: z, x: x, y: y, floor: lvOf(MODEL, x - wu.uy * off, y + wu.ux * off), ch: rm ? rm.ch : MODEL.ch };
+      } else if (tg.k === "floor" || tg.k === "step"){
+        rm = (tg.room && roomById(tg.room)) || roomAt(MODEL, x, y);
+        o = { kind: "floor", room: rm ? rm.id : null, x: x, y: y, floor: lvOf(MODEL, x, y) };
+      } else if (tg.k === "ceil"){ rm = roomById(tg.room); o = { kind: "ceil", room: tg.room || null, x: x, y: y, ch: rm ? rm.ch : MODEL.ch }; }
+      else if (tg.k === "thing"){ ti = (MODEL.ti && MODEL.ti[tg.id]) || {}; rm = roomAt(MODEL, x, y); o = { kind: "thing", list: tg.list, id: tg.id, i: fin(ti.i) ? ti.i : null, k: ti.k || null, room: rm ? rm.id : null, x: x, y: y, z: z }; }
+      else if (tg.k === "sash"){ rm = roomOfFp() ? roomById(roomOfFp()) : null; o = { kind: "sash", id: tg.id, room: rm ? rm.id : null, x: x, y: y, z: z }; }
+      break;   /* 壁の木口など、ほかの面は「何も無い所」 */
+    }
+    if (o){ o.name = rm ? (rm.nm || rm.name || "") : ""; o.sx = Math.round(cx); o.sy = Math.round(cy); o.view = VIEW; }
+    return o;
+  }
+  function touchTap(cx, cy){ var f = TOUCH, ht = hitOf(cx, cy); try { f(ht, "tap"); } catch(e){ warn("触った場所の知らせ先で、うまくいきませんでした", e); } }
+  function touchSet(fn, opt){   /* fn(hit, わけ) を渡すと、タップが「歩く」から「触った場所を知らせる」に替わる。opt.walk＝足あとのタップだけは今までどおり歩く */
+    if (typeof fn !== "function"){ touchEnd(null); return false; }
+    var w0 = !!TOUCH && !TWALK; TOUCH = fn; TWALK = !!(opt && opt.walk);
+    if ((!!TOUCH && !TWALK) !== w0 && V && V.open){ footBuild(); ask(); }
+    return true;
+  }
+  function touchEnd(why){   /* 知らせ先を外す：タップは元どおり（足あとへ歩く）。知らせ先には (null, わけ) で1回知らせる */
+    var f = TOUCH, w0 = !!TOUCH && !TWALK; TOUCH = null; TWALK = false; markAt(null);
+    if (why === "close") barSet(null);
+    else if (w0 && V && V.open){ footBuild(); ask(); }
+    if (f && why){ try { f(null, why); } catch(e){ warn("触った場所の知らせ先で、うまくいきませんでした", e); } }
+  }
+  function markAt(hit, w, hh){   /* 触った所に、青い印（置く前の目印）。w・hh＝印の大きさ（mm。置く物の大きさに合わせられる） */
+    if (MARKO){ if (scene) scene.remove(MARKO); try { MARKO.geometry.dispose(); } catch(e){} MARKO = null; ask(); }
+    if (!hit || !MODEL || !scene || !T) return null;
+    w = (fin(w) && w > 0) ? w : 240; hh = (fin(hh) && hh > 0) ? hh : 240;
+    var wu, sd, t, px, py, pz, ry = 0, rx = 0;
+    if (hit.kind === "wall"){
+      wu = wallD(hit.wall); if (!wu || !fin(hit.u) || !fin(hit.z)) return null;
+      sd = hit.side < 0 ? -1 : 1; t = sd * (wu.th / 2 + 16); px = wu.a[0] + wu.ux * hit.u - wu.uy * t; py = wu.a[1] + wu.uy * hit.u + wu.ux * t; pz = hit.z;
+      ry = Math.atan2(-wu.uy * sd, wu.ux * sd);
+    } else if (hit.kind === "floor" || hit.kind === "ceil"){
+      if (!fin(hit.x) || !fin(hit.y)) return null;
+      px = hit.x; py = hit.y; pz = hit.kind === "ceil" ? (fin(hit.ch) ? hit.ch : MODEL.ch) - 6 : lvOf(MODEL, hit.x, hit.y) + 16;
+      rx = hit.kind === "ceil" ? Math.PI / 2 : -Math.PI / 2;
+    } else return null;
+    var m = new T.Mesh(new T.PlaneGeometry(w * K, hh * K), mat("mark3"));
+    m.rotation.set(rx, ry, 0); m.position.set(px * K, pz * K, py * K); m.renderOrder = 5; MARKO = m; scene.add(m); ask();
+    return { x: Math.round(px), y: Math.round(py), z: Math.round(pz), w: w, h: hh };
+  }
+  function barSet(node){   /* 候補の帯などを、立体の下のボタンの列のすぐ上に差し込む（立体の絵はその分だけ縮む＝絵に被らない） */
+    var v = V || frame();
+    if (BARE && BARE.parentNode === v.bot) v.bot.removeChild(BARE);
+    BARE = null;
+    if (node && node.nodeType === 1){ v.bot.insertBefore(node, v.bot.firstChild); BARE = node; }
+    if (v.open && R){ resize(); renderNow(); }
+    return !!BARE;
+  }
+  function btnSet(key, label, fn){   /* 下のボタンの列に、ボタンを1つ足す（［設定］の左）。label を null にすると外す。見た目はほかのボタンと同じ */
+    var v = V || frame(), b = XB[key];
+    if (b){ if (b.parentNode) b.parentNode.removeChild(b); delete XB[key]; }
+    if (!label || typeof fn !== "function"){ rowFit(); return null; }
+    b = el("button", BTN + ";padding:0 10px", String(label)); b.type = "button";
+    b.onclick = function(){ sheetShow(false); try { fn(); } catch(e){ warn("足したボタンの先で、うまくいきませんでした", e); } };
+    v.row.insertBefore(b, v.bSet); XB[key] = b; rowFit();
+    return b;
+  }
+  function rowFit(){   /* 下のボタンの列が横にはみ出す時は、ボタンの左右の余白とすき間を詰める（ボタンが画面の外に隠れないように。高さ 44 はそのまま） */
+    if (!V || !V.open) return;
+    var row = V.row, bs = row.children, st = [[10, 6], [8, 6], [6, 6], [5, 4], [3, 3]], i, k;
+    for (i = 0; i < st.length; i++){
+      for (k = 0; k < bs.length; k++) bs[k].style.padding = "0 " + st[i][0] + "px";
+      row.style.gap = st[i][1] + "px";
+      if (row.scrollWidth <= row.clientWidth + .5) break;
+    }
+  }
+  function watchSay(what){ WATCH.slice().forEach(function(f){ try { f(what); } catch(e){ warn("開いた・とじたの知らせ先で、うまくいきませんでした", e); } }); }
   function outInfo(){   /* 検査用：外まわりの材料ごとの外形（mm） */
     if (!OUTG) return null;
     OUTG.updateMatrixWorld(true);
@@ -46895,6 +46997,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
           applyQual();
         }
         labels(); arrive(-1); renderNow();
+        watchSay("open");
         if (!hinted){ hinted = true; say((QAUTO ? "この端末では画質を「軽い」にしました（設定で戻せます）。" : "") + (CTL === "stick" ? "左の丸で歩けます。足あとをタップしても歩けます。" : "床の足あとをタップすると、そこへ歩きます。なぞると見回せます。"), 5200); }
         return { ok: true, built: r.built, kept: r.kept, removed: r.removed, ms: r.ms, warn: r.warn };
       } catch(e){ warn("開けませんでした", e); say("立体を出せませんでした。とじて、今までの画面を使ってください。"); return { ok: false, why: "error", msg: String((e && e.message) || e) }; }
@@ -46903,6 +47006,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   function close(){
     if (!V) return;
     posSave(true); V.open = false; V.box.style.display = "none"; V.sheet.style.display = "none";
+    touchEnd("close"); watchSay("close");
     if (raf){ cancelAnimationFrame(raf); raf = 0; } if (LOOP){ cancelAnimationFrame(LOOP); LOOP = 0; }
     need = false; isMoving = false; LOOPACT = false; NPTR = 0; TW = null; ringHide();
     if (POSE){ var dn = POSE.done; POSE = null; if (dn) try { dn(); } catch(e){} }
@@ -46930,7 +47034,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function stats(){
     var meshes = 0, tris = 0; Object.keys(UNITS).forEach(function(k){ var o = UNITS[k].obj; if (o){ meshes++; tris += o.userData.tris || 0; } });
-    return { open: !!(V && V.open), units: Object.keys(UNITS).length, meshes: meshes, tris: tris, rev: last.rev, built: last.built, kept: last.kept, removed: last.removed, ms: last.ms, renderMs: last.renderMs, fps: last.fps, room: fpRoom, calls: R ? R.info.render.calls : 0, qual: QUAL, auto: QAUTO, bench: BENCH, view: VIEW, ctl: CTL, node: hereNode, nodes: NODES.length, doors: DOORS.length };
+    return { open: !!(V && V.open), units: Object.keys(UNITS).length, meshes: meshes, tris: tris, rev: last.rev, built: last.built, kept: last.kept, removed: last.removed, ms: last.ms, renderMs: last.renderMs, fps: last.fps, room: fpRoom, calls: R ? R.info.render.calls : 0, qual: QUAL, auto: QAUTO, bench: BENCH, view: VIEW, ctl: CTL, node: hereNode, nodes: NODES.length, doors: DOORS.length, feet: !!footObj };
   }
   /* 画面の点（−1〜1）で触った面を返す。段階6（触って候補）の土台 */
   function pick(nx, ny){
@@ -47011,6 +47115,14 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     ctl: function(m){ if (m){ setCtl(m); labels(); } return CTL; },
     home: function(){ goHome(); renderNow(); return here(); },
     jump: function(id){ jumpRoom(id); renderNow(); return here(); },
+    /* 触った場所を知らせる口（Fable の作業番号 689）。Opus の「触って候補」が使う */
+    touch: function(fn, opt){ if (fn === undefined) return !!TOUCH; return touchSet(fn, opt); },   /* fn(hit, わけ) を渡すと、タップで歩かずに知らせる（opt.walk＝足あとだけは歩く）。null で元に戻す。とじた時も元に戻る */
+    touching: function(){ return !TOUCH ? false : TWALK ? "walk" : "only"; },
+    hit: function(cx, cy){ return hitOf(cx, cy); },                 /* 画面の点（clientX・clientY）→ 触った場所 */
+    mark: function(hit, w, h){ return markAt(hit, w, h); },         /* 触った所に青い印。null で消す */
+    bar: function(node){ return barSet(node); },                    /* 帯を、下のボタンの列のすぐ上に差し込む（絵は縮む）。null で外す。とじた時も外れる */
+    button: function(key, label, fn){ return btnSet(String(key), label, fn); },   /* 下のボタンの列に、ボタンを1つ足す。label を null で外す */
+    watch: function(fn){ if (typeof fn === "function" && WATCH.indexOf(fn) < 0) WATCH.push(fn); return WATCH.length; },   /* 立体を開いた時 fn("open")・とじた時 fn("close") */
     outside: outInfo,   /* 検査用（CAD-688）：外まわり（地面・基礎・塀など）の外形 */
     /* 床の高さ（CAD-687） */
     level: function(x, y){ return MODEL ? lvOf(MODEL, x, y) : null; },                        /* その点の床の高さ（FL＝0、mm） */
@@ -49707,5 +49819,103 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   window.CAT705 = { v: 1, base: function(){ return BASE; }, setBase: function(b){ BASE = b; idx = null; files = Object.create(null); }, groupOf: groupOf, open: open, loadIndex: loadIndex, loadFile: loadFile, makers: function(){ var m = seenMakers.slice(); (S && S.sashes || []).forEach(function(sa){ if (sa.cat705 && m.indexOf(sa.cat705.maker) < 0) m.push(sa.cat705.maker); }); return m; }, _total: total, _fix: fix };
   /* 単価表の掛率の一覧にカタログのメーカーを早めに出すため、静かに一覧だけ読む（失敗しても何もしない） */
   setTimeout(function(){ try { loadIndex().catch(function(){}); } catch(e){} }, 4000);
+})();
+</script>
+<script>
+/* ---------- CAD-707：立体でも「触って候補」（2026-11-27 Claude/Opus）----------
+   Fable の「触った場所を知らせる口」（RITTAI.touch・hit・mark・bar・button・watch）だけを使う。立体の中は1文字も触らない。
+   ・立体の下のボタンの列に［置く］。押すと「置きたい壁・床・天井をタップ」（足あとのタップは今までどおり歩く）。
+   ・壁／床／天井をタップ → 青い印＋帯に「その部屋でよく使う物3つ＋その他」（平面図と同じ候補の表 KOHO・同じ呼び方）。
+   ・選ぶと平面図と同じ置き方（KAKU2.specPut＋placeAt）で置く＝見積・戻す・微調整も平面図と同じ。置いたら立体を描き直す。
+   ・壁は、触った点を壁の芯に寄せ、触った面の側へ少しずらして置く（内と外・間仕切りの両面を取り違えない）。高さは平面図と同じ決まりの高さ。
+   ・今は1階だけ（平面図と同じ）。保存キーは増やさない。 */
+(function(){
+  "use strict";
+  if (window.TOUCH707 || !window.RITTAI || !RITTAI.touch) return;
+  var on = false, last = null, band = null;
+  var BTN = "flex:1 1 0;min-width:0;min-height:44px;padding:0 4px;border-radius:10px;border:1px solid var(--ai,#2563B0);background:#F3F7FC;font:inherit;font-size:13px;font-weight:800;color:var(--ai,#2563B0);overflow:hidden;white-space:nowrap;text-overflow:ellipsis";
+  var GRY = "flex:0 0 auto;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:13px;font-weight:800;color:var(--ink,#18202A)";
+  function say(t){ try { toast(t); } catch(e){} }
+  function isRf(){ try { return typeof S !== "undefined" && S && S.mode === "rf"; } catch(e){ return false; } }
+  function W(where){ return where === "wall" ? "壁" : where === "ceil" ? "天井" : "床"; }
+  function mk(tag, css, txt){ var d = document.createElement(tag); if (css) d.style.cssText = css; if (txt != null) d.textContent = txt; return d; }
+  function btn(row, label, css, fn){ var b = mk("button", css, label); b.type = "button"; b.onclick = fn; row.appendChild(b); return b; }
+  function showBand(fill){
+    band = mk("div", "display:flex;flex-direction:column;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--line,#DCE3EB)"); band.id = "t707band";
+    fill(band); RITTAI.bar(band);
+  }
+  function hint(){
+    showBand(function(b){
+      var r = mk("div", "display:flex;gap:6px;align-items:center");
+      r.appendChild(mk("div", "flex:1 1 auto;font-size:13px;font-weight:700;color:var(--sub,#5B6673)", "置きたい壁・床・天井をタップ"));
+      btn(r, "やめる", GRY, stop); b.appendChild(r);
+    });
+  }
+  /* 平面図の点（mm）：壁は芯に寄せて、触った面の側へ 10mm */
+  function ptOf(h){
+    if (h.kind !== "wall") return [h.x, h.y];
+    var m = null; try { m = MADO.read(); } catch(e){}
+    var w = m && (m.walls || []).find(function(q){ return q.id === h.wall; });
+    if (!w) return [h.x, h.y];
+    var ux = w.ux, uy = w.uy, u = Math.max(0, Math.min(w.len, h.u)), cx = w.a[0] + ux * u, cy = w.a[1] + uy * u;
+    var dx = h.x - cx, dy = h.y - cy, L = Math.hypot(dx, dy);
+    return L > 1 ? [Math.round(cx + dx / L * 10), Math.round(cy + dy / L * 10)] : [Math.round(cx), Math.round(cy)];
+  }
+  function put(it, h){
+    var K = window.KAKU2, r = null;
+    if (!K || !K.state().usable){ say("置くのは、平面図から立体を開いた時の1階だけです"); return { ok: false }; }
+    var p = ptOf(h);
+    try { K.off(); K.specPut(it[0], it[1], it[2]); r = K.placeAt(p[0], p[1]); } catch(e){ try { console.warn("CAD-707 置く", e); } catch(x){} }
+    try { K.off(); } catch(e){}
+    if (r && r.ok){ try { RITTAI.sync(); } catch(e){} say(it[2] + "を置きました（戻すで戻せます）"); }
+    else say(it[2] + "は、ここには置けませんでした");
+    try { RITTAI.mark(null); } catch(e){}
+    last = null; hint();
+    return r || { ok: false };
+  }
+  function cands(h){
+    var where = h.kind;
+    showBand(function(b){
+      var t = mk("div", "display:flex;gap:6px;align-items:center");
+      t.appendChild(mk("div", "flex:1 1 auto;font-size:13px;font-weight:800;color:var(--ink,#18202A)", (h.name ? h.name + "の" : "") + W(where) + "に置く"));
+      btn(t, "やめる", GRY, stop); b.appendChild(t);
+      var r = mk("div", "display:flex;gap:6px;align-items:center;width:100%");
+      var top = window.KOHO ? KOHO.cands({ where: where, room: h.name || "", mode: isRf() ? "rf" : "zo" }) : [];
+      top.forEach(function(it){ btn(r, it[2].replace(/（.*?）/g, ""), BTN, function(){ put(it, h); }); });
+      btn(r, "その他", BTN.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 10px"), function(){ more(h); });
+      b.appendChild(r);
+    });
+  }
+  /* その他：その場所に置ける物を全部（分け方は平面図と同じ）。選ぶ間だけ帯が伸びる */
+  function more(h){
+    var G = window.KOHO ? KOHO.all(h.kind) : [];
+    showBand(function(b){
+      var t = mk("div", "display:flex;gap:6px;align-items:center");
+      t.appendChild(mk("div", "flex:1 1 auto;font-size:13px;font-weight:800", (h.name ? h.name + "の" : "") + W(h.kind) + "に置く物"));
+      btn(t, "もどる", GRY, function(){ cands(h); }); b.appendChild(t);
+      var box = mk("div", "max-height:40vh;overflow:auto");
+      G.forEach(function(g){
+        box.appendChild(mk("div", "margin:8px 0 4px;font-size:12px;font-weight:800;color:var(--sub,#5B6673)", g[0]));
+        var gr = mk("div", "display:grid;grid-template-columns:repeat(3,1fr);gap:6px");
+        g[1].forEach(function(it){ btn(gr, it[2].replace(/（.*?）/g, ""), BTN.replace("flex:1 1 0;", ""), function(){ put(it, h); }); });
+        box.appendChild(gr);
+      });
+      b.appendChild(box);
+    });
+  }
+  function onHit(h, why){
+    if (why === "close"){ on = false; band = null; last = null; return; }
+    if (!h || (h.kind !== "wall" && h.kind !== "floor" && h.kind !== "ceil")){ try { RITTAI.mark(null); } catch(e){} say("壁・床・天井をタップしてください"); return; }
+    if (h.floor && h.floor > 0){ say("置くのは今は1階だけです"); return; }
+    try { var rr = (RITTAI.rooms() || []).find(function(q){ return q.id === h.room; }); if (rr && rr.name) h.name = rr.name; } catch(e){}   /* 部屋の名前は立体の部屋一覧から（hit.name は名前の無い部屋で「B」などの記号になるため） */
+    last = h;
+    try { RITTAI.mark(h, h.kind === "wall" ? 300 : 450, h.kind === "wall" ? 300 : 450); } catch(e){}
+    cands(h);
+  }
+  function start(){ on = true; RITTAI.touch(onHit, { walk: true }); hint(); }
+  function stop(){ on = false; last = null; try { RITTAI.mark(null); } catch(e){} try { RITTAI.touch(null); } catch(e){} try { RITTAI.bar(null); } catch(e){} band = null; }
+  function addBtn(){ RITTAI.button("k707", "置く", function(){ on ? stop() : start(); }); }
+  RITTAI.watch(function(ev){ if (ev === "open") addBtn(); else if (ev === "close"){ on = false; last = null; band = null; } });
+  window.TOUCH707 = { v: 1, start: start, stop: stop, isOn: function(){ return on; }, last: function(){ return last; }, put: put, ptOf: ptOf };
 })();
 </script>
