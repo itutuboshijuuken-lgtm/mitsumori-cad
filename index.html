@@ -48156,6 +48156,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* 検査用：図面の座標（mm）で、なぞった線・タップを渡す */
     trace: function(P){ if (!A || !tool || tool === "del" || !Array.isArray(P)) return { ok: false }; return tool === "add" ? finishAdd(P) : tool === "part" ? finishPart(P) : finishEra(P); },
     tapEdge: function(i){ if (!A || tool !== "del") return { ok: false }; return toggle(i); },
+    puts: function(){ return PUTS; },   /* CAD-699：触って候補（KOHO）が同じ一覧・同じ名前を使う */
     choose: chooseSpec, put: choosePut, specPut: function(put, k, label){ spec = { put: put, k: k, label: label || k }; tool = "put"; refresh(); pick2put(); return spec; },
     spec: function(o){ if (o && typeof o === "object"){ spec = o; tool = "put"; refresh(); pick2put(); } return spec; },
     placeAt: function(x, y){ if (!A || tool !== "put" || !spec) return { ok: false }; var p = [x, y]; return !spec.put ? place(p) : spec.put === "lt" ? placeLt(p) : spec.put === "fx" ? placeFx(p) : placeTk(p); },
@@ -48199,6 +48200,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    CAD-693（2026-11-27 Claude/Opus）：部屋の［床］に「土間」。土間の部屋は「土間の下がり」（150・180・200・数字。まわりの床から土間の面まで＝上がり框の高さ）。
      記録は土間の床の記録（S.tatami の fk:"flDoma"）の dz（mm）。MADO.read の things の raw.dz で立体（Fable）が読む。見積は変わらない。
    CAD-694（2026-11-27 Claude/Opus）：窓をタップ→帯に［付属］（雨戸 手動・窓シャッター 電動・面格子・霧除け）。記録は sa.acc。見積は窓1か所ずつ（仮単価）。
+   CAD-699（2026-11-27 Claude/Opus）：触って候補（翔伍の11/25・26の決め：触った場所から予想して候補3つ＋その他、決まった表で毎回同じ）。
+     部屋（床・天井）・外壁・間仕切りをタップ→帯の1段目に、その場所と部屋の種類で決まる候補3つ＋［その他］（押すとその場で置く）。
+     外壁は帯に［寸法］（寸法がそろっていない間は今までどおりすぐ数字パッド）。候補の表は window.KOHO（立体と同じ物を使う）。
    CAD-698（2026-11-27 Claude/Opus）：部屋の帯に［横幅］［奥行］。数字を入れると間仕切りが動く（今の CAD-139 の applyRoomDim。T字の壁も一緒・戻す1回）。
      入れた数字はぴったり（5mm単位。227.5mmの目には吸い付けない）。四角くない部屋・動かせる間仕切りが無い向きは出さない。部屋名・広さの白抜きを太く。
    CAD-695（2026-11-27 Claude/Opus）：「工事を追加」にバルコニー（FRP防水・手すり）・ロフト（床・はしご）・スロープ（手すり）・家庭用蓄電池（全国平均の仮単価）。 */
@@ -48285,7 +48289,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var si = sashAt(p);
     if (si >= 0){ closePart(); closeRoom(); closeThing(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openSash(si); return; }
     closeSash();
+    lastP = p;
     var i = edgeAt(p);
+    if (i >= 0 && window.KOHO && S.edges && S.edges[i] && !unk()){ closePart(); closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openWall(i, p); return; }   /* CAD-699：寸法がそろっている時の外壁は、触って候補の帯（［寸法］も帯の中）。決まっていない辺がある間は、今までどおりすぐ数字パッド */
     if (i < 0) i = dimEdgeAt(p);
     if (i < 0){ var ti = tareAt(p); if (ti >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openTare(ti); return; } }   /* CAD-687：垂れ壁（別の記録 S.tare）→帯［下がり］（今の tareEdit） */
     if (i < 0){ var pi = partAt(p); if (pi >= 0){ closeRoom(); setTimeout(function(){ try { var z = zumen(); if (z) z.select(d.sel); } catch(x){} }, 0); openPart(pi); } else { closePart(); setTimeout(roomAfterTap, 0); } return; }
@@ -48494,6 +48500,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var dz = roomDims(r), seen = {};
     dz.forEach(function(en){ if (seen[en.dim]) return; seen[en.dim] = 1; var b = mk("", function(){ dimPad(en); }); b.innerHTML = '<span style="display:block;font-size:11px;font-weight:700;line-height:1.1">' + (en.dim === "w" ? "横幅" : "奥行") + '</span><span style="display:block;font-size:13px;line-height:1.2">' + Math.round(en.cur).toLocaleString("ja-JP") + "</span>"; b.style.padding = "0 8px"; });
     var x = mk("×", function(){ closeRoom(); try { var z = zumen(); if (z) z.select(null); } catch(e){} }); x.style.padding = "0"; x.style.width = "44px";
+    /* CAD-699：触った所（床・天井）に置く候補。触った点が今の部屋の中にある時だけ */
+    var rp = (lastP && roomAtPt(lastP) && roomAtPt(lastP).cid === cid) ? lastP.slice() : null;
+    if (rp){ roomBar.dataset.kp = rp.join(","); kohoRow(roomBar, "room", rp, r); }
     return { ok: true, cid: cid, name: nm };
   }
   /* ===== CAD-688：新築・増築の部屋の床。今の「床を構えて部屋をタップ」（HB.__ltSeg50）をそのまま1回呼ぶ
@@ -48609,6 +48618,59 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var partSel = -1, partObj = null, partBar = null;   /* 選んだ間仕切りは、物そのもので覚える（戻す・足す・消すで番号がずれても取り違えない） */
   function partIdx(){ var i = partObj ? (S.parts2D || []).indexOf(partObj) : -1; partSel = i; return i; }
   function isRf(){ try { return S.mode === "rf"; } catch(e){ return false; } }
+  /* ===== CAD-699：触って候補（平面図の側）。候補の表は window.KOHO（立体と同じ物を使う） ===== */
+  var lastP = null, wallObj = null;
+  function pip(p, P){ var c = false; for (var i = 0, j = P.length - 1; i < P.length; j = i++){ var xi = P[i][0], yi = P[i][1], xj = P[j][0], yj = P[j][1]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) c = !c; } return c; }
+  function roomAtPt(p){ try { var r = roomAt(p[0], p[1]); return r || null; } catch(e){ return null; } }
+  function kohoBtn(bar, it, B, fn){ var b = document.createElement("button"); b.type = "button"; b.style.cssText = B; b.textContent = it; b.onclick = fn; bar.appendChild(b); return b; }
+  /* 置く：今の［置く］と同じ置き方（KAKU2 の specPut → placeAt）。置いたら道具は持たない */
+  function putItem(it, p){
+    var K = window.KAKU2; if (!K || !p) return { ok: false };
+    var r = null;
+    try { K.off(); K.specPut(it[0], it[1], it[2]); r = K.placeAt(p[0], p[1]); } catch(e){ warn("候補を置く", e); }
+    try { K.off(); } catch(e){}
+    say(r && r.ok ? it[2] + "を置きました（戻すで戻せます）" : it[2] + "は、ここには置けませんでした");
+    return r || { ok: false };
+  }
+  /* その他：その場所に置ける物を全部（分け方は今の［置く］と同じ） */
+  function moreSheet(where, p, ttl){
+    var G = window.KOHO ? window.KOHO.all(where) : [];
+    $("mbox").innerHTML = "<h3>" + ttl + "</h3>" + G.map(function(g, gi){ return '<div style="margin:10px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">' + g[0] + '</div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">' + g[1].map(function(it, ii){ return '<button type="button" class="btn sub" data-k699="' + gi + "," + ii + '" style="min-height:44px">' + it[2] + "</button>"; }).join("") + "</div>"; }).join("")
+      + '<div class="row" style="margin-top:12px"><button type="button" class="btn" id="k699Ok" style="width:100%;min-height:46px">閉じる</button></div>';
+    $("modal").hidden = false;
+    $("k699Ok").onclick = function(){ $("modal").hidden = true; };
+    $("mbox").querySelectorAll("[data-k699]").forEach(function(b){ b.onclick = function(){ var q = b.dataset.k699.split(","), it = G[+q[0]][1][+q[1]]; $("modal").hidden = true; putItem(it, p); closeAllBars(); }; });
+  }
+  function closeAllBars(){ closePart(); closeRoom(); }
+  /* 候補の帯の1段目（ここに置く：候補3つ＋その他）を bar に足す */
+  function kohoRow(bar, where, p, rm){
+    if (!window.KOHO || !p) return;
+    var nm = rm ? roomNm(rm) : "", top = window.KOHO.cands({ where: where, room: nm, mode: isRf() ? "rf" : "zo" });
+    var row = document.createElement("div"); row.style.cssText = "display:flex;gap:6px;align-items:center;width:100%";
+    var B = "flex:1 1 0;min-width:0;min-height:44px;padding:0 4px;border-radius:10px;border:1px solid var(--ai,#2563B0);background:#F3F7FC;font:inherit;font-size:13px;font-weight:800;color:var(--ai,#2563B0);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+    top.forEach(function(it){ kohoBtn(row, it[2].replace(/（.*?）/g, ""), B, function(){ putItem(it, p); closeAllBars(); }); });
+    kohoBtn(row, "その他", B.replace("flex:1 1 0", "flex:0 0 auto").replace("padding:0 4px", "padding:0 10px"), function(){ moreSheet(where, p, (nm ? nm + "の" : "") + (where === "wall" ? "壁に置く物" : "床・天井に置く物")); });
+    bar.insertBefore(row, bar.firstChild);
+    bar.style.flexWrap = "wrap";
+  }
+  /* 外壁の帯：候補＋［寸法］ */
+  function openWall(i, p){
+    if (!A) return { ok: false };
+    var P = pts(), a = P[i], b = P[(i + 1) % P.length]; if (!a || !b) return { ok: false };
+    var L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1, nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L, q = [p[0] + nx * 40, p[1] + ny * 40];
+    if (!pip(q, P)) q = [p[0] - nx * 40, p[1] - ny * 40];   /* 家の内側へ少しずらした点で置く（壁の内側の面に付く） */
+    wallObj = { i: i, p: q };
+    if (!partBar){ partBar = document.createElement("div"); partBar.id = "k3PartBar"; partBar.style.cssText = "position:absolute;left:8px;right:8px;bottom:8px;z-index:4;display:flex;gap:6px;align-items:center;padding:8px;border-radius:12px;background:var(--panel,#fff);border:1px solid var(--line,#DCE3EB);box-shadow:0 4px 14px rgba(0,0,0,.12)"; }
+    if (!A.mid.contains(partBar)) A.mid.appendChild(partBar);
+    partBar.dataset.lab = "w|" + i;
+    var B = "flex:1 1 0;min-width:0;min-height:40px;border-radius:10px;border:1px solid var(--line,#DCE3EB);background:#fff;font:inherit;font-size:13px;font-weight:800;color:var(--ink,#18202A)";
+    partBar.innerHTML = '<div style="flex:1 1 auto;font-size:12px;font-weight:700;color:var(--sub,#5B6673)">外壁　' + Math.round(L).toLocaleString("ja-JP") + "mm</div>";
+    kohoBtn(partBar, "寸法", B.replace("flex:1 1 0", "flex:0 0 auto") + ";padding:0 14px", function(){ var j = wallObj ? wallObj.i : -1; closePart(); if (j >= 0){ tapT = Date.now(); open(j); } });
+    var x = kohoBtn(partBar, "×", B + ";flex:0 0 44px", closePart); x.setAttribute("aria-label", "閉じる");
+    kohoRow(partBar, "wall", q, roomAtPt([q[0] + (q[0] - p[0]) * 4, q[1] + (q[1] - p[1]) * 4]));   /* 部屋の名前は、壁から少し奥（約200mm）の点で見る */
+    try { while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); var l = document.createElementNS(NS, "line"); l.setAttribute("class", "k3sel"); l.setAttribute("x1", a[0]); l.setAttribute("y1", a[1]); l.setAttribute("x2", b[0]); l.setAttribute("y2", b[1]); l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke"); A.ov.appendChild(l); } catch(e){}
+    return { ok: true, i: i };
+  }
   var tareObj = null;
   function tareLab(q){ return "垂れ壁 下がり" + (q.h || 400) + "|" + Math.round(Math.hypot(q.x2 - q.x1, q.y2 - q.y1)); }
   function openTare(i){
@@ -48661,6 +48723,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     /* CAD-687：形（普通の壁・垂れ壁・腰壁・ふかす・開放）。今の partFormSheet292 をそのまま開く（新築・リフォームどちらも） */
     if (typeof partFormSheet292 === "function"){ var fb = document.createElement("button"); fb.type = "button"; fb.textContent = "形"; fb.style.cssText = B; fb.onclick = function(){ var j = partIdx(); if (j >= 0) partFormSheet292(j); }; partBar.appendChild(fb); }
     var x = document.createElement("button"); x.type = "button"; x.textContent = "×"; x.setAttribute("aria-label", "閉じる"); x.style.cssText = B + ";flex:0 0 44px"; x.onclick = closePart; partBar.appendChild(x);
+    /* CAD-699：触った側の面に置く候補（タップした点を間仕切りから40mm、触った側へ） */
+    if (lastP && pState(q) !== "remove"){ var Lq = Math.hypot(q.x2 - q.x1, q.y2 - q.y1) || 1, nx = -(q.y2 - q.y1) / Lq, ny = (q.x2 - q.x1) / Lq, sd = ((lastP[0] - q.x1) * nx + (lastP[1] - q.y1) * ny) >= 0 ? 1 : -1, tq = ((lastP[0] - q.x1) * (q.x2 - q.x1) + (lastP[1] - q.y1) * (q.y2 - q.y1)) / (Lq * Lq), t2 = Math.max(.05, Math.min(.95, tq)); var pp = [q.x1 + (q.x2 - q.x1) * t2 + nx * sd * 40, q.y1 + (q.y2 - q.y1) * t2 + ny * sd * 40]; kohoRow(partBar, "wall", pp, roomAtPt([pp[0] + nx * sd * 160, pp[1] + ny * sd * 160])); }
     markPart();
     return { ok: true, i: i, state: cur };
   }
@@ -48680,7 +48744,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     l.setAttribute("stroke", "#FF00C8"); l.setAttribute("stroke-width", "5"); l.setAttribute("stroke-linecap", "round"); l.setAttribute("vector-effect", "non-scaling-stroke");
     A.ov.appendChild(l);
   }
-  function closePart(){ partSel = -1; partObj = null; tareObj = null; if (partBar && partBar.parentNode) partBar.parentNode.removeChild(partBar); if (A && !editing) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
+  function closePart(){ partSel = -1; partObj = null; tareObj = null; wallObj = null; if (partBar && partBar.parentNode) partBar.parentNode.removeChild(partBar); if (A && !editing) while (A.ov.firstChild) A.ov.removeChild(A.ov.firstChild); }
   /* 指を離した直後、同じ場所に「クリック」が届く。開いたばかりのパッドのボタン（×など）に当たって閉じないよう、それだけ捨てる */
   var tapT = 0;
   document.addEventListener("click", function(e){
@@ -49165,5 +49229,72 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       after.after(b);
     } catch(e){}
   }, 600);
+})();
+</script>
+<script>
+/* ---------- CAD-699：触って候補の表（KOHO）（2026-11-27 Claude/Opus）----------
+   翔伍の決め（11/25・11/26）：触った場所から、したいことを予想して候補を出す。候補は最大3つ＋「その他」。
+   予想は決まった表（AIの推測は使わず、毎回同じ結果）。平面図と立体（Fable）で同じ表を使う（名前・順番をそろえる）。
+   品物の名前と置き方は今の［置く］の一覧（KAKU2.puts）と同じ。表を直す時はここだけ。
+   ・where：wall（壁の面）／room（床・天井。平面図では床と天井を分けられないので両方）／floor／ceil（立体用）
+   ・room：部屋の名前（名前から部屋の種類を決める）。mode：zo（新築・増築）／rf（リフォーム）
+   ・KOHO.cands(ctx) → [[put, k, 名前], …] 最大3つ。KOHO.all(where) → [[分け名, [[put, k, 名前], …]], …]（その他の中身） */
+(function(){
+  "use strict";
+  if (window.KOHO) return;
+  var KIND = [
+    ["wc", /トイレ|便所|ＷＣ|WC/i], ["bath", /浴室|風呂|バス/], ["senmen", /洗面|脱衣|ランドリー/], ["kitchen", /キッチン|台所|ＤＫ|DK|ダイニング/i],
+    ["genkan", /玄関|土間|ポーチ/], ["storage", /収納|クローゼット|押入|納戸|物入|ＷＩＣ|WIC|パントリー/i], ["hall", /廊下|ホール|階段/],
+    ["washitsu", /和室|座敷/], ["living", /リビング|居間|ＬＤＫ|LDK|ＬＤ|LD/i], ["bed", /寝室|洋室|子供|子ども|主寝室|書斎|個室/]
+  ];
+  function kind(name){ name = String(name || ""); for (var i = 0; i < KIND.length; i++) if (KIND[i][1].test(name)) return KIND[i][0]; return "other"; }
+  /* 表：部屋の種類ごとに、壁・床・天井で多い順 */
+  var T = {
+    wall: {
+      wc: ["fx:paper", "fx:towel", "fx:rail"], bath: ["fx:rail", "fx:towel", "fx:outlet"], senmen: ["fx:outlet", "fx:towel", "fx:mirror"],
+      kitchen: ["fx:outlet", "fx:switch", "fx:cshelf"], genkan: ["fx:switch", "fx:doorphone", "fx:rail"], storage: ["fx:pipe", "fx:shelf", "tk:makura"],
+      hall: ["fx:switch", "fx:outlet", "fx:rail"], washitsu: ["fx:outlet", "fx:switch", "fx:picrail"], living: ["fx:outlet", "fx:switch", "fx:tv"],
+      bed: ["fx:outlet", "fx:switch", "fx:lan"], other: ["fx:outlet", "fx:switch", "fx:rail"]
+    },
+    floor: {
+      wc: ["tk:wc", "tk:tearai", "tk:floor"], bath: ["tk:bath", "tk:floor", "tk:ceil"], senmen: ["tk:senmen", "tk:senpan", "tk:floor"],
+      kitchen: ["tk:kitchen", "tk:yukashu", "tk:floor"], genkan: ["tk:geta", "tk:dansa", "tk:floor"], storage: ["tk:chudan", "tk:makura", "tk:floor"],
+      hall: ["tk:stair", "tk:floor", "tk:pillar"], washitsu: ["tk:floor", "tk:pillar", "tk:dansa"], living: ["tk:floor", "tk:stair", "tk:pillar"],
+      bed: ["tk:floor", "tk:pillar", "tk:stair"], other: ["tk:floor", "tk:pillar", "tk:stair"]
+    },
+    ceil: {
+      wc: ["lt:down", "lt:ceil", "tk:ceil"], bath: ["lt:down", "tk:ceil", "lt:ceil"], senmen: ["lt:down", "lt:ceil", "tk:ceil"],
+      kitchen: ["lt:down", "lt:ceil", "lt:rail"], genkan: ["lt:down", "lt:ceil", "tk:ceil"], storage: ["lt:down", "lt:ceil", "tk:ceil"],
+      hall: ["lt:down", "lt:ceil", "tk:ceil"], washitsu: ["lt:ceil", "lt:down", "tk:ceil"], living: ["lt:ceil", "lt:down", "lt:rail"],
+      bed: ["lt:ceil", "lt:down", "tk:ceil"], other: ["lt:ceil", "lt:down", "tk:ceil"]
+    }
+  };
+  /* 平面図の部屋のタップ（床と天井を分けられない）：その部屋で一番多い1つ目の物を先に。水まわり・玄関・収納は床の物、ほかは照明 */
+  var ROOMMIX = { wc: ["tk:wc", "tk:tearai", "lt:down"], bath: ["tk:bath", "lt:down", "tk:ceil"], senmen: ["tk:senmen", "tk:senpan", "lt:down"],
+    kitchen: ["tk:kitchen", "lt:down", "lt:ceil"], genkan: ["tk:geta", "lt:down", "tk:dansa"], storage: ["tk:chudan", "tk:makura", "lt:down"],
+    hall: ["lt:down", "tk:stair", "tk:floor"], washitsu: ["lt:ceil", "lt:down", "tk:floor"], living: ["lt:ceil", "lt:down", "tk:floor"],
+    bed: ["lt:ceil", "lt:down", "tk:floor"], other: ["lt:ceil", "lt:down", "tk:floor"] };
+  var WALLT = { pt: 1, seg: 1, area: 1, wall: 1 };
+  function puts(){ try { return (window.KAKU2 && window.KAKU2.puts) ? window.KAKU2.puts() : []; } catch(e){ return []; } }
+  function find(id){ var q = id.split(":"), hit = null; puts().forEach(function(g){ g[1].forEach(function(it){ if (!hit && it[0] === q[0] && it[1] === q[1]) hit = it; }); }); return hit; }
+  function okMode(it, mode){ return !(it[0] === "fx" && it[1] === "demo" && mode !== "rf"); }
+  function cands(ctx){
+    ctx = ctx || {}; var k = kind(ctx.room), w = ctx.where || "room", L = w === "wall" ? T.wall[k] : w === "floor" ? T.floor[k] : w === "ceil" ? T.ceil[k] : ROOMMIX[k];
+    return (L || []).map(find).filter(function(it){ return it && okMode(it, ctx.mode); }).slice(0, 3);
+  }
+  /* その他：壁＝壁に付く物（fx と 枕棚・中段棚）、床・天井＝照明と設備（tk）。新築ではリフォームだけの物を出さない */
+  function all(where, mode){
+    var out = [];
+    puts().forEach(function(g){
+      var L = g[1].filter(function(it){
+        if (!okMode(it, mode || ((typeof S !== "undefined" && S && S.mode === "rf") ? "rf" : "zo"))) return false;
+        if (where === "wall") return it[0] === "fx" || (it[0] === "tk" && (it[1] === "makura" || it[1] === "chudan"));
+        return it[0] === "lt" || (it[0] === "tk" && it[1] !== "makura" && it[1] !== "chudan");
+      });
+      if (L.length) out.push([g[0], L]);
+    });
+    return out;
+  }
+  window.KOHO = { v: 1, kind: kind, cands: cands, all: all, table: T, roomMix: ROOMMIX };
 })();
 </script>
