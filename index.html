@@ -7212,6 +7212,16 @@ function openArea(){ return S.sashes.reduce((a, s) => a + opW308(s) * s.h * s.n,
 const EQ_KEYS = new Set(["wKyuto","wKanki","tatamiNew","tatamiOmote","kHon","kSetsubi","kHaiso","kGencho","kWork","kIH","kDuct","kPanel","kPanelM","kPanelH","paraVent","kasagi","ventIn","tQR","tSB","tIttai","tIttaiR","tTankless","tWork","tParts","tTear","tTearai","tRemodel","tAcc","tTesuri","rpFloor","rpCross","rpAmido","rpShoji","tConsent","uHon1216","uHon1616","uHon1620","uKumi","uSetsubi","uDenki","uDan","ubKaitai","uToKan1","uToKan2","uToKan3","uToOsoji","uToWipe","uToLight","uToBar","uLiKan","uLiKanP","uLiJet","uLiOsoji","uLiPack","uTaKata","uTaJet","uTaUru","uTaWash","uTaKan1","uTaKan2","uTaMirL","uTaMirW","uTaGrip","uTaFloor","uKan","kDish","kHood","eLockB","eLockS","eLockE","tWash","sHon","sHon600","sWork","sTear","tearaiHon","tearaiWork","ecoTank","ecoHP","ecoLeg","ecoRemo","ecoWork","ecoTear","ecoBase","eKae","eHik","eIsetsu","eLight","eTekkyo","ePanel","eEco","eAircon","eAirconTear","cloth","clothNew","cfShiki","flCF","floorFin","flSheet","flMuku","tosou","tNoki","tFutai","tYane","tYojo","senjo","sYojo","sDown","sUp","siding","yakisugi","nuri","yakumono","caulk","caulkM","roofFin","roofYaku","nokiten","toi","tatedoi","toiKaitai","umS","umM","umL","umWork","bTop","bFrp","bTearF","bDrain","deckHard","deckJinko","deckHinoki","deckRail","deckStep","fenceHinoki","fenceAlu","kisoBase","kisoRise","domaCon","domaFin","namakon","kuuzumi","ashiba","precut","toriai","precutUnpan","gWood","gBoard","gPla","gGareki","gCon","gToki","gomiZan","bisou","hcFloor","hcKitchen","hcBath","hcToilet","hcSenmen","hcAircon","hcWindow","hAlu","hAluWork","pGenkan"]);
 ["jibanSurvey", "jibanKairyo", "kakuninShinsei", "kakuninShinsei1", "kashiHoken", "jousouSet", "jichinsai", "ltCeilFix", "hikomi", "denkiHik478", "chouki478", "tq3_478", "gaikoDoma", "gaikoFence", "gaikoMon", "gaikoCar", "v24First", "v24Third"].forEach(k => EQ_KEYS.add(k));
 function isEq(r){ const f = r.fix || {}; return f.kind === "sash" || EQ_KEYS.has(f.key); }
+/* CAD-718（Fable）：1階と2階の外形が同じか。形（辺の向き・長さ・始点）だけでくらべる。
+   前は JSON の文字どうしでくらべていたので、辺の控え（b0＝なぞった寸法の土台・auto の印。solve が後から書く）の有り無しだけで「ちがう」になり、
+   階を足した直後（1階の保管にはまだ b0 が無い）は総2階の計算にならなかった。形は pts() と同じく po・d・v だけで決まる */
+function sameOutline2F(a, b){
+  const ea = (a && a.edges) || [], eb = (b && b.edges) || [];
+  if (!ea.length || ea.length !== eb.length) return false;
+  for (let i = 0; i < ea.length; i++){ if (!ea[i] || !eb[i] || ea[i].d !== eb[i].d || Math.abs((+ea[i].v || 0) - (+eb[i].v || 0)) > 0.5) return false; }
+  const pa = a.po || [0, 0], pb = b.po || [0, 0];
+  return Math.abs((+pa[0] || 0) - (+pb[0] || 0)) <= 0.5 && Math.abs((+pa[1] || 0) - (+pb[1] || 0)) <= 0.5;
+}
 // 「外周が同じを2階建て」の計算で、③階の図面の中身（窓・ドア・設備・間仕切りなど）も足して数える
 function mergeUpperFloor(b){
   if (!b) return; const cl = v => JSON.parse(JSON.stringify(v));
@@ -7245,7 +7255,7 @@ function calc(){
     const keep0 = flSnap(), fl00 = S.floors, a = S.fi === 0 ? keep0 : S.fl[0].snap, b = S.fi === 1 ? keep0 : S.fl[1].snap;
     /* CAD-477：2階が1階を全部覆って外に出ている（はね出し・玄関の引っ込み）時も、この2階建の計算を使い、出た所の分（軒天・水切り・床の断熱・受け梁・柱）を足す */
     const hEq477 = a && b && JSON.stringify(a.house) === JSON.stringify(b.house);
-    const same477 = hEq477 && JSON.stringify(a.edges) === JSON.stringify(b.edges) && JSON.stringify(a.po || null) === JSON.stringify(b.po || null);
+    const same477 = hEq477 && sameOutline2F(a, b);   /* CAD-718（Fable）：形でくらべる（前は JSON の文字どうし） */
     const oh477 = (!same477 && hEq477 && S.oh477 !== false && typeof ohInfo477 === "function") ? ohInfo477(a, b) : null;
     if (same477 || oh477){
       try { flLoad(a); S.floors = 2; mergeUpperFloor(b); window.__oh477 = oh477; return calcFloor(); }
@@ -39312,6 +39322,57 @@ function kozo478(C){
     return c0.apply(this, arguments);
   };
   window.calc.__j491 = true;
+})();
+</script>
+<script id="calc1Fjs">
+/* ---------- CAD-718（Fable）：見積の計算は、いつも「1階を見ている状態」にそろえてから数える（2026-11-27 Claude Fable）----------
+   この部品は「Fable（Claude）の持ち場」（計算）。直してほしい所はドライブのメモで送ること。
+   ・なぜ：計算（calc）は、階のデータを S に入れ替えながら数える。その間「今の階（S.fi）」は入れ替えないので、2階を見ている時（S.fi＝1）は、
+     階を取り出す窓口（withFloor416）が「今の S は2階」と見て、1階のデータで2階を数えていた。見ている階で見積が変わっていた：
+       総2階の計算 … 2階の管柱・金物（N値）・まぐさ・窓台・すき間の埋め材・窓の上の桁
+       階ごとの計算（2階の外形が1階とちがう家）… 2階の筋交い・金物
+       別棟でつなぐ時（join491js）… 1階の「壁なしの辺」を見ないので、つなぐ辺の壁・柱
+   ・直し方：calc のいちばん外で、2階以上を見ている時だけ、階の保管を「1階を見ている時」と同じ並びに一時的に入れ替えてから数え、終わったら必ず元に戻す。
+     やる事は flSwitch のデータの入れ替えと同じ（階段の位置をどの階にもそろえる → 今の階を保管へ → 1階を S へ）。ただし保管の中身は書き換えず、写しで行う。
+     画面・保存・「元に戻す」の記録には触らない。1階を見ている時・階が1つの家は、今までと1文字も同じ道を通る（この部品は何もしない）。
+   ・保存キーは増やさない。S の形も変えない。calc を後から包む物が増えても、読み込みの終わりにもう一度いちばん外に付け直す。 */
+(function(){
+  "use strict";
+  if (window.CALC1F) return;
+  var load0 = flLoad, snapNow = flSnap, busy = false, runs = 0;
+  function wrap(c0){
+    var w = function(){
+      var need = false;
+      try { need = !busy && typeof S !== "undefined" && !!S && Array.isArray(S.fl) && S.fl.length > 1 && S.fi > 0 && !!S.fl[S.fi] && !!S.fl[0] && !!S.fl[0].snap && Array.isArray(S.fl[0].snap.edges) && S.fl[0].snap.edges.length > 0 && Array.isArray(S.edges); } catch(e){ need = false; }
+      if (!need) return c0.apply(this, arguments);
+      var fi = S.fi, live = snapNow(), keep = S.fl.map(function(f){ return f.snap; });
+      var st = (S.zones || []).filter(function(z){ return z && z.k === "stair"; });
+      busy = true; runs++;
+      try {
+        S.fl.forEach(function(f, k){
+          if (k === fi){ f.snap = live; return; }
+          if (!f.snap) return;
+          var o = {}; Object.keys(f.snap).forEach(function(key){ o[key] = f.snap[key]; });
+          o.zones = (f.snap.zones || []).filter(function(z){ return z && z.k !== "stair"; }).concat(flClone(st));   /* 階段は、どの階でも同じ位置（flSwitch と同じ） */
+          f.snap = o;
+        });
+        var s1 = S.fl[0].snap; S.fi = 0; load0(s1); S.fl[0].snap = null;
+        return c0.apply(this, arguments);
+      } finally {
+        busy = false;
+        S.fi = fi; S.fl.forEach(function(f, k){ f.snap = keep[k]; });
+        load0(live);
+      }
+    };
+    try { Object.keys(c0).forEach(function(k){ w[k] = c0[k]; }); } catch(e){}
+    w.__c1F = true;
+    return w;
+  }
+  function install(){ try { if (typeof calc === "function" && !calc.__c1F) window.calc = wrap(calc); } catch(e){} }
+  install();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", install);
+  window.addEventListener("load", install);
+  window.CALC1F = { v: 1, busy: function(){ return busy; }, runs: function(){ return runs; } };
 })();
 </script>
 <script id="stair480js">
