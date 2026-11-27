@@ -45233,7 +45233,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 })();
 </script>
 <script>
-/* ---------- CAD-731：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（2026-11-27 Claude Fable）----------
+/* ---------- CAD-733：新しい立体（rittai）＝ 中を歩く（段階4）＋ 器具の形 ＋ 明るさの直し ＋ 床の高さ ＋ 窓と外まわり ＋ 触った場所を知らせる口 ＋ 床の質感 ＋ 扉と枠 ＋ 階段（一番上に框）（2026-11-27 Claude Fable）----------
    この部品は「Fable（Claude）の持ち場」。他のAIは中を直さず、直してほしい所はドライブのメモで送ること。
    ・今までの立体の部品（main の CAD-685 ＝ Fable の CAD-669 版）を、まるごとこの部品に入れ替える。名前は同じ window.RITTAI。
    ・番号の注意：この中に出てくる「CAD-667・CAD-668・CAD-669」は、Fable が作業中に付けた番号（ドライブの検証待ちフォルダの名前）。
@@ -45273,7 +45273,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
    ・階段（Fable の作業番号 695）：本物の段の形にした（前は高さ20cmの木の台）。平面図と同じ並び（o.parts＝直の段数／廻り 910×910 の踊り場・2段・3段。window.__st306.partsOf）から段を作る。
      段の高さ＝階の高さ÷段数（階の高さ＝階段の記録の kh。無い時は 天井高＋240）。天井は階段の所だけ穴をあけ、上の階の天井までの吹き抜けの壁を作る（四角い部屋の時。ななめの辺がある部屋は、段を天井で止める）。
      階段の所は歩けない（通り抜けない）。古い記録（並びも形も無い）で曲がる階段は、今までの台のまま。RITTAI.steps(部品の名前)＝検査用（段の形）。見積・保存は変えない（表示だけ）。
-     RITTAI.v は 14。
+   ・階段の一番上（Fable の作業番号 696。翔伍さんの決まり 2026-11-27）：図面の段は全部「踏み板」。その上に階段框（上の階の床のふち）を入れ、框の下にも蹴込みを付ける。
+     だから 蹴上げ＝階の高さ÷（図面の段の数＋1）（695 では ÷段の数 で、一番上の段が上の階の床と同じ高さだった）。階の高さ＝記録の kh、無ければ 天井高＋MADO.read().base.dosa（無ければ 240）。
+     RITTAI.v は 15。
    ・やること：読む窓口 MADO.read() だけを読み、部屋ごとの床・壁・天井・開口・扉・器具を立体にして、中を歩けるようにする。
      歩く＝床の足あとをタップ（各ドアの手前と向こう・部屋の真ん中・広い部屋は何か所か）。なぞると見回す。2本指で広さ。
      扉は近づくと開く（開く側＝flip の1、吊元・戸袋の側＝flip の2。新しい図面 CAD-662 と同じ決まり）。
@@ -45290,7 +45292,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
 (function(){
   "use strict";
   if (window.RITTAI) return;
-  var VER = 14, STAGE = 4, K = .001, EYE = 1500;
+  var VER = 15, STAGE = 4, K = .001, EYE = 1500;
   var T = null, threeP = null;
   var V = null;                          /* 画面枠（1つだけ作って使い回す） */
   var R = null, scene = null, cam = null, root = null, OUTG = null, OUTSIG = "", OUTV = null, GL = -550, TOUCH = null, TWALK = false, MARKO = null, BARE = null, WATCH = [], XB = Object.create(null), RSW = 0, RSH = 0;   /* 描く仕組み（起動中1つを使い続ける）。OUTG＝外まわり（空・地面・基礎・塀）、GL＝地面の高さ（FL から） */
@@ -45359,7 +45361,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* 階段の段の形（Fable 695）。平面図と同じ並び（window.__st306.partsOf＝直の段数／廻り 910×910 の踊り場・2段・3段）から作る。
      歩く枠で組み立てる（アプリの絵 layoutGen395 と同じ進み方）：入口の辺の左の角 A と進む向き h。直は h へ 227.5 ずつ、廻りは角を中心に扇に割って向きを90°変える。
      返す物＝{ kh: 階の高さ, ch2: 上の階の天井高, bb: 外形, hb: 天井の穴（外形から壁の半分 60 だけ内）, tr: [[出口の辺の番号, [x,y]…]…] }。段は下から順、1つ目の辺が入口（蹴込みの面） */
-  function stairGeo(o, cx, cy, dir, chDef){
+  function stairGeo(o, cx, cy, dir, chDef, ds){
     var A3 = window.__st306, MW = 910, TD = 227.5, HV = [[0, -1], [1, 0], [0, 1], [-1, 0]], hi = 0, A = [0, 0], tr = [], k;
     if (!A3 || typeof A3.partsOf !== "function" || !o || typeof o !== "object") return null;
     if (!o.parts && !o.sf && o.st && String(o.st).toLowerCase() !== "s") return null;   /* 古い記録（並びも形も無い）で曲がる階段は、平面図の絵が前の描き方なので、今までの台のまま */
@@ -45392,7 +45394,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     if (!RT) RT = function(x, y){ return [x, y]; };
     var bb = [1e18, 1e18, -1e18, -1e18];
     tr = tr.map(function(q){ return [q[0]].concat(q.slice(1).map(function(p){ var v = RT(p[0] - mx, p[1] - my), X = r1(cx + v[0]), Y = r1(cy + v[1]); bb[0] = Math.min(bb[0], X); bb[1] = Math.min(bb[1], Y); bb[2] = Math.max(bb[2], X); bb[3] = Math.max(bb[3], Y); return [X, Y]; })); });
-    var ch = (fin(chDef) && chDef > 1500) ? chDef : 2400, kh = (fin(+o.kh) && +o.kh > 1500) ? +o.kh : ch + 240;   /* 階の高さ：記録の kh。無い時は 天井高＋胴差240（アプリの階段の決まりと同じ） */
+    var ch = (fin(chDef) && chDef > 1500) ? chDef : 2400, kh = (fin(+o.kh) && +o.kh > 1500) ? +o.kh : ch + ((fin(+ds) && +ds >= 50 && +ds <= 1000) ? +ds : 240);   /* 階の高さ：記録の kh。無い時は 天井高＋胴差（base.dosa。無ければ 240。アプリの階段の決まりと同じ） */
     return { kh: r1(kh), ch2: ch, bb: bb, hb: [bb[0] + 60, bb[1] + 60, bb[2] - 60, bb[3] - 60], tr: tr };
   }
   function model(rd){
@@ -45403,7 +45405,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var STG = Object.create(null), STH = [];
     arr(rd.things).forEach(function(t){
       if (t.list !== "tenken" || t.kind !== "stair" || t.state === "remove" || !fin(t.x) || !fin(t.y)) return;
-      var g = null; try { g = stairGeo((t.raw && typeof t.raw === "object") ? t.raw : t, t.x, t.y, String(t.dir || "n"), rd.ch); } catch(e){ g = null; }
+      var g = null; try { g = stairGeo((t.raw && typeof t.raw === "object") ? t.raw : t, t.x, t.y, String(t.dir || "n"), rd.ch, rd.base && rd.base.dosa); } catch(e){ g = null; }
       if (!g) return;
       var hb = g.hb, sq = hb[2] - hb[0] > 300 && hb[3] - hb[1] > 300, any = false;
       arr(rd.rooms).forEach(function(r){
@@ -45898,7 +45900,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     grid: { g: [[.15, .075, .85, .925]], bu: [.5], bv: [.2875, .5, .7125] }, panel: { p: [[.2, .1, .8, .45], [.2, .55, .8, .9]] }, louver: { l: [.7, .775, .85] }, mirror: { m: [.2, .1, .8, .9] } };
   var SOLID = {   /* 名前：[色, ざらつき, 柄] */
     cloth: [0xffffff, .96, "cloth"], ceil: [0xffffff, 1, "cloth"], bare: [0xdedad1, .9], cap: [0xf0ece3, .9], ext: [0xffffff, .85, "siding"],
-    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5], chrome: [0xb2b8bd, .24, null, .8], railW: [0xcda571, .5], plateS: [0xc6c9ca, .9], screen: [0xe3ded2, .95], stairT: [0xdcbe8c, .56, "grainV"], stairR: [0xc2a472, .62, "grainV"],
+    alu: [0x555a60, .5], wframe: [0xd3b68c, .6, "grainV"], door: [0xdcbe8c, .56, "grainV"], doorE: [0x5c4838, .5, "grainV"], sill: [0xb9bec2, .35, null, .7], steel: [0x9aa0a6, .4], plate: [0xf6f4ee, .5], chrome: [0xb2b8bd, .24, null, .8], railW: [0xcda571, .5], plateS: [0xc6c9ca, .9], screen: [0xe3ded2, .95], stairT: [0xdcbe8c, .56, "grainV"], stairR: [0xc2a472, .62, "grainV"], stairK: [0xdcbe8c, .56, "grainV"],
       accD: [0x4a4640, .95, "cloth"], accT: [0xeae5db, .55, "tileS"], accP: [0xeadfc8, .95, "cloth"], accW: [0xd7b88a, .8, "grainV"],
     porc: [0xfafafa, .25], cab: [0xece7dc, .6], wood: [0xffffff, .65, "ply"], tile: [0xffffff, .35, "tileS"], accent: [0x7d8a96, .95, "cloth"],
     shikkui: [0xf2eee4, 1], under: [0xd8c9a8, .9], mark: [0x8a9099, .7], base: [0xf2efe8, .55], crown: [0xf5f3ee, .8], cut: [0x3b4149, .95], ubd: [0xeef2f3, .3],
@@ -46341,7 +46343,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var FIXK = { wc: 1, bath: 1, senmen: 1, tearai: 1, kitchen: 1, geta: 1, senpan: 1 };
   /* 階段の段（Fable 695）：段板の上（木目は段の幅の向き）・蹴込み（入口の辺）・外まわりの側面。天井に穴がある時は上の階まで、無い時は天井まで */
   function stairBuild(acc, d, tag){
-    var st = d.st, n = st.tr.length, base = d.dz || 0, H = st.kh - base, R = H / n, top = st.hole ? H : Math.min(H, d.ch - base - 2), i;
+    var st = d.st, n = st.tr.length, base = d.dz || 0, H = st.kh - base, R = H / (n + 1), top = st.hole ? H : Math.min(H, d.ch - base - 2), i;   /* 蹴上げ＝階の高さ÷（段の数＋1）：図面の段は全部踏み板で、その上に階段框（Fable 696。翔伍さんの決まり） */
     if (!(n > 0) || !(R > 30) || !(top > 100)) return false;
     var V = function(p, z){ return [p[0] * K, z * K, p[1] * K]; };
     for (i = 0; i < n; i++){
@@ -46357,6 +46359,16 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
         if (j === 0){ if (z1 - z0 > .5) acc.quad("stairR", [V(a, z0), V(b, z0), V(b, z1), V(a, z1)], [nx, 0, ny], [[z0 * K, 0], [z0 * K, L * K], [z1 * K, L * K], [z1 * K, 0]], tag); }   /* 入口の辺＝蹴込み */
         else if (j === ex && i < n - 1 && z1 < top - .5) continue;                                                                                                                     /* 出口の辺：次の段の蹴込みが作る */
         else acc.quad("cloth", [V(a, 0), V(b, 0), V(b, z1), V(a, z1)], [nx, 0, ny], [[0, 0], [L * K, 0], [L * K, z1 * K], [0, z1 * K]], tag);                                          /* 外まわり：床から段の上まで */
+      }
+    }
+    if (top >= H - .5){   /* 一番上（Fable 696）：階段框（上の階の床のふち。見付 36・奥行 110）と、その下の蹴込み。出口の辺の 62 内側（吹き抜けの壁の面のすぐ手前）に立てる */
+      var lq = st.tr[n - 1], lp = lq.slice(1), ex2 = lq[0], E0 = lp[ex2], E1 = lp[(ex2 + 1) % lp.length], Le = Math.hypot(E1[0] - E0[0], E1[1] - E0[1]);
+      if (Le > 1){
+        var cgx = 0, cgy = 0; lp.forEach(function(p){ cgx += p[0] / lp.length; cgy += p[1] / lp.length; });
+        var tx = (E1[0] - E0[0]) / Le, ty = (E1[1] - E0[1]) / Le, inx = -ty, iny = tx; if ((cgx - E0[0]) * inx + (cgy - E0[1]) * iny < 0){ inx = -inx; iny = -iny; }   /* inx, iny＝出口の辺から、段の中への向き */
+        var fr2 = { a: [E0[0], E0[1]], ux: tx, uy: ty }, sgn = (-ty * inx + tx * iny) > 0 ? 1 : -1, a2 = [E0[0] + inx * 62, E0[1] + iny * 62], b2 = [E1[0] + inx * 62, E1[1] + iny * 62];
+        acc.quad("stairR", [V(a2, n * R), V(b2, n * R), V(b2, H - 34), V(a2, H - 34)], [inx, 0, iny], [[n * R * K, 0], [n * R * K, Le * K], [(H - 34) * K, Le * K], [(H - 34) * K, 0]], tag);
+        fbox(acc, fr2, 0, Le, sgn > 0 ? -30 : -80, sgn > 0 ? 80 : 30, H - 34, H + 2, "stairK", tag);
       }
     }
     return true;
