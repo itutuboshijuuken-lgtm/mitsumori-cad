@@ -1,0 +1,2979 @@
+{
+ "v": 2,
+ "maker": "LIXIL",
+ "series": "richento-rd",
+ "seriesName": "リシェント 玄関ドア3 アルミ仕様",
+ "group": "玄関ドア",
+ "year": "2026-10",
+ "src": "リシェント受発注資料集 IG4600 RD-38・RD-39・RD-41（2026年10月）。発注は見積システム（商品コードは表に無い）",
+ "tax": "税抜",
+ "pick": [
+  {
+   "id": "design",
+   "name": "デザイン",
+   "values": [
+    {
+     "id": "C11N",
+     "name": "C11N型",
+     "wmin": 715,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C12N",
+     "name": "C12N型",
+     "wmin": 688,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C14N",
+     "name": "C14N型",
+     "wmin": 697,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C16N",
+     "name": "C16N型",
+     "wmin": 657,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C17N",
+     "name": "C17N型",
+     "wmin": 650,
+     "wmax": 913,
+     "shape": "panel",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C20N",
+     "name": "C20N型",
+     "wmin": 674,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定。ガラス別途（本体価格にガラスは含まれない）"
+    },
+    {
+     "id": "M11N",
+     "name": "M11N型",
+     "wmin": 650,
+     "wmax": 913,
+     "shape": "panel",
+     "shapeNote": "絵の種類は受発注資料集の図から判定"
+    },
+    {
+     "id": "C83N",
+     "name": "C83N型",
+     "wmin": 685,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定。採風・ガラス別途・上の高さ帯は2,006〜2,318"
+    },
+    {
+     "id": "C84N",
+     "name": "C84N型",
+     "wmin": 685,
+     "wmax": 913,
+     "shape": "slitE",
+     "shapeNote": "絵の種類は受発注資料集の図から判定。採風・ガラス別途・上の高さ帯は2,006〜2,318"
+    }
+   ]
+  },
+  {
+   "id": "open",
+   "name": "開き方",
+   "values": [
+    {
+     "id": "10",
+     "name": "片開き",
+     "wmin": 714,
+     "wmax": 977,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "20",
+     "name": "親子",
+     "wmin": 1004,
+     "wmax": 1484,
+     "hmin": 1738,
+     "hmax": 2356
+    },
+    {
+     "id": "40",
+     "name": "片袖",
+     "wmin": 872,
+     "wmax": 1446,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "35P",
+     "name": "片袖飾り中桟付ポスト付",
+     "wmin": 1013,
+     "wmax": 1446,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "55",
+     "name": "両袖",
+     "wmin": 1030,
+     "wmax": 1895,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "75P",
+     "name": "両袖飾り中桟付ポスト付",
+     "wmin": 1312,
+     "wmax": 1895,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "50",
+     "name": "両開き",
+     "wmin": 1464,
+     "wmax": 1796,
+     "hmin": 1738,
+     "hmax": 2438
+    },
+    {
+     "id": "11",
+     "name": "片開き ランマ付",
+     "wmin": 714,
+     "wmax": 977,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "21",
+     "name": "親子 ランマ付",
+     "wmin": 1004,
+     "wmax": 1484,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "41",
+     "name": "片袖 ランマ付",
+     "wmin": 872,
+     "wmax": 1446,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "36P",
+     "name": "片袖飾り中桟付ポスト付 ランマ付",
+     "wmin": 1013,
+     "wmax": 1446,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "56",
+     "name": "両袖 ランマ付",
+     "wmin": 1030,
+     "wmax": 1895,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "76P",
+     "name": "両袖飾り中桟付ポスト付 ランマ付",
+     "wmin": 1312,
+     "wmax": 1895,
+     "hmin": 1973,
+     "hmax": 2600
+    },
+    {
+     "id": "51",
+     "name": "両開き ランマ付",
+     "wmin": 1464,
+     "wmax": 1796,
+     "hmin": 1973,
+     "hmax": 2600
+    }
+   ]
+  },
+  {
+   "id": "spec",
+   "name": "仕様",
+   "values": [
+    {
+     "id": "alumi",
+     "name": "アルミ仕様"
+    }
+   ]
+  },
+  {
+   "id": "sizeH",
+   "name": "高さ",
+   "values": [
+    {
+     "id": "H2005",
+     "name": "1,700〜2,005",
+     "h": 2005,
+     "outH": 2005
+    },
+    {
+     "id": "H2400",
+     "name": "2,006〜2,400",
+     "h": 2400,
+     "outH": 2400
+    }
+   ]
+  },
+  {
+   "id": "color",
+   "name": "色",
+   "values": [
+    {
+     "id": "mokume",
+     "name": "木目調",
+     "note": "CJポートマホガニー・CBクリエモカ・BBクリエダーク・CAアイリッシュパイン・CDミディアムチェリー"
+    },
+    {
+     "id": "alu",
+     "name": "アルミ色",
+     "note": "AKシャイングレー・AGオータムブラウン・AAマットブラック"
+    }
+   ]
+  },
+  {
+   "id": "entry",
+   "name": "鍵",
+   "values": [
+    {
+     "id": "shudo",
+     "name": "手動"
+    },
+    {
+     "id": "denchi",
+     "name": "FamiLock（電池式）"
+    }
+   ]
+  }
+ ],
+ "base": [
+  {
+   "design": "C11N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 202000,
+   "page": 38
+  },
+  {
+   "design": "C11N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 169000,
+   "page": 38
+  },
+  {
+   "design": "C11N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 248000,
+   "page": 38
+  },
+  {
+   "design": "C11N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 207000,
+   "page": 38
+  },
+  {
+   "design": "C12N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 132000,
+   "page": 38
+  },
+  {
+   "design": "C12N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 98000,
+   "page": 38
+  },
+  {
+   "design": "C12N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 153000,
+   "page": 38
+  },
+  {
+   "design": "C12N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 111000,
+   "page": 38
+  },
+  {
+   "design": "C14N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 202000,
+   "page": 38
+  },
+  {
+   "design": "C14N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 169000,
+   "page": 38
+  },
+  {
+   "design": "C14N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 248000,
+   "page": 38
+  },
+  {
+   "design": "C14N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 207000,
+   "page": 38
+  },
+  {
+   "design": "C16N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 160000,
+   "page": 38
+  },
+  {
+   "design": "C16N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 124000,
+   "page": 38
+  },
+  {
+   "design": "C16N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 193000,
+   "page": 38
+  },
+  {
+   "design": "C16N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 153000,
+   "page": 38
+  },
+  {
+   "design": "C17N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 224000,
+   "page": 38
+  },
+  {
+   "design": "C17N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 191000,
+   "page": 38
+  },
+  {
+   "design": "C17N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 275000,
+   "page": 38
+  },
+  {
+   "design": "C17N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 234000,
+   "page": 38
+  },
+  {
+   "design": "C20N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 102000,
+   "page": 38
+  },
+  {
+   "design": "C20N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 124000,
+   "page": 38
+  },
+  {
+   "design": "M11N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "mokume",
+   "teika": 224000,
+   "page": 38
+  },
+  {
+   "design": "M11N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "mokume",
+   "teika": 275000,
+   "page": 38
+  },
+  {
+   "design": "C83N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 202000,
+   "page": 38
+  },
+  {
+   "design": "C83N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 248000,
+   "page": 38
+  },
+  {
+   "design": "C84N",
+   "spec": "alumi",
+   "sizeH": "H2005",
+   "color": "alu",
+   "teika": 202000,
+   "page": 38
+  },
+  {
+   "design": "C84N",
+   "spec": "alumi",
+   "sizeH": "H2400",
+   "color": "alu",
+   "teika": 248000,
+   "page": 38
+  }
+ ],
+ "adds": [
+  {
+   "id": "waku",
+   "name": "枠",
+   "always": true,
+   "match": [
+    "open",
+    "color",
+    "spec"
+   ],
+   "values": [
+    {
+     "id": "10mokumealumi",
+     "teika": 89000,
+     "page": 38
+    },
+    {
+     "id": "10alualumi",
+     "teika": 62000,
+     "page": 38
+    },
+    {
+     "id": "20mokumealumi",
+     "teika": 101000,
+     "page": 38
+    },
+    {
+     "id": "20alualumi",
+     "teika": 67000,
+     "page": 38
+    },
+    {
+     "id": "40mokumealumi",
+     "teika": 153000,
+     "page": 38
+    },
+    {
+     "id": "40alualumi",
+     "teika": 105000,
+     "page": 38
+    },
+    {
+     "id": "35Pmokumealumi",
+     "teika": 164000,
+     "page": 38
+    },
+    {
+     "id": "35Palualumi",
+     "teika": 116000,
+     "page": 38
+    },
+    {
+     "id": "55mokumealumi",
+     "teika": 213000,
+     "page": 38
+    },
+    {
+     "id": "55alualumi",
+     "teika": 144000,
+     "page": 38
+    },
+    {
+     "id": "75Pmokumealumi",
+     "teika": 230000,
+     "page": 38
+    },
+    {
+     "id": "75Palualumi",
+     "teika": 160000,
+     "page": 38
+    },
+    {
+     "id": "50mokumealumi",
+     "teika": 116000,
+     "page": 38
+    },
+    {
+     "id": "50alualumi",
+     "teika": 76000,
+     "page": 38
+    },
+    {
+     "id": "11mokumealumi",
+     "teika": 94000,
+     "page": 38
+    },
+    {
+     "id": "11alualumi",
+     "teika": 68000,
+     "page": 38
+    },
+    {
+     "id": "21mokumealumi",
+     "teika": 108000,
+     "page": 38
+    },
+    {
+     "id": "21alualumi",
+     "teika": 73000,
+     "page": 38
+    },
+    {
+     "id": "41mokumealumi",
+     "teika": 168000,
+     "page": 38
+    },
+    {
+     "id": "41alualumi",
+     "teika": 121000,
+     "page": 38
+    },
+    {
+     "id": "36Pmokumealumi",
+     "teika": 180000,
+     "page": 38
+    },
+    {
+     "id": "36Palualumi",
+     "teika": 132000,
+     "page": 38
+    },
+    {
+     "id": "56mokumealumi",
+     "teika": 233000,
+     "page": 38
+    },
+    {
+     "id": "56alualumi",
+     "teika": 165000,
+     "page": 38
+    },
+    {
+     "id": "76Pmokumealumi",
+     "teika": 250000,
+     "page": 38
+    },
+    {
+     "id": "76Palualumi",
+     "teika": 180000,
+     "page": 38
+    },
+    {
+     "id": "51mokumealumi",
+     "teika": 122000,
+     "page": 38
+    },
+    {
+     "id": "51alualumi",
+     "teika": 85000,
+     "page": 38
+    }
+   ]
+  },
+  {
+   "id": "kotobira",
+   "name": "子扉（開き方で自動）",
+   "always": true,
+   "match": [
+    "design",
+    "open",
+    "sizeH",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "C11N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C11N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C11N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N20H2005mokume",
+     "teika": 106000,
+     "page": 38
+    },
+    {
+     "id": "C12N20H2005alu",
+     "teika": 89000,
+     "page": 38
+    },
+    {
+     "id": "C12N20H2400mokume",
+     "teika": 130000,
+     "page": 38
+    },
+    {
+     "id": "C12N20H2400alu",
+     "teika": 109000,
+     "page": 38
+    },
+    {
+     "id": "C12N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N21H2005mokume",
+     "teika": 106000,
+     "page": 38
+    },
+    {
+     "id": "C12N21H2005alu",
+     "teika": 89000,
+     "page": 38
+    },
+    {
+     "id": "C12N21H2400mokume",
+     "teika": 130000,
+     "page": 38
+    },
+    {
+     "id": "C12N21H2400alu",
+     "teika": 109000,
+     "page": 38
+    },
+    {
+     "id": "C12N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C12N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C12N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N50H2005mokume",
+     "teika": 204000,
+     "page": 38
+    },
+    {
+     "id": "C14N50H2005alu",
+     "teika": 171000,
+     "page": 38
+    },
+    {
+     "id": "C14N50H2400mokume",
+     "teika": 251000,
+     "page": 38
+    },
+    {
+     "id": "C14N50H2400alu",
+     "teika": 210000,
+     "page": 38
+    },
+    {
+     "id": "C14N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C14N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C14N51H2005mokume",
+     "teika": 204000,
+     "page": 38
+    },
+    {
+     "id": "C14N51H2005alu",
+     "teika": 171000,
+     "page": 38
+    },
+    {
+     "id": "C14N51H2400mokume",
+     "teika": 251000,
+     "page": 38
+    },
+    {
+     "id": "C14N51H2400alu",
+     "teika": 210000,
+     "page": 38
+    },
+    {
+     "id": "C16N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C16N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C16N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C17N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C17N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C20N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C20N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "M11N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "M11N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C83N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C83N76PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N10H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N10H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N10H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N10H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N40H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N40H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N40H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N40H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N35PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N35PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N35PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N35PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N55H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N55H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N55H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N55H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N75PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N75PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N75PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N75PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N11H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N11H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N11H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N11H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N41H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N41H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N41H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N41H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N36PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N36PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N36PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N36PH2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N56H2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N56H2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N56H2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N56H2400alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N76PH2005mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N76PH2005alu",
+     "teika": 0
+    },
+    {
+     "id": "C84N76PH2400mokume",
+     "teika": 0
+    },
+    {
+     "id": "C84N76PH2400alu",
+     "teika": 0
+    }
+   ]
+  },
+  {
+   "id": "sode",
+   "name": "袖ガラス・袖飾り（開き方で自動）",
+   "always": true,
+   "match": [
+    "open",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "10alu",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "20mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "20alu",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "40mokume",
+     "teika": 89000,
+     "page": 41
+    },
+    {
+     "id": "40alu",
+     "teika": 89000,
+     "page": 41
+    },
+    {
+     "id": "35Pmokume",
+     "teika": 118400,
+     "page": 41
+    },
+    {
+     "id": "35Palu",
+     "teika": 111500,
+     "page": 41
+    },
+    {
+     "id": "55mokume",
+     "teika": 153000,
+     "page": 41
+    },
+    {
+     "id": "55alu",
+     "teika": 153000,
+     "page": 41
+    },
+    {
+     "id": "75Pmokume",
+     "teika": 212000,
+     "page": 41
+    },
+    {
+     "id": "75Palu",
+     "teika": 198200,
+     "page": 41
+    },
+    {
+     "id": "50mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "50alu",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "11mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "11alu",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "21mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "21alu",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "41mokume",
+     "teika": 89000,
+     "page": 41
+    },
+    {
+     "id": "41alu",
+     "teika": 89000,
+     "page": 41
+    },
+    {
+     "id": "36Pmokume",
+     "teika": 118400,
+     "page": 41
+    },
+    {
+     "id": "36Palu",
+     "teika": 111500,
+     "page": 41
+    },
+    {
+     "id": "56mokume",
+     "teika": 153000,
+     "page": 41
+    },
+    {
+     "id": "56alu",
+     "teika": 153000,
+     "page": 41
+    },
+    {
+     "id": "76Pmokume",
+     "teika": 212000,
+     "page": 41
+    },
+    {
+     "id": "76Palu",
+     "teika": 198200,
+     "page": 41
+    },
+    {
+     "id": "51mokume",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "51alu",
+     "teika": 0,
+     "page": 41
+    }
+   ]
+  },
+  {
+   "id": "ranmaGlass",
+   "name": "ランマガラス（ランマ付のみ）",
+   "always": true,
+   "match": [
+    "open"
+   ],
+   "values": [
+    {
+     "id": "10",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "20",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "40",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "35P",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "55",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "75P",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "50",
+     "teika": 0,
+     "page": 41
+    },
+    {
+     "id": "11",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "21",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "41",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "36P",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "56",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "76P",
+     "teika": 64000,
+     "page": 41
+    },
+    {
+     "id": "51",
+     "teika": 64000,
+     "page": 41
+    }
+   ]
+  },
+  {
+   "id": "closer",
+   "name": "ドアクローザ（必須）",
+   "always": true,
+   "match": [
+    "open"
+   ],
+   "values": [
+    {
+     "id": "10",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "20",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "40",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "35P",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "55",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "75P",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "50",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "11",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "21",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "41",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "36P",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "56",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "76P",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    },
+    {
+     "id": "51",
+     "teika": 11500,
+     "hinban": "□-0005-DVAA",
+     "page": 39
+    }
+   ]
+  },
+  {
+   "id": "hinge",
+   "name": "丁番セット（必須）",
+   "always": true,
+   "match": [
+    "open"
+   ],
+   "values": [
+    {
+     "id": "10",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "20",
+     "teika": 23200,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "40",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "35P",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "55",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "75P",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "50",
+     "teika": 23200,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "11",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "21",
+     "teika": 23200,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "41",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "36P",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "56",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "76P",
+     "teika": 11600,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    },
+    {
+     "id": "51",
+     "teika": 23200,
+     "hinban": "□-1013(R/L)-DNXB 3枚入り",
+     "page": 39
+    }
+   ]
+  },
+  {
+   "id": "doorguard",
+   "name": "ドアガード",
+   "always": true,
+   "match": [
+    "open"
+   ],
+   "values": [
+    {
+     "id": "10",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "20",
+     "teika": 4000,
+     "hinban": "ZB-0012-DVAA／G-0012-DVAA",
+     "page": 39
+    },
+    {
+     "id": "40",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "35P",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "55",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "75P",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "50",
+     "teika": 4000,
+     "hinban": "ZB-0012-DVAA／G-0012-DVAA",
+     "page": 39
+    },
+    {
+     "id": "11",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "21",
+     "teika": 4000,
+     "hinban": "ZB-0012-DVAA／G-0012-DVAA",
+     "page": 39
+    },
+    {
+     "id": "41",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "36P",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "56",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "76P",
+     "teika": 4000,
+     "hinban": "ZB-0011-DVAA／G-0011-DVAA",
+     "page": 39
+    },
+    {
+     "id": "51",
+     "teika": 4000,
+     "hinban": "ZB-0012-DVAA／G-0012-DVAA",
+     "page": 39
+    }
+   ]
+  },
+  {
+   "id": "handle",
+   "name": "ハンドルセット（標準）",
+   "always": true,
+   "match": [
+    "open",
+    "color"
+   ],
+   "values": [
+    {
+     "id": "10alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "10mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "20alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "20mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "40alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "40mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "35Palu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "35Pmokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "55alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "55mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "75Palu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "75Pmokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "50alu",
+     "teika": 116000,
+     "hinban": "Z-2A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "50mokume",
+     "teika": 105000,
+     "hinban": "Z-2A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "11alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "11mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "21alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "21mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "41alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "41mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "36Palu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "36Pmokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "56alu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "56mokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "76Palu",
+     "teika": 64000,
+     "hinban": "Z-1A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "76Pmokume",
+     "teika": 52000,
+     "hinban": "Z-1A1-DNWF",
+     "page": 39
+    },
+    {
+     "id": "51alu",
+     "teika": 116000,
+     "hinban": "Z-2A1-DNWD",
+     "page": 39
+    },
+    {
+     "id": "51mokume",
+     "teika": 105000,
+     "hinban": "Z-2A1-DNWF",
+     "page": 39
+    }
+   ]
+  },
+  {
+   "id": "cylinder",
+   "name": "シリンダーセット（標準）",
+   "always": true,
+   "match": [
+    "entry"
+   ],
+   "values": [
+    {
+     "id": "shudo",
+     "teika": 11600,
+     "hinban": "Z-2A5-DDTW",
+     "page": 39
+    },
+    {
+     "id": "denchi",
+     "teika": 16200,
+     "hinban": "Z-1A5-DDTW",
+     "page": 39
+    }
+   ]
+  },
+  {
+   "id": "keyset",
+   "name": "FamiLock キーセット",
+   "values": [
+    {
+     "id": "none",
+     "name": "なし",
+     "teika": 0
+    },
+    {
+     "id": "tag2",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコン2個）",
+     "teika": 139000
+    },
+    {
+     "id": "tag1",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコン1個）",
+     "teika": 110000
+    },
+    {
+     "id": "tag0",
+     "name": "基本プラン タグキーセット（タグキー3個・リモコンなし）",
+     "teika": 75000
+    },
+    {
+     "id": "card2",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコン2個）",
+     "teika": 139000
+    },
+    {
+     "id": "card1",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコン1個）",
+     "teika": 110000
+    },
+    {
+     "id": "card0",
+     "name": "基本プラン カードキーセット（カードキー3枚・リモコンなし）",
+     "teika": 75000
+    },
+    {
+     "id": "otag2",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコン2個）",
+     "teika": 169000
+    },
+    {
+     "id": "otag1",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコン1個）",
+     "teika": 140000
+    },
+    {
+     "id": "otag0",
+     "name": "オプションプラン タグキーセット（タグキー3個・リモコンなし）",
+     "teika": 105000
+    },
+    {
+     "id": "ocard2",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコン2個）",
+     "teika": 169000
+    },
+    {
+     "id": "ocard1",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコン1個）",
+     "teika": 140000
+    },
+    {
+     "id": "ocard0",
+     "name": "オプションプラン カードキーセット（カードキー3枚・リモコンなし）",
+     "teika": 105000
+    }
+   ]
+  }
+ ],
+ "note": "アルミ仕様は断熱区分（k2/k4）の分かれがなく、色は木目調・アルミ色の2種。鍵は手動とFamiLock（電池式）のみでAC100V式の設定はない。高さ帯の境目は2,005／2,006（他の仕様と異なる）。子扉の価格表があるのはC12N型（親子用）とC14N型（両開き用）だけなので、他のデザインでは親子・両開きの子扉の値は入れていない。C20N型・C83N型・C84N型はガラス別途（本体価格にガラス代は含まれない）。袖ガラスはカスミガラス（安全合わせ）。ハンドル標準は一般仕様（アルミ色→室内アルミ／木目調→室内樹脂）。",
+ "pages": [
+  {
+   "page": 38,
+   "rows": 28
+  },
+  {
+   "page": 39,
+   "rows": 0
+  },
+  {
+   "page": 41,
+   "rows": 0
+  }
+ ]
+}
