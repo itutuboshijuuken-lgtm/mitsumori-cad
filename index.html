@@ -47993,7 +47993,8 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
      MADO.read の things に list:"tare"（x0,y0,x1,y1,h,z0,z1）を足した（立体で使える）。
    CAD-688（2026-11-27 Claude/Opus）：新築・増築で部屋をタップ→帯に［床］。フローリング・フロアタイル・クッションフロア・無垢板15・畳から選ぶ。
      適用は今の「床を構えて部屋をタップ」（HB.__ltSeg50）を1回呼ぶだけ（部屋の形どおり・二重取りの引き算・戻す1回は今と同じ）。
-     囲みで置いた床だけで部屋が埋まっていて今の仕組みが守って置かない時は、この部屋の中だけにある床に部屋タップの印を付けて置き換える（小上がりは除く）。 */
+     囲みで置いた床だけで部屋が埋まっていて今の仕組みが守って置かない時は、この部屋の中だけにある床に部屋タップの印を付けて置き換える（小上がりは除く）。
+   CAD-691（2026-11-27 Claude/Opus）：ドア・窓の当たりを最大250mmに（引いて見ている時、ドアのとなりの部屋のタップまでドアに取られていた）。 */
 (function(){
   "use strict";
   if (window.KAKU3) return;
@@ -48189,7 +48190,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   var sashBar = null, sashObj = null;
   function sashAt(p){   /* 今の pickCands の建具と同じ近さ（26px・ドアは中心も見る）を、新しい図面の大きさで */
     if (typeof hostSeg !== "function") return -1;
-    var rad = 26 * pxmm(), best = -1, bd = Infinity;
+    var rad = Math.min(26 * pxmm(), 250), best = -1, bd = Infinity;   /* CAD-691：引いて見ている時に指の26pxが図面で300mmを超え、ドアのとなりの部屋（トイレなど）のタップまでドアに取られていた。250mmまで */
     (S.sashes || []).forEach(function(sa, i){
       if (!sa.drawn || !sa.host) return; var sg = hostSeg(sa.host); if (!sg) return;
       var L = Math.hypot(sg[1][0] - sg[0][0], sg[1][1] - sg[0][1]) || 1, u = [(sg[1][0] - sg[0][0]) / L, (sg[1][1] - sg[0][1]) / L];
