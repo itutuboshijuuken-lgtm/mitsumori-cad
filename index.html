@@ -52800,7 +52800,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
       + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">工事の種類</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
       + '<button type="button" data-m720="zo" style="' + T + (m === "zo" ? ON : "") + '">新築・増築</button><button type="button" data-m720="rf" style="' + T + (m === "rf" ? ON : "") + '">内装リフォーム</button></div>'
       + '<div style="margin:12px 0 4px;font-size:13px;font-weight:800;color:var(--sub,#5B6673)">家</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-      + '<button type="button" id="h720Files" style="' + T + '">保存・開く・新しい家</button><button type="button" id="h720Old" style="' + T + ';font-size:13px;color:var(--sub,#5B6673)">前の画面に戻す</button></div>'
+      + '<button type="button" id="h720Files" style="' + T + '">保存・開く・新しい家</button><button type="button" id="h720Old" style="' + T + ';font-size:13px;color:var(--sub,#5B6673)">古い描き方の画面にする</button></div>'
       + (window.SHARE722 ? '<button type="button" id="h720Share" style="' + T + ';width:100%;margin-top:8px;border-color:#EA580C;color:#C2410C;background:#FFF7ED">' + (SHARE722.role() === "cust" ? "業者さんに送り返す" : "お客さんに送る（家を見て・触ってもらう）") + "</button>" : "")
       + '<div class="row" style="margin-top:12px"><button type="button" class="btn" id="h720x" style="width:100%;min-height:46px">閉じる</button></div>';
     md.hidden = false;
@@ -52809,7 +52809,9 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     mb.querySelectorAll("[data-m720]").forEach(function(b){ b.onclick = function(){ setMode(b.dataset.m720); menu(); }; });
     document.getElementById("h720Files").onclick = function(){ md.hidden = true; try { ZUMEN.close(); } catch(e){} showBack(true); try { var d = document.querySelector("details.mo"); if (d){ d.open = true; window.scrollTo(0, 0); } } catch(e){} };
     if (document.getElementById("h720Share")) document.getElementById("h720Share").onclick = function(){ md.hidden = true; SHARE722.send(); };
-    document.getElementById("h720Old").onclick = function(){ md.hidden = true; try { WALK2.setOn(false); } catch(e){} try { ZUMEN.close(); } catch(e){} showBack(false); try { toast("前の画面に戻しました（⋯の「新しい歩く画面」を入にすると新しい画面に戻ります）"); } catch(e){} };
+    document.getElementById("h720Old").onclick = function(){
+      var ob = this; if (!ob.dataset.c764){ ob.dataset.c764 = "1"; ob.textContent = "もう一度押すと、古い描き方の画面になります"; ob.style.color = "#B42318"; setTimeout(function(){ try { delete ob.dataset.c764; ob.textContent = "古い描き方の画面にする"; ob.style.color = "var(--sub,#5B6673)"; } catch(e){} }, 4000); return; }   /* CAD-764：押し間違いで新しい図面から出てしまわないよう、2回押しにする（Fable の指摘） */
+      md.hidden = true; try { WALK2.setOn(false); } catch(e){} try { ZUMEN.close(); } catch(e){} showBack(false); try { toast("古い描き方の画面にしました。上の［◀ 新しい図面に戻る］で、いつでも戻れます"); } catch(e){} };
   }
   /* 図面の下の列：［とじる］→［メニュー］、［見積］を足す */
   function bar(){
