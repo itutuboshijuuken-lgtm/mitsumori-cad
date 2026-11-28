@@ -32180,7 +32180,7 @@ window.__len309txt = function(){ return null; };
     ["#mbox [data-zk='hall']", C("rouka")], ["#mbox [data-zk='closet']", C("shuno")],
     ["#h720Menu", C("menu")], ["#k2Gai", C("gaikei")],
     ["#fl709 button", function(el){ var t = txt(el); return (t === "＋2階" || t === "2F") ? "nikai" : null; }],   /* CAD-769：チャットくん3回目の「2階」。新しい図面の上の［＋2階］［2F］。低いと字が消えるので、絵の時だけ高さ44にして「＋2階」の字も残す */   /* CAD-767：チャットくんの生成シートから切り出し（メニュー・外形）。名前（namae）・見切り材（mikiri）は ICONS に入れただけ */
-    ["#zumenRoot button", function(el){ var t = txt(el); return /^入り口/.test(t) ? "iriguchi" : t === "全体" ? "zentai" : (el.__b325 || null); }]   /* CAD-768：［全体］にも絵（チャットくん2回目の 03） */   /* 入り口以外は、前の行で付いた絵をそのまま残す（null を返すと外してしまう） */   /* CAD-766：チャットくんの絵（02 入り口）。新しい図面の［入り口］（立体の中へ）。07 仕上げ（shiage）は ICONS に入れただけ（帯のボタンは、11枚そろってからじゅうちゃんが付ける） */
+    ["#zumenRoot button", function(el){ var t = txt(el); return t === "名前" ? "namae" : t === "仕上げ" ? "shiage" : t === "カタログ" ? "catalog" : /見切り/.test(t) ? "mikiri" : (/UB|浴/.test(t) && /入口|ドア/.test(t)) ? "ubdoor" : /^入り口/.test(t) ? "iriguchi" : t === "全体" ? "zentai" : (el.__b325 || null); }]   /* CAD-768：［全体］にも絵（チャットくん2回目の 03） */   /* 入り口以外は、前の行で付いた絵をそのまま残す（null を返すと外してしまう） */   /* CAD-766：チャットくんの絵（02 入り口）。新しい図面の［入り口］（立体の中へ）。07 仕上げ（shiage）は ICONS に入れただけ（帯のボタンは、11枚そろってからじゅうちゃんが付ける） */
   ];
   try { var st769 = document.createElement("style"); st769.textContent = "#fl709 button.btn325i{height:44px!important;min-width:56px!important}"; document.head.appendChild(st769); } catch(e){}
   function unswap325(el){
@@ -53841,3 +53841,95 @@ window.WHY724 = function(why){
   } catch(e){}
 })();
 </script>
+
+<style>
+/* ===== 図面差し替え見本v6：本物の頭（.top＝プレート＋手順の札）をそのまま使う ===== */
+/* 新しい図面が開いている間だけ、アプリ本物の .top を一番上に固定 */
+body.k2z .top{
+  position:fixed !important;
+  top:0;left:0;right:0;
+  z-index:2147482996 !important;
+}
+/* 図面側：周りは元の画面の紙色、頭の分だけ下げる（padding-topは台本が実測で入れる） */
+#zumenRoot{
+  background:#FAF5EA !important;
+  padding-left:4px !important;
+  padding-right:4px !important;
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 4px) !important;
+  gap:4px !important;
+  box-sizing:border-box !important;
+}
+/* 題の帯（1F・＋2階の行）：紙の上の小さな行 */
+#zumenRoot > div:has(> #fl709){
+  background:transparent !important;
+  border-bottom:none !important;
+  color:#6B5B45 !important;
+  font-size:12px !important;
+  padding:2px 2px 0 !important;
+}
+/* 図面の紙 */
+#zumenRoot > div:nth-of-type(2){
+  border:1px solid #D8CBB2 !important;
+  border-radius:4px !important;
+}
+/* 道具の列・下の列：ウォールナットの受け（元の画面の下の段と同じ） */
+#zumenRoot #kakuRow,#zumenRoot #k2Row,#zumenRoot #k2Row3,
+#zumenRoot > div:last-child{
+  background-color:#43301d !important;
+  background-image:linear-gradient(rgba(36,26,19,.32),rgba(36,26,19,.32)),var(--oak556) !important;
+  border-top:none !important;
+  border-radius:6px !important;
+  padding:4px !important;
+  box-shadow:inset 0 1px 0 rgba(255,235,190,.25), 0 1px 2px rgba(0,0,0,.25) !important;
+}
+/* ボタン＝元の手順の札と同じ値（#FFFAF0／枠#AB9479／字#382E24） */
+#zumenRoot button,
+body.k2z #modal .mbox button{
+  background-color:#FFFAF0 !important;
+  background-image:none !important;
+  border:1px solid #AB9479 !important;
+  border-radius:4px !important;
+  color:#382E24 !important;
+  font-weight:700 !important;
+  box-shadow:0 1px 2px rgba(60,40,20,.35) !important;
+}
+#zumenRoot button[aria-pressed="true"],
+body.k2z #modal .mbox button[aria-pressed="true"]{
+  border-color:#AA844E !important;
+  box-shadow:inset 0 -3px 0 #AA844E, 0 1px 2px rgba(60,40,20,.35) !important;
+}
+#zumenRoot #k2Ok{
+  background-color:#3D2C1C !important;
+  border-color:#AA844E !important;
+  color:#F7EEDD !important;
+}
+#zumenRoot #h720Mitsu{
+  border:2px solid #AA844E !important;
+}
+/* 一番下の列：ボタンが横にはみ出さないように（入り口の字が切れる対策） */
+#zumenRoot > div:last-child button{
+  min-width:0 !important;
+  overflow:hidden !important;
+}
+#zumenRoot button .row325{ min-width:0 !important; }
+#zumenRoot button .lb325{
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  white-space:nowrap !important;
+}
+
+</style>
+<script>
+(function(){
+  function fit(){
+    var root = document.getElementById('zumenRoot');
+    var top = document.querySelector('.top');
+    if (!root || !top) return false;
+    var h = Math.ceil(top.getBoundingClientRect().height);
+    if (h > 0) root.style.paddingTop = h + 'px';
+    return false; /* 階の表示などで高さが変わる事があるので監視を続ける */
+  }
+  setInterval(fit, 500);
+})();
+</script>
+
