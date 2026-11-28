@@ -49778,11 +49778,12 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var mb = document.getElementById("mbox"), md = document.getElementById("modal"); if (!mb || !md) return false;
     off(true);
     var B = "min-height:52px;border:1.5px solid var(--line,#DCE3EB);border-radius:10px;background:#fff;font:inherit;font-size:15px;font-weight:800;color:var(--ink,#18202A)";
-    var h = '<h3>置く</h3><button type="button" data-k2p="sash" style="' + B + ';width:100%;margin-bottom:10px">ドア・窓</button>';
+    var h = '<div style="display:flex;align-items:center;gap:8px"><h3 style="flex:1;margin:0">置く</h3><button class="btn sub" id="k2PutNoTop" type="button" style="flex:none;width:52px;min-width:52px">×</button></div><button type="button" data-k2p="sash" style="' + B + ';width:100%;margin:10px 0">ドア・窓</button>';
     PUTS.forEach(function(gp){ h += '<div class="sub2" style="margin:8px 2px 4px">' + gp[0] + '</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">' + gp[1].map(function(it){ return '<button type="button" data-k2p="' + it[0] + ':' + it[1] + '" style="' + B + '">' + it[2] + "</button>"; }).join("") + "</div>"; });
     h += '<div class="row" style="margin-top:10px"><button class="btn sub" id="k2PutNo" type="button">×</button></div>';
     mb.innerHTML = h; md.hidden = false;
     document.getElementById("k2PutNo").onclick = function(){ md.hidden = true; };
+    document.getElementById("k2PutNoTop").onclick = function(){ md.hidden = true; };
     Array.prototype.forEach.call(mb.querySelectorAll("[data-k2p]"), function(b){
       b.onclick = function(){
         var v = b.dataset.k2p; if (v === "sash"){ chooseSpec(); return; }
