@@ -53321,3 +53321,66 @@ window.WHY724 = function(why){
   window.doorRec752 = rec; window.doorOrient752 = orient; window.doorSweep752 = sweep; window.doorWarn752 = warnDoor; window.doorWarnObj752 = warnObj;
 })();
 </script>
+<script>
+/* ---------- CAD-763：新しい図面のメニューに［図面集］／前の画面から新しい図面へ戻るボタン（2026-11-28 Fable。翔伍さんの頼み）----------
+   翔伍さん（11/28・披露の日の昼）：「新しい図面にいけなくなった。古い図面しかみれない。図面集も表示されない」
+   「（戻るボタンは）描き直すを押した時だけ出る」「図面集みれるようにして追加して」。
+   ・新しい図面の［メニュー］（CAD-720）に［図面集］を足す。押すと、図面集（CAD-411 の dzOpen411）を、新しい図面の上にそのまま開く。
+     図面集の［閉じる］で新しい図面に戻る。今までは メニュー → 完成図 → 外観▴ → 材料・図面集 → 図面集 と押した先にあった。
+   ・前の画面（「新しい歩く画面」が切）にいる間は、どの段でも、上の題の帯（見積即答CAD の字の所）に［◀ 新しい図面に戻る］を出す。
+     押すと「入」にして新しい図面を開く。今までは、戻る道が ①描く の「📐 新しい図面で描く」だけで、
+     家の外形がある時は［描き直す］を押した先にしか出なかった。題の字の上に置くので、図面にも、ほかのボタンにも被らない。
+   ・CAD-720・CAD-411・CAD-697 の中は触らない（外から足すだけ）。保存キーは増やさない（WALK2 の入・切を、今ある口で替えるだけ）。
+     見積・保存の中身は変えない。お客さん（無料）の時は［図面集］を足さない（今までどおり）。
+   ・この部品は Fable が足した物。Opus が CAD-720 の中に取り込む時は、この部品ごと消してよい。 */
+(function(){
+  "use strict";
+  if (window.FAB763) return;
+  function on(){ try { return !!(window.WALK2 && WALK2.isOn()); } catch(e){ return false; } }
+  function zo(){ try { return !!(window.ZUMEN && ZUMEN.isOpen()); } catch(e){ return false; } }
+  function tst(m){ try { if (typeof toast === "function") toast(m); } catch(e){} }
+  function cust(){ try { return !!(window.SHARE722 && SHARE722.role() === "cust"); } catch(e){ return false; } }
+
+  /* ----- ① 新しい図面のメニューに［図面集］ ----- */
+  function openDz(){
+    try { var md = document.getElementById("modal"); if (md) md.hidden = true; } catch(e){}
+    try { if (typeof dzOpen411 === "function"){ dzOpen411(); return true; } } catch(e){ try { console.warn("[CAD-763] 図面集を開けませんでした", e); } catch(x){} }
+    tst("図面集を開けませんでした。メニューの［完成図］から開いてください"); return false;
+  }
+  function addDz(){
+    var mb = document.getElementById("mbox"); if (!mb || document.getElementById("h763Dz")) return;
+    var ref = mb.querySelector('[data-h720="6"]'); if (!ref || typeof dzOpen411 !== "function" || cust()) return;   /* CAD-720 のメニューの［完成図］の次に置く */
+    var b = document.createElement("button"); b.type = "button"; b.id = "h763Dz"; b.textContent = "図面集"; b.style.cssText = ref.style.cssText;
+    b.onclick = openDz; ref.after(b);
+    try { if (ref.parentNode.children.length % 2 === 1) b.style.gridColumn = "1 / -1"; } catch(e){}   /* 1つだけ余る時は、横いっぱいに */
+  }
+
+  /* ----- ② 前の画面から、新しい図面へ戻るボタン（上の題の帯） ----- */
+  var back = null;
+  function goNew(){
+    try { if (window.WALK2 && !WALK2.isOn()) WALK2.setOn(true); } catch(e){}
+    var n = 0, t = setInterval(function(){
+      n++;
+      try { if (window.ZUMEN && typeof ZUMEN.open === "function"){ ZUMEN.open(); if (ZUMEN.isOpen()){ clearInterval(t); tick(); return; } } } catch(e){}
+      if (n > 20){ clearInterval(t); tst("新しい図面を開けませんでした。もう一度押してください"); }
+    }, 150);
+  }
+  function tick(){
+    var need = !!(window.WALK2 && window.ZUMEN) && !on() && !zo();
+    var h1 = need ? document.querySelector("header.top h1") : null, host = h1 ? h1.parentNode : null;
+    if (need && h1 && host){
+      if (!back){ back = document.createElement("button"); back.type = "button"; back.id = "h763New"; back.textContent = "◀ 新しい図面に戻る";
+        back.style.cssText = "position:absolute;z-index:3;margin:0;padding:0 10px;border-radius:10px;border:1px solid #2563B0;background:#2563B0;color:#fff;font:inherit;font-size:16px;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;box-shadow:0 2px 8px rgba(24,32,42,.3)";
+        back.onclick = goNew; }
+      if (back.parentNode !== host) host.appendChild(back);
+      back.style.left = h1.offsetLeft + "px"; back.style.top = h1.offsetTop + "px"; back.style.width = h1.offsetWidth + "px"; back.style.height = h1.offsetHeight + "px";
+      back.style.display = "";
+    } else if (back) back.style.display = "none";
+  }
+
+  setInterval(function(){ try { tick(); addDz(); } catch(e){} }, 700);
+  try { var mb0 = document.getElementById("mbox"); if (mb0 && window.MutationObserver) new MutationObserver(function(){ try { addDz(); } catch(e){} }).observe(mb0, { childList: true }); } catch(e){}
+  window.addEventListener("walk2-switch", function(){ setTimeout(function(){ try { tick(); } catch(e){} }, 0); });
+  window.FAB763 = { v: 1, openDz: openDz, goNew: goNew };
+})();
+</script>
