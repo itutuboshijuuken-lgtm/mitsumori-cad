@@ -49975,6 +49975,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   /* 照明・電気・設備を置く／動かす */
   /* CAD-724：あり得ない置き方を止める（ドア・窓の開口の中にコンセント・スイッチ・紙巻器・手すりなど／その逆） */
   function fxBox(t){ var L = +t.len || 0, H = +t.hgt || 0, u = +t.u || 0, z = +t.z || 0;
+    if (String(t.kind || t.k || (t.raw && t.raw.k) || "") === "aircon") return [u - 400, u + 400, z - 145 - 30, z + 145];   /* CAD-762：エアコン本体（幅800・高さ290）。下は窓・ドアの枠（30）の分あける */
     if (L > 0) return [u - L / 2, u + L, z - 20, z + (H || 60)]; return [u - 45, u + 45, z - 45, z + 45 + H]; }
   function saBox(t){ return [+t.u || 0, (+t.u || 0) + (+t.w || 0), +t.sill || 0, (+t.sill || 0) + (+t.h || 0)]; }
   function hits(a, b){ return a[0] < b[1] - 10 && b[0] < a[1] - 10 && a[2] < b[3] - 10 && b[2] < a[3] - 10; }
@@ -49988,6 +49989,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
   }
   function blockWhy(fx, sa){
     var fb = fxBox(fx), sb = saBox(sa); if (!hits(fb, sb)) return "";
+    if (String(fx.kind || fx.k || (fx.raw && fx.raw.k) || "") === "aircon") return "aircon";
     var k = kataOf(sa); if (!k) return "clash";
     if (hits(fb, [k.open[0], k.open[1], sb[2], sb[3]])) return "clash";
     if (k.both) return "pocket";
@@ -50012,6 +50014,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var w = cl && cl.why734;
     if (w === "pocket") return "ここは引き戸の扉が壁の中に入る所（戸袋）なので、スイッチ・コンセントは付けられません。扉が入る分だけ下地が両面に分かれて薄くなり、箱が入らないためです。戸袋の外の壁に付けてください";
     if (w === "run") return "ここは引き戸の扉が走る面なので付けられません（開けると扉がぶつかります）。反対側の薄い壁の面なら付けられます";
+    if (w === "aircon") return "エアコン本体（高さ290）が、ドア・窓（" + ((cl && cl.kind) || "") + "）の枠にかかります。枠の上から天井までのすき間が足りないので、横の壁に付けてください";
     return "ドア・窓（" + ((cl && cl.kind) || "") + "）がある所には付けられません。横の壁をタップしてください";
   }
   /* 壁のその点に、スイッチ・コンセントが付けられない理由（無ければ ""）。立体で壁を触った時に先に見せる */
@@ -50037,10 +50040,17 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     return wr([{ op: "add", list: "lights", k: spec.k, x: p[0], y: p[1] }]);
   }
   /* 点の物の高さ（室内図で置いた時に近い高さ。火災警報器・室内物干しは窓口が天井から決める） */
-  var FXZ = { aircon: 2100, outlet: 300, usb: 300, tv: 300, lan: 300, switch: 1200, dimmer: 1200, sconce: 1800, spot: 2200, pendant: 2200, sensor: 2200, tvwall: 1000, coat: 1600, doorphone: 1400, panel: 1800, paper: 700 };
+  var FXZ = { aircon: 2175, outlet: 300, usb: 300, tv: 300, lan: 300, switch: 1200, dimmer: 1200, sconce: 1800, spot: 2200, pendant: 2200, sensor: 2200, tvwall: 1000, coat: 1600, doorphone: 1400, panel: 1800, paper: 700 };
   function fxType(k){ try { return (typeof FK !== "undefined" && FK[k]) ? FK[k][1] : ""; } catch(e){ return ""; } }
   function sideOf(w, p){ var d = (p[0] - w.a[0]) * (-w.uy) + (p[1] - w.a[1]) * w.ux; return d >= 0 ? 1 : -1; }
   function isRf(){ try { return S.mode === "rf"; } catch(e){ return false; } }
+  /* CAD-762：エアコンの高さ（本体の真ん中）。上は天井（壁の上）から80下げる。下に窓・ドアがあれば、枠（30）の上に本体が入るか見る（入らなければ今の高さのまま＝置く時に理由を出して止める） */
+  function acZ762(w, u){
+    var top = +w.z1; if (!(top > 1800 && top < 4000)) top = 2400;
+    var z = top - 80 - 145, r = null; try { r = mado().read(); } catch(e){}
+    (r && r.things || []).forEach(function(t){ if (t.list !== "sashes" || t.wall !== w.id) return; var b = saBox(t); if (b[0] < u + 400 - 10 && u - 400 < b[1] - 10){ var need = b[3] + 30 + 145; if (need > z && need + 145 <= top - 20) z = need; } });
+    return Math.round(z);
+  }
   function placeFx(p){
     if (!appOk()) return { ok: false };
     var nw = nearWall(p, wallsNow(), 25); if (!nw) return { ok: false, why: "far" };
@@ -50048,6 +50058,7 @@ body #st2 #zRow button:is(#zUndoBtn,#zRedoBtn):disabled{opacity:.6}
     var typ = fxType(spec.k), c = { op: "add", list: "fx", k: spec.k, wall: nw.w.id };
     if (nw.w.t === "p") c.side = sideOf(nw.w, p);
     if (typ === "pt"){ c.u = Math.round(nw.t * nw.L); if (FXZ[spec.k] != null) c.z = FXZ[spec.k]; }
+    if (spec.k === "aircon") c.z = acZ762(nw.w, c.u);   /* CAD-762：天井から80下げた所に本体の上。窓・ドアの上なら枠にかからない高さ */
     else if (typ !== "wall") c.at = { u: Math.round(nw.t * nw.L) };   /* 線・面の物：今の決まりの長さで、タップした所が真ん中 */
     if (spec.k === "demo" && !isRf()){ say("壁の一部を剥がすのは、リフォームの時だけです"); return { ok: false, why: "rf-only" }; }
     var r724 = wr([c]);
