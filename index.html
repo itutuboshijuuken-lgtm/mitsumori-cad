@@ -7262,8 +7262,11 @@ function calc(){
     const same477 = hEq477 && sameOutline2F(a, b);   /* CAD-718（Fable）：形でくらべる（前は JSON の文字どうし） */
     const oh477 = (!same477 && hEq477 && S.oh477 !== false && typeof ohInfo477 === "function") ? ohInfo477(a, b) : null;
     if (same477 || oh477){
-      try { flLoad(a); S.floors = 2; mergeUpperFloor(b); window.__oh477 = oh477; return calcFloor(); }
-      finally { window.__oh477 = null; flLoad(keep0); S.floors = fl00; }
+      /* CAD-765（Fable）：合算中（1階に2階の間仕切り・窓を足した状態）でも、耐力壁・N値は階ごとの本当の壁で数える。
+         合算する前の1階と2階を控え（__pure765）、withFloor416 がそれを使う。前は合算した壁のまま1階の耐力壁を置いていたので、
+         見積の筋交いの本数・柱頭柱脚の金物の数が、耐力壁図・金物図と違っていた。 */
+      try { flLoad(a); S.floors = 2; window.__pure765 = {a: flSnap(), b: b}; mergeUpperFloor(b); window.__oh477 = oh477; return calcFloor(); }
+      finally { window.__pure765 = null; window.__oh477 = null; flLoad(keep0); S.floors = fl00; }
     }
   }
   const cur = S.fi, keep = flSnap(), parts = [], fl0 = S.floors; if (S.mode === "zo") S.floors = 1;   // 増築：階ごとに1階建として数え、下の仕分けで、基礎・土台は1階だけ、屋根は最上階だけにする
@@ -13337,6 +13340,13 @@ const WALLF406 = {none: 0, kata: 2.0, tasuki: 4.0, menzai: 2.5, menzaiKata: 4.5}
    階が1つだけ・別の階の保管が無い時は今まで通り（総2階＝1階と同じ並び）。戻す時は元の S を丸ごと元の値に入れ直す。 */
 function withFloor416(fl, fn){
   try {
+    /* CAD-765（Fable）：見積の合算中は、控えてある「合算する前の階」に差し替えて数える（中から重ねて呼ばれても、その都度その階に差し替える） */
+    const P765 = window.__pure765;
+    if (P765){ const t765 = fl === 2 ? P765.b : P765.a;
+      if (t765 && t765.edges && t765.edges.length){ const k765 = {}; FLOOR_KEYS.forEach(k => { k765[k] = S[k]; });
+        FLOOR_KEYS.forEach(k => { if (t765[k] !== undefined) S[k] = t765[k]; else delete S[k]; }); if (!S.sashes) S.sashes = [];
+        try { solve(); return fn(); }
+        finally { FLOOR_KEYS.forEach(k => { if (k765[k] !== undefined) S[k] = k765[k]; else delete S[k]; }); try { solve(); } catch(e){} } } }
     if (!Array.isArray(S.fl) || S.fl.length < 2) return fn();
     const idx = fl === 2 ? 1 : 0; if (idx === S.fi) return fn();
     const tgt = S.fl[idx] && S.fl[idx].snap; if (!tgt || !tgt.edges || !tgt.edges.length) return fn();
@@ -13452,7 +13462,10 @@ function wallSegs406core(fl){
       const rank = arr => arr.sort((a, c) => (c.ext - a.ext) || (c.end - a.end) || (pairScore(c) - pairScore(a)) || (c.L - a.L));
       const put = sg => { sg.kind = autoKind; sg.auto = true; };
       // 1) 両端の1/4の帯：充足率1を超えるまで
-      [0, 1].forEach(si => { let guard = 0; while (sideHave(si) < Q.sideReq && guard++ < 60){ const c2 = rank(free().filter(sg => sideOf(sg, Q) === si)); if (!c2.length){ const t2 = !tas && rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) === si)); if (t2 && t2.length){ t2[0].kind = "tasuki"; t2[0].auto = true; continue; } break; } put(c2[0]); } });
+      /* CAD-765（Fable）：帯に空いた壁が無い時の手を足す。①片筋交い→たすき（今まで通り）②面材の上に筋交いを重ねる（倍率4.5）。
+         今までは②を帯では使わず、面材しか無い帯（窓の多い面）で充足率が1に届かないまま図面になっていた（四分割法の不合格）。
+         充足率は「1を超える」が決まりなので、ちょうど1の時ももう1か所置く。 */
+      [0, 1].forEach(si => { let guard = 0; while (Q.sideReq > 0 && sideHave(si) <= Q.sideReq + 1e-6 && guard++ < 60){ const c2 = rank(free().filter(sg => sideOf(sg, Q) === si)); if (!c2.length){ const t2 = !tas && rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "kata" && sideOf(sg, Q) === si)); if (t2 && t2.length){ t2[0].kind = "tasuki"; t2[0].auto = true; continue; } const m765 = rank(mine.filter(sg => sg.bok && !sg.user && sg.kind === "menzai" && sideOf(sg, Q) === si)); if (m765.length){ m765[0].kind = "menzaiKata"; m765[0].auto = true; continue; } break; } put(c2[0]); } });
       // 2) 全体の必要量まで：充足率の低い側の帯→真ん中の順、角に近い所から
       let guard = 0;
       while (have() < need[d] && guard++ < 200){
@@ -13959,7 +13972,8 @@ function drw415(kind){
     const r5 = [["階", "方向", "側端部", "必要（m）", "存在（m）", "充足率", "壁率比", "判定"]];
     fls.forEach(fl => { const WS = D[fl].WS; ["x", "y"].forEach(d => { const Q = WS.q[d]; if (!Q) return; const nm = d === "x" ? ["上", "下"] : ["左", "右"];
       [0, 1].forEach(si => r5.push([d === "x" && !si ? fl : "", si ? "" : d.toUpperCase(), nm[si], f3(Q.sideReq / 100), f3((si ? Q.h1 : Q.h0) / 100), f2(si ? Q.r1 : Q.r0), si ? "" : f2(Q.ratio), si ? "" : (Q.ok ? "OK" : "NG")])); }); });
-    g += table415(r5, [22, 26, 34, 48, 48, 40, 40, 34], xR, yR, 13); yR += r5.length * 13 + 18;
+    g += table415(r5, [22, 26, 34, 48, 48, 40, 40, 34], xR, yR, 13); yR += r5.length * 13 + 8;
+    g += tx415(xR, yR, "判定：両側の充足率がともに1を超えれば合格（壁率比は問わない）。それ以外は壁率比0.5以上で合格（平12建告1352号）。", 7, "start"); yR += 16;   /* CAD-765 */
     g += lab(xR, yR, "接合部凡例（告示1460号）"); yR += 5;
     const cnt = {}; fls.forEach(fl => NV416(fl, cnt));
     const r6 = [["記号", "仕様（又は同等以上）", "N値", "柱の数"]];
@@ -32392,7 +32406,7 @@ var rows = [hdr];
 rows.push(["横の壁(X)", f1(WS.need.x), f1(WS.have.x), f2(WS.have.x / Math.max(1, WS.need.x)), WS.have.x >= WS.need.x - 0.5? "OK": "不足"]);
 rows.push(["縦の壁(Y)", f1(WS.need.y), f1(WS.have.y), f2(WS.have.y / Math.max(1, WS.need.y)), WS.have.y >= WS.need.y - 0.5? "OK": "不足"]);
 ["x", "y"].forEach(function(d){ var Q = WS.q[d]; if (!Q) return; var nm = d === "x"? ["上の1/4", "下の1/4"]: ["左の1/4", "右の1/4"];
-rows.push([nm[0], f1(Q.sideReq), f1(Q.h0), f2(Q.r0), ""]); rows.push([nm[1], f1(Q.sideReq), f1(Q.h1), f2(Q.r1), "壁率比 " + f2(Q.ratio) + (Q.ok? " OK": " NG")]);});
+rows.push([nm[0], f1(Q.sideReq), f1(Q.h0), f2(Q.r0), ""]); rows.push([nm[1], f1(Q.sideReq), f1(Q.h1), f2(Q.r1), (Q.r0 > 1 && Q.r1 > 1)? "両側とも1超 OK": "壁率比 " + f2(Q.ratio) + (Q.ok? " OK": " NG")]);}); /* CAD-765：両側とも1を超える時は壁率比は問わない（告示1352号） */
 rows.push(["筋交い", "", WS.n + "本", "", WS.unplaced? WS.unplaced + "本分 置けない": ""]);
 rows.push(["係数", rq.coef + "cm/㎡", "", "", "余裕1.2倍"]);
 g += "<rect x=\"" + x0 + "\" y=\"" + r2(y0) + "\" width=\"" + wT + "\" height=\"" + r2(rh * rows.length) + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"0.8\"/>";
@@ -53385,5 +53399,43 @@ window.WHY724 = function(why){
   try { var mb0 = document.getElementById("mbox"); if (mb0 && window.MutationObserver) new MutationObserver(function(){ try { addDz(); } catch(e){} }).observe(mb0, { childList: true }); } catch(e){}
   window.addEventListener("walk2-switch", function(){ setTimeout(function(){ try { tick(); } catch(e){} }, 0); });
   window.FAB763 = { v: 1, openDz: openDz, goNew: goNew };
+})();
+</script>
+
+<script id="fab765">
+/* CAD-765（Fable）：構造の見直し ①耐力壁。
+   四分割法（平12建告1352号）が不合格の時に、どの階の・どの面が・どれだけ足りないか・どう直すかを「見積の前のチェック」に出す。
+   自動の置き方の直し（帯で面材の上に筋交いを重ねる）は wallSegs406core の中。ここは、それでも足りない時の知らせだけ。
+   数は耐力壁の正本（wallSegs406）から取る。保存する物は無い。 */
+(function(){
+  if (window.FAB765) return;
+  function chk765(){
+    var out = [];
+    try {
+      if (typeof S === "undefined" || S.mode !== "zo" || typeof wallSegs406 !== "function") return out;
+      var two = false; try { two = !!roof().two; } catch(e){}
+      [1, 2].forEach(function(fl){
+        if (fl === 2 && !two) return;
+        var WS = wallSegs406(fl); if (!WS || !WS.q) return;
+        ["x", "y"].forEach(function(d){
+          var Q = WS.q[d]; if (!Q || Q.ok) return;
+          var weak = Q.r0 <= Q.r1 ? 0 : 1, hw = weak ? Q.h1 : Q.h0, hs = weak ? Q.h0 : Q.h1, rw = weak ? Q.r1 : Q.r0;
+          /* 合格まであと何cm：①弱い側の充足率が1を超える ②弱い側÷強い側が0.5以上 の、少なくて済む方 */
+          var def = Math.max(0, Math.min(Q.sideReq - hw, 0.5 * hs - hw)) + 0.5;
+          var f = S.tr === "menzai" ? 4.5 : (S.suji === "tasuki" ? 4.0 : 2.0), n = Math.max(1, Math.ceil(def * 10 / f / 910 - 1e-9));
+          var nm = d === "x" ? ["上", "下"] : ["左", "右"];
+          var b = null; try { b = withFloor416(fl, function(){ return bbox(); }); } catch(e){}
+          var p = null; if (b){ var c = weak ? Q.hi - Q.q4 / 2 : Q.lo + Q.q4 / 2; p = d === "x" ? [b.x0 + b.w / 2, c] : [c, b.y0 + b.h / 2]; }
+          out.push({lv: 2, t: "耐力壁のつり合い（四分割法）が不合格：" + (two ? fl + "階の" : "") + "「" + nm[weak] + "の面」の壁が足りません（端から1/4の中の充足率 " + (Math.round(rw * 100) / 100).toFixed(2) + "）。この面に、窓・ドアの無い壁（幅910）をあと " + n + " か所作ると合格します（窓を小さくする・窓の位置をずらす）", p: p, k765: {fl: fl, d: d, weak: weak, n: n}});
+        });
+      });
+    } catch(e){}
+    return out;
+  }
+  try {
+    var prev = HB.__kozoChk480;
+    HB.__kozoChk480 = function(){ var out = []; try { out = prev ? (prev() || []) : []; } catch(e){ out = []; } try { chk765().forEach(function(o){ out.push(o); }); } catch(e){} return out; };
+  } catch(e){}
+  window.FAB765 = {chk: chk765, ver: 1};
 })();
 </script>
