@@ -1235,6 +1235,7 @@ const WORK = [
   ["roofFin", "屋根（ガルバ・ルーフィング）", "円/㎡", 0, 6500],
   ["roofKawara", "屋根（瓦・ルーフィング・桟木・役物共）", "円/㎡", 0, 12000],
   ["sujiKana", "筋交い金物（筋交いプレート・ビス共）", "円/本", 0, 600],
+  ["hariUke769", "梁受け金物（梁が梁に掛かる所・仮）", "円/個", 0, 2500],   /* CAD-769：単価は仮（翔伍さんが決める） */
   ["tsugite", "継手加工（腰掛け鎌継ぎ・手刻み）（仮）", "円/か所", 0, 1500],   /* CAD-406：単価は未決（翔伍が決める） */
   ["tanzaku", "短冊金物（ボルト・ビス共）（仮）", "円/枚", 0, 500],
   ["kisoNuno", "布基礎（フーチング・立ち上がり）（仮）", "円/m", 0, 25000],
@@ -6812,7 +6813,8 @@ segBind("[data-rfcc]", "rfCeilCur", v => v, drawSpec);
   try {
     const row = (lbl, key, opts) => `<div class="sub2" style="margin-top:8px">${lbl}</div><div class="seg">${opts.map(o => `<button type="button" data-k409="${key}" data-v="${o[0]}" aria-pressed="${String((S[key] ?? "__u") === o[0] || (S[key] === true && o[0] === "true") || (S[key] === false && o[0] === "__u") || (typeof S[key] === "number" && String(S[key]) === o[0]))}">${o[1]}</button>`).join("")}</div>`;
     const box = document.createElement("div");
-    box.innerHTML = row("梁の材", "hariMat", [["__u", "米松"], ["glu", "集成材"]])
+    box.innerHTML = row("梁の材", "hariMat", [["__u", "製材（樹種の設定どおり）"], ["glu", "集成材"]])
+      + row("梁の等級（製材の強さの区分・CAD-769）", "hariGrade", [["__u", "無等級"], ["E70", "E70"], ["E90", "E90"], ["E110", "E110"]])
       + row("基礎の種類", "kisoType", [["__u", "ベタ基礎"], ["nuno", "布基礎"]])
       + row("太陽光パネル", "solar", [["__u", "なし"], ["true", "あり"]])
       + row("断熱等級（新築・増築）", "dannetsuGrade", [["__u", "等級4"], ["5", "等級5"], ["6", "等級6"]])
@@ -7566,6 +7568,11 @@ function framePos(){
       }
       r.postT = ts;
     });
+    /* CAD-769（Fable）：骨組みの正本（KOZO）が決めた「1階に足す柱」（2階の柱の真下・梁の交わる所の下で、1階が壁の所）を、その壁の柱に入れる。
+       1階の壁の並びの時だけ返ってくる（2階の並びには何も足さない）。開口の中と、柱から105以内は足さない。 */
+    try { const ex769 = (window.KOZO && KOZO.extraFor) ? KOZO.extraFor(runs) : null;
+      if (ex769 && ex769.length) runs.forEach(r => { ex769.forEach(e => { const t = (e.x - r.ax) * r.ux + (e.y - r.ay) * r.uy; if (t < -1.5 || t > r.L + 1.5 || Math.hypot(e.x - (r.ax + r.ux * t), e.y - (r.ay + r.uy * t)) > 1.5) return;
+        const tt = Math.max(0, Math.min(r.L, t)); if (inOp(r, tt) || [...r.postT].some(v => Math.abs(v - tt) <= 105)) return; r.postT.add(tt); }); }); } catch(e){}
     const key = (x, y) => Math.round(x * 2) + "," + Math.round(y * 2);
     const onRun = (r, x, y) => { const t = (x - r.ax) * r.ux + (y - r.ay) * r.uy; return t >= -1.5 && t <= r.L + 1.5 && Math.hypot(x - (r.ax + r.ux * t), y - (r.ay + r.uy * t)) <= 1.5; };
     const postMap = new Map(), studMap = new Map();
@@ -8605,10 +8612,12 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
     if (S.mabaKata === "mix" && (studThin > 0 || op1161.tn.length > 0)){ const [ta, tb] = mabaSecP(), [na, nb] = mabaThinP(); lum("mabashira", "間柱", ta, tb, Array(studThick).fill(Lc).concat(op1161.th), `${ta}×${tb}・910の位置（継目）${op1161.th.length ? "・開口の上下含む" : ""}`, false); lum("mabashira", "間柱", na, nb, Array(studThin).fill(Lc).concat(op1161.tn), `${na}×${nb}・455の位置${op1161.tn.length ? "・開口の上下含む" : ""}`, false); }
     else { const [ta, tb] = mabaSecP(); lum("mabashira", "間柱", ta, tb, Array(studsPer).fill(Lc).concat(op1161.th, op1161.tn), `${ta}×${tb}・455間隔${opNote161}`, false); }
   }
+  /* CAD-769（Fable）：胴差・2階の床梁は、骨組みの正本（KOZO）が壁から組んで、乗る重さから1本ずつ計算した大きさと本数で数える。組めない時は今まで通り */
+  const KZ769 = (() => { try { return (two && window.KOZO && KOZO.lumber) ? KOZO.lumber() : null; } catch(e){ return null; } })();
   { const IL406 = intLines406(); if (IL406.sup.length){ const G402 = intGirderH(), ipn = intPostList().n + G402.prop.length, nF = two ? 2 : 1;   /* CAD-406：線は intLines406（壁に寄せた線）。柱は交点＋「柱か壁」の提案分。2階建ては2階の柱を1階の柱の真上に同数 */
     const lens406 = []; IL406.sup.forEach(l => (typeof lineSegs === "function" ? lineSegs(l.axis, l.c) : [[0, D]]).forEach(q => lens406.push(Math.round(q[1] - q[0]))));
     if (ipn > 0) lum("hashira", "内部の柱", 105, 105, Array(ipn).fill(Lc + 120).concat(two ? Array(ipn).fill(Lc2 + 120) : []), `105角・間仕切りとの交点${G402.prop.length ? `＋柱か壁の提案${G402.prop.length}か所` : ""}（${IL406.rows}列${two ? "・1階と2階の真上" : ""}）`, true);
-    lum("keta", two ? "内部の桁（2階床梁の受け・柱の上）" : "内部の桁（柱の上）", 105, G402.h, jtA(lens406, 300), `105×${fmt(G402.h)}・${IL406.rows}列${IL406.sup.some(l => l.wall) ? "・間仕切りの上" : ""}${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true);
+    if (!(two && KZ769)) lum("keta", two ? "内部の桁（2階床梁の受け・柱の上）" : "内部の桁（柱の上）", 105, G402.h, jtA(lens406, 300), `105×${fmt(G402.h)}・${IL406.rows}列${IL406.sup.some(l => l.wall) ? "・間仕切りの上" : ""}${G402.h > (+S.hari || 180) ? "（柱の間が長いので梁せいを大きく）" : ""}`, true);
     const zR = zoInt(W, D, yose, two); if (two && zR.rowsR > 0) lum("keta", "内部の桁（2階 小屋梁の受け）", 105, Math.max(+S.hari || 180, G402.h), jtA(lens406.slice(0, Math.min(lens406.length, zR.rowsR * Math.max(1, Math.round(lens406.length / IL406.rows)))), 300), `105×${fmt(Math.max(+S.hari || 180, G402.h))}・2階の柱の上`, true);
     if (ipn > 0 && !(S.tr === "suji" || S.tr === "menzai")) work("kanamono", "内部の柱の金物", ipn * nF, "本"); } }   /* CAD-408：金物は N値計算の行（nValue406）にまとめる
   /* CAD-222: 入隅のボード受け（36×45 スギ）。本人の確定仕様（2026-11-08/09）。
@@ -8629,7 +8638,11 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
   if (S.tr === "menzai" && sujiN > 0){ lum("suji", "筋交い（面材の不足分）", 45, 105, bl409.length ? bl409 : Array(sujiN).fill(sujiL), `45×105・長さ${blTxt409}・面材だけでは壁量が足りない分（耐力壁図の位置）`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
   { const NV = nValue406(); if (NV.n > 0){ NTYPES406.forEach(t => { const c = NV.cnt[t[3]]; if (c) work(t[3], `柱頭・柱脚の金物 (${t[1]}) ${t[2]}・N値≦${t[0]}`, c, "個"); }); if (NV.anchors) work("hdAnchor", "ホールダウン用アンカーボルト M16（1階の柱脚）", NV.anchors, "本"); } }   /* CAD-408 */
   if (S.tr === "suji"){ lum("suji", "筋交い", 45, 105, bl409.length ? bl409 : Array(sujiN).fill(sujiL), `45×105・${S.suji === "tasuki" ? "たすき" : "片"}・長さ${blTxt409}（耐力壁図の位置）`, false); work("sujiKana", "筋交い金物（上下）", sujiN, "本"); }
-  if (two){
+  if (two && KZ769){
+    KZ769.rows.forEach(g => lum(g.key, g.name, 105, g.h, S.precut ? g.lens : g.lensJ, g.spec, true));
+    if (!S.precut) window.__J406 += KZ769.joints;   /* 継ぎ目の数（柱の上で継ぐ所）。短冊金物・継手加工の数に使う */
+    if (KZ769.kana > 0) work("hariUke769", "梁受け金物（梁が梁に掛かる力が大きい所）", KZ769.kana, "個");
+  } else if (two){
     lum("keta", "胴差", 105, S.dosa, jtA(lens, 300), `105×${fmt(S.dosa)}`, true);
     lum("yukabari", "2階床梁", 105, S.dosa, jtA(joistRuns(true).raw, 300), `105×${fmt(S.dosa)}・910間隔`, true);
   }
@@ -8666,7 +8679,7 @@ if (cut198 > 0){ const fo198 = Math.min(clOld, cut198); clOld -= fo198; clNew = 
         lin490.push(Math.round(span)); if (/窓|FIX/.test(cat) && !/掃/.test(cat) && !/玄関|勝手口|ドア/.test(cat)) sill490.push(Math.round(span));
         if (r.kind === "e" && a0 !== null && c0 !== null && span > 1821){
           const lower = two && fl === 1, base = lower ? +S.dosa : +S.keta, hN = Math.max(base, Math.ceil(span / (lower ? 10 : 11) / 30) * 30);
-          if (hN > base) up490.push({span: Math.round(span), base, h: hN, nm: lower ? "胴差" : "桁", fl});
+          if (hN > base && !(lower && KZ769)) up490.push({span: Math.round(span), base, h: hN, nm: lower ? "胴差" : "桁", fl});   /* CAD-769：胴差は KOZO が計算済み */
         }
       });
     });
@@ -13353,8 +13366,9 @@ function withFloor416(fl, fn){
     const keep = {}; FLOOR_KEYS.forEach(k => { keep[k] = S[k]; });
     FLOOR_KEYS.forEach(k => { if (tgt[k] !== undefined) S[k] = tgt[k]; else delete S[k]; });
     if (!S.sashes) S.sashes = [];
+    const w769 = window.__wf769; if (!w769) window.__wf769 = {keep: keep};   /* CAD-769：差し替えている間の印（元の階の中身）。骨組みの正本 KOZO が見る */
     try { solve(); return fn(); }
-    finally { FLOOR_KEYS.forEach(k => { if (keep[k] !== undefined) S[k] = keep[k]; else delete S[k]; }); try { solve(); } catch(e){} }
+    finally { FLOOR_KEYS.forEach(k => { if (keep[k] !== undefined) S[k] = keep[k]; else delete S[k]; }); if (!w769) window.__wf769 = null; try { solve(); } catch(e){} }
   } catch(e){ return fn(); }
 }
 /* その階の外形と間仕切り（図面用） */
@@ -14089,6 +14103,7 @@ function dzOpen411(){
     ["A-02", "軸組図（柱・間柱・筋交い）", () => HBx.__pvRender410(true), ["柱・間柱の位置と本数は見積と同じ。☒は柱。", "▶筋交い：尖った方が下（柱脚）、広い方が上（柱頭）、置いた側が入る面（外周は外壁側）。たすきは⋈。太線は面材。"]],
     ["S-01", "基礎伏図", () => HBx.__fsRender410("kiso"), stN.concat([S.kisoType === "nuno" ? "基礎は布基礎（床下は防湿コンクリート）。" : "基礎はベタ基礎。立ち上がり幅150。"])],
     ["S-02", two ? "1階床伏図" : "床伏図", () => HBx.__fsRender410("yuka"), stN],
+    two && window.KOZO && ["S-14", "2階床伏図", () => HBx.__fsRender410("yuka2"), stN.slice(1).concat((() => { try { return KOZO.notes(); } catch(e){ return []; } })())],   /* CAD-769（Fable） */
     ["S-03", "小屋伏図", () => HBx.__fsRender410("koya"), stN.concat(["□は柱か壁を入れる所（提案）。"])],
     ["S-08", "母屋伏図", () => HBx.__fsRender410("moya"), stN],
     ["S-09", "垂木伏図", () => HBx.__fsRender410("taru"), ["垂木 45×60、間隔は仕様の設定による。軒の出・ケラバを含む屋根の形。", "点線は外壁の線。単位はmm。"]],
@@ -32874,7 +32889,7 @@ try {
 try { flEnsure();} catch(e){}
 if (S.fl && S.fl.length > 1){
 keep = flSnap();
-var target = (fsKind === "koya" || fsKind === "moya" || fsKind === "taru" || fsKind === "noji")? S.fl.length - 1: 0;
+var target = (fsKind === "koya" || fsKind === "moya" || fsKind === "taru" || fsKind === "noji" || fsKind === "yuka2")? S.fl.length - 1: 0;   /* CAD-769：2階床伏図は2階の外形で描く */
 if (target!== S.fi){ var snap = S.fl[target] && S.fl[target].snap; if (snap) flLoad(snap);}
 }
 var b = bbox();
@@ -32882,13 +32897,14 @@ var fsHasInt393 = false; try { fsHasInt393 = (fsKind === "kiso"? fsKisoLines406(
 var fsIntPosts393 = 0; try { fsIntPosts393 = intPostList().n; } catch(e){}
 var lgRows393 = fsLegendRows393(fsHasInt393, fsIntPosts393);
 if (fsKind === "moya") lgRows393 = lgRows393.filter(function(r){ return r.nm !== "小屋梁";});   /* CAD-413：母屋伏図は小屋梁を描かない */
+if (fsKind === "yuka2"){ try { lgRows393 = KOZO.legendRows();} catch(e){ lgRows393 = [];} }   /* CAD-769 */
 var tblH393 = (fsKind === "taru" || fsKind === "noji")? 3 * 13.5 + 10: (fsKind === "kana" || fsKind === "kana2")? 12 * 13.5 + 10: (fsKind === "taiku" || fsKind === "taiku2")? 11 * 13.5 + 10: lgRows393.length? (lgRows393.length + 1) * 13.5 + 10: 0;
 var fr = {W: 360, mL: 94, mT: 94, s: 0, H: 0, P: null};
 fr.s = Math.min((fr.W - fr.mL - 42) / b.w, (470 - fr.mT - 38 - tblH393) / b.h);
 fr.H = Math.round(fr.mT + b.h * fr.s + 38 + tblH393);
 fr.P = function(q){ return [fr.mL + (q[0] - b.x0) * fr.s, fr.mT + (q[1] - b.y0) * fr.s];};
 var R = roof();
-var title = fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): fsKind === "taiku"? (R.two? "1階耐力壁図": "耐力壁図"): fsKind === "taiku2"? "2階耐力壁図": fsKind === "kana"? (R.two? "1階金物図": "金物図"): fsKind === "kana2"? "2階金物図": fsKind === "moya"? "母屋伏図": fsKind === "taru"? "垂木伏図": fsKind === "noji"? "野地板割付図": "小屋伏図";
+var title = fsKind === "yuka2"? "2階床伏図": fsKind === "kiso"? "基礎伏図": fsKind === "yuka"? (R.two? "1階床伏図": "床伏図"): fsKind === "taiku"? (R.two? "1階耐力壁図": "耐力壁図"): fsKind === "taiku2"? "2階耐力壁図": fsKind === "kana"? (R.two? "1階金物図": "金物図"): fsKind === "kana2"? "2階金物図": fsKind === "moya"? "母屋伏図": fsKind === "taru"? "垂木伏図": fsKind === "noji"? "野地板割付図": "小屋伏図";
 var g = fsHead(fr, b, title), legend = "";
 var hasInt349 = false; try { hasInt349 = fsIntLines().length > 0; } catch(e){} /* CAD-349：内部の線を描くかどうか（描画と同じ fsIntLines が正本） */
 var geyaNote = (S.geya && S.geya.length)? "下屋の分は描いていません。": "";
@@ -32896,7 +32912,9 @@ if (fsKind === "taiku2" && !R.two) fsKind = "taiku";
 if (fsKind === "kana2" && !R.two) fsKind = "kana";
 try { var k2b = document.querySelector("[data-fs=\"kana2\"]"); if (k2b) k2b.style.display = R.two? "": "none";} catch(e){}
 try { var t2b = document.querySelector("[data-fs=\"taiku2\"]"); if (t2b) t2b.style.display = R.two? "": "none";} catch(e){}
-if (fsKind === "moya"){
+if (fsKind === "yuka2"){ /* CAD-769（Fable）：2階床伏図。梁の線・大きさは骨組みの正本（KOZO） */
+var k769 = {g: "", legend: ""}; try { k769 = KOZO.fs2(fr, b, {band: band, line: line, r2: r2});} catch(e){} g += k769.g; legend = k769.legend;
+} else if (fsKind === "moya"){
 g += fsMoya413(fr, b);
 legend = "母屋伏図：母屋・棟木・小屋束・隅木・桁は見積と同じ位置と本数です（小屋梁は小屋伏図）。";
 } else if (fsKind === "taru"){
@@ -34599,7 +34617,7 @@ function knDraw(svg, roomNm){
   note("end", 356, Y(FL1 + S.ch * 0.30) + 3, [wallNm], [[xIn, FL1 + S.ch * 0.30]], "L");
   note("end", 340, Y(CE1) + 3, [ceilNm], [[1000, CE1 + gbC[1] / 2]], "L");
   if (two) note("end", 340, Y(CE2) + 3, [ceilNm], [[1000, CE2 + gbC[1] / 2]], "L");
-  if (two) note("end", 356, Y(zT + Lc + S.dosa / 2) + 3, ["2階床梁：" + PIL + "×" + S.dosa + " @910"], [[1210 + PIL / 2, zT + Lc + S.dosa / 2]], "L");
+  if (two) note("end", 356, Y(zT + Lc + S.dosa / 2) + 3, [(window.KOZO && (() => { try { return KOZO.build().ok; } catch(e){ return false; } })()) ? "2階床梁：@910（大きさは2階床伏図）" : "2階床梁：" + PIL + "×" + S.dosa + " @910"], [[1210 + PIL / 2, zT + Lc + S.dosa / 2]], "L");
   var ceTop = two ? CE2 : CE1;
   if (S.danC) note("end", 348, Y(ceTop) - 13, [danNm392("danC", "断熱 天井")], [[760, ceTop + gbC[1] + 40]], "L");
   if (wood) note("end", 356, Y(zT - 70) + 3, ["床：" + flNm + "（合板 " + banT + "mm）"], [[1000, FL1 - S.dfl / 2]], "L");
@@ -53440,5 +53458,386 @@ window.WHY724 = function(why){
     HB.__kozoChk480 = function(){ var out = []; try { out = prev ? (prev() || []) : []; } catch(e){ out = []; } try { chk765().forEach(function(o){ out.push(o); }); } catch(e){} return out; };
   } catch(e){}
   window.FAB765 = {chk: chk765, ver: 1};
+})();
+</script>
+
+<script id="fab769">
+/* CAD-769（Fable）：構造の見直し ②柱と梁。骨組みの正本 KOZO（壁 → 柱 → 梁）。2階床伏図・見積の胴差と床梁・1階に足す柱・点検はここから。 */
+/* KOZO（Fable）：骨組みの正本。壁 → 柱（上下をそろえる）→ 梁（2階の壁・柱の下に必ず）の順に決める。
+   入力は framePos（階ごとの壁と柱）と roof()。保存する物は無い。数は全部ここから図面・見積・点検へ出す。 */
+(function(){
+  if (window.KOZO) return;
+  var TOL = 40, DEFL = 300, BW = 105, STD = [105, 120, 150, 180, 210, 240, 270, 300, 330, 360, 390, 420, 450], PIT = 910, JMAX = 3640;
+  /* 梁の材料：基準強度は平12建告1452号（無等級材・機械等級区分）と平13国交告1024号（集成材）。ヤング係数は等級の呼び値（無等級は木質構造設計規準の値）。 */
+  var MATS = {
+    "__u":        {nm: "米松（無等級）",   sp: "米松",   E: 10000, Fb: 28.2, Fs: 2.4},
+    "beiE110":    {nm: "米松 E110",        sp: "米松",   E: 11000, Fb: 30.6, Fs: 2.4},
+    "glu":        {nm: "集成材 E105-F300", sp: "集成材", E: 10500, Fb: 30.0, Fs: 3.0},
+    "hinoki":     {nm: "ヒノキ（無等級）", sp: "ヒノキ", E: 9000,  Fb: 26.7, Fs: 2.1},
+    "hinokiE90":  {nm: "ヒノキ E90",       sp: "ヒノキ", E: 9000,  Fb: 30.6, Fs: 2.1},
+    "hinokiE110": {nm: "ヒノキ E110",      sp: "ヒノキ", E: 11000, Fb: 38.4, Fs: 2.1},
+    "sugi":       {nm: "杉（無等級）",     sp: "スギ",   E: 7000,  Fb: 22.2, Fs: 1.8},
+    "sugiE70":    {nm: "杉 E70",           sp: "スギ",   E: 7000,  Fb: 29.4, Fs: 1.8},
+    "sugiE90":    {nm: "杉 E90",           sp: "スギ",   E: 9000,  Fb: 34.8, Fs: 1.8}
+  };
+  MATS.tsuga = {nm: "米ツガ（無等級）", sp: "米ツガ", E: 8000, Fb: 25.2, Fs: 2.1};
+  MATS.ww = {nm: "ホワイトウッド（無等級）", sp: "ホワイトウッド", E: 7000, Fb: 22.2, Fs: 1.8};
+  MATS.rw = {nm: "レッドウッド（無等級）", sp: "レッドウッド", E: 8000, Fb: 28.2, Fs: 2.4};
+  var SPM = {"米松": "__u", "ヒノキ": "hinoki", "スギ": "sugi", "米ツガ": "tsuga", "ホワイトウッド": "ww", "レッドウッド": "rw", "集成材": "glu", "その他": "sugi"};
+  /* 機械等級区分（JAS）の曲げの基準強度 Fb（平12建告1452号 第二号）。ヤング係数は等級の呼び値 */
+  var GRADE = {"米松": {E90: 21.0, E110: 30.6, E130: 39.6}, "ヒノキ": {E70: 22.2, E90: 30.6, E110: 38.4, E130: 46.8}, "スギ": {E50: 24.0, E70: 29.4, E90: 34.8, E110: 40.8}};
+  /* 部材ごとの材料。key＝"keta"（胴差）か "yukabari"（2階の床梁）。樹種は見積の設定（S.sp）と同じ物を使う＝選んだ材料で梁の大きさが変わる */
+  function mat(key){
+    try { if (S.hariMat === "glu") return MATS.glu; var sp = (S.sp && S.sp[key || "yukabari"]) || "米松", base = MATS[SPM[sp] || "sugi"], g = S.hariGrade, fb = g && GRADE[sp] && GRADE[sp][g];
+      return fb ? {nm: sp + " " + g, sp: sp, E: +g.slice(1) * 100, Fb: fb, Fs: base.Fs} : base; } catch(e){ return MATS.__u; }
+  }
+  /* 荷重（kN/㎡）。床：床0.6＋1階の天井0.2＋間仕切りの見込み0.3＋積載（小梁の曲げ1.8／大梁・たわみ1.3）。アプリの今までの決まり（FLOORQ406＝2.4）と同じ。 */
+  function loads(){
+    var rq = 1.5; try { rq = roofQ410(); } catch(e){}
+    var g = (typeof S !== "undefined" && S.gaiheki) || "siding";
+    return {fJ: 2.9, fG: 2.4, roof: rq, wExt: g === "nuri" ? 1.2 : g === "metal" ? 0.7 : 0.9, wPart: 0.4, self: 0.15};
+  }
+  var r1 = function(v){ return Math.round(v * 10) / 10; };
+  /* ---------- 階のデータ（壁・柱・外形） ----------
+     アプリは、見積や図面の途中で、別の階を S に読み込んだり（flLoad）、2階の間仕切りを1階に足したり（合算）する。
+     その最中に呼ばれても「本当の1階・2階」を取れるように、読み込みの出入りを見張って、元の階の控えを持っておく。 */
+  var T = {temp: false, live: null, merged: false, pre: null}, RAWING = 0, LIVE = (typeof WeakSet === "function") ? new WeakSet() : null;
+  function pure(fl){
+    var P = window.__pure765; if (P) return fl === 2 ? P.b : P.a;
+    var idx = fl === 2 ? 1 : 0, multi = Array.isArray(S.fl) && S.fl.length > 1, W = window.__wf769;
+    if (!multi || idx === (S.fi || 0)) return W ? W.keep : (T.temp ? T.live : (T.merged ? T.pre : null));
+    return (S.fl[idx] && S.fl[idx].snap) || null;
+  }
+  function withSnap(sn, fn){
+    if (!sn) return fn();
+    var keep = {}; FLOOR_KEYS.forEach(function(k){ keep[k] = S[k]; }); FLOOR_KEYS.forEach(function(k){ if (sn[k] !== undefined) S[k] = sn[k]; else delete S[k]; }); if (!S.sashes) S.sashes = [];
+    try { solve(); return fn(); } finally { FLOOR_KEYS.forEach(function(k){ if (keep[k] !== undefined) S[k] = keep[k]; else delete S[k]; }); try { solve(); } catch(e){} }
+  }
+  function raw(fl){
+    RAWING++;
+    try { return withSnap(pure(fl), function(){
+      var F = framePos();
+      return {runs: (F.runs || []).map(function(r){ return {ax: r.ax, ay: r.ay, bx: r.bx, by: r.by, L: r.L, kind: r.kind, isNew: !!r.isNew, ops: (r.ops || []).map(function(o){ return [o[0], o[1]]; })}; }),
+        posts: (F.posts || []).map(function(p){ return {x: p.x, y: p.y}; }), poly: pts().map(function(p){ return [p[0], p[1]]; }), bb: bbox()};
+    }); } finally { RAWING--; }
+  }
+  /* 見張り：flSnap・flLoad・mergeUpperFloor・save を包む（元の働きは変えない）。
+     temp＝今 S に入っているのは「見ている階」ではない（別の階を一時的に読み込んでいる）。live＝見ている階の控え。
+     merged＝2階の間仕切りなどを足した後（合算）。pre＝足す前の中身。save の時は必ず普通の状態なので、そこで全部戻す。 */
+  function watch(){
+    try {
+      if (typeof flSnap === "function" && !flSnap.__k769){ var s0 = flSnap; window.flSnap = function(){ var r = s0.apply(this, arguments); try { if (!T.temp && !T.merged){ T.live = r; if (LIVE) LIVE.add(r); } } catch(e){} return r; }; window.flSnap.__k769 = 1; window.flSnap.__o769 = s0; }
+      if (typeof flLoad === "function" && !flLoad.__k769){ var l0 = flLoad; window.flLoad = function(o){ try { T.merged = false; T.pre = null;
+            if (o && (o === T.live || (LIVE && LIVE.has(o)))){ T.temp = false; T.live = o; } else if (o && Array.isArray(S.fl) && S.fl[S.fi] && o === S.fl[S.fi].snap){ T.temp = false; T.live = null; } else if (o) T.temp = true; } catch(e){} return l0.apply(this, arguments); }; window.flLoad.__k769 = 1; }
+      if (typeof mergeUpperFloor === "function" && !mergeUpperFloor.__k769){ var m0 = mergeUpperFloor; window.mergeUpperFloor = function(b){ try { if (b){ T.pre = (flSnap.__o769 || flSnap)(); T.merged = true; } } catch(e){} return m0.apply(this, arguments); }; window.mergeUpperFloor.__k769 = 1; }
+      if (typeof save === "function" && !save.__k769){ var v0 = save; window.save = function(){ try { T.temp = false; T.live = null; T.merged = false; T.pre = null; } catch(e){} return v0.apply(this, arguments); }; window.save.__k769 = 1; }
+    } catch(e){}
+  }
+  function inPoly(P, x, y){
+    for (var i = 0; i < P.length; i++){ var a = P[i], b = P[(i + 1) % P.length], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy; if (!L2) continue;
+      var t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / L2)); if (Math.hypot(x - a[0] - dx * t, y - a[1] - dy * t) <= 2) return true; }
+    var c = false; for (var k = 0, j = P.length - 1; k < P.length; j = k++){ var p = P[k], q = P[j]; if (((p[1] > y) !== (q[1] > y)) && (x < (q[0] - p[0]) * (y - p[1]) / (q[1] - p[1]) + p[0])) c = !c; }
+    return c;
+  }
+  /* 壁（縦横だけ）。ax＝壁の走る向き（"x"＝横＝y一定）。c＝その一定の値。a〜b＝走る範囲。ops＝開口（絶対の位置） */
+  function walls(R, fl, skew){
+    var out = [];
+    R.runs.forEach(function(r, i){
+      var hx = Math.abs(r.ay - r.by) < 1, vy = Math.abs(r.ax - r.bx) < 1; if (!hx && !vy){ skew.push({fl: fl, r: r}); return; }
+      var s = hx ? r.ax : r.ay, e = hx ? r.bx : r.by, dir = e >= s ? 1 : -1, a = Math.min(s, e), b = Math.max(s, e);
+      out.push({fl: fl, id: fl + (r.kind === "e" ? "e" : "p") + i, ax: hx ? "x" : "y", c: hx ? r.ay : r.ax, a: a, b: b, ext: r.kind === "e", isNew: r.isNew,
+        ops: r.ops.map(function(o){ var p0 = s + dir * o[0], p1 = s + dir * o[1]; return [Math.min(p0, p1), Math.max(p0, p1)]; })});
+    });
+    return out;
+  }
+  function wallAt(ws, ax, c, t, tol){ tol = tol == null ? 1 : tol; for (var i = 0; i < ws.length; i++){ var w = ws[i]; if (w.ax !== ax || Math.abs(w.c - c) > tol) continue; if (t < w.a - 1 || t > w.b + 1) continue;
+      return {w: w, solid: !w.ops.some(function(o){ return t > o[0] + 1 && t < o[1] - 1; })}; } return null; }
+  function anyWallAt(ws, x, y){ return wallAt(ws, "x", y, x, 2) || wallAt(ws, "y", x, y, 2); }
+
+  /* ---------- 梁1スパンの計算（単純梁。点の荷重の重ね合わせ） ---------- */
+  /* pl＝[{a:端からmm, P:N（強さ用）, Pd:N（たわみ用）}]。返り値＝曲げ M(Nmm)・せん断 V(N)・たわみ×EI・両端の反力 */
+  function beamCalc(L, pl){
+    var RA = 0, RB = 0, RAd = 0, RBd = 0, M = 0, i, j;
+    pl.forEach(function(q){ var Pd = q.Pd == null ? q.P : q.Pd; RA += q.P * (L - q.a) / L; RB += q.P * q.a / L; RAd += Pd * (L - q.a) / L; RBd += Pd * q.a / L; });
+    var xs = pl.map(function(q){ return q.a; }).filter(function(a){ return a > 0 && a < L; }); xs.push(L / 2);
+    xs.forEach(function(x){ var m = RA * x; pl.forEach(function(q){ if (q.a < x) m -= q.P * (x - q.a); }); if (m > M) M = m; });
+    var dEI = 0; for (i = 3; i <= 7; i++){ var x = L * i / 10, d = 0; for (j = 0; j < pl.length; j++){ var q = pl[j], a = q.a, b = L - a, P = q.Pd == null ? q.P : q.Pd; if (a <= 0 || a >= L) continue;
+        d += x <= a ? P * b * x * (L * L - b * b - x * x) / (6 * L) : P * a * (L - x) * (L * L - a * a - (L - x) * (L - x)) / (6 * L); } if (d > dEI) dEI = d; }
+    return {M: M, V: Math.max(RA, RB), dEI: dEI, RA: RA, RB: RB, RAd: RAd, RBd: RBd};
+  }
+  /* 要るせい：曲げ（断面係数×0.8＝仕口の欠き込み）・せん断（端が梁に掛かる時は断面×0.8）・たわみ（変形増大係数2を掛けて スパンの1/300 以下。
+     法律（平12建告1459号）は 1/250。1/300 にすると、2間の小梁が 105×240 など、プレカットで普通に使う大きさになる） */
+  function needH(L, cal, MT, hung, minH){
+    var fb = 1.1 * MT.Fb / 3, fs = 1.1 * MT.Fs / 3, out = null;
+    for (var i = 0; i < STD.length; i++){ var h = STD[i]; if (minH && h < minH) continue;
+      var Z = BW * h * h / 6 * 0.8, I = BW * h * h * h / 12, A = BW * h * (hung ? 0.8 : 1);
+      var rb = cal.M / Z / fb, rs = 1.5 * cal.V / A / fs, rd = (2 * cal.dEI / (MT.E * I)) / (L / DEFL);
+      if (rb <= 1 && rs <= 1 && rd <= 1){ out = {h: h, rb: rb, rs: rs, rd: rd}; break; } }
+    if (!out){ var h2 = STD[STD.length - 1], Z2 = BW * h2 * h2 / 6 * 0.8, I2 = BW * h2 * h2 * h2 / 12; out = {h: h2, over: true, rb: cal.M / Z2 / fb, rs: 1.5 * cal.V / (BW * h2 * (hung ? 0.8 : 1)) / fs, rd: (2 * cal.dEI / (MT.E * I2)) / (L / DEFL)}; }
+    return out;
+  }
+
+  /* ---------- 骨組みを組む ---------- */
+  var FORCE = null, CACHE = null;
+  function build1(){
+    var out = {ok: false, two: false, warn: [], add1: [], lines: [], joists: [], p1: [], p2: [], skew: [], joint: []};
+    try {
+      if (typeof S === "undefined" || S.mode !== "zo") return out;
+      var RF = roof(), two = !!RF.two, spanY = !!RF.spanY; out.two = two; out.spanY = spanY; if (!two) return out;
+      var has2 = Array.isArray(S.fl) && S.fl.length > 1, R1 = raw(1), R2 = has2 ? raw(2) : raw(1), MT = mat("yukabari"), MTk = mat("keta"), LD = loads();
+      var W1 = walls(R1, 1, out.skew), W2 = walls(R2, 2, out.skew), P1 = R1.posts.map(function(p){ return {x: p.x, y: p.y}; }), P2 = R2.posts.map(function(p){ return {x: p.x, y: p.y}; });
+      out.bb = R2.bb; out.poly2 = R2.poly; out.poly1 = R1.poly; out.mat = MT; out.matK = MTk; out.ld = LD; out.has2 = has2; out._r1 = R1.runs;
+      /* 2階の壁の線が、1階の壁の線と 40mm 以内なら同じ線にそろえる（読み込みのずれ）。柱と、直交する壁の端も一緒に動かす */
+      var mv = [];
+      W2.forEach(function(w){ var best = null; W1.forEach(function(v){ if (v.ax !== w.ax) return; var d = Math.abs(v.c - w.c); if (d > 0.5 && d <= TOL && (best === null || d < Math.abs(best - w.c))) best = v.c; });
+        if (best !== null && !W1.some(function(v){ return v.ax === w.ax && Math.abs(v.c - w.c) <= 0.5; })){ mv.push({ax: w.ax, from: w.c, to: best}); } });
+      mv.forEach(function(m){
+        W2.forEach(function(w){ if (w.ax === m.ax && Math.abs(w.c - m.from) <= 0.5) w.c = m.to; else if (w.ax !== m.ax){ if (Math.abs(w.a - m.from) <= 0.5) w.a = m.to; if (Math.abs(w.b - m.from) <= 0.5) w.b = m.to; } });
+        P2.forEach(function(p){ if (m.ax === "x"){ if (Math.abs(p.y - m.from) <= 0.5) p.y = m.to; } else if (Math.abs(p.x - m.from) <= 0.5) p.x = m.to; });
+      });
+      out.moved = mv;
+      var solid1 = function(x, y){ var a = wallAt(W1, "x", y, x, 2), b = wallAt(W1, "y", x, y, 2); return !!((a && a.solid) || (b && b.solid)); };
+      var on1 = function(x, y){ return !!(wallAt(W1, "x", y, x, 2) || wallAt(W1, "y", x, y, 2)); };
+      var has1 = function(x, y){ return P1.some(function(p){ return Math.hypot(p.x - x, p.y - y) <= TOL; }); };
+      var addCol = function(x, y, why){ if (has1(x, y)) return; P1.push({x: x, y: y, add: true}); out.add1.push({x: x, y: y, why: why}); };
+      /* 柱：2階の柱の真下が1階の壁（開口でない所）なら、1階にも柱を立てる */
+      /* ただし、1階の壁の上で、両側の1階の柱が910以内にある時は足さない（胴差・梁が受ける普通の納まり。910の面材・筋交いの間を割らないため） */
+      var bay1 = function(x, y){ var best = Infinity; ["x", "y"].forEach(function(ax){ var h = wallAt(W1, ax, ax === "x" ? y : x, ax === "x" ? x : y, 2); if (!h || !h.solid) return; var t = ax === "x" ? x : y, lo = -Infinity, hi = Infinity;
+          P1.forEach(function(p){ var c = ax === "x" ? p.y : p.x, u = ax === "x" ? p.x : p.y; if (Math.abs(c - h.w.c) > TOL || u < h.w.a - 1 || u > h.w.b + 1) return; if (u < t && u > lo) lo = u; if (u > t && u < hi) hi = u; }); if (isFinite(lo) && isFinite(hi)) best = Math.min(best, hi - lo); }); return best; };
+      P2.forEach(function(q){ if (has1(q.x, q.y)) q.sup = "col"; else if (solid1(q.x, q.y)){ if (bay1(q.x, q.y) <= 911) q.sup = "wall"; else { addCol(q.x, q.y, "2階の柱の真下"); q.sup = "col"; q.added = true; } } else q.sup = on1(q.x, q.y) ? "lintel" : "beam"; });
+      /* 梁の線：1階の壁の上（2階の床の範囲だけ）＋2階の壁の真下 */
+      var LN = {}, lineOf = function(ax, c){ var k = ax + Math.round(c); return LN[k] || (LN[k] = {k: k, ax: ax, c: c, segs: [], iv: []}); };
+      var P2poly = R2.poly, mid = function(ax, c, t){ return ax === "x" ? [t, c] : [c, t]; };
+      W1.forEach(function(w){ var st = 113.75, n = Math.max(1, Math.round((w.b - w.a) / st)), cur = null;
+        for (var i = 0; i <= n; i++){ var t = w.a + (w.b - w.a) * i / n, m = mid(w.ax, w.c, t), ins = inPoly(P2poly, m[0], m[1]);
+          if (ins){ if (!cur) cur = [t, t]; else cur[1] = t; } if ((!ins || i === n) && cur){ if (cur[1] - cur[0] > 1) lineOf(w.ax, w.c).segs.push({a: cur[0], b: cur[1], w1: w}); cur = null; } } });
+      W2.forEach(function(w){ lineOf(w.ax, w.c).segs.push({a: w.a, b: w.b, w2: w}); });
+      var uni = function(L){ var s = L.segs.slice().sort(function(a, b){ return a.a - b.a; }), iv = []; s.forEach(function(g){ var last = iv[iv.length - 1]; if (last && g.a <= last[1] + 1) last[1] = Math.max(last[1], g.b); else iv.push([g.a, g.b]); }); L.iv = iv; };
+      var ivAt = function(L, t){ for (var i = 0; i < L.iv.length; i++) if (t >= L.iv[i][0] - 1 && t <= L.iv[i][1] + 1) return L.iv[i]; return null; };
+      var lines = function(ax){ return Object.keys(LN).map(function(k){ return LN[k]; }).filter(function(L){ return !ax || L.ax === ax; }); };
+      var NK, nodeAt = function(x, y){ var k = Math.round(x) + "," + Math.round(y); return NK[k] || (NK[k] = {x: x, y: y, lx: null, ly: null, endx: false, endy: false, car: {}}); };
+      var mkNodes = function(){
+        NK = {}; lines().forEach(uni);
+        lines("x").forEach(function(Lx){ lines("y").forEach(function(Ly){ var ix = ivAt(Lx, Ly.c), iy = ivAt(Ly, Lx.c); if (!ix || !iy) return; var n = nodeAt(Ly.c, Lx.c); n.lx = Lx; n.ly = Ly;
+          n.endx = Math.abs(Ly.c - ix[0]) <= 1 || Math.abs(Ly.c - ix[1]) <= 1; n.endy = Math.abs(Lx.c - iy[0]) <= 1 || Math.abs(Lx.c - iy[1]) <= 1; }); });
+        lines().forEach(function(L){ L.iv.forEach(function(v){ [v[0], v[1]].forEach(function(t){ var m = mid(L.ax, L.c, t), n = nodeAt(m[0], m[1]); if (L.ax === "x"){ n.lx = L; n.endx = true; } else { n.ly = L; n.endy = true; } }); }); });
+        P1.forEach(function(p){ lines().forEach(function(L){ var c = L.ax === "x" ? p.y : p.x, t = L.ax === "x" ? p.x : p.y; if (Math.abs(c - L.c) > TOL || !ivAt(L, t)) return; var m = mid(L.ax, L.c, t), n = nodeAt(m[0], m[1]); if (L.ax === "x") n.lx = n.lx || L; else n.ly = n.ly || L; n.col = true; }); });
+        Object.keys(NK).forEach(function(k){ var n = NK[k]; if (!n.col && has1(n.x, n.y)) n.col = true; n.addable = !n.col && solid1(n.x, n.y); });
+      };
+      /* 端が宙に浮く梁は、先の梁（か壁）まで延ばす。角で2本とも終わる時（下に柱が無い）は、短く済む方を延ばす */
+      var reach = function(L, t, dir){ var best = null; lines(L.ax === "x" ? "y" : "x").forEach(function(P){ var d = (P.c - t) * dir; if (d <= 1 || !ivAt(P, L.c)) return; if (best === null || d < best.d) best = {d: d, c: P.c}; }); return best; };
+      var extend = function(L, t, dir, why){ var r = reach(L, t, dir); if (!r){ out.warn.push({lv: 2, t: "梁の端を受ける物がありません", p: mid(L.ax, L.c, t)}); return false; } L.segs.push(dir > 0 ? {a: t, b: r.c, ext: why} : {a: r.c, b: t, ext: why}); return true; };
+      var NL = function(){ return Object.keys(NK).map(function(k){ return NK[k]; }); };
+      var nodesOn = function(L){ return NL().filter(function(n){ return (L.ax === "x" ? n.lx : n.ly) === L; }).map(function(n){ return {n: n, t: L.ax === "x" ? n.x : n.y}; }).sort(function(a, b){ return a.t - b.t; }); };
+      var scan = function(ax, c){ var P = P2poly, xs = []; for (var i = 0; i < P.length; i++){ var p = P[i], q = P[(i + 1) % P.length], u0 = ax === "x" ? p[1] : p[0], u1 = ax === "x" ? q[1] : q[0], v0 = ax === "x" ? p[0] : p[1], v1 = ax === "x" ? q[0] : q[1];
+          if ((u0 > c) !== (u1 > c)) xs.push(v0 + (c - u0) / (u1 - u0) * (v1 - v0)); } xs.sort(function(a, b){ return a - b; }); var iv = []; for (var k = 0; k + 1 < xs.length; k += 2) if (xs[k + 1] - xs[k] > 1) iv.push([xs[k], xs[k + 1]]); return iv; };
+      var pieces = function(dir){ var res = [], bb = R2.bb, o = dir === "x" ? bb.y0 : bb.x0, e = dir === "x" ? bb.y1 : bb.x1, perp = lines(dir === "x" ? "y" : "x"), same = lines(dir);
+        for (var c = o + PIT; c < e - 1; c += PIT){ scan(dir, c).forEach(function(iv){ var cuts = [iv[0], iv[1]]; perp.forEach(function(Pp){ if (Pp.c > iv[0] + 1 && Pp.c < iv[1] - 1 && ivAt(Pp, c)) cuts.push(Pp.c); }); cuts.sort(function(a, b){ return a - b; });
+            for (var k = 0; k + 1 < cuts.length; k++){ var a2 = cuts[k], b2 = cuts[k + 1], m = (a2 + b2) / 2; if (b2 - a2 < 2 || same.some(function(L){ return Math.abs(L.c - c) <= 1 && ivAt(L, m); })) continue; res.push({ax: dir, c: c, a: a2, b: b2, len: b2 - a2}); } }); }
+        return res; };
+      var mxLen = function(a){ return a.reduce(function(m, q){ return Math.max(m, q.len); }, 0); }, sq = function(a){ return a.reduce(function(m, q){ return m + q.len * q.len; }, 0); };
+      var dir = null, J = [];
+      /* 骨組みを解く：柱の追加 → 受ける・掛かる → スパン → 小梁。小梁が 3640 を超える所には受け梁を足して、もう一度 */
+      for (var round = 0; round < 4; round++){
+        for (var it = 0; it < 12; it++){
+          mkNodes(); var ch = false;
+          NL().some(function(n){ if (n.col || n.addable) return false;
+            if (n.lx && n.ly){ if (!(n.endx && n.endy)) return false;
+              var ix = ivAt(n.lx, n.x), iy = ivAt(n.ly, n.y), dx = Math.abs(n.x - ix[0]) <= 1 ? -1 : 1, dy = Math.abs(n.y - iy[0]) <= 1 ? -1 : 1, rx = reach(n.lx, n.x, dx), ry = reach(n.ly, n.y, dy);
+              if (!rx && !ry) return false;
+              if (rx && (!ry || rx.d <= ry.d)) ch = extend(n.lx, n.x, dx, "角"); else ch = extend(n.ly, n.y, dy, "角"); return ch; }
+            var L = n.lx || n.ly, t = n.lx ? n.x : n.y, iv = ivAt(L, t); if (!iv) return false; var isA = Math.abs(t - iv[0]) <= 1, isB = Math.abs(t - iv[1]) <= 1; if (!isA && !isB) return false;
+            ch = extend(L, t, isA ? -1 : 1, "端"); return ch; });
+          if (!ch) break;
+        }
+        /* 梁と梁が交わる所の下が1階の壁（開口でない所）なら、そこに柱を立てる */
+        NL().forEach(function(n){ if (n.addable && n.lx && n.ly) addCol(n.x, n.y, "梁の交わる所の下"); });
+        mkNodes();
+        /* T字：終わる方が、通る方に掛かる。角（どちらも終わる・柱なし）は警告 */
+        NL().forEach(function(n){ if (n.col || !(n.lx && n.ly)) return; if (n.endx && !n.endy) n.car.x = n.ly; else if (n.endy && !n.endx) n.car.y = n.lx; else if (n.endx && n.endy){ n.car.x = n.ly; out.warn.push({lv: 2, t: "梁の角の下に柱がありません：1階に柱か壁が要ります", p: [n.x, n.y]}); } });
+        /* 十字：柱から柱（支えから支え）までが短い方が受ける。短い順に決めていく */
+        var stretch = function(L, n){ var ax = L.ax, t = ax === "x" ? n.x : n.y, iv = ivAt(L, t), pl = iv[0], ph = iv[1];
+          nodesOn(L).forEach(function(q){ if (!(q.n.col || q.n.car[ax])) return; if (q.t < t - 1 && q.t > pl) pl = q.t; if (q.t > t + 1 && q.t < ph) ph = q.t; }); return ph - pl; };
+        for (var g2 = 0; g2 < 400; g2++){ var un = NL().filter(function(n){ return !n.col && n.lx && n.ly && !n.car.x && !n.car.y; }); if (!un.length) break; var best = null;
+          un.forEach(function(n){ [n.lx, n.ly].forEach(function(L){ var d = stretch(L, n) - (wallAt(W1, L.ax, L.c, L.ax === "x" ? n.x : n.y, 2) ? 0.5 : 0); if (!best || d < best.d) best = {d: d, L: L, n: n}; }); });
+          if (best.L.ax === "x") best.n.car.y = best.L; else best.n.car.x = best.L; }
+        /* スパン（支えから支えまで） */
+        lines().forEach(function(L){ L.spans = []; L.iv.forEach(function(iv){ var sup = nodesOn(L).filter(function(q){ return q.t >= iv[0] - 1 && q.t <= iv[1] + 1 && (q.n.col || q.n.car[L.ax]); });
+            if (!sup.length || sup[0].t > iv[0] + 1 || sup[sup.length - 1].t < iv[1] - 1) out.warn.push({lv: 2, t: "梁の端の下に支えがありません", p: mid(L.ax, L.c, (!sup.length || sup[0].t > iv[0] + 1) ? iv[0] : iv[1])});
+            for (var i = 0; i + 1 < sup.length; i++){ if (sup[i + 1].t - sup[i].t < 2) continue; L.spans.push({L: L, a: sup[i].t, b: sup[i + 1].t, len: sup[i + 1].t - sup[i].t, na: sup[i].n, nb: sup[i + 1].n, pl: [], kids: [], minH: 0}); } }); });
+        /* 小梁（910ごと）：向きは、いちばん長い小梁が短くなる方 */
+        var px = pieces("x"), py = pieces("y");
+        dir = FORCE || (mxLen(px) < mxLen(py) - 1 ? "x" : mxLen(py) < mxLen(px) - 1 ? "y" : (sq(px) <= sq(py) ? "x" : "y"));
+        J = dir === "x" ? px : py;
+        var lg = J.filter(function(q){ return q.len > JMAX + 1; }); if (!lg.length || round === 3){ if (lg.length) out.warn.push({lv: 1, t: "小梁が " + Math.round(mxLen(J)) + "mm 飛んでいます（3,640mmまでが目安）", p: mid(dir, lg[0].c, (lg[0].a + lg[0].b) / 2)}); break; }
+        lg.forEach(function(q){ var o = dir === "x" ? R2.bb.x0 : R2.bb.y0, m = (q.a + q.b) / 2, gc = o + Math.round((m - o) / PIT) * PIT; if (gc - q.a < PIT - 1 || q.b - gc < PIT - 1) gc = m;
+          var lo = -Infinity, hi = Infinity; lines(dir).forEach(function(L){ if (!ivAt(L, gc)) return; if (L.c < q.c && L.c > lo) lo = L.c; if (L.c > q.c && L.c < hi) hi = L.c; });
+          if (isFinite(lo) && isFinite(hi)) lineOf(dir === "x" ? "y" : "x", gc).segs.push({a: lo, b: hi, gird: true}); });
+        out.warn = out.warn.filter(function(w){ return !/梁の角の下|梁の端の下/.test(w.t); });
+      }
+      out.dir = dir;
+      /* ---------- 荷重 ---------- */
+      var colN = {}, ck = function(x, y){ return Math.round(x) + "," + Math.round(y); }, addColN = function(x, y, P){ var k = ck(x, y); colN[k] = (colN[k] || 0) + P; };
+      var spanAt = function(L, t){ for (var i = 0; i < L.spans.length; i++) if (t > L.spans[i].a + 1 && t < L.spans[i].b - 1) return L.spans[i]; return null; };
+      var lineAt = function(ax, x, y){ var L = LN[ax + Math.round(ax === "x" ? y : x)]; return L && ivAt(L, ax === "x" ? x : y) ? L : null; };
+      /* 点の荷重（kN）を、その場所の梁に乗せる。柱の真上なら柱へ。掛かっている所なら受けている梁へ */
+      var addPoint = function(x, y, P, Pd, minH, hop){ var n = NK[ck(x, y)]; if ((n && n.col) || has1(x, y)){ addColN(x, y, P); return null; }
+        var Lx = lineAt("x", x, y), Ly = lineAt("y", x, y), tgt = (Lx && Ly) ? ((n && n.car.x) ? Ly : (n && n.car.y) ? Lx : Lx) : (Lx || Ly); if (!tgt) return null;
+        var t = tgt.ax === "x" ? x : y, sp = spanAt(tgt, t);
+        if (!sp){ var oth = tgt === Lx ? Ly : Lx; if (oth && !hop){ var sp2 = spanAt(oth, oth.ax === "x" ? x : y); if (sp2){ sp2.pl.push({a: (oth.ax === "x" ? x : y) - sp2.a, P: P * 1000, Pd: (Pd == null ? P : Pd) * 1000}); if (minH) sp2.minH = Math.max(sp2.minH, minH); return sp2; } } addColN(x, y, P); return null; }
+        sp.pl.push({a: t - sp.a, P: P * 1000, Pd: (Pd == null ? P : Pd) * 1000}); if (minH) sp.minH = Math.max(sp.minH, minH); return sp; };
+      /* 2階の柱が運ぶ重さ：2階の壁（高さ分）＋屋根（屋根を受ける壁だけ。受け持ち幅×屋根の重さ） */
+      var H2 = ((RF.Lc2 || RF.Lc || 2540) + 300) / 1000, bearAx = spanY ? "x" : "y", noki = +S.noki || 600;
+      var bearW = W2.filter(function(w){ return w.ax === bearAx && (w.ext || w.b - w.a >= 1819); });
+      var tribRoof = function(w, t){ var cs = []; bearW.forEach(function(v){ if (t >= v.a - 1 && t <= v.b + 1 && cs.indexOf(Math.round(v.c)) < 0) cs.push(Math.round(v.c)); }); cs.sort(function(a, b){ return a - b; });
+        var i = cs.indexOf(Math.round(w.c)), prev = i > 0 ? cs[i - 1] : null, next = (i >= 0 && i + 1 < cs.length) ? cs[i + 1] : null; return (prev === null ? noki : (w.c - prev) / 2) + (next === null ? noki : (next - w.c) / 2); };
+      P2.forEach(function(q){ var N = 0;
+        W2.forEach(function(w){ var c = w.ax === "x" ? q.y : q.x, t = w.ax === "x" ? q.x : q.y; if (Math.abs(c - w.c) > 1 || t < w.a - 1 || t > w.b + 1) return;
+          var lo = w.a, hi = w.b; P2.forEach(function(o){ var c2 = w.ax === "x" ? o.y : o.x, t2 = w.ax === "x" ? o.x : o.y; if (o === q || Math.abs(c2 - w.c) > 1 || t2 < w.a - 1 || t2 > w.b + 1) return; if (t2 < t - 1 && t2 > lo) lo = t2; if (t2 > t + 1 && t2 < hi) hi = t2; });
+          var tl = ((t - lo) / 2 + (hi - t) / 2) / 1000; if (Math.abs(lo - w.a) < 1 && t - lo > 1 && !P2.some(function(o){ return Math.abs((w.ax === "x" ? o.x : o.y) - w.a) <= 1 && Math.abs((w.ax === "x" ? o.y : o.x) - w.c) <= 1; })) tl += (t - lo) / 2000;
+          N += (w.ext ? LD.wExt : LD.wPart) * H2 * tl;
+          if (bearW.indexOf(w) >= 0) N += LD.roof * tribRoof(w, t) / 1000 * tl; else if (w.ext) N += LD.roof * 0.6 * tl; });
+        q.N = N; addPoint(q.x, q.y, N, N); });
+      /* 小梁：自分の大きさ（曲げは積載1.8・たわみは1.3）と、両端の反力（大梁用の積載1.3）を受ける梁へ */
+      J.forEach(function(q){ var n = Math.max(1, Math.round(q.len / 113.75)), pl = []; for (var i = 0; i < n; i++) pl.push({a: (i + 0.5) * q.len / n, P: (LD.fJ * 0.91 + LD.self) * q.len / n, Pd: (LD.fG * 0.91 + LD.self) * q.len / n});
+        q.cal = beamCalc(q.len, pl); q.need = needH(q.len, q.cal, MT, true, 0); q.h = q.need.h; var R = (LD.fG * 0.91 + LD.self) * q.len / 2 / 1000, A = mid(dir, q.c, q.a), B = mid(dir, q.c, q.b);
+        addPoint(A[0], A[1], R, R, q.h); addPoint(B[0], B[1], R, R, q.h); });
+      /* 梁の自重と、小梁と平行な梁が受ける床（片側455ずつ） */
+      lines().forEach(function(L){ L.spans.forEach(function(sp){ var m = mid(L.ax, L.c, (sp.a + sp.b) / 2), w = LD.self;
+          if (L.ax === dir){ var s1 = L.ax === "x" ? inPoly(P2poly, m[0], m[1] - 228) : inPoly(P2poly, m[0] - 228, m[1]), s2 = L.ax === "x" ? inPoly(P2poly, m[0], m[1] + 228) : inPoly(P2poly, m[0] + 228, m[1]); w += LD.fG * 0.455 * ((s1 ? 1 : 0) + (s2 ? 1 : 0)); }
+          var n = Math.max(1, Math.round(sp.len / 113.75)); for (var i = 0; i < n; i++) sp.pl.push({a: (i + 0.5) * sp.len / n, P: w * sp.len / n, Pd: w * sp.len / n}); }); });
+      /* 掛かる梁 → 受ける梁 の順に計算 */
+      var all = []; lines().forEach(function(L){ L.spans.forEach(function(sp){ all.push(sp); }); });
+      all.forEach(function(sp){ [["a", sp.na], ["b", sp.nb]].forEach(function(e){ var n = e[1]; if (n.col) return; var C = n.car[sp.L.ax]; if (!C) return; var U = spanAt(C, C.ax === "x" ? n.x : n.y); if (U) U.kids.push({sp: sp, end: e[0], t: (C.ax === "x" ? n.x : n.y) - U.a}); else sp["col" + e[0]] = true; }); });
+      var minRole = {dosa: 150}, done = 0;
+      var calcSpan = function(sp, force){ if (sp.done) return; if (!force && sp.kids.some(function(k){ return !k.sp.done; })) return;
+        sp.kids.forEach(function(k){ if (!k.sp.done) return; var c = k.sp.cal; sp.pl.push({a: k.t, P: k.end === "a" ? c.RA : c.RB, Pd: k.end === "a" ? c.RAd : c.RBd}); sp.minH = Math.max(sp.minH, k.sp.h); });
+        var m = (sp.a + sp.b) / 2, w1 = wallAt(W1, sp.L.ax, sp.L.c, m, 2), w2 = wallAt(W2, sp.L.ax, sp.L.c, m, 2);
+        sp.role = w1 && w1.w.ext ? "dosa" : (w2 && w2.w.ext) ? "dosa" : w1 ? "maji" : w2 ? "uke2" : "uke"; sp.open1 = !!(w1 && !w1.solid); sp.w2 = !!w2;
+        sp.hung = !sp.na.col || !sp.nb.col; sp.cal = beamCalc(sp.len, sp.pl); sp.need = needH(sp.len, sp.cal, sp.role === "dosa" ? MTk : MT, sp.hung, Math.max(sp.minH, minRole[sp.role] || 0)); sp.h = sp.need.h; sp.done = true; done++;
+        if (sp.na.col) addColN(sp.na.x, sp.na.y, sp.cal.RA / 1000); if (sp.nb.col) addColN(sp.nb.x, sp.nb.y, sp.cal.RB / 1000);
+        [["a", sp.na, sp.cal.RA], ["b", sp.nb, sp.cal.RB]].forEach(function(e){ if (e[1].col) return; var R = e[2] / 1000; if (R > 8) out.joint.push({x: e[1].x, y: e[1].y, R: R, kind: R > 20 ? "col" : "kana"});
+          if (R > 20) out.warn.push({lv: 2, t: "梁が梁に掛かる所の力が大きすぎます（約" + Math.round(R) + "kN）：この下（1階）に柱を足してください", p: [e[1].x, e[1].y]}); });
+        if (sp.need.over) out.warn.push({lv: 2, t: "梁が大きくなりすぎます（" + Math.round(sp.len) + "mm・105×450でも足りない）：下に柱か壁を足すか、材料を強くしてください", p: mid(sp.L.ax, sp.L.c, m)}); };
+      for (var g3 = 0; g3 < 60 && done < all.length; g3++){ var before = done; all.forEach(function(sp){ calcSpan(sp, false); }); if (done === before){ all.forEach(function(sp){ calcSpan(sp, true); }); out.warn.push({lv: 1, t: "梁の掛け方が輪になっています（受ける順が決まらない所があります）", p: null}); } }
+      out.lines = lines().map(function(L){ return {ax: L.ax, c: L.c, iv: L.iv, ext: L.segs.filter(function(g){ return g.ext || g.gird; }).map(function(g){ return {a: g.a, b: g.b, why: g.ext || "受け梁"}; }),
+        spans: L.spans.map(function(sp){ return {a: sp.a, b: sp.b, len: sp.len, h: sp.h, role: sp.role, hung: sp.hung, hA: !sp.na.col, hB: !sp.nb.col, open1: sp.open1, w2: sp.w2, rb: sp.need.rb, rs: sp.need.rs, rd: sp.need.rd, over: !!sp.need.over, M: sp.cal.M / 1e6, V: sp.cal.V / 1000, nk: sp.kids.length, mk: sp.minH}; })}; });
+      var RK = {dosa: 3, uke2: 2, uke: 1, maji: 0}, JP = 400 * 240;
+      lines().forEach(function(L){ L.pcs = []; var seq = [];
+        var flush = function(){ if (!seq.length) return; var n = seq.length, pos = [seq[0].a].concat(seq.map(function(sp){ return sp.b; })), best = [0], prev = [-1];
+          for (var j = 1; j <= n; j++){ best[j] = Infinity; for (var i = j - 1; i >= 0; i--){ var len = pos[j] - pos[i]; if (len > 4000 + 1 && j - i > 1) break; var mh = 0; for (var k = i; k < j; k++) mh = Math.max(mh, seq[k].h); var c = best[i] + len * mh + (i > 0 ? JP : 0); if (c < best[j] - 1e-6){ best[j] = c; prev[j] = i; } } }
+          var cuts = []; for (var j2 = n; j2 > 0; j2 = prev[j2]) cuts.unshift([prev[j2], j2]);
+          cuts.forEach(function(cu){ var mh = 0, role = "maji", hung = false; for (var k = cu[0]; k < cu[1]; k++){ mh = Math.max(mh, seq[k].h); if (RK[seq[k].role] > RK[role]) role = seq[k].role; }
+            L.pcs.push({a: pos[cu[0]], b: pos[cu[1]], len: pos[cu[1]] - pos[cu[0]], h: mh, role: role, jointA: cu[0] > 0, hA: cu[0] === 0 && !seq[0].na.col, hB: cu[1] === n && !seq[n - 1].nb.col}); });
+          seq = []; };
+        L.spans.forEach(function(sp, i){ var pv = L.spans[i - 1]; if (pv && (Math.abs(pv.b - sp.a) > 1 || !sp.na.col)) flush(); seq.push(sp); }); flush(); });
+      out.lines.forEach(function(o, i){ o.pcs = lines()[i].pcs; });
+      out.joists = J.map(function(q){ return {ax: q.ax, c: q.c, a: q.a, b: q.b, len: q.len, h: q.h}; });
+      var wOut = function(w){ return {fl: w.fl, ax: w.ax, c: w.c, a: w.a, b: w.b, ext: w.ext, ops: w.ops}; };
+      out.w1 = W1.map(wOut); out.w2 = W2.map(wOut); out.colN = colN; out.p1 = P1; out.p2 = P2; out.ok = true;
+    } catch(e){ out.err = String(e && e.stack || e); }
+    return out;
+  }
+  var SIGK = ["edges", "po", "house", "noWall", "parts2D", "sashes", "wallLines"];
+  function sig(){ try { var f = function(fl){ var sn = pure(fl) || S, o = {}; SIGK.forEach(function(k){ o[k] = sn[k]; }); return o; }, multi = Array.isArray(S.fl) && S.fl.length > 1;
+      return JSON.stringify([f(1), multi ? f(2) : 0, S.hariMat || "", S.hariGrade || "", S.sp && S.sp.keta, S.sp && S.sp.yukabari, S.roofW || "", S.gaiheki || "", S.roof || "", S.k || 0, S.noki || 0, S.kobariDir || "", S.mode, S.colP, S.colPe, S.colPi, S.modul, S.floors, S.ch, S.ch2, S.fuko]); } catch(e){ return "ERR" + Math.random(); } }
+  function score(r){ if (!r.ok) return [9, 0, 0, 0, 0]; var mh = 0, vol = 0; r.lines.forEach(function(L){ L.spans.forEach(function(sp){ mh = Math.max(mh, sp.h); vol += sp.len * sp.h; }); }); r.joists.forEach(function(q){ mh = Math.max(mh, q.h); vol += q.len * q.h; });
+    return [0, r.warn.filter(function(w){ return w.lv === 2; }).length, r.joint.filter(function(j){ return j.kind === "col"; }).length, mh, Math.round(vol / 1e4)]; }
+  function build(){
+    var key = sig(); if (CACHE && CACHE.key === key) return CACHE.val;
+    var fx = (S.kobariDir === "x" || S.kobariDir === "y") ? S.kobariDir : null, best = null;
+    (fx ? [fx] : ["x", "y"]).forEach(function(d){ FORCE = d; var r; try { r = build1(); } finally { FORCE = null; } if (!r.two){ best = best || r; return; } r.score = score(r); var b = best && best.score; if (!b){ best = r; return; } for (var i = 0; i < 5; i++){ if (r.score[i] < b[i]){ best = r; break; } if (r.score[i] > b[i]) break; } });
+    CACHE = {key: key, val: best}; return best;
+  }
+  /* ---------- 図面：2階床伏図（伏図の枠 fr の中に描く。H＝伏図の部品 band・line・r2） ---------- */
+  var STDH = {dosa: 150, other: 105};
+  function fs2(fr, b, H){
+    var K = build(), g = "", r2 = H.r2 || function(v){ return Math.round(v * 100) / 100; };
+    if (!K || !K.ok) return {g: "", legend: "2階床伏図：2階の床の骨組みを組めませんでした。"};
+    var pt = function(ax, c, t){ return ax === "x" ? [t, c] : [c, t]; }, boxes = [];
+    /* 字は梁の横（家の内側）に置く。柱の印・金物の印・ほかの字に重ならない所を探す */
+    var hcol = Math.max(2.6, 105 * fr.s / 2 + 0.8) + 0.6;
+    K.p1.forEach(function(p){ if (!inPoly(K.poly2, p.x, p.y)) return; var c = fr.P([p.x, p.y]); boxes.push([c[0] - hcol, c[1] - hcol, c[0] + hcol, c[1] + hcol]); });
+    K.p2.forEach(function(q){ if (q.sup !== "col"){ var c = fr.P([q.x, q.y]); boxes.push([c[0] - hcol, c[1] - hcol, c[0] + hcol, c[1] + hcol]); } });
+    K.joint.forEach(function(j){ var c = fr.P([j.x, j.y]); boxes.push([c[0] - 5.4, c[1] - 5.4, c[0] + 5.4, c[1] + 5.4]); });
+    var label = function(ax, c, a, bb2, text, fs, must, onLine){ var A = fr.P(pt(ax, c, a)), B = fr.P(pt(ax, c, bb2)), len = Math.hypot(B[0] - A[0], B[1] - A[1]), w = text.length * fs * 0.56 + 3, h = fs + 1.6; if (len < w * 0.9 && !must) return "";
+      var m0 = pt(ax, c, (a + bb2) / 2), inP = ax === "x" ? inPoly(K.poly2, m0[0], m0[1] + 250) : inPoly(K.poly2, m0[0] + 250, m0[1]), off = onLine ? 0 : (h / 2 + 2.6), sides = onLine ? [0] : (inP ? [1, -1] : [-1, 1]), tries = [0.5, 0.32, 0.68, 0.2, 0.8], pos = null;
+      for (var si = 0; si < sides.length && !pos; si++) for (var i = 0; i < tries.length; i++){ var mx = A[0] + (B[0] - A[0]) * tries[i] + (ax === "y" ? sides[si] * off : 0), my = A[1] + (B[1] - A[1]) * tries[i] + (ax === "x" ? sides[si] * off : 0);
+          var bx = ax === "x" ? [mx - w / 2, my - h / 2, mx + w / 2, my + h / 2] : [mx - h / 2, my - w / 2, mx + h / 2, my + w / 2];
+          if (bx[0] < 2 || bx[1] < 2) continue;
+          if (!boxes.some(function(q){ return bx[0] < q[2] && bx[2] > q[0] && bx[1] < q[3] && bx[3] > q[1]; })){ pos = [mx, my, bx]; break; } }
+      if (!pos){ if (!must) return ""; var mx2 = (A[0] + B[0]) / 2 + (ax === "y" ? sides[0] * off : 0), my2 = (A[1] + B[1]) / 2 + (ax === "x" ? sides[0] * off : 0); pos = [mx2, my2, [0, 0, 0, 0]]; }
+      boxes.push(pos[2]); return "<text class=\"fsSize\" x=\"" + r2(pos[0]) + "\" y=\"" + r2(pos[1]) + "\" text-anchor=\"middle\" dominant-baseline=\"central\" style=\"font-size:" + fs + "px;font-weight:700;fill:#111;paint-order:stroke;stroke:#fff;stroke-width:2.2px\"" + (ax === "y" ? " transform=\"rotate(-90 " + r2(pos[0]) + " " + r2(pos[1]) + ")\"" : "") + ">" + text + "</text>"; };
+    /* 小梁（細い線） */
+    K.joists.forEach(function(q){ g += H.line(fr, pt(q.ax, q.c, q.a), pt(q.ax, q.c, q.b), "fsKobari", "#111", 0.7); });
+    /* 梁（2本線の帯）。1本ずつ。継ぎ目は短い線 */
+    var txt = "", big = [];
+    K.lines.forEach(function(L){ (L.pcs || []).forEach(function(p){ g += H.band(fr, pt(L.ax, L.c, p.a), pt(L.ax, L.c, p.b), 105, "fsHari2");
+        if (p.jointA){ var c0 = fr.P(pt(L.ax, L.c, p.a + 150)), d = 4.2; g += L.ax === "x" ? "<line x1=\"" + r2(c0[0]) + "\" y1=\"" + r2(c0[1] - d) + "\" x2=\"" + r2(c0[0]) + "\" y2=\"" + r2(c0[1] + d) + "\" stroke=\"#111\" stroke-width=\"0.9\"/>" : "<line x1=\"" + r2(c0[0] - d) + "\" y1=\"" + r2(c0[1]) + "\" x2=\"" + r2(c0[0] + d) + "\" y2=\"" + r2(c0[1]) + "\" stroke=\"#111\" stroke-width=\"0.9\"/>"; }
+        var std = p.role === "dosa" ? STDH.dosa : STDH.other; if (p.h !== std) big.push({L: L, p: p}); }); });
+    big.sort(function(u, v){ return v.p.h - u.p.h; }).forEach(function(o){ txt += label(o.L.ax, o.L.c, o.p.a, o.p.b, "105×" + o.p.h, 7.4, true, false); });
+    var seen = {}; K.joists.forEach(function(q){ var k = q.h + "|" + Math.round(q.len); if (seen[k] || q.h === STDH.other) return; var t = label(q.ax, q.c, q.a, q.b, "105×" + q.h, 6.6, false, true); if (t){ seen[k] = 1; txt += t; } });
+    /* 柱：1階の柱＝☒。2階の柱で、真下に1階の柱が無い物（梁の上に立つ）＝□ */
+    var sqX = function(x, y, cross){ var c = fr.P([x, y]), h = Math.max(2.6, 105 * fr.s / 2 + 0.8); return "<rect class=\"" + (cross ? "fsPost1" : "fsPost2") + "\" x=\"" + r2(c[0] - h) + "\" y=\"" + r2(c[1] - h) + "\" width=\"" + r2(h * 2) + "\" height=\"" + r2(h * 2) + "\" fill=\"#fff\" stroke=\"#111\" stroke-width=\"" + (cross ? 0.8 : 1.1) + "\"/>" + (cross ? "<path d=\"M" + r2(c[0] - h) + " " + r2(c[1] - h) + "l" + r2(h * 2) + " " + r2(h * 2) + "m0 " + r2(-h * 2) + "l" + r2(-h * 2) + " " + r2(h * 2) + "\" stroke=\"#111\" stroke-width=\"0.6\"/>" : ""); };
+    K.p1.forEach(function(p){ if (inPoly(K.poly2, p.x, p.y)) g += sqX(p.x, p.y, true); });
+    K.p2.forEach(function(q){ if (q.sup !== "col") g += sqX(q.x, q.y, false); });
+    /* 梁受け金物（掛かる力が大きい所）＝◎ */
+    K.joint.forEach(function(j){ var c = fr.P([j.x, j.y]); g += "<circle class=\"fsUke\" cx=\"" + r2(c[0]) + "\" cy=\"" + r2(c[1]) + "\" r=\"4.6\" fill=\"none\" stroke=\"#111\" stroke-width=\"1\"/><circle cx=\"" + r2(c[0]) + "\" cy=\"" + r2(c[1]) + "\" r=\"1.5\" fill=\"#111\"/>"; });
+    g += txt;
+    var n2 = K.p2.filter(function(q){ return q.sup !== "col"; }).length;
+    return {g: g, legend: "2階床伏図：梁は、壁の位置から自動で組み、乗る重さ（屋根・2階の壁・床）を1本ずつ足して大きさを決めています。2階の壁の下には必ず梁があります。□は梁の上に立つ2階の柱（" + n2 + "本）、☒は1階の柱です。" + (K.add1.length ? "2階の柱の真下などに、1階の柱を " + K.add1.length + " 本足しています。" : "") + (K.joint.length ? "◎は梁受け金物で受ける所です。" : "")};
+  }
+  function legendRows(){
+    var K = build(), rows = []; if (!K || !K.ok) return rows; var hs = {}; K.joists.forEach(function(q){ hs[q.h] = 1; }); var jl = Object.keys(hs).map(Number).sort(function(a, b){ return a - b; });
+    rows.push({sw: "band", nm: "胴差", sz: "105×150（基本）"}); rows.push({sw: "band", nm: "梁", sz: "105×105（基本）"});
+    rows.push({sw: "line", nm: "小梁 @910", sz: jl.length ? "105×" + (jl.length > 1 ? jl[0] + "〜" + jl[jl.length - 1] : jl[0]) : "—"});
+    rows.push({sw: "sq", nm: "1階の柱", sz: "105×105"}); rows.push({sw: "sqO", nm: "2階の柱（梁の上）", sz: "105×105"});
+    if (K.joint.length) rows.push({sw: "hd", nm: "梁受け金物", sz: K.joint.length + "か所"});
+    rows.push({sw: "", nm: "梁の材料", sz: K.mat.nm.replace("（", " ").replace("）", "")});
+    return rows;
+  }
+  function notes(){ var K = build(); if (!K || !K.ok) return [];
+    return ["梁は壁の位置から組み、乗る重さ（屋根・2階の壁・床）を足して1本ずつ大きさを計算。",
+      "見るのは曲げ・せん断・たわみ（変形増大係数2を掛けてスパンの1/300以下。法は1/250）。",
+      "字の無い胴差は105×150・梁は105×105。材料：" + K.matK.nm + (K.mat.nm !== K.matK.nm ? "（胴差）・" + K.mat.nm + "（梁）" : "") + "。基準強度は平12建告1452号。"]; }
+  /* 柱の配置（framePos）へ：1階に足す柱。渡された壁の並びが「1階」（1階の壁を全部含む）の時だけ返す */
+  function extraFor(runs){
+    try { if (RAWING || typeof S === "undefined" || S.mode !== "zo") return []; var K = build(); if (!K || !K.ok || !K.add1.length || !K._r1) return [];
+      var ok = K._r1.every(function(a){ return runs.some(function(r){ return Math.abs(r.ax - a.ax) <= 1 && Math.abs(r.ay - a.ay) <= 1 && Math.abs(r.bx - a.bx) <= 1 && Math.abs(r.by - a.by) <= 1; }); });
+      return ok ? K.add1 : []; } catch(e){ return []; }
+  }
+  /* 見積へ：胴差・2階の床梁（大梁・小梁）を、大きさごとに。長さは1本ずつ（lens）。継ぐ所は150足した長さ（lensJ） */
+  var RN = {dosa: ["keta", "胴差"], maji: ["yukabari", "2階床梁"], uke2: ["yukabari", "2階床梁"], uke: ["yukabari", "2階床梁"]};
+  function lumber(){
+    var K = build(); if (!K || !K.ok) return null; var G = {}, out = [];
+    var add = function(key, name, h, len, joint, tag){ var k = name + "|" + h, g = G[k] || (G[k] = {key: key, name: name, h: h, lens: [], lensJ: [], tag: {}}); g.lens.push(Math.round(len)); g.lensJ.push(Math.round(len + (joint ? 150 : 0))); if (tag) g.tag[tag] = (g.tag[tag] || 0) + 1; };
+    K.lines.forEach(function(L){ (L.pcs || []).forEach(function(p){ var rn = RN[p.role] || RN.uke; add(rn[0], rn[1], p.h, p.len, p.jointA, p.role); }); });
+    K.joists.forEach(function(q){ add("yukabari", "2階床梁（小梁）", q.h, q.len, false, "ko"); });
+    Object.keys(G).forEach(function(k){ var g = G[k], n = g.lens.length, mx = Math.max.apply(null, g.lens), nm = g.name === "胴差" ? "外まわりの壁の上" : g.name === "2階床梁" ? ((g.tag.uke2 || g.tag.uke) ? "2階の壁の下・1階の壁の上" : "1階の間仕切りの上") : "910間隔";
+      g.spec = "105×" + g.h + "・" + nm + "・" + n + "本（いちばん長い所 " + mx.toLocaleString("ja-JP") + "）・乗る重さから計算"; out.push(g); });
+    var ord = {"胴差": 0, "2階床梁": 1, "2階床梁（小梁）": 2}; out.sort(function(a, b){ return (ord[a.name] - ord[b.name]) || (b.h - a.h); });
+    var jn = 0; K.lines.forEach(function(L){ (L.pcs || []).forEach(function(p){ if (p.jointA) jn++; }); });
+    return {rows: out, kana: K.joint.filter(function(j){ return j.kind === "kana"; }).length, joints: jn, add1: K.add1.length, mat: K.mat, matK: K.matK};
+  }
+  /* 見積の前のチェックへ：骨組みの注意 */
+  function checks(){
+    var K = build(), o = []; if (!K || !K.two) return o; if (!K.ok){ o.push({lv: 1, t: "2階の床の骨組みを組めませんでした（斜めの壁など）。構造の確認が要ります", p: null}); return o; }
+    K.warn.forEach(function(w){ o.push({lv: w.lv, t: w.t, p: w.p, k769: 1}); });
+    try { var mh = 0, at = null; K.lines.forEach(function(L){ L.spans.forEach(function(sp){ if (sp.h > mh){ mh = sp.h; at = L.ax === "x" ? [(sp.a + sp.b) / 2, L.c] : [L.c, (sp.a + sp.b) / 2]; } }); });
+      var RF = roof(), ch = +S.ch || 2400, dosa = +S.dosa || 240, futo = Math.max(0, (RF.Lc || (ch + 140)) - ch - 40), fit = dosa + futo - 50;
+      if (mh > fit + 0.5) o.push({lv: 1, t: "いちばん大きい梁（せい " + mh + "）が、1階の天井の上に納まりません：今の高さで入るのは せい " + Math.floor(fit / 30) * 30 + " まで。1階の天井の懐を " + (Math.ceil((mh - fit) / 10) * 10) + "mm 上げる（階高を上げる）か、その梁の下に柱か壁を足してください（梁を見せる納まりにする手もあります）", p: at, k769: 2}); } catch(e){}
+    if (K.skew.length) o.push({lv: 1, t: "斜めの壁が " + K.skew.length + " か所あります：その上下の梁は自動で決めていません", p: null, k769: 1});
+    return o;
+  }
+  watch();
+  window.KOZO = {ver: 1, build: build, extraFor: extraFor, lumber: lumber, checks: checks, fs2: fs2, legendRows: legendRows, notes: notes, pure: pure, watch: watch, _T: T, _build1: function(d){ FORCE = d; try { return build1(); } finally { FORCE = null; } }, MATS: MATS, mat: mat, loads: loads, _raw: raw, _walls: walls, _wallAt: wallAt, _beamCalc: beamCalc, _needH: needH, _inPoly: inPoly, STD: STD, TOL: TOL};
+})();
+
+(function(){
+  try { var prev = HB.__kozoChk480;
+    HB.__kozoChk480 = function(){ var out = []; try { out = prev ? (prev() || []) : []; } catch(e){ out = []; }
+      try { var K = KOZO.build(); if (K && K.ok){ out = out.filter(function(o){ return !/^2階の柱の下に/.test(o.t || ""); }); KOZO.checks().forEach(function(o){ out.push(o); }); } } catch(e){}
+      return out; };
+  } catch(e){}
 })();
 </script>
